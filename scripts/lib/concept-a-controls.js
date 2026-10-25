@@ -179,6 +179,7 @@
     editingPalette = activePalette;
     editorIndex = swatchIndex;
     renderManager();
+    $(".app").classList.add("palette-sheet-open");
     openDialog($(".palette-dialog"));
   }
   function updatePalette() {
@@ -329,6 +330,7 @@
     $("[data-tool-icon]").innerHTML = icons[id] || icons.agent;
     $(".tool-picker").setAttribute("data-selected-tool", id);
     $(".tool-settings").hidden = id !== "scatter";
+    $('.sidebar').classList.toggle('has-tool-settings', id === 'scatter');
 
   }
   function setFollow(value) {
@@ -382,6 +384,7 @@
     syncSteps();
   }
   function undo() {
+    if (historyPreview) return;
     const id = ["18", "17"].find(
       (id) => window.__getChange(id).state === "applied",
     );
@@ -389,6 +392,7 @@
     else notify("No earlier reversible session step.");
   }
   function redo() {
+    if (historyPreview) return;
     const id = reverted.at(-1);
     if (id) toggleStep(id);
     else notify("Nothing to redo.");
@@ -637,9 +641,17 @@
       menuTrigger = trigger;
       trigger?.setAttribute("aria-expanded", "true");
     } else {
-      menuChain.splice(level).forEach((m) => m.element.remove());
+      menuChain.splice(level).forEach((m) => {m.trigger?.setAttribute('aria-expanded','false'); m.element.remove();});
+      trigger?.setAttribute('aria-expanded','true');
     }
-    const entries = menuItems(name),
+    const entries = menuItems(name).map(entry => {
+      if (!entry || entry.heading) return entry;
+      const editingMenu = ['Tools','ToolPicker','Mirror','Layers'].includes(name);
+      const editingItem = name === 'Edit' && ['Undo','Redo'].includes(entry.label) ||
+        name === 'File' && ['New project','Open…','Save','Save as…'].includes(entry.label) ||
+        name === 'Extensions' && entry.label === 'Scatter moss';
+      return {...entry, disabled: entry.disabled || historyPreview && (editingMenu || editingItem)};
+    }),
       element = document.createElement("div");
     element.className = "dropdown-menu";
     element.role = "menu";
@@ -651,7 +663,7 @@
           ? '<div role="separator" class="separator"></div>'
           : it.heading
             ? `<div class="menu-label">${esc(it.label)}</div>`
-            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} aria-label="${esc(it.label)}${it.badge ? ` ${it.badge}` : ""}" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.checked !== undefined ? `<span class="menu-check">${it.checked ? icons.check : ""}</span>` : it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
+            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} aria-label="${esc(it.label)}${it.badge ? ` ${it.badge}` : ""}" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.checked ? `<span class="menu-check">${icons.check}</span>` : ""}${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
                 it.ramp
                   ? `<span class="mini-ramp">${it.ramp
                       .slice(0, 8)
@@ -664,8 +676,25 @@
     const host = $('dialog[open]') || $('.app');
     if ($('.menu-root').parentElement !== host) host.append($('.menu-root'));
     $('.menu-root').append(element);
-    if (['Tools', 'ToolPicker', 'Extensions'].includes(name) && tool === 'scatter') {
-      element.insertAdjacentHTML('beforeend', `<div class="tool-configuration" role="group" aria-label="Scatter moss configuration"><div>Brush settings <span>Agent tool</span></div><label>Density <input type="range" min="1" max="100" value="${toolConfig.density}" data-tool-density aria-label="Scatter density"><output>${toolConfig.density}%</output></label><label>Seed <input type="number" value="${toolConfig.seed}" min="0" max="9999" data-tool-seed aria-label="Scatter seed"></label><p>Canopy · surface only</p></div>`);
+    if (['ToolPicker','Extensions'].includes(name)) {
+      element.insertAdjacentHTML('afterbegin', `<label class="menu-search">${icons.search}<input data-menu-search aria-label="Search ${name === 'Extensions' ? 'extensions' : 'tools'}" placeholder="Search ${name === 'Extensions' ? 'extensions' : 'tools'}…" autocomplete="off"></label>`);
+      element.insertAdjacentHTML('beforeend','<p class="menu-empty" hidden>No matches</p>');
+      const input = element.querySelector('input');
+      input.addEventListener('input', () => {
+        const value = input.value.trim().toLowerCase();
+        const rows = [...element.querySelectorAll('[data-menu-index]')];
+        rows.forEach(row => row.hidden = !row.getAttribute('aria-label').toLowerCase().includes(value));
+        element.querySelectorAll('.menu-label').forEach(label => {
+          let next = label.nextElementSibling, visible = false;
+          while (next && !next.matches('.menu-label,.separator')) {
+            if (next.matches('[data-menu-index]') && !next.hidden) visible = true;
+            next = next.nextElementSibling;
+          }
+          label.hidden = !visible;
+        });
+        element.querySelectorAll('.separator').forEach(el => el.hidden = !!value);
+        element.querySelector('.menu-empty').hidden = rows.some(row => !row.hidden);
+      });
     }
     const r = trigger?.getBoundingClientRect();
     let x = point?.x ?? (level ? r.right + 4 : r.left),
@@ -677,6 +706,7 @@
     element.style.left = x + "px";
     element.style.top = y + "px";
     menuChain.push({ name, element, trigger });
+    element.querySelector('[data-menu-search]')?.focus();
     element.addEventListener("click", (e) => {
       const el = e.target.closest("[data-menu-index]");
       if (!el || el.disabled) return;
@@ -699,13 +729,16 @@
           showMenu(it.menu, el, null, level + 1, false);
         }
       } else {
-        menuChain.splice(level + 1).forEach((m) => m.element.remove());
+        menuChain.splice(level + 1).forEach((m) => {m.trigger?.setAttribute('aria-expanded','false'); m.element.remove();});
       }
     });
     element.addEventListener("keydown", (e) => {
-      if (/INPUT|SELECT/.test(e.target.tagName) && e.key !== "Escape") return;
-      const buttons = [...element.querySelectorAll("button:not(:disabled)")],
+      const inSearch = e.target.matches('[data-menu-search]');
+      if (/INPUT|SELECT/.test(e.target.tagName) && !inSearch && e.key !== "Escape") return;
+      const buttons = [...element.querySelectorAll("button:not(:disabled):not([hidden])")],
         index = buttons.indexOf(document.activeElement);
+      if (inSearch && !['ArrowDown','ArrowUp','Enter','Escape','Tab'].includes(e.key)) return;
+      if (inSearch && e.key === 'Enter') { e.preventDefault(); buttons[0]?.click(); return; }
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
         e.preventDefault();
         const next =
@@ -715,7 +748,7 @@
               ? buttons.length - 1
               : (index + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) %
                 buttons.length;
-        buttons[next].focus();
+        buttons[next]?.focus();
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
@@ -733,7 +766,7 @@
           trigger.setAttribute("aria-expanded", "false");
         } else cycleMenubar(-1);
       }
-      if (/INPUT|SELECT/.test(e.target.tagName)) return;
+      if (/INPUT|SELECT/.test(e.target.tagName) && !inSearch) return;
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -966,6 +999,13 @@
       snapshot: window.__sceneSnapshot(),
     },
   ];
+  function setHistoryPreview(value) {
+    historyPreview = value;
+    $('.tool-picker').disabled = value;
+    $('.tool-picker').title = value ? 'Editing is disabled during history preview' : 'Choose a tool';
+    $$('[data-step-undo],[data-tool-density],[data-tool-seed],[data-layer-lock]').forEach(b => b.disabled = value);
+    $('.app').classList.toggle('previewing-history', value);
+  }
   function renderHistory() {
     $('[data-history-position]').textContent = timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`;
     $('[data-history-step-title]').textContent = historyNames[timelineStep];
@@ -974,13 +1014,15 @@
     $('[data-branch-name]').textContent = branch;
     $('[data-action="history-prev"]').disabled = timelineStep === 0;
     $('[data-action="history-next"]').disabled = timelineStep === 8;
-    $$('.timeline-ticks button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.historyTick) === timelineStep)));
-    $('.history-event-list').innerHTML = historyNames.map((name, step) => `<button class="history-event ${step === timelineStep ? 'active' : ''}" data-history-tick="${step}" aria-current="${step === timelineStep}"><span class="event-origin"><i class="${step === 0 ? 'initial-marker' : step <= 4 ? 'human-marker' : 'agent-marker'}"></i></span><div><span>${name}</span><small>${step === 0 ? 'Initial state' : `${step <= 4 ? 'Human' : 'Agent'} · Step ${step}`}</small></div></button>`).join('');
+    $('.history-event-list').innerHTML = historyNames.map((name, step) => `<button class="history-event ${step === timelineStep ? 'active' : ''}" data-history-tick="${step}" aria-current="${step === timelineStep}"><span class="event-origin"><i class="${step === 0 ? 'initial-marker' : step <= 4 ? 'human-marker' : 'agent-marker'}"></i></span><span class="event-title">${name}</span><small>${step === 0 ? 'Artist 01' : step <= 2 ? 'Artist 01' : step <= 4 ? 'Designer 02' : 'Canopy agent'}</small></button>`).join('');
     $('.history-event.active')?.scrollIntoView({block:'nearest'});
     $('.version-list').innerHTML = versions.map(v => `<article class="version-item"><div><h3>${esc(v.name)}</h3><p class="version-meta">${v.snapshot.length.toLocaleString()} voxels · Step ${v.step}</p></div><button class="icon-button" data-menu="Version:${v.id}" aria-haspopup="menu" aria-expanded="false" aria-label="Actions for ${esc(v.name)}">${icons.more}</button></article>`).join('');
     const isPreview = window.__sceneSnapshot().map(c => `${c.x},${c.y},${c.z}`).join('|') !== liveSnapshot?.map(c => `${c.x},${c.y},${c.z}`).join('|');
+    setHistoryPreview(isPreview);
+    $('[data-action="save-version"]').innerHTML = icons.plus + (isPreview ? 'Save preview' : 'Save this state');
+    $('[data-version-save-context]').textContent = isPreview ? 'Saves the previewed geometry at step ' + timelineStep + '.' : 'Saves the latest document state.';
     $('.history-preview-banner').hidden = !isPreview;
-    $('.history-preview-banner span').textContent = `History preview · ${timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`} · ${historyNames[timelineStep]}`;
+    $('.history-preview-banner span').textContent = `Read-only preview · ${timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`} · ${historyNames[timelineStep]}`;
     $('.viewport').classList.toggle('historical-preview', isPreview);
   }
   function openHistory() {
@@ -1004,6 +1046,7 @@
       window.__loadSnapshot(liveSnapshot);
       syncSteps();
     }
+    setHistoryPreview(false);
     $(".history-panel").hidden = true;
     $(".workspace").classList.remove("history-open");
     $(".history-preview-banner").hidden = true;
@@ -1080,7 +1123,7 @@
     dialog.showModal();
   }
   for (const dialog of $$("dialog")) {
-    dialog.addEventListener("close", () => {closeMenus(); $('.app').append($('.menu-root')); modalFocus?.focus();});
+    dialog.addEventListener("close", () => {if (dialog.matches(".palette-dialog")) $(".app").classList.remove("palette-sheet-open"); closeMenus(); $('.app').append($('.menu-root')); modalFocus?.focus();});
     dialog.addEventListener('cancel', e => {if (menuChain.length) {e.preventDefault(); closeMenus(true);}});
   }
 
@@ -1199,7 +1242,7 @@
   function renderCommands() {
     const value = $(".command-search input").value.toLowerCase();
     filteredCommands = commands.filter((c) =>
-      c.label.toLowerCase().includes(value),
+      c.label.toLowerCase().includes(value) && !(historyPreview && (tools.some(t => t[1] === c.label) || c.label === 'Scatter moss')),
     );
     commandIndex = Math.max(
       0,
@@ -1220,7 +1263,8 @@
     else $(".command-search input").removeAttribute("aria-activedescendant");
   }
   function openCommands() {
-    closeFloating();
+    if (historyPreview) { closeMenus(); $(".share-popover").hidden = true; }
+    else closeFloating();
     commandIndex = 0;
     $(".command-search input").value = "";
     renderCommands();
@@ -1473,6 +1517,7 @@
       const key = e.key.toLowerCase();
       if (["n", "o", "s"].includes(key)) {
         e.preventDefault();
+        if (historyPreview) return;
         notify(
           {
             n: "New project",

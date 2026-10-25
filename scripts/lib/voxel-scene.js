@@ -216,7 +216,7 @@
     if (!thumbnail && grid) for (let i = -50; i <= 50; i += 2) {
       ctx.lineWidth = i % 10 === 0 ? .85 : .6;
       for (let j = -50; j < 50; j += 5) {
-        const alpha = Math.max(0, 1 - Math.hypot(i, j + 2.5) / 54) ** 1.4 * .10;
+        const alpha = Math.max(0, 1 - Math.hypot(i, j + 2.5) / 54) ** 1.4 * (modern ? light ? .13 : .18 : .10);
         ctx.strokeStyle = light ? `rgba(100,108,115,${alpha})` : `rgba(163,174,177,${alpha})`;
         for (const points of [[[i,-.12,j],[i,-.12,j+5]], [[j,-.12,i],[j+5,-.12,i]]]) {
           const a = project(points[0]), b = project(points[1]);
