@@ -48,6 +48,41 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "api_version": {
+              "const": "voxelite.v1"
+            },
+            "documents": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "limits": {
+              "type": "object"
+            },
+            "protocol_versions": {
+              "items": {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 2,
+              "minItems": 1,
+              "type": "array"
+            },
+            "renderer": {
+              "const": "cpu"
+            }
+          },
+          "required": [
+            "api_version",
+            "protocol_versions",
+            "limits",
+            "documents",
+            "renderer"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -279,6 +314,139 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "message_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "thread_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "thread_id",
+            "message_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -353,7 +521,7 @@
   },
   {
     "name": "voxelite_comments_list",
-    "description": "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Paged at 50 by default, max 200; bind pages with revision.",
+    "description": "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Thread and message pages default to 50, max 200. message_offset applies per thread; bind pages with revision.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
@@ -361,6 +529,16 @@
         "limit": {
           "maximum": 200,
           "minimum": 1,
+          "type": "integer"
+        },
+        "message_limit": {
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "message_offset": {
+          "maximum": 10000,
+          "minimum": 0,
           "type": "integer"
         },
         "model_id": {
@@ -430,6 +608,48 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "comments": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "next_offset": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "total": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "comments",
+            "total",
+            "next_offset"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -584,6 +804,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -748,6 +1091,139 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "message_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "thread_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "thread_id",
+            "message_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -902,6 +1378,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1084,6 +1683,100 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bounds": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "dirty": {
+              "type": "boolean"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "layers": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "name": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "voxel_count": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "name",
+            "bounds",
+            "layers",
+            "dirty",
+            "voxel_count",
+            "head_id",
+            "redo_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1217,6 +1910,100 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bounds": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "dirty": {
+              "type": "boolean"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "layers": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "name": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "voxel_count": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "name",
+            "bounds",
+            "layers",
+            "dirty",
+            "voxel_count",
+            "head_id",
+            "redo_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1361,6 +2148,100 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bounds": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "dirty": {
+              "type": "boolean"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "layers": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "name": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "voxel_count": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "name",
+            "bounds",
+            "layers",
+            "dirty",
+            "voxel_count",
+            "head_id",
+            "redo_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1516,6 +2397,39 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bytes": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "path": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "path",
+            "bytes",
+            "sha256"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1655,6 +2569,39 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bytes": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "path": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "path",
+            "bytes",
+            "sha256"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -1900,6 +2847,39 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bytes": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "path": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "path",
+            "bytes",
+            "sha256"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2043,6 +3023,82 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "entries": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "history_bytes": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "initial_retained": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "next_offset": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "total": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "entries",
+            "total",
+            "next_offset",
+            "head_id",
+            "redo_id",
+            "initial_retained",
+            "history_bytes"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2197,6 +3253,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2351,6 +3530,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2515,6 +3817,134 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "layer_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "layer_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2648,6 +4078,29 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "layers": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "layers"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2808,6 +4261,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -2964,6 +4540,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3126,6 +4825,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3287,6 +5109,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3447,6 +5392,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3609,6 +5677,136 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "slot_mapping": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "slot_mapping"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3750,6 +5948,36 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "format": {
+              "enum": [
+                "hex",
+                "gpl"
+              ],
+              "type": "string"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "text": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "text",
+            "format"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -3913,6 +6141,136 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "slot_mapping": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "slot_mapping"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4046,6 +6404,26 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette": {
+              "type": "object"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "palette"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4217,6 +6595,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4412,6 +6913,136 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "bounds": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "occupied_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "region": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "view": {
+              "enum": [
+                "layers",
+                "composite"
+              ],
+              "type": "string"
+            },
+            "voxel_count": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "bounds",
+            "region",
+            "occupied_bounds",
+            "voxel_count",
+            "view"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4651,6 +7282,80 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "backend": {
+              "const": "cpu"
+            },
+            "bounds": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "image_mode": {
+              "enum": [
+                "contact_sheet",
+                "individual",
+                "both"
+              ],
+              "type": "string"
+            },
+            "images": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "views": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "backend",
+            "bounds",
+            "views",
+            "images",
+            "image_mode"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4784,6 +7489,29 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "versions": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "versions"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -4950,6 +7678,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -5113,6 +7964,134 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "version_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability",
+            "version_id"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -5682,6 +8661,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -5929,6 +9031,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -6150,6 +9375,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -6402,6 +9750,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -6558,6 +10029,34 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "layer_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "voxels": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "layer_id",
+            "voxels"
+          ],
           "type": "object"
         },
         "epoch": {
@@ -6796,6 +10295,129 @@
           "const": "voxelite.v1"
         },
         "data": {
+          "additionalProperties": true,
+          "properties": {
+            "added": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "changed_bounds": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "items": {
+                        "maximum": 32768,
+                        "minimum": -32767,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    },
+                    "min": {
+                      "items": {
+                        "maximum": 32767,
+                        "minimum": -32768,
+                        "type": "integer"
+                      },
+                      "maxItems": 3,
+                      "minItems": 3,
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "changed_layers": {
+              "items": {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "changed_voxels": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "metadata_changed": {
+              "type": "boolean"
+            },
+            "model_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "operation_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "palette_changed": {
+              "type": "boolean"
+            },
+            "recolored": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "removed": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "revision": {
+              "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+              "pattern": "^(0|[1-9][0-9]{0,19})$",
+              "type": "string"
+            },
+            "undo_entry_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "work_units": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "model_id",
+            "revision",
+            "operation_id",
+            "undo_entry_id",
+            "changed_voxels",
+            "added",
+            "removed",
+            "recolored",
+            "changed_bounds",
+            "changed_layers",
+            "palette_changed",
+            "metadata_changed",
+            "work_units",
+            "durability"
+          ],
           "type": "object"
         },
         "epoch": {

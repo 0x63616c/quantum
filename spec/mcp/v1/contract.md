@@ -103,7 +103,7 @@ null. Include the captured revision on subsequent pages; stale reads reject.
 | Encoded request / tool result | 16 MiB / 12 MiB |
 | Explicit writes / batch operations / charged work | 65,536 / 256 / 1,048,576 |
 | Voxel read page | default 1000, maximum 10,000 |
-| Comments/history page | default 50, maximum 200 |
+| Comments/history page; messages per thread | default 50, maximum 200 |
 | Comment text | 4096 UTF-8 bytes per message |
 | Palette import text | 64 KiB, 1–256 colors |
 | Named versions | 64, aggregate 64 MiB canonical snapshots |

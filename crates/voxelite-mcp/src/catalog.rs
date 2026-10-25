@@ -169,7 +169,7 @@ fn render_fields() -> Vec<Field> {
         ),
     ]
 }
-fn output_schema() -> Value {
+fn output_schema(name: &str, scope: u8) -> Value {
     let error = object(vec![
         req("code", string(80)),
         req("message", string(4096)),
@@ -179,7 +179,109 @@ fn output_schema() -> Value {
         opt("command_index", integer(0, 255)),
         opt("current_revision", revision()),
     ]);
-    json!({"type":"object","properties":{"api_version":{"const":"voxelite.v1"},"session_id":uuid(),"epoch":uuid(),"ok":{"type":"boolean"},"data":{"type":"object"},"error":error},"required":["api_version","session_id","epoch","ok"],"additionalProperties":false,"oneOf":[{"properties":{"ok":{"const":true}},"required":["data"],"not":{"required":["error"]}},{"properties":{"ok":{"const":false}},"required":["error"],"not":{"required":["data"]}}]})
+    let data = data_schema(name, scope);
+    json!({"type":"object","properties":{"api_version":{"const":"voxelite.v1"},"session_id":uuid(),"epoch":uuid(),"ok":{"type":"boolean"},"data":data,"error":error},"required":["api_version","session_id","epoch","ok"],"additionalProperties":false,"oneOf":[{"properties":{"ok":{"const":true}},"required":["data"],"not":{"required":["error"]}},{"properties":{"ok":{"const":false}},"required":["error"],"not":{"required":["data"]}}]})
+}
+fn data_schema(name: &str, scope: u8) -> Value {
+    let count = || integer(0, i64::MAX);
+    let list = || json!({"type":"array","items":{"type":"object"}});
+    let mut fields = if scope == 0 {
+        vec![]
+    } else {
+        vec![req("model_id", uuid()), req("revision", revision())]
+    };
+    if scope == 2 && name != "document_save" {
+        fields.extend([
+            req("operation_id", uuid()),
+            req("undo_entry_id", nullable(uuid())),
+            req("changed_voxels", count()),
+            req("added", count()),
+            req("removed", count()),
+            req("recolored", count()),
+            req("changed_bounds", nullable(region())),
+            req("changed_layers", array(uuid(), 0, 64)),
+            req("palette_changed", boolean()),
+            req("metadata_changed", boolean()),
+            req("work_units", count()),
+            req("durability", json!({"const":"memory"})),
+        ]);
+    }
+    match name {
+        "capabilities_get" => fields.extend([
+            req("api_version", json!({"const":"voxelite.v1"})),
+            req("protocol_versions", array(string(32), 1, 2)),
+            req("limits", json!({"type":"object"})),
+            req("documents", list()),
+            req("renderer", json!({"const":"cpu"})),
+        ]),
+        "document_create" | "document_open" | "document_info" => fields.extend([
+            req("name", string(128)),
+            req("bounds", region()),
+            req("layers", list()),
+            req("dirty", boolean()),
+            req("voxel_count", count()),
+            req("head_id", nullable(uuid())),
+            req("redo_id", nullable(uuid())),
+        ]),
+        "document_save" | "export_glb" | "export_png" => fields.extend([
+            req("path", string(1024)),
+            req("bytes", count()),
+            req(
+                "sha256",
+                json!({"type":"string","pattern":"^[0-9a-f]{64}$"}),
+            ),
+        ]),
+        "voxels_get" => fields.extend([req("layer_id", uuid()), req("voxels", list())]),
+        "query" => fields.extend([
+            req("bounds", region()),
+            req("region", region()),
+            req("occupied_bounds", nullable(region())),
+            req("voxel_count", count()),
+            req("view", choice(&["layers", "composite"])),
+        ]),
+        "layers_list" => fields.push(req("layers", list())),
+        "layers_add" => fields.push(req("layer_id", uuid())),
+        "palette_list" => fields.push(req("palette", json!({"type":"object"}))),
+        "palette_import" | "palette_apply_preset" => fields.push(req("slot_mapping", list())),
+        "palette_export" => fields.extend([
+            req("text", string(65536)),
+            req("format", choice(&["hex", "gpl"])),
+        ]),
+        "render" => fields.extend([
+            req("backend", json!({"const":"cpu"})),
+            req("bounds", region()),
+            req("views", list()),
+            req("images", list()),
+            req(
+                "image_mode",
+                choice(&["contact_sheet", "individual", "both"]),
+            ),
+        ]),
+        "comments_list" => fields.extend([
+            req("comments", list()),
+            req("total", count()),
+            req("next_offset", nullable(count())),
+        ]),
+        "comments_add" | "comments_reply" => {
+            fields.extend([req("thread_id", uuid()), req("message_id", uuid())])
+        }
+        "history_read" => fields.extend([
+            req("entries", list()),
+            req("total", count()),
+            req("next_offset", nullable(count())),
+            req("head_id", nullable(uuid())),
+            req("redo_id", nullable(uuid())),
+            req("initial_retained", boolean()),
+            req("history_bytes", count()),
+        ]),
+        "versions_save" => fields.push(req("version_id", uuid())),
+        "versions_list" => fields.push(req("versions", list())),
+        _ => {}
+    }
+    let mut schema = object(fields);
+    // Clients must tolerate additive result fields within this API major.
+    schema["additionalProperties"] = json!(true);
+    schema
 }
 fn build() -> Vec<Spec> {
     let mut specs = Vec::new();
@@ -201,7 +303,9 @@ fn build() -> Vec<Spec> {
                 description,
                 schema.as_object().unwrap().clone(),
             );
-            tool.output_schema = Some(Arc::new(output_schema().as_object().unwrap().clone()));
+            tool.output_schema = Some(Arc::new(
+                output_schema(name, scope).as_object().unwrap().clone(),
+            ));
             tool.annotations = Some(
                 ToolAnnotations::default()
                     .read_only(
@@ -434,11 +538,13 @@ fn build() -> Vec<Spec> {
     );
     add(
         "comments_list",
-        "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Paged at 50 by default, max 200; bind pages with revision.",
+        "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Thread and message pages default to 50, max 200. message_offset applies per thread; bind pages with revision.",
         vec![
             opt("state", choice(&["open", "resolved", "all"])),
             opt("offset", integer(0, 512)),
             opt("limit", integer(1, 200)),
+            opt("message_offset", integer(0, 10000)),
+            opt("message_limit", integer(1, 200)),
         ],
         1,
     );
