@@ -1,5 +1,4 @@
 //! Stdio entry point. Standard output is reserved for MCP JSON-RPC messages.
-use rmcp::ServiceExt;
 use voxelite_mcp::VoxeliteServer;
 
 #[tokio::main]
@@ -29,9 +28,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => return Err(format!("unknown argument: {arg}; see --help").into()),
         }
     }
-    let service = VoxeliteServer::new(root)?
-        .serve(rmcp::transport::stdio())
-        .await?;
-    service.waiting().await?;
+    VoxeliteServer::new(root)?.serve_stdio().await?;
     Ok(())
 }

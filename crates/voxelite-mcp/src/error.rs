@@ -5,9 +5,9 @@ pub(crate) type Result<T> = std::result::Result<T, Failure>;
 #[derive(Debug, Serialize)]
 pub(crate) struct Failure {
     pub code: &'static str,
-    pub message: String,
+    pub message: Box<str>,
     pub retryable: bool,
-    pub recovery: String,
+    pub recovery: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -17,15 +17,21 @@ pub(crate) struct Failure {
 }
 impl Failure {
     pub fn new(code: &'static str, message: impl Into<String>) -> Self {
-        Self { code, message: message.into(), retryable: false,
-            recovery: "Inspect document_info and tool schema, correct the request, then use a new operation_id.".into(),
-            path: None, command_index: None, current_revision: None }
+        Self {
+            code,
+            message: bounded(message.into(), 2048).into_boxed_str(),
+            retryable: false,
+            recovery: "Inspect document_info and tool schema, correct the request, then use a new operation_id.",
+            path: None,
+            command_index: None,
+            current_revision: None,
+        }
     }
     pub fn invalid(message: impl Into<String>) -> Self {
         Self::new("invalid_argument", message)
     }
     pub fn at(mut self, path: impl Into<String>) -> Self {
-        self.path = Some(path.into());
+        self.path = Some(bounded(path.into(), 512));
         self
     }
 }
@@ -88,5 +94,27 @@ impl Args<'_> {
     }
     pub fn default<T: serde::de::DeserializeOwned>(&self, name: &str, value: T) -> Result<T> {
         Ok(self.optional(name)?.unwrap_or(value))
+    }
+}
+
+fn bounded(mut value: String, max: usize) -> String {
+    if value.len() > max {
+        let mut end = max;
+        while !value.is_char_boundary(end) {
+            end -= 1;
+        }
+        value.truncate(end);
+    }
+    value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn errors_bound_untrusted_unicode_without_splitting_characters() {
+        let error = Failure::invalid("🦀".repeat(2000)).at("🦀".repeat(500));
+        assert!(error.message.len() <= 2048);
+        assert!(error.path.unwrap().len() <= 512);
     }
 }
