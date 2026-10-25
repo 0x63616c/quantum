@@ -35,6 +35,7 @@ pub struct EditorView {
     displayed: Option<FrameIdentity>,
     display_size: [u32; 2],
     camera_view: Option<Op>,
+    camera_fitted: bool,
     navigation_epoch: u64,
     interactive_render: bool,
     viewport: Rc<Cell<Bounds<Pixels>>>,
@@ -142,6 +143,7 @@ impl EditorView {
             displayed: None,
             display_size: [0, 0],
             camera_view: Some(Op::Frame),
+            camera_fitted: true,
             navigation_epoch: 0,
             interactive_render: false,
             editor,
@@ -298,6 +300,7 @@ impl EditorView {
         self.cursor = self.editor.snapshot().bounds.min;
         self.palette_index = 0;
         self.camera_view = Some(Op::Frame);
+        self.camera_fitted = true;
         let aspect = f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1));
         self.editor.camera = OrbitCamera::fit(self.editor.snapshot(), aspect.max(0.01));
         self.display_camera = self.editor.camera;
@@ -316,7 +319,6 @@ impl EditorView {
             .flat_map(|(_, items)| items.iter().copied())
             .filter(|op| {
                 *op != Op::Commands
-                    && *op != Op::ToolPicker
                     && (!self.tools_only
                         || matches!(
                             op,
@@ -411,6 +413,7 @@ impl EditorView {
                 };
                 self.editor.camera = OrbitCamera::fit_view(self.editor.snapshot(), aspect, view);
                 self.camera_view = Some(op);
+                self.camera_fitted = true;
                 self.request_render(cx);
             }
             Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker => {
@@ -643,6 +646,7 @@ impl EditorView {
                     self.editor.camera.orbit(dx, dy);
                 }
                 self.camera_view = None;
+                self.camera_fitted = false;
                 self.request_navigation(cx);
             }
             self.drag = Some(e.position);
@@ -1237,25 +1241,26 @@ impl EditorView {
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
                 };
                 this.editor.camera.zoom(delta);
+                this.camera_fitted = false;
                 this.request_navigation(cx);
                 cx.notify();
                 cx.stop_propagation();
             }))
     }
-    fn palette_panel(&self, cx: &Context<Self>) -> Div {
+    fn palette_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let palette = self.active_palette();
         let color = self.editor.color.rgba;
         let hex = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
         div()
             .flex_shrink_0()
-            .p(px(20.0))
+            .p(px(if compact { 12.0 } else { 20.0 }))
             .border_t_1()
             .border_color(t.line())
             .child(
                 row()
                     .justify_between()
-                    .mb(px(10.0))
+                    .mb(px(8.0))
                     .child(
                         row()
                             .id("palette-switch")
@@ -1277,7 +1282,7 @@ impl EditorView {
             .child(
                 div()
                     .id("swatch-scroll")
-                    .max_h(px(176.0))
+                    .max_h(px(if compact { 68.0 } else { 176.0 }))
                     .overflow_y_scroll()
                     .child(div().flex().flex_wrap().gap(px(4.0)).children(
                         palette.order.iter().enumerate().map(|(i, slot)| {
@@ -1312,7 +1317,7 @@ impl EditorView {
             )
             .child(
                 row()
-                    .mt(px(12.0))
+                    .mt(px(8.0))
                     .gap(px(8.0))
                     .text_color(t.muted())
                     .child(
@@ -1330,12 +1335,12 @@ impl EditorView {
                     .child(mono("[  ]")),
             )
     }
-    fn layers_panel(&self, cx: &Context<Self>) -> Div {
+    fn layers_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         div()
             .flex_shrink_0()
             .px(px(16.0))
-            .py(px(16.0))
+            .py(px(if compact { 8.0 } else { 16.0 }))
             .border_b_1()
             .border_color(t.line())
             .child(
@@ -1349,7 +1354,7 @@ impl EditorView {
             .child(
                 div()
                     .id("layer-scroll")
-                    .max_h(px(192.0))
+                    .max_h(px(if compact { 128.0 } else { 192.0 }))
                     .overflow_y_scroll()
                     .children(self.editor.snapshot().layers.iter().rev().enumerate().map(
                         |(i, layer)| {
@@ -1358,7 +1363,7 @@ impl EditorView {
                             let locked = layer.locked;
                             row()
                                 .id(("layer", i))
-                                .h(px(38.0))
+                                .h(px(if compact { 32.0 } else { 38.0 }))
                                 .px(px(8.0))
                                 .gap(px(9.0))
                                 .rounded(px(6.0))
@@ -1426,15 +1431,15 @@ impl EditorView {
                     )),
             )
     }
-    fn history_panel(&self, cx: &Context<Self>) -> Div {
+    fn history_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         div()
             .flex_1()
-            .min_h(px(188.0))
+            .min_h(px(if compact { 124.0 } else { 188.0 }))
             .flex()
             .flex_col()
-            .p(px(20.0))
-            .gap(px(14.0))
+            .p(px(if compact { 12.0 } else { 20.0 }))
+            .gap(px(if compact { 8.0 } else { 14.0 }))
             .child(
                 row()
                     .justify_between()
@@ -1447,6 +1452,7 @@ impl EditorView {
             .child(
                 div()
                     .id("history-scroll")
+                    .min_h(px(0.0))
                     .flex_1()
                     .overflow_y_scroll()
                     .children(
@@ -1492,17 +1498,19 @@ impl EditorView {
                                     } else {
                                         "Project ready"
                                     })
-                                    .child(
-                                        div()
-                                            .text_size(px(12.0))
-                                            .mt(px(4.0))
-                                            .text_color(t.muted())
-                                            .child(if self.editor.engine.head().is_none() {
-                                                "Your edits will appear here"
-                                            } else {
-                                                "Local editing history"
-                                            }),
-                                    ),
+                                    .when(!compact, |d| {
+                                        d.child(
+                                            div()
+                                                .text_size(px(12.0))
+                                                .mt(px(4.0))
+                                                .text_color(t.muted())
+                                                .child(if self.editor.engine.head().is_none() {
+                                                    "Your edits will appear here"
+                                                } else {
+                                                    "Local editing history"
+                                                }),
+                                        )
+                                    }),
                             ),
                     ),
             )
@@ -1514,7 +1522,7 @@ impl EditorView {
                     .border_color(t.line()),
             )
     }
-    fn sidebar(&self, cx: &Context<Self>) -> Stateful<Div> {
+    fn sidebar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         div()
             .id("sidebar-scroll")
@@ -1528,7 +1536,7 @@ impl EditorView {
             .flex_col()
             .child(
                 row()
-                    .h(px(52.0))
+                    .h(px(if compact { 40.0 } else { 52.0 }))
                     .flex_shrink_0()
                     .px(px(20.0))
                     .gap(px(9.0))
@@ -1539,9 +1547,9 @@ impl EditorView {
                     .child(div().flex_1())
                     .child(mono("Human").text_color(t.muted())),
             )
-            .child(self.history_panel(cx))
-            .child(self.layers_panel(cx))
-            .child(self.palette_panel(cx))
+            .child(self.history_panel(compact, cx))
+            .child(self.layers_panel(compact, cx))
+            .child(self.palette_panel(compact, cx))
     }
     fn statusbar(&self) -> Div {
         let t = self.theme;
@@ -1958,10 +1966,16 @@ impl Render for EditorView {
             (height * scale).round() as u32,
         ];
         if self.render_size != dimensions {
-            if self.render_size == [0, 0] {
-                self.editor.camera = OrbitCamera::fit(
+            if self.camera_fitted {
+                self.editor.camera = OrbitCamera::fit_view(
                     self.editor.snapshot(),
                     f64::from(dimensions[0]) / f64::from(dimensions[1].max(1)),
+                    match self.camera_view {
+                        Some(Op::Front) => PresetView::Front,
+                        Some(Op::Right) => PresetView::Right,
+                        Some(Op::Top) => PresetView::Top,
+                        _ => PresetView::Iso,
+                    },
                 );
                 self.display_camera = self.editor.camera;
             }
@@ -2031,7 +2045,7 @@ impl Render for EditorView {
                     .min_h(px(0.0))
                     .items_stretch()
                     .child(self.viewport(cx))
-                    .child(self.sidebar(cx)),
+                    .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
             .child(self.statusbar())
             .children(overlay.map(|overlay| {

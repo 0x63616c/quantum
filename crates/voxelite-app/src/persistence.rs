@@ -11,6 +11,10 @@ use voxelite_format::Project;
 pub(crate) type Fingerprint = [u8; 32];
 
 pub(crate) fn read(path: &Path) -> EditorResult<Vec<u8>> {
+    // Reject devices and FIFOs before open, which could otherwise block forever.
+    if !fs::metadata(path)?.is_file() {
+        return Err(EditorError::Gesture("Open a regular .voxl file".into()));
+    }
     let file = File::open(path)?;
     if !file.metadata()?.is_file() {
         return Err(EditorError::Gesture("Open a regular .voxl file".into()));
@@ -108,7 +112,9 @@ impl SaveTask {
             temporary.persist_noclobber(&path).map_err(|e| e.error)?;
         }
         #[cfg(unix)]
-        File::open(parent)?.sync_all()?;
+        File::open(parent)?.sync_all().map_err(|error| {
+            EditorError::Gesture(format!("File was written, but directory sync failed: {error}. Verify the saved file before retrying."))
+        })?;
         Ok(SavedProject {
             project: self.project,
             path,
