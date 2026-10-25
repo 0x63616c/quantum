@@ -16,3 +16,9 @@ Pro creative tool. References: Aseprite (dense, tool-first, shortcut-driven), Fi
 - Destructive actions styled as primary — 2026-10-24
 - Busy/cluttered or too sparse clip-art — 2026-10-24
 - MagicaVoxel .vox export (dropped from v1) — 2026-10-24
+
+## Theme direction (2026-10-24)
+Vercel / Stripe aesthetic. Dark mode = pure black #000 backgrounds, crisp 1px hairline borders (#1f1f1f–#2e2e2e), Geist / Geist Mono typography, restrained single accent, very clean. Light mode = pure white with matching hairlines. Applies to all concepts, the GPUI app theme and the marketing site. App is all-Rust GPUI (Zed-level native polish), not Tauri.
+
+## Positioning (2026-10-24)
+Voxelite is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a visible agent activity/session panel (live edits humans can watch).

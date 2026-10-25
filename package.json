@@ -1,0 +1,16 @@
+{
+  "name": "voxelite",
+  "version": "1.0.0",
+  "description": "Standalone Voxelite editor UI concepts",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build:concepts": "node scripts/build-concepts.mjs",
+    "render": "node scripts/render.mjs"
+  },
+  "keywords": [],
+  "type": "module",
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}
