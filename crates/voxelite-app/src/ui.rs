@@ -877,7 +877,8 @@ impl EditorView {
         let theme = self.theme;
         let enabled = self.enabled(op);
         // Frame is an action; the camera selector owns the persistent view state.
-        let selected = self.selected(op) && op != Op::Frame;
+        let selected = self.selected(op) && id != "view-fit";
+        let primary = id == "save";
         row()
             .id(id)
             .tooltip(move |_, cx| {
@@ -908,14 +909,25 @@ impl EditorView {
             })
             .when(enabled, |d| {
                 d.hover(move |d| {
-                    if selected {
+                    if primary {
+                        d.bg(theme.text().opacity(0.88))
+                            .text_color(theme.background())
+                    } else if selected {
                         d.bg(theme.selected())
                     } else {
                         d.bg(theme.hover()).text_color(theme.text())
                     }
                 })
             })
-            .when(!name.is_empty(), |d| d.child(icon(name)))
+            .when(!name.is_empty(), |d| {
+                d.child(icon(name).text_color(if !enabled {
+                    theme.disabled()
+                } else if selected {
+                    theme.accent()
+                } else {
+                    theme.muted()
+                }))
+            })
             .when(!label.is_empty(), |d| d.child(label))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -1108,10 +1120,79 @@ impl EditorView {
                     .px(px(20.0))
                     .font_weight(FontWeight::MEDIUM)
                     .bg(t.text())
-                    .text_color(t.background())
-                    .hover(move |d| d.bg(t.text().opacity(0.88)).text_color(t.background())),
+                    .text_color(t.background()),
             )
     }
+    /// Project the world axes with the displayed camera, not a fixed illustration.
+    fn orientation(&self, cx: &Context<Self>) -> Stateful<Div> {
+        let t = self.theme;
+        let (right, up, _) = self.display_camera.basis();
+        let axes = [
+            ("X", DVec3::X, Op::Right),
+            ("Y", DVec3::Y, Op::Top),
+            ("Z", DVec3::Z, Op::Front),
+        ]
+        .map(|(label, axis, op)| {
+            (
+                label,
+                [axis.dot(right) as f32 * 34.0, -axis.dot(up) as f32 * 34.0],
+                op,
+            )
+        });
+        div()
+            .id("orientation")
+            .absolute()
+            .top(px(12.0))
+            .right(px(12.0))
+            .size(px(104.0))
+            .cursor_default()
+            .child(
+                canvas(
+                    |_, _, _| (),
+                    move |bounds, _, window, _| {
+                        let center = bounds.origin + point(px(52.0), px(52.0));
+                        let mut path = PathBuilder::stroke(px(1.0));
+                        for (_, delta, _) in axes {
+                            path.move_to(center - point(px(delta[0] * 0.5), px(delta[1] * 0.5)));
+                            path.line_to(center + point(px(delta[0]), px(delta[1])));
+                        }
+                        if let Ok(path) = path.build() {
+                            window.paint_path(path, t.muted().opacity(0.55));
+                        }
+                    },
+                )
+                .size_full(),
+            )
+            .children(axes.into_iter().enumerate().map(|(i, (label, delta, op))| {
+                row()
+                    .id(("axis", i))
+                    .absolute()
+                    .left(px(36.0 + delta[0]))
+                    .top(px(36.0 + delta[1]))
+                    .size(px(32.0))
+                    .justify_center()
+                    .rounded_full()
+                    .cursor_pointer()
+                    .tooltip(hint(op.label(), t))
+                    .hover(move |d| d.bg(t.hover()))
+                    .child(
+                        row()
+                            .size(px(22.0))
+                            .justify_center()
+                            .rounded_full()
+                            .border_1()
+                            .border_color(t.line())
+                            .bg(t.background())
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child(label),
+                    )
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |this, _, window, cx| this.invoke(op, window, cx)))
+            }))
+            .on_mouse_move(|_, _, cx| cx.stop_propagation())
+    }
+
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         let bounds_cell = self.viewport.clone();
@@ -1151,7 +1232,7 @@ impl EditorView {
                         path.line_to(project(DVec3::new(f64::from(end), y, f64::from(a))));
                     }
                     if let Ok(path) = path.build() {
-                        window.paint_path(path, t.line().opacity(0.35));
+                        window.paint_path(path, t.line().opacity(0.24));
                     }
                 }
                 if let Some(image) = image {
@@ -1204,40 +1285,48 @@ impl EditorView {
                             Some(Op::Top) => "Top",
                             Some(Op::Frame) => "Isometric",
                             _ => "Orthographic",
-                        })
-                        .child(div().w(px(3.0)).h(px(3.0)).rounded_full().bg(t.muted()))
-                        .child("Studio lighting"),
+                        }),
                 ),
             )
+            .child(self.orientation(cx))
             .child(
                 div()
                     .absolute()
-                    .top(px(18.0))
-                    .right(px(20.0))
-                    .child(self.button("view-fit", "fit", "", Op::Frame, cx)),
-            )
-            .child(
-                div()
-                    .absolute()
-                    .bottom(px(66.0))
+                    .bottom(px(28.0))
                     .left(px(24.0))
                     .text_color(t.muted())
                     .text_size(px(12.0))
                     .child("Right-drag orbit · Shift-right-drag pan · Scroll zoom"),
             )
             .child(
-                div().absolute().bottom(px(14.0)).right(px(20.0)).child(
+                div().absolute().bottom(px(16.0)).right(px(24.0)).child(
                     row()
                         .gap(px(4.0))
                         .p(px(4.0))
                         .bg(t.background())
                         .border_1()
                         .border_color(t.line())
-                        .rounded(px(7.0))
-                        .child(self.button("view-iso", "cube", "Iso", Op::Frame, cx))
-                        .child(self.button("view-front", "cube", "Front", Op::Front, cx))
-                        .child(self.button("view-right", "cube", "Right", Op::Right, cx))
-                        .child(self.button("view-top", "cube", "Top", Op::Top, cx)),
+                        .rounded(px(8.0))
+                        .children(
+                            [
+                                ("view-iso", "Iso", Op::Frame),
+                                ("view-front", "Front", Op::Front),
+                                ("view-right", "Right", Op::Right),
+                                ("view-top", "Top", Op::Top),
+                            ]
+                            .map(|(id, label, op)| {
+                                self.button(id, "", label, op, cx)
+                                    .border_b_2()
+                                    .border_color(transparent_black())
+                                    .when(self.camera_view == Some(op), |d| {
+                                        d.bg(t.selected())
+                                            .text_color(t.accent())
+                                            .border_color(t.accent())
+                                    })
+                            }),
+                        )
+                        .child(div().h(px(20.0)).w(px(1.0)).mx(px(4.0)).bg(t.line()))
+                        .child(self.button("view-fit", "fit", "", Op::Frame, cx)),
                 ),
             )
             .on_mouse_move(cx.listener(Self::pointer_move))
@@ -1337,7 +1426,7 @@ impl EditorView {
             .flex_shrink_0()
             .px(px(PANEL_GUTTER))
             .pt(px(if compact { 8.0 } else { 16.0 }))
-            .pb(px(if compact { 12.0 } else { 20.0 }))
+            .pb(px(if compact { 8.0 } else { 20.0 }))
             .child(
                 row()
                     .justify_between()
@@ -1444,7 +1533,7 @@ impl EditorView {
                             let locked = layer.locked;
                             row()
                                 .id(("layer", i))
-                                .h(px(36.0))
+                                .h(px(if compact { 32.0 } else { 36.0 }))
                                 .px(px(8.0))
                                 .gap(px(8.0))
                                 .rounded(px(6.0))
@@ -1536,7 +1625,7 @@ impl EditorView {
         let empty = self.editor.engine.head().is_none();
         div()
             .flex_1()
-            .min_h(px(if compact { 132.0 } else { 204.0 }))
+            .min_h(px(if compact { 112.0 } else { 204.0 }))
             .flex()
             .flex_col()
             .px(px(PANEL_GUTTER))
@@ -1675,7 +1764,7 @@ impl EditorView {
             .flex_col()
             .child(
                 row()
-                    .h(px(if compact { 56.0 } else { 72.0 }))
+                    .h(px(if compact { 52.0 } else { 72.0 }))
                     .flex_shrink_0()
                     .px(px(PANEL_GUTTER))
                     .gap(px(12.0))
@@ -1759,7 +1848,7 @@ impl EditorView {
             .h(px(36.0))
             .px(px(10.0))
             .gap(px(10.0))
-            .rounded(px(5.0))
+            .rounded(px(6.0))
             .when(enabled, |d| d.cursor_pointer())
             .when(selected, |d| d.bg(t.hover()))
             .text_color(if enabled { t.text() } else { t.disabled() })
@@ -2003,23 +2092,23 @@ impl EditorView {
                 div()
                     .absolute()
                     .top(px(112.0))
-                    .right(px(18.0))
+                    .right(px(16.0))
                     .child(
                         self.floating()
-                            .w(px(280.0))
+                            .w(px(328.0))
                             .child(
-                                div()
-                                    .px(px(10.0))
-                                    .py(px(8.0))
-                                    .text_color(t.muted())
-                                    .text_size(px(12.0))
-                                    .child("CHOOSE PALETTE"),
+                                row()
+                                    .px(px(12.0))
+                                    .h(px(40.0))
+                                    .justify_between()
+                                    .child(section_title("Choose palette"))
+                                    .child(mono("Esc").text_color(t.muted())),
                             )
                             .child(
                                 div()
                                     .id("palette-results")
                                     .track_scroll(&self.palette_scroll)
-                                    .max_h(px(400.0))
+                                    .max_h(px(360.0))
                                     .overflow_y_scroll()
                                     .children(PALETTES.iter().enumerate().map(
                                         |(i, (name, preset))| {
@@ -2031,18 +2120,24 @@ impl EditorView {
                                                 .id(("preset", i))
                                                 .p(px(10.0))
                                                 .rounded(px(6.0))
-                                                .cursor_pointer()
-                                                .when(i == self.palette_cursor, |d| {
-                                                    d.bg(t.hover())
-                                                        .border_l_2()
-                                                        .border_color(t.accent())
+                                                .border_l_2()
+                                                .border_color(if i == self.palette_cursor {
+                                                    t.accent()
+                                                } else {
+                                                    t.background()
                                                 })
+                                                .cursor_pointer()
+                                                .when(i == self.palette_cursor, |d| d.bg(t.hover()))
                                                 .hover(move |d| d.bg(t.hover()))
                                                 .child(
                                                     row()
-                                                        .justify_between()
-                                                        .mb(px(9.0))
-                                                        .child(*name)
+                                                        .gap(px(8.0))
+                                                        .mb(px(8.0))
+                                                        .child(
+                                                            div()
+                                                                .font_weight(FontWeight::MEDIUM)
+                                                                .child(*name),
+                                                        )
                                                         .when(i == self.palette_index, |d| {
                                                             d.child(
                                                                 icon("check")
@@ -2052,22 +2147,40 @@ impl EditorView {
                                                         }),
                                                 )
                                                 .child(
-                                                    row()
-                                                        .h(px(9.0))
-                                                        .rounded(px(3.0))
-                                                        .overflow_hidden()
-                                                        .children(p.order.iter().take(32).map(
-                                                            |slot| {
-                                                                let c = p
-                                                                    .get(*slot)
-                                                                    .expect("valid palette")
-                                                                    .rgba;
-                                                                div().flex_1().h_full().bg(rgb(
-                                                                    u32::from(c[0]) << 16
-                                                                        | u32::from(c[1]) << 8
-                                                                        | u32::from(c[2]),
+                                                    div().flex().flex_wrap().gap(px(3.0)).children(
+                                                        p.order.iter().take(32).map(|slot| {
+                                                            div()
+                                                                .w(px(15.0))
+                                                                .h(px(14.0))
+                                                                .rounded(px(3.0))
+                                                                .border_1()
+                                                                .border_color(t.swatch_edge())
+                                                                .bg(color_fill(
+                                                                    p.get(*slot)
+                                                                        .expect("valid palette")
+                                                                        .rgba,
                                                                 ))
+                                                        }),
+                                                    ),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .mt(px(6.0))
+                                                        .text_size(px(12.0))
+                                                        .text_color(t.muted())
+                                                        .child(format!(
+                                                            "{} colors{}{}",
+                                                            p.order.len(),
+                                                            if preset.is_some() {
+                                                                " · Preset"
+                                                            } else {
+                                                                " · In this project"
                                                             },
+                                                            if p.order.len() > 32 {
+                                                                " · First 32 shown"
+                                                            } else {
+                                                                ""
+                                                            }
                                                         )),
                                                 )
                                                 .on_click(cx.listener(move |this, _, _, cx| {
@@ -2077,6 +2190,17 @@ impl EditorView {
                                                 }))
                                         },
                                     )),
+                            )
+                            .child(
+                                div()
+                                    .px(px(12.0))
+                                    .py(px(12.0))
+                                    .mt(px(4.0))
+                                    .border_t_1()
+                                    .border_color(t.line())
+                                    .text_size(px(12.0))
+                                    .text_color(t.muted())
+                                    .child("Applies to new voxels"),
                             ),
                     )
                     .into_any_element(),
@@ -2091,7 +2215,7 @@ impl EditorView {
                     .sum::<f32>();
             div()
                 .absolute()
-                .top(px(33.0))
+                .top(px(MENUBAR_HEIGHT))
                 .left(px(left))
                 .child(
                     self.floating().w(px(310.0)).children(
