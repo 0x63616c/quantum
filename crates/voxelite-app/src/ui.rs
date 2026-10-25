@@ -1,5 +1,6 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
 mod palettes;
+mod share;
 use crate::{
     actions::{MENUS, Op},
     theme::Theme,
@@ -30,6 +31,7 @@ struct FrameIdentity {
 
 pub struct EditorView {
     palettes: palettes::PaletteManager,
+    sharing: share::Sharing,
     editor: Editor,
     theme: Theme,
     focus: FocusHandle,
@@ -197,6 +199,7 @@ impl EditorView {
         }
         Self {
             palettes,
+            sharing: share::Sharing::new(cx),
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
             document_generation: 0,
@@ -463,6 +466,7 @@ impl EditorView {
             Op::Open => self.open_dialog(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
+            Op::Share => self.open_share(cx),
             Op::Undo => {
                 let r = self.editor.undo();
                 self.report(r, "Undone", cx);
@@ -737,11 +741,13 @@ impl EditorView {
         let key = e.keystroke.key.as_str();
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
-                || self.palettes.hex.read(cx).focused(window))
+                || self.palettes.hex.read(cx).focused(window)
+                || self.sharing.person.read(cx).focused(window))
         {
             return;
         }
         if key == "escape" {
+            self.sharing.open = false;
             self.palettes.open = false;
             window.focus(&self.focus, cx);
             self.menu = None;
@@ -758,7 +764,7 @@ impl EditorView {
             cx.notify();
             return;
         }
-        if self.palettes.open {
+        if self.palettes.open || self.sharing.open {
             cx.stop_propagation();
             return;
         }
@@ -1129,6 +1135,11 @@ impl EditorView {
                 Op::Theme,
                 cx,
             ))
+            .child(
+                self.button("share", "", "Share", Op::Share, cx)
+                    .border_1()
+                    .border_color(t.line()),
+            )
             .child(
                 self.button("save", "", "Save", Op::Save, cx)
                     .h(px(36.0))
@@ -1906,6 +1917,9 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        if self.sharing.open && !self.dialog_open {
+            return Some(self.share_popover(cx));
+        }
         if self.palettes.open && !self.dialog_open {
             return Some(self.palette_manager(cx));
         }
@@ -2276,6 +2290,9 @@ impl Render for EditorView {
         self.palettes
             .hex
             .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.sharing
+            .person
+            .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
         let height =
@@ -2340,6 +2357,7 @@ impl Render for EditorView {
                 || self.info.is_some()
                 || self.dialog_open
                 || self.palettes.open
+                || self.sharing.open
             {
                 "Modal"
             } else {
@@ -2381,6 +2399,7 @@ impl Render for EditorView {
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(|this, _, _, cx| {
+                            this.sharing.open = false;
                             this.palettes.open = false;
                             this.menu = None;
                             this.palette_open = false;
