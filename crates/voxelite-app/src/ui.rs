@@ -160,6 +160,8 @@ impl EditorView {
         self.render_pending = false;
         let snapshot = self.editor.engine.snapshot();
         let camera = self.editor.camera;
+        let document_id = snapshot.id;
+        let revision = self.editor.engine.revision();
         let interactive = self.interactive_render;
         let options = RenderOptions {
             width: if interactive {
@@ -184,7 +186,9 @@ impl EditorView {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
-                // Show each completed navigation frame, then coalesce to the newest camera.
+                // Never install a render from a replaced document or an older edit.
+                if this.editor.engine.document().id == document_id
+                    && this.editor.engine.revision() == revision
                 {
                     match result {
                         Ok(mut frame) => {
@@ -1376,8 +1380,11 @@ impl EditorView {
                 }
             }))
     }
-    fn floating(&self) -> Div {
+    fn floating(&self) -> Stateful<Div> {
         div()
+            .id("floating-panel")
+            .occlude()
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .bg(self.theme.background())
             .border_1()
             .border_color(self.theme.line())
@@ -1676,7 +1683,18 @@ impl Render for EditorView {
                     .absolute()
                     .size_full()
                     .occlude()
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, _, _, cx| {
+                            this.menu = None;
+                            this.palette_open = false;
+                            this.command_open = false;
+                            this.info = None;
+                            this.pending = None;
+                            cx.stop_propagation();
+                            cx.notify();
+                        }),
+                    )
                     .child(overlay)
             }))
     }
