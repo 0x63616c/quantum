@@ -50,5 +50,5 @@ wasm-bindgen = { version = "0.2.120", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
 futures-channel = { version = "0.3", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "HtmlInputElement", "HtmlAnchorElement", "FileList", "File", "Blob", "BlobPropertyBag", "Url", "Storage", "Event", "EventTarget", "Location"] }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "HtmlInputElement", "HtmlAnchorElement", "FileList", "File", "Blob", "BlobPropertyBag", "Url", "Storage", "Event", "EventTarget", "Location", "BeforeUnloadEvent"] }
 uuid = { workspace = true, features = ["js"] }

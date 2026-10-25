@@ -66,8 +66,9 @@ impl EditorView {
                 let frame = voxelite_render::render(
                     self.editor.snapshot(),
                     &RenderOptions {
-                        width: 1440,
-                        height: 1080,
+                        width: 1024,
+                        height: 768,
+                        view: View::Camera(self.editor.camera.camera()),
                         background: if self.theme == Theme::Dark {
                             [0, 0, 0, 255]
                         } else {

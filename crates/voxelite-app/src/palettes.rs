@@ -117,6 +117,32 @@ pub fn parse_color(text: &str) -> EditorResult<Swatch> {
     }
     Ok(palette.slots[0].color.clone())
 }
+/// Persist browser settings in origin-local storage.
+#[cfg(all(feature = "web", target_family = "wasm"))]
+pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
+    crate::web::store(&path.to_string_lossy(), bytes)
+}
+
+/// Read bounded settings bytes, or `None` if no settings have been saved.
+pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
+    #[cfg(not(target_family = "wasm"))]
+    let bytes = {
+        if !path.exists() {
+            return Ok(None);
+        }
+        if std::fs::metadata(path)?.len() > 4 * 1024 * 1024 {
+            return Err(EditorError::Gesture("Settings file too large".into()));
+        }
+        Some(std::fs::read(path)?)
+    };
+    #[cfg(target_family = "wasm")]
+    let bytes = crate::web::load(&path.to_string_lossy())?;
+    if bytes.as_ref().is_some_and(|b| b.len() > 4 * 1024 * 1024) {
+        return Err(EditorError::Gesture("Settings file too large".into()));
+    }
+    Ok(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,30 +216,4 @@ mod tests {
         assert_eq!(Palette::from_hex(&p.to_hex()).unwrap(), p);
         assert_eq!(Palette::from_gpl(&p.to_gpl("Studio").unwrap()).unwrap(), p);
     }
-}
-
-/// Persist browser settings in origin-local storage.
-#[cfg(all(feature = "web", target_family = "wasm"))]
-pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
-    crate::web::store(&path.to_string_lossy(), bytes)
-}
-
-/// Read bounded settings bytes, or `None` if no settings have been saved.
-pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
-    #[cfg(not(target_family = "wasm"))]
-    let bytes = {
-        if !path.exists() {
-            return Ok(None);
-        }
-        if std::fs::metadata(path)?.len() > 4 * 1024 * 1024 {
-            return Err(EditorError::Gesture("Settings file too large".into()));
-        }
-        Some(std::fs::read(path)?)
-    };
-    #[cfg(target_family = "wasm")]
-    let bytes = crate::web::load(&path.to_string_lossy())?;
-    if bytes.as_ref().is_some_and(|b| b.len() > 4 * 1024 * 1024) {
-        return Err(EditorError::Gesture("Settings file too large".into()));
-    }
-    Ok(bytes)
 }

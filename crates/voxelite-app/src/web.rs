@@ -24,12 +24,38 @@ pub(crate) fn store(key: &str, bytes: &[u8]) -> EditorResult<()> {
 }
 
 pub(crate) fn load(key: &str) -> EditorResult<Option<Vec<u8>>> {
-    Ok(web_sys::window()
-        .unwrap()
-        .local_storage()
+    let Some(storage) = web_sys::window().unwrap().local_storage().map_err(error)? else {
+        return Ok(None);
+    };
+    Ok(storage
+        .get_item(key)
         .map_err(error)?
-        .and_then(|storage| storage.get_item(key).ok().flatten())
         .map(String::into_bytes))
+}
+
+thread_local! {
+    static UNSAVED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+pub(crate) fn set_unsaved(unsaved: bool) {
+    UNSAVED.set(unsaved);
+}
+
+fn protect_unsaved_edits() -> Result<(), JsValue> {
+    let callback = Closure::<dyn FnMut(web_sys::BeforeUnloadEvent)>::new(
+        |event: web_sys::BeforeUnloadEvent| {
+            if UNSAVED.get() {
+                event.prevent_default();
+                event.set_return_value("");
+            }
+        },
+    );
+    web_sys::window()
+        .unwrap()
+        .add_event_listener_with_callback("beforeunload", callback.as_ref().unchecked_ref())?;
+    // One listener lives for the lifetime of this browser application.
+    callback.forget();
+    Ok(())
 }
 
 type Upload = Option<(String, Vec<u8>)>;
@@ -126,6 +152,7 @@ pub(crate) fn download(name: &str, mime: &str, bytes: &[u8]) -> EditorResult<()>
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     gpui_web::init_logging();
+    protect_unsaved_edits()?;
     let query = web_sys::window().unwrap().location().search()?;
     let backend = if query.contains("backend=webgl") {
         gpui_web::WebBackendPreference::WebGl
