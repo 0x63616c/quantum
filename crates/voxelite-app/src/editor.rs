@@ -797,4 +797,90 @@ mod tests {
         .unwrap();
         assert!(image.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
     }
+    #[test]
+    fn foreign_layer_hit_is_not_silently_edited() {
+        let mut e = editor();
+        e.apply_at([2, 2, 2]).unwrap();
+        e.add_layer().unwrap();
+        e.tool = Tool::Erase;
+        let before = e.engine.document().clone();
+        let ray = Ray {
+            origin: DVec3::new(2.5, 2.5, 40.0),
+            direction: DVec3::NEG_Z,
+        };
+        assert!(e.click(ray, false).is_err());
+        assert_eq!(e.engine.document(), &before);
+        assert!(!e.click(ray, true).unwrap());
+    }
+    #[test]
+    fn save_preserves_forward_metadata_and_portable_view() {
+        let base = editor();
+        let project = Project::new(base.engine.document().clone()).unwrap();
+        let mut json: serde_json::Value =
+            serde_json::from_slice(&project.to_bytes().unwrap()).unwrap();
+        json["future_extension"] = serde_json::json!({"note": "retain me"});
+        json["view"] = serde_json::json!({"camera": "iso"});
+        let mut e = Editor::new(
+            voxelite_format::read(serde_json::to_vec(&json).unwrap().as_slice()).unwrap(),
+            None,
+        )
+        .unwrap();
+        e.apply_at([1, 2, 3]).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("metadata.voxl");
+        e.save(&path).unwrap();
+        let saved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(saved["future_extension"], json["future_extension"]);
+        assert_eq!(saved["view"], json["view"]);
+    }
+    #[test]
+    fn full_palette_failure_is_atomic_including_history() {
+        let mut e = editor();
+        let commands = (2..=256)
+            .map(|slot| {
+                Command::Palette(PaletteEdit::Add {
+                    slot: Some(slot),
+                    color: Swatch::rgb(0, (slot - 1) as u8, 0),
+                })
+            })
+            .collect();
+        e.execute("Fill palette", Command::Batch(commands)).unwrap();
+        let before = e.engine.document().clone();
+        let revision = e.engine.revision();
+        e.color = Swatch::rgb(123, 45, 67);
+        assert!(e.apply_at([1, 1, 1]).is_err());
+        assert_eq!(e.engine.document(), &before);
+        assert_eq!(e.engine.revision(), revision);
+    }
+    #[test]
+    fn hidden_layers_and_background_picker_leave_color_unchanged() {
+        let mut e = editor();
+        e.apply_at([2, 2, 2]).unwrap();
+        e.update_layer(e.layer, Some(false), None).unwrap();
+        let ray = Ray {
+            origin: DVec3::new(2.5, 2.5, 40.0),
+            direction: DVec3::NEG_Z,
+        };
+        assert!(raycast(e.snapshot(), ray).is_none());
+        e.color = Swatch::rgb(23, 45, 67);
+        let color = e.color.clone();
+        assert!(!e.click(ray, true).unwrap());
+        assert_eq!(e.color, color);
+        assert!(e.apply_at([2, 2, 2]).is_err());
+    }
+    #[test]
+    fn projection_and_raycast_agree_across_orbits() {
+        let mut e = editor();
+        e.apply_at([15, 15, 15]).unwrap();
+        let mut camera = OrbitCamera::fit(e.snapshot(), 1.4);
+        for step in 0..80 {
+            camera.yaw = f64::from(step) * 0.13;
+            camera.pitch = -1.3 + f64::from(step % 20) * 0.13;
+            let uv = camera.project(DVec3::splat(15.5), 1.4);
+            let hit = raycast(e.snapshot(), camera.ray(uv, 1.4).unwrap()).unwrap();
+            assert_eq!(hit.at, [15; 3]);
+            assert_eq!(hit.normal.iter().map(|v| v.abs()).sum::<i32>(), 1);
+        }
+    }
 }
