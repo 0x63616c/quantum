@@ -1,5 +1,8 @@
 # Native GPUI stage verification
 
+The latest [app polish round 1](../reviews/app-polish-1.md) records visual scores,
+typography and layout refinements, and fresh native captures in both themes.
+
 The subsequent [app review round 1](../reviews/app-review-1.md) records the latest
 fixes, **96 passing workspace tests**, minimum-window and high-density captures,
 and native dialog regression checks. The stage evidence below is historical.

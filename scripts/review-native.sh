@@ -78,6 +78,22 @@ capture tools
 xdotool type --clearmodifiers 'paint'
 xdotool key Return
 wait_title 'Autumn Workshop — Voxelite'
+# Camera-axis controls must navigate without placing a voxel through the overlay.
+xdotool mousemove 632 174 click 1
+sleep 4
+capture axis-right
+wait_title 'Autumn Workshop — Voxelite'
+xdotool mousemove 608 126 click 1
+sleep 4
+capture axis-top
+wait_title 'Autumn Workshop — Voxelite'
+search 'frame model'
+sleep 4
+# Mirror controls disclose only while active; command search remains the entry.
+search 'mirror x'
+capture mirror-active
+search 'mirror x'
+wait_title 'Autumn Workshop — Voxelite'
 search 'choose palette'
 xdotool key Down Down Down Down Down Down Down
 capture palettes
@@ -131,6 +147,20 @@ wait_title 'Autumn Workshop • — Voxelite'
 xdotool key ctrl+n Left Left Return
 wait_title 'Untitled — Voxelite'
 stop_app
+# Inspect preset previews and the truthful local-session guide in both themes.
+for theme in dark light; do
+  start_app 1 "$theme"
+  xdotool windowsize "$window" 1440 900
+  sleep 6
+  search 'choose palette'
+  capture "palette-$theme"
+  xdotool key Escape
+  xdotool mousemove 1200 302 click 1
+  capture "guide-$theme"
+  xdotool key Escape
+  wait_title 'Autumn Workshop — Voxelite'
+  stop_app
+done
 # Boundary layout: 128-byte names, 64 layers and all 256 palette slots.
 python3 - "$XDG_RUNTIME_DIR/boundary.voxl" <<'PYBOUNDARY'
 import json,sys,uuid
