@@ -198,17 +198,14 @@ export async function renderConceptA(browser, root, output) {
     await page.keyboard.press("Escape");
     await page.locator('[data-pin="1"]').click();
     assert.equal(await page.locator("#comments-panel").isVisible(), true);
-    assert.equal(
-      await page.locator(".mcp-note").textContent(),
-      "MCP · comments.reply",
-    );
+    assert.equal(await page.locator(".mcp-note").count(), 0);
+    assert.ok(await page.locator('.thread-meta .agent-avatar').isVisible());
     assert.ok(
       await page
         .locator(".sidebar")
         .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
       "Comments sidebar overflow",
     );
-    assert.ok(await page.locator('.mcp-note').isVisible());
     assert.equal(await page.locator('.viewport .pin-thread,.comment-anchor').count(), 0);
     assert.equal(await page.getByText('Could the canopy feel a little less symmetrical?', {exact:true}).count(), 1);
     const threadBox = await page.locator('.pin-thread').boundingBox();
@@ -235,7 +232,7 @@ export async function renderConceptA(browser, root, output) {
     await page.locator("[data-timeline]").fill("4");
     assert.ok((await count(page)) < 2079);
     assert.ok(await page.locator('.tool-picker').isDisabled());
-    assert.equal(await page.locator('[data-action="save-version"]').textContent(), 'Save preview');
+    assert.equal(await page.locator('[data-action="save-version"]').textContent(), 'Name version');
     const previewTool = await page.locator('[data-current-tool]').textContent();
     const previewCount = await count(page);
     await page.keyboard.press('p');
