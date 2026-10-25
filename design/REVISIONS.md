@@ -260,3 +260,59 @@ Visual review of all six PNGs against ART-CHECKLIST.md: black/white surfaces, re
 - **Precision modelling, post-v1 unless trivial.** CAD-style dimensions, measurements, snapping and numeric input; scope and exact interaction contract remain to be defined with the maintainer. No speculative precision controls in the default concept.
 
 These requirements supersede the earlier runtime-plugin exclusion and the previous recommendation to start with B. A's layout is the selected design direction. They are product/roadmap requirements; the HTML study does not implement the production GPUI app, service, MCP transport or WASM runtime.
+
+## Declutter round 1
+
+Completed **round 1 of 3**, on concept A only. The incoming three HTML files, six PNGs and README were verified and preserved in `design/concepts/history/v5/` before changes. B/C's HTML and PNG hashes remain identical to the incoming files; v1–v4 are unchanged. Work stayed on `master`; no changes were made to the separate plan branch or checkout.
+
+The earlier 8.8 scores for A were too generous against the owner's current brief. The three chrome bands, always-visible tool rail, 36 swatches, repeated document copy and expanded agent coordinates still read as a dated editor. The palette selector offered one choice. Those are structural problems, not problems solved by changing an accent or rounding the same panels.
+
+**What changed:** A now uses a 32px native-style menu bar and one 64px unified toolbar above a 1,272 × 874px viewport, with a 328px sidebar. The old tool rail, document tab band, mirror strip, export buttons and horizontal palette deck are gone. File, Edit, View, Tools, Layers, Palette, Agent, Extensions and Help have real dropdowns, shortcuts, separators and submenus, with context menus for the viewport, layers and palette. Secondary actions live there or in overflow. The toolbar carries one tool picker, command search, subtle synthetic presence, Comments, History and Share. Repeated document labels were removed.
+
+The sidebar uses Session/Comments segmented tabs, generous spacing and few rules. The session retains the current operation, follow/pause, two recent steps and actual three-angle captured geometry. Step diffs, coordinates and per-step undo are disclosed only on expansion. Palette and layers remain compact below. Pure black/white base surfaces, embedded Geist/Geist Mono, one blue accent, 1px hairlines, 6–8px controls and translucent blurred surfaces replace the former hard panel stack. Shadows are restricted to floating menus/popovers/dialogs and pins. This is CSS approximation of native vibrancy, not a claim of macOS material APIs.
+
+The palette manager supports custom create/rename/duplicate/delete, swatch add/remove/reorder and validated hex edits. Presets include exact PICO-8, Endesga 32 and Sweetie 16 values, plus a mathematically defined 16-step grayscale; source links are in the concept README. Presets can be duplicated. Active palettes stay in a two-row scrollable area. Custom data persists in local storage; deleting the final custom palette falls back to a preset. Actual browser-generated `.hex` and `.gpl` downloads round-trip through the import parser. Invalid input leaves existing palettes intact. Palette selection does not unexpectedly recolor the cottage.
+
+Three subtle pins anchor to actual voxel coordinates and follow camera projection. The Comments tab lists threads; a pin opens replies, resolve/reopen and a reply field. The fixture includes a visible `MCP · comments.reply` agent response. Right-click picking can create a new anchored thread. Sharing has view/comment/remix segments, copy/fallback and two synthetic human avatars plus an agent; the reserved `.example` link and preview note make its unconnected state explicit.
+
+History reconstructs the model from immutable fixture geometry at each of eight edits, with human circles and agent diamonds. The mid-way capture is step 4: **1,816 voxels**, before the tree; the default is **2,079**. Returning/closing restores the live geometry and revision rather than committing a scrub. Named versions save current geometry, restore explicitly, compare added/removed cells with solid/dashed spatial overlays, and create a separate in-memory branch snapshot with parent/version lineage. The subtle branch name does not imply Git integration. Extensions and the tool picker's Custom → Scatter moss entry illustrate the requested plugin direction without a permanent plugin panel.
+
+**Corrections made during inspection:** the first default sidebar clipped palette metadata; spacing was reduced without reducing type. The first Comments state also pushed the palette down; the comment list now has its own bounded scroll region. Removed the palette tagline and redundant comment instructions. Moved the history popover to avoid an exposed strip of sidebar alongside it. Added scroll bounds for larger palettes/threads, fixed arrow navigation for palettes shorter than eight swatches, and verified the final-custom-palette deletion case. The full render suite passes after these corrections.
+
+**Per-PNG review:** opened and inspected all twelve final A PNGs individually, including both themes for every state. Scores assess design quality against this expanded brief, not production readiness. They deliberately leave room for the next two rounds.
+
+| PNG | Score / 10 | Harsh critique |
+| --- | --- | --- |
+| [A dark](concepts/png/concept-a-dark.png) | 8.3 | Viewport dominates and the session is calm. Pure black makes sidebar vibrancy almost imperceptible; captured views are still too small for close review. |
+| [A light](concepts/png/concept-a-light.png) | 8.4 | White space and neutral selections work well. The floor grid is faint and the small clock/comment icons rely on tooltips for first-use discovery. |
+| [A dark — menu](concepts/png/concept-a-dark-menu.png) | 8.5 | Proper shortcut alignment and separators replace fake menu buttons. The dark material is restrained, but hover/focus and submenu motion still need native-platform review. |
+| [A light — menu](concepts/png/concept-a-light-menu.png) | 8.6 | Clean floating boundary and readable shortcuts; no panel clutter. The shadow is slightly stronger than necessary on white. |
+| [A dark — palettes](concepts/png/concept-a-dark-palettes.png) | 8.3 | Custom/preset navigation and editing are clear. The small reorder/delete/add row could be more discoverable; a long preset library will need search. |
+| [A light — palettes](concepts/png/concept-a-light-palettes.png) | 8.4 | Strong color/selection legibility with a neutral destructive action. Name appears in both heading and edit field; inline rename could remove that duplication in round 2. |
+| [A dark — comments](concepts/png/concept-a-dark-comments.png) | 7.9 | Anchoring and human/agent authorship are clear, and the palette now fits. The open thread covers part of the very canopy being discussed; the selected message repeats in the sidebar and popover. |
+| [A light — comments](concepts/png/concept-a-light-comments.png) | 8.0 | Thread, reply, resolve and MCP note read cleanly. The large white popover interrupts the silhouette; test alternate placement or a docked thread for longer conversations. |
+| [A dark — share](concepts/png/concept-a-dark-share.png) | 8.3 | Permission segments and copy action are calm. The truncated preview link hides destination details; the meaning of remix will need concise product help. |
+| [A light — share](concepts/png/concept-a-light-share.png) | 8.4 | Clear selected permission, good spacing and readable presence. It obscures session status while open; production collaboration still needs offline/error/revocation states. |
+| [A dark — history](concepts/png/concept-a-dark-history.png) | 8.0 | Scrubbing visibly removes the tree and preserves the cottage. The history popover is tall, hides the session, and offers three repeated actions per named version. |
+| [A light — history](concepts/png/concept-a-light-history.png) | 8.1 | Timeline origin shapes and named-version hierarchy are understandable. The native range track is visually heavier than surrounding hairlines; a large history needs search/grouping. |
+
+The four preserved B/C reference PNGs were also opened and inspected. Their prior visual limitations and scores remain historical; this round did not revise or re-score them.
+
+**Checklist recheck:**
+
+| Item | Round 1 result |
+| --- | --- |
+| No clutter; secondary actions in menus | Default has no open menus/dialogs/details. One tool picker, a compact palette and progressive disclosure replace dense always-visible controls. History/comments deliberately spend more space only when opened. |
+| No fixed single palette | Custom palettes, four exact preset lists, editable swatches and valid `.hex`/`.gpl` interchange are exercised in-browser. |
+| No dated editor chrome | Unified toolbar, segmented tabs, restrained modern popovers and blur; no bevels, heavy stacked panels or tiny tool grid. Native material fidelity remains a GPUI implementation task. |
+| No redundant / over-explaining copy | Removed duplicate document titles, viewport study label, palette tagline and comment instructions. Some heading/form and selected-thread duplication remains noted above. |
+| No flat generic dashboard | The original detailed cottage and editor workflow lead; no metric cards or generic dashboard content. |
+| No jagged UI / renders | SVG UI and DPR-2 antialiased procedural geometry remain crisp. Voxel edges are intentionally cubic. |
+| No primary destructive actions | Delete, undo, restore and resolve remain neutral; no destructive accent-filled action. |
+| No busy clutter or sparse clip-art | Viewport area increases, original cottage lighting/AO stays intact, and real evidence remains accessible. Long-session/list density needs further review. |
+| No MagicaVoxel export | Only `.voxl`, GLB, PNG and palette interchange appear; no `.vox` export. |
+| Theme / type / agent strengths | Pure #000/#fff bases, local Geist, 12px minimum visible metadata, one accent, hairlines, live fixture, per-step undo, captured angles, follow-agent and working ⌘K. |
+
+**Verification:** `npm run build:concepts`, `npm run render` and `git diff --check` pass. A produces twelve 3200 × 2000 PNGs with no text/EXIF chunks. Browser checks cover no network requests/errors, font loading, minimum text size, at least 4.5:1 text-token contrast on base/floating surfaces, sidebar/floating-layer containment and three distinct rendered angles. Interaction checks exercise menu keyboard/submenus/context menus, palette editing and last-custom deletion/reload, file import validation and exact downloaded export bytes, short-palette keyboard wrapping, real geometry undo/scrub/restore/compare/branch, capture immutability, projected pins/hidden layers, picked-voxel comment creation, replies/resolve/reopen/filters, share permissions and clipboard fallback, and command search. B/C's existing checks pass without writing their PNGs. v5 matches the incoming Git blobs byte-for-byte; B/C file hashes remain unchanged. No personal information was added to fixtures, docs or assets.
+
+**Scope and next review:** round 1 is complete; rounds 2 and 3 remain pending. Comments/versions/branch lineage are local in-memory fixtures; palettes persist locally and files download for real. Sharing/presence, MCP transport, WASM plugins, Git and production editing are not connected implementations. The README identifies preview-only project/layer/extension operations. Future reviews should test native materials, pin occlusion/placement, long lists and threads, accessible control states, smaller windows and a genuine GPUI/plugin host. PLAN.md now carries the requested open-core/plugin, collaboration, history/version, Git and precision requirements without treating this HTML prototype as shipped product functionality.
