@@ -38,10 +38,10 @@ export async function renderConceptA(browser,root,output) {
     assert.ok(await page.locator('.sidebar').evaluate(el=>el.scrollHeight<=el.clientHeight+1),'Default sidebar overflow');
     assert.equal(await page.locator('details[open]').count(),0);
     await capture('');
-    await menu(page,'Palette');assert.equal(await page.getByRole('menu',{name:'Palette',exact:true}).isVisible(),true);await capture('menu');
-    await menuItem(page,'Manage palettes…').click();assert.ok(await page.locator('.palette-dialog').evaluate(el=>el.open));await capture('palettes');
+    await menu(page,'File');assert.equal(await page.getByRole('menu',{name:'File',exact:true}).isVisible(),true);await capture('menu');
+    await page.keyboard.press('Escape');await menu(page,'Palette');await menuItem(page,'Manage palettes…').click();assert.ok(await page.locator('.palette-dialog').evaluate(el=>el.open));await capture('palettes');
     await page.keyboard.press('Escape');
-    await page.locator('[data-pin="1"]').click();assert.equal(await page.locator('#comments-panel').isVisible(),true);assert.equal(await page.locator('.mcp-note').textContent(),'MCP · comments.reply');await capture('comments');
+    await page.locator('[data-pin="1"]').click();assert.equal(await page.locator('#comments-panel').isVisible(),true);assert.equal(await page.locator('.mcp-note').textContent(),'MCP · comments.reply');assert.ok(await page.locator('.sidebar').evaluate(el=>el.scrollHeight<=el.clientHeight+1),'Comments sidebar overflow');await capture('comments');
     await page.locator('[data-tab="session"]').click();await page.locator('[data-action="share"]').click();await capture('share');
     await page.locator('[data-close="share"]').click();await page.locator('[data-action="history"]').click();
     await page.locator('[data-timeline]').fill('4');assert.ok(await count(page)<2079);await capture('history');

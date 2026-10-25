@@ -110,18 +110,19 @@
     cube.layer === 'Canopy' ? (cube.y <= 10 ? 5 : 6) :
     cube.layer === 'Roof' ? 3 : cube.layer === 'Cottage' ? 2 : cube.y < 3 ? 1 : 4;
   let comparison = null, pickFaces = [];
-  const snapshot = (items, step) => Object.assign([...items], {step});
+  const snapshot = (items, step) => Object.assign([...items], {step, revision});
   if (modern) {
     window.__currentHistoryStep = 8;
-    window.__historySnapshot = step => snapshot([...fullFixture.values()].filter(c => stageOf(c) <= step), step);
+    window.__historySnapshot = step => Object.assign(snapshot([...fullFixture.values()].filter(c => stageOf(c) <= step), step), {revision:10 + step});
     window.__sceneSnapshot = () => snapshot(cubes.values(), window.__currentHistoryStep);
-    window.__loadSnapshot = values => {
+    window.__loadSnapshot = (values, commit = false) => {
       cubes.clear(); values.forEach(c => cubes.set(key(c.x,c.y,c.z),c));
       window.__currentHistoryStep = values.step ?? 8;
       for (const [id,group] of Object.entries(historyGroups)) {
         if (group.every(c => cubes.has(key(c.x,c.y,c.z)))) undone.delete(id); else undone.add(id);
       }
-      revision++; updateCaptureState(); window.__updateSelection(); draw();
+      revision = commit ? revision + 1 : values.revision ?? revision;
+      updateCaptureState(); window.__updateSelection(); draw();
     };
     window.__setHistory = step => window.__loadSnapshot(window.__historySnapshot(Number(step)));
     window.__compareScene = values => {

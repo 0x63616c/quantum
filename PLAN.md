@@ -13,11 +13,19 @@ Status: implementation specification; no application code is claimed complete. F
 - Follow [design/ART-CHECKLIST.md](design/ART-CHECKLIST.md) throughout implementation and review. Ship an art-quality example model, not placeholder cubes.
 - Publish source, build instructions, schemas, examples, and release artifacts without personal information. Deploy the web editor and a separate marketing website to Vercel.
 
+### Open core and new product requirements (2026-10-25)
+
+Voxelite is **an open Linux-like thing**: a tiny open core with nearly everything—including built-in editing tools—implemented as plugins humans and agents can swap, fork and extend. Likely use sandboxed WASM; prove the native/web runtime and stable host interface at M0. Plugins add tools, brushes, palettes, importers/exporters, panels, toolbar buttons, menus, commands and MCP tools. Network calls to external APIs are allowed. Local plugins just run; use only a lightweight one-time prompt for network access or files outside the project. An agent can author, register and use a new tool through MCP at runtime.
+
+Concept A now sets the visual direction: modern macOS Sonoma/Sequoia vibrancy and unified toolbar, shadcn-style dropdown/popover/dialog components, 6–8px radii, pure black/white surfaces, Geist and one accent. Native-style menus and context menus hold secondary actions. Keep palette management, comment threads, sharing and history progressively disclosed. This supersedes earlier Aseprite-density guidance without changing the all-Rust GPUI production stack.
+
+Required additions: voxel/region-anchored 3D comments with threads, replies, resolve/reopen and MCP list/read/reply/resolve tools; share links with view/comment/remix permissions; scrubbable history with human/agent markers; named versions with save/restore/compare/branch and corresponding MCP tools. Keep exact custom/preset palette values and `.hex`/`.gpl` round trips. Coordinate history previews must preserve the live document until an explicit restore.
+
 ### Non-goals
 
-Agent-host integration packages (Cursor plugin, Codex CLI setup, Claude Code/Desktop setup) and repository skills are in scope; the runtime-plugin exclusion below does not apply to them.
+The 2026-10-25 product additions in [design/REVISIONS.md](design/REVISIONS.md#product-requirements-2026-10-25) supersede the former runtime-plugin exclusion. Agent-host integration packages and editor runtime plugins are both in scope, with different responsibilities.
 
-Animation/timelines, rigging, sculpting, arbitrary meshes, texture painting, transparent voxel materials, physics, third-party editor runtime plugins, cloud accounts/storage, multi-user collaboration, mobile editing, and native Windows/Linux releases are outside v1. No MagicaVoxel `.vox` import or export. Aseprite informs workflow, not copied code, branding, icons, or artwork. No Electron, JavaScript editor implementation, or alternate web UI.
+Animation timelines (distinct from scrubbable edit history), rigging, sculpting, arbitrary meshes, texture painting, transparent voxel materials, physics, hosted cloud accounts/storage, mobile editing, and native Windows/Linux releases are outside v1. Real-time multi-user collaboration/presence is likely v2; share links with view/comment/remix permissions remain a required roadmap item. No MagicaVoxel `.vox` import or export. Aseprite informs workflow, not copied code, branding, icons, or artwork. No Electron, JavaScript editor implementation, or alternate web UI.
 
 Application logic, UI, MCP, build orchestration, and website generation are Rust. GPU shaders use WGSL; generated `wasm-bindgen` JavaScript, static HTML/CSS, platform bindings, and deployment configuration are necessary integration artifacts. Do not promise a browser build with literally zero JavaScript.
 
@@ -426,12 +434,22 @@ For architecture-only stages, use executable spikes, diagrams, fixtures, and sch
 | M0 — Feasibility and pins | None | Build the GPUI native/web/3D integration spike; prove fallback UI+renderer, PNG, browser connection, licensing, toolchain/dependency pins. Choose integration ADR and companion path. Three reviewed rounds; stop on unresolved feasibility blockers. |
 | M1 — Core and persistence | M0 | Workspace/core/session contracts; bounded sparse storage, layers/palette, commands/history, `.voxl` 1.0 reader/writer/malformed fixtures, recovery prototype, deterministic CPU meshing. Freeze measured limits; unit/property/format CI green. |
 | M2 — Renderer and workspace | M1 | Native and wasm viewport, camera/grid/gizmo/picking, lighting/AO/AA, themes/tokens, panel skeleton, original art sample. Benchmark and render baselines accepted; native/WebGPU/WebGL2 share appearance. |
-| M3 — Complete artist workflow | M2 | All editing tools, palette import/presets, layer controls, mirrors, shortcuts, undo/redo, native/web open/save/recovery, GLB/PNG export. F01–F19 end-to-end acceptance; no mocked actions. |
+| M3 — Complete artist workflow | M2 | All editing tools through the plugin interface, native-style menus, custom/preset palette manager and .hex/.gpl interchange, layer controls, mirrors, shortcuts, undo/redo, native/web open/save/recovery, GLB/PNG export. F01–F19 end-to-end acceptance; no mocked actions. |
 | M4 — MCP and live sync | M1, M2; integrate after M3 | Reviewed versioned spec first; complete tool/resource schemas, examples for every tool, batch/primitives, inspectable history, multi-angle rendering, CLI/headless, stdio/HTTP, native discovery, browser pairing/local served fallback, conflicts/retries/auth, headless rendering, session recovery. F20 and adversarial transport tests pass against actual UI. |
 | M5 — Platform hardening | M3, M4 | F21, accessibility/platform edge cases, memory/performance budgets, feature parity, wasm packaging, signed/notarized packaging and auto-update rehearsal, Homebrew cask draft, deployment/rollback previews. CI matrices and security/dependency checks complete. |
 | M6 — Public website and OSS | M3 captures, M5 compatibility | Codex builds separate marketing site and Vercel preview; finish full versioned docs site, host install pages, repo skills/plugin bundles, README/contribution/conduct/security/templates/licenses; reproducible agent benchmarks and sanitized demo recordings; site passes its three review rounds and linked workflows work. |
 | M7 — Release candidate and v1 | M0–M6 accepted | Fresh-machine native install, real-browser artist+MCP workflow, all three backends, file exchange, export validation, website checks, three final critique/fix rounds, signed/notarized public artifacts (missing credentials keep release pending), tagged source/checksums and Vercel production promotion. |
 | M8 — Agent-made showcase | Released working v1 and M4 contracts | Produce 6–9 original creations through actual MCP workflows: isometric props, characters, buildings and a larger scene. Preserve source, prompts, host/API versions, tool traces, multi-angle renders and GLBs. Curate gallery compositions, capture replay/demo videos and benchmark reports; inspect desktop/mobile WebGL performance and reduced-motion/poster fallbacks. Three separate art/site critique rounds before publishing. |
+
+Required roadmap additions from the 2026-10-25 product review:
+
+| Stage | Additional deliverable |
+| --- | --- |
+| M0–M1 | Prove the minimal open core and likely WASM plugin runtime on native/web. Freeze extension registration/lifecycle and stable tool/brush/palette/IO/UI/command/MCP interfaces. Built-ins use these interfaces. Local plugins run directly; one-time network/outside-project prompts only. |
+| M1–M3 | Persist 3D comment anchors/threads and named versions. Build comment/reply/resolve filters, real history scrubbing, human/agent markers, named save/restore/compare/branch and spatial diff counts; retain conflict-aware compensating edits. Palettes get full custom editing and exact named presets. |
+| M4 | Version and test MCP comments list/read/reply/resolve and versions list/read/save/restore/compare/branch. Demonstrate an agent authoring, registering and invoking its own tool at runtime. |
+| Sharing milestone, release cut after M0 | Implement project links with enforced view/comment/remix permissions and independent remix lineage; define persistence/hosting without requiring an account for local editing. Real-time collaboration, presence and multi-author conflict recovery likely v2. Synthetic concept avatars do not fulfill this milestone. |
+| Post-v1, unless trivial | Git integration for canonical .voxl repositories, commits and visual diffs in history. CAD-style precision dimensions, measurements, snapping and numeric input; exact scope TBD with the maintainer. |
 
 Ordering is dependency-driven; do not spend final UI/site polish before M0 proves the rendering/web path. Estimate dates only after the spike and representative benchmark; track each acceptance row as a milestone issue with test evidence.
 

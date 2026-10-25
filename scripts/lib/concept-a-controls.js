@@ -14,9 +14,9 @@
     {id:'grayscale',name:'Grayscale',colors:Array.from({length:16},(_,i)=>(i*17).toString(16).padStart(2,'0').repeat(3)).join(' ')}
   ].map(p=>({...p,preset:true,colors:p.colors.split(' ').map(c=>'#'+c)}));
   let custom=[{id:'woodland',name:'Woodland',colors:woodland}], activePalette='woodland', editingPalette='woodland', swatchIndex=10, editorIndex=10;
-  try { const saved=JSON.parse(localStorage.getItem('voxelite-palettes-v1')); if(saved?.custom?.length && saved.custom.every(p=>typeof p.id==='string' && typeof p.name==='string' && p.name.trim() && p.colors.length && p.colors.length<=256 && p.colors.every(c=>/^#[\da-f]{6}$/i.test(c)))){custom=saved.custom;activePalette=saved.activePalette;}}catch{}
-  const palettes=()=>[...custom,...presets], palette=id=>palettes().find(p=>p.id===id)||custom[0], active=()=>palette(activePalette), editing=()=>palette(editingPalette);
-  if(!palettes().some(p=>p.id===activePalette))activePalette=custom[0].id;
+  try { const saved=JSON.parse(localStorage.getItem('voxelite-palettes-v1')); if(Array.isArray(saved?.custom) && saved.custom.every(p=>typeof p.id==='string' && typeof p.name==='string' && p.name.trim() && p.colors.length && p.colors.length<=256 && p.colors.every(c=>/^#[\da-f]{6}$/i.test(c)))){custom=saved.custom;activePalette=saved.activePalette;}}catch{}
+  const palettes=()=>[...custom,...presets], palette=id=>palettes().find(p=>p.id===id)||custom[0]||presets[0], active=()=>palette(activePalette), editing=()=>palette(editingPalette);
+  if(!palettes().some(p=>p.id===activePalette))activePalette=palettes()[0].id;
   editingPalette=activePalette;
   const persist=()=>{try{localStorage.setItem('voxelite-palettes-v1',JSON.stringify({custom,activePalette}));}catch{notify('Palette storage unavailable; export to keep your colors.');}};
   const uid=prefix=>`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
@@ -29,7 +29,7 @@
     $('[data-palette-rename]').value=p.name;$('[data-palette-rename]').disabled=!!p.preset;
     $('.manager-swatches').innerHTML=p.colors.map((c,i)=>swatchButton(c,i,editorIndex,true)).join('');
     $('.color-preview').style.background=p.colors[editorIndex];$('[data-hex-edit]').value=p.colors[editorIndex].toUpperCase();$('[data-hex-edit]').disabled=!!p.preset;
-    for(const action of ['swatch-left','swatch-right','remove-swatch','add-swatch','delete-palette'])$(`[data-action="${action}"]`).disabled=!!p.preset || (action==='remove-swatch'&&p.colors.length===1) || (action==='add-swatch'&&p.colors.length>=256) || (action==='swatch-left'&&editorIndex===0) || (action==='swatch-right'&&editorIndex===p.colors.length-1) || (action==='delete-palette'&&custom.length===1);
+    for(const action of ['swatch-left','swatch-right','remove-swatch','add-swatch','delete-palette'])$(`[data-action="${action}"]`).disabled=!!p.preset || (action==='remove-swatch'&&p.colors.length===1) || (action==='add-swatch'&&p.colors.length>=256) || (action==='swatch-left'&&editorIndex===0) || (action==='swatch-right'&&editorIndex===p.colors.length-1);
     $('.palette-edit-note').textContent=p.preset?'Duplicate this preset to make it your own.':'Select a swatch to edit. Use the arrows to reorder.';
     $('[data-editor-status]').textContent=p.id===activePalette?'Active palette':'';
   }
@@ -103,7 +103,7 @@
     {id:2,anchor:[-3,16,3],layer:'Roof',author:'JD',text:'Keep this warm roof color. It balances the greens nicely.',resolved:false,replies:[]},
     {id:3,anchor:[-2,3,8],layer:'Garden',author:'AL',text:'A few mossy stones along this path?',resolved:false,replies:[]}
   ],activeThread=null,pinsVisible=true,contextPoint=null;
-  function setTab(tab){$$('[data-tab]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.tab===tab)));$('#session-panel').hidden=tab!=='session';$('#comments-panel').hidden=tab!=='comments';$('[data-action="comments"]').setAttribute('aria-pressed',String(tab==='comments'));if(tab==='session'){activeThread=null;$('.pin-thread').hidden=true;}renderComments();window.__drawVoxelScene();}
+  function setTab(tab){$$('[data-tab]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.tab===tab)));$$('[data-tab]').forEach(el=>el.tabIndex=el.dataset.tab===tab?0:-1);$('#session-panel').hidden=tab!=='session';$('#comments-panel').hidden=tab!=='comments';$('[data-action="comments"]').setAttribute('aria-pressed',String(tab==='comments'));if(tab==='session'){activeThread=null;$('.pin-thread').hidden=true;}renderComments();window.__drawVoxelScene();}
   const messageHTML=(author,text,mcp=false)=>`<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp?'agent-avatar':''}">${mcp?icons.agent:esc(author)}</span><strong>${esc(author)}</strong>${mcp?'':'<span>Just now</span>'}</div><p>${esc(text)}</p>${mcp?'<div class="mcp-note">MCP · comments.reply</div>':''}</div>`;
   function renderComments(){
     $('[data-comment-count]').textContent=comments.filter(c=>!c.resolved).length;
@@ -123,7 +123,7 @@
   document.addEventListener('submit',e=>{if(e.target.matches('.reply-form')){e.preventDefault();const input=e.target.querySelector('input'),text=input.value.trim();if(!text)return;comments.find(c=>c.id===activeThread).replies.push({author:'You',text});renderComments();window.__drawVoxelScene();$('.reply-form input').focus();}});
 
   let permission='comment';
-  function openShare(){closeFloating();$('.share-popover').hidden=false;$('[data-action="share"]').setAttribute('aria-expanded','true');}
+  function openShare(){closeFloating();$('.share-popover').hidden=false;$('[data-action="share"]').setAttribute('aria-expanded','true');$(`[data-permission="${permission}"]`).focus();}
   async function copyLink(){const input=$('.link-field input');try{await navigator.clipboard.writeText(input.value);notify('Preview link copied');}catch{input.focus();input.select();notify('Press ⌘C or Ctrl+C to copy the preview link.');}}
 
   // Timeline snapshots are reconstructed from the procedural cottage's actual cells.
@@ -135,21 +135,21 @@
     const start=Math.max(1,Math.min(timelineStep-1,5));$('.history-event-list').innerHTML=Array.from({length:4},(_,i)=>start+i).map(step=>`<button class="history-event ${step===timelineStep?'active':''}" data-history-tick="${step}"><span class="event-origin">${step<=4?'<i class="human-marker"></i>':icons.agent}</span><div><span>${historyNames[step]}</span><small>${step<=4?'Human':'Agent'} · Step ${step}</small></div></button>`).join('');
     $('.version-list').innerHTML=versions.map(v=>`<article class="version-item"><h3>${esc(v.name)}</h3><p class="version-meta">${v.snapshot.length.toLocaleString()} voxels · Step ${v.step}</p><div class="version-actions"><button data-version-action="restore" data-version-id="${v.id}">Restore</button><button data-version-action="compare" data-version-id="${v.id}">Compare</button><button data-version-action="branch" data-version-id="${v.id}">Branch from here</button></div></article>`).join('');
   }
-  function openHistory(){closeFloating();liveSnapshot=window.__sceneSnapshot();timelineStep=window.__currentHistoryStep??8;$('.history-panel').hidden=false;$('[data-action="history"]').setAttribute('aria-expanded','true');renderHistory();}
+  function openHistory(){closeFloating();liveSnapshot=window.__sceneSnapshot();timelineStep=window.__currentHistoryStep??8;$('.history-panel').hidden=false;$('[data-action="history"]').setAttribute('aria-expanded','true');renderHistory();$('[data-timeline]').focus();}
   function scrub(step){timelineStep=Number(step);window.__setHistory(timelineStep);syncSteps();renderHistory();}
   function closeHistory(){if(!$('.history-panel').hidden&&liveSnapshot){window.__loadSnapshot(liveSnapshot);syncSteps();}$('.history-panel').hidden=true;$('[data-action="history"]').setAttribute('aria-expanded','false');window.__compareScene(null);$('.compare-badge').hidden=true;$('.version-form').hidden=true;}
   $('[data-timeline]').addEventListener('input',e=>scrub(e.target.value));
   $('.version-form').addEventListener('submit',e=>{e.preventDefault();const input=e.target.querySelector('input'),name=input.value.trim();if(!name)return;versions.unshift({id:uid('version'),name,step:timelineStep,snapshot:window.__sceneSnapshot()});input.value='';e.target.hidden=true;renderHistory();notify('Named version saved in this preview.');});
-  function versionAction(action,id){const v=versions.find(v=>v.id===id);if(action==='compare'){const counts=window.__compareScene(v.snapshot);$('.compare-badge').innerHTML=`<span>Compared with ${esc(v.name)}</span><code>+${counts.added} / −${counts.removed}</code><span class="muted">Solid added · dashed removed</span><button data-action="clear-compare">Done</button>`;$('.compare-badge').hidden=false;return;}window.__loadSnapshot(v.snapshot);timelineStep=v.step;liveSnapshot=window.__sceneSnapshot();if(action==='branch')branch=v.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-branch';renderHistory();syncSteps();notify(action==='branch'?'Created local preview branch':'Version restored in this preview');}
+  function versionAction(action,id){const v=versions.find(v=>v.id===id);if(action==='compare'){const counts=window.__compareScene(v.snapshot);$('.compare-badge').innerHTML=`<span>Compared with ${esc(v.name)}</span><code>+${counts.added} / −${counts.removed}</code><span class="muted">Solid added · dashed removed</span><button data-action="clear-compare">Done</button>`;$('.compare-badge').hidden=false;return;}window.__loadSnapshot(v.snapshot,true);timelineStep=v.step;liveSnapshot=window.__sceneSnapshot();if(action==='branch')branch=v.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-branch';renderHistory();syncSteps();notify(action==='branch'?'Created local preview branch':'Version restored in this preview');}
   function closeFloating(){closeMenus();$('.share-popover').hidden=true;$('[data-action="share"]').setAttribute('aria-expanded','false');closeHistory();}
-  function openDialog(dialog){modalFocus=document.activeElement;closeMenus();dialog.showModal();}
+  function openDialog(dialog){modalFocus=document.activeElement===document.body?menuTrigger:document.activeElement;closeMenus();dialog.showModal();}
   for(const dialog of $$('dialog'))dialog.addEventListener('close',()=>modalFocus?.focus());
 
   const actions={
     commands:openCommands,palettes:openManager,comments:()=>setTab($('#comments-panel').hidden?'comments':'session'),history:()=>$('.history-panel').hidden?openHistory():closeHistory(),share:()=>$('.share-popover').hidden?openShare():closeFloating(),
     'copy-link':copyLink,follow:()=>setFollow(!follow),pause,frame:()=>{$('[data-reset-view]').click();},grid:()=>$('[data-toggle-grid]').click(),theme:()=>document.documentElement.dataset.theme=document.documentElement.dataset.theme==='light'?'dark':'light',refresh:()=>{window.__captureViews();notify('Captured 3 views');},
     'create-palette':()=>createPalette(),'duplicate-palette':()=>createPalette(true),'use-palette':()=>{selectPalette(editingPalette);$('.palette-dialog').close();},
-    'delete-palette':()=>{if(editing().preset||custom.length===1)return;const id=editingPalette;custom=custom.filter(p=>p.id!==id);if(activePalette===id)activePalette=custom[0].id;editingPalette=activePalette;editorIndex=0;updatePalette();},
+    'delete-palette':()=>{if(editing().preset)return;const id=editingPalette;custom=custom.filter(p=>p.id!==id);if(activePalette===id)activePalette=palettes()[0].id;editingPalette=activePalette;editorIndex=0;updatePalette();},
     'swatch-left':()=>moveSwatch(-1),'swatch-right':()=>moveSwatch(1),'remove-swatch':()=>{const p=editing();if(p.preset||p.colors.length===1)return;p.colors.splice(editorIndex,1);updatePalette();},'add-swatch':()=>{const p=editing();if(p.preset||p.colors.length>=256)return;p.colors.push('#829a63');editorIndex=p.colors.length-1;updatePalette();},
     'export-hex':()=>exportPalette('hex'),'export-gpl':()=>exportPalette('gpl'),'import-palette':()=>{if(!$('.palette-dialog').open)openManager();$('[data-palette-file]').click();},
     'close-thread':()=>{activeThread=null;renderComments();window.__drawVoxelScene();},'history-live':()=>{window.__loadSnapshot(liveSnapshot);timelineStep=window.__currentHistoryStep??8;renderHistory();syncSteps();},
@@ -168,7 +168,7 @@
     const el=e.target.closest('button');if(!el)return;
     if(el.dataset.menu){const open=el.getAttribute('aria-expanded')==='true';if(open)closeMenus(true);else showMenu(el.dataset.menu,el);return;}
     if(el.dataset.action){run(el.dataset.action);return;}
-    if(el.dataset.close){const id=el.dataset.close;if(id==='palettes')$('.palette-dialog').close();else if(id==='history')closeHistory();else closeFloating();return;}
+    if(el.dataset.close){const id=el.dataset.close;if(id==='palettes')$('.palette-dialog').close();else if(id==='history'){closeHistory();$('[data-action="history"]').focus();}else {closeFloating();$('[data-action="share"]').focus();}return;}
     if(el.dataset.tab){setTab(el.dataset.tab);return;}
     if(el.dataset.editPalette){editingPalette=el.dataset.editPalette;editorIndex=0;renderManager();return;}
     if(el.hasAttribute('data-swatch')){swatchIndex=Number(el.dataset.swatch);renderPalette();$(`[data-swatch="${swatchIndex}"]`).focus();return;}
@@ -187,6 +187,7 @@
   $$('.menubar>[data-menu]').forEach(el=>{el.addEventListener('pointerenter',()=>{if(menuChain.length&&menuTrigger?.closest('.menubar'))showMenu(el.dataset.menu,el);});el.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();showMenu(el.dataset.menu,el);menuChain[0].element.querySelector('button')?.focus();}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();const buttons=$$('.menubar>[data-menu]'),i=buttons.indexOf(el);buttons[(i+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length].focus();}});});
   document.addEventListener('contextmenu',e=>{const layer=e.target.closest('[data-layer]'),paletteArea=e.target.closest('.palette-section'),view=e.target.closest('.viewport');if(!layer&&!paletteArea&&!view)return;e.preventDefault();if(layer)layer.querySelector('[data-select-layer]').click();if(view){const r=$('.viewport').getBoundingClientRect();contextPoint=[e.clientX-r.left,e.clientY-r.top];}showMenu(layer?'Layers':paletteArea?'Palette':'ViewportContext',null,{x:e.clientX,y:e.clientY});});
   document.addEventListener('keydown',e=>{
+    if(e.target.hasAttribute('data-tab') && ['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();const tab=e.target.dataset.tab==='session'?'comments':'session';setTab(tab);$(`[data-tab="${tab}"]`).focus();return;}
     const swatch=e.target.closest('[data-swatch],[data-edit-swatch]');if(swatch&&['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const editor=swatch.hasAttribute('data-edit-swatch'),items=[...swatch.parentElement.children],i=items.indexOf(swatch),next=e.key==='Home'?0:e.key==='End'?items.length-1:(i+({ArrowRight:1,ArrowLeft:-1,ArrowUp:-8,ArrowDown:8}[e.key])+items.length)%items.length;items[next].click();return;}
     if(e.key==='Escape'){closeMenus(true);closeFloating();activeThread=null;renderComments();window.__drawVoxelScene();return;}
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();if($('.palette-dialog').open)return;$('.command-dialog').open?$('.command-dialog').close():openCommands();return;}
