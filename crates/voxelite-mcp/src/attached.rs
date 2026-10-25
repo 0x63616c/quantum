@@ -323,7 +323,11 @@ impl AttachedSession {
                 .map(str::to_string)
                 .or_else(|| result.as_ref().err().map(|e| e.message.to_string()));
             events.push(SessionEvent {
-                label: if engine.revision() != revision {
+                label: if request.name == "voxelite_history_undo" {
+                    "Undo edit".into()
+                } else if request.name == "voxelite_history_redo" {
+                    "Redo edit".into()
+                } else if engine.revision() != revision {
                     engine
                         .history()
                         .next_back()

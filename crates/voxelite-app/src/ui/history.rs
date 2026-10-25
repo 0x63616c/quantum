@@ -157,7 +157,8 @@ impl EditorView {
                     )
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(move |this, e: &MouseDownEvent, _, cx| {
+                        cx.listener(move |this, e: &MouseDownEvent, window, cx| {
+                            window.focus(&this.focus, cx);
                             this.timeline.dragging = true;
                             scrub_at(this, e.position, bounds.get(), cx);
                             cx.stop_propagation();

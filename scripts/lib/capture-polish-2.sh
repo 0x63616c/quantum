@@ -28,6 +28,10 @@ xdotool mousemove 700 251 click 1
 sleep 0.25
 xdotool key ctrl+a
 xdotool type --clearmodifiers --delay 15 'Studio warm'
+# Reversing a Shift selection must contract it, then insert at the caret.
+xdotool key shift+Left shift+Right
+xdotool type --clearmodifiers 'x'
+xdotool key BackSpace
 sleep 0.25
 xdotool mousemove 1040 251 click 1
 sleep 0.25
@@ -45,6 +49,19 @@ assert p['name'] == 'Studio warm', p
 assert p['palette']['slots'][0]['rgba'] == [204, 136, 68, 255], p
 assert len(p['palette']['slots']) == 16
 PYTEST
+xdotool mousemove 943 478 click 1
+sleep 0.2
+xdotool click 1
+sleep 0.2
+python3 - "$VOXELITE_DATA_DIR/palettes.json" <<'PYTEST'
+import json, sys
+p = json.load(open(sys.argv[1]))['entries'][0]['palette']
+assert p['slots'][2]['rgba'] == [204, 136, 68, 255], p
+PYTEST
+xdotool mousemove 825 478 click 1
+sleep 0.2
+xdotool click 1
+sleep 0.3
 capture_feature palettes
 xdotool key Escape
 search 'share project'
@@ -54,6 +71,11 @@ xdotool key Escape
 timeout 30s python3 scripts/lib/capture-mcp.py "$XDG_RUNTIME_DIR/$theme.sock" seed > "$artifact/mcp-$theme.json"
 sleep 4
 capture_feature agent
+xdotool windowsize "$window" 1024 640
+sleep 3
+capture_feature agent-small
+xdotool windowsize "$window" 1440 900
+sleep 3
 # Open the discussion panel and its first real thread.
 xdotool mousemove 1260 193 click 1
 sleep 0.3
@@ -66,6 +88,11 @@ xdotool type --clearmodifiers --delay 12 'The warm highlights look balanced.'
 xdotool mousemove 1260 831 click 1
 sleep 3
 capture_feature comments
+xdotool windowsize "$window" 1024 640
+sleep 3
+capture_feature comments-small
+xdotool windowsize "$window" 1440 900
+sleep 3
 xdotool key Escape
 # Named versions and a draggable history preview.
 xdotool mousemove 1370 193 click 1
@@ -78,6 +105,15 @@ sleep 0.4
 xdotool mousemove 1230 318 mousedown 1 mousemove 1190 318 mouseup 1
 sleep 3
 capture_feature history
+xdotool windowsize "$window" 1024 640
+sleep 3
+capture_feature history-small
+xdotool windowsize "$window" 1440 900
+sleep 3
+# Initial preview must not display later comment pins.
+xdotool mousemove 1109 318 click 1
+sleep 2
+capture_feature history-initial
 xdotool key Escape
 
 # Read through a new MCP connection to verify the UI edits and preview isolation.

@@ -1654,7 +1654,7 @@ impl EditorView {
             .child(
                 row()
                     .justify_between()
-                    .mb(px(10.0))
+                    .mb(px(if compact { 8.0 } else { 10.0 }))
                     .child(
                         row()
                             .id("palette-switch")
@@ -1724,7 +1724,7 @@ impl EditorView {
             )
             .child(
                 row()
-                    .mt(px(12.0))
+                    .mt(px(if compact { 8.0 } else { 12.0 }))
                     .gap(px(8.0))
                     .text_size(px(12.0))
                     .text_color(t.muted())
@@ -1744,7 +1744,7 @@ impl EditorView {
             .child(
                 row()
                     .pl(px(8.0))
-                    .mb(px(8.0))
+                    .mb(px(if compact { 4.0 } else { 8.0 }))
                     .justify_between()
                     .child(section_title("Layers"))
                     .child(self.button("add-layer", "plus", "", Op::AddLayer, cx)),
@@ -2004,11 +2004,7 @@ impl EditorView {
             .flex_col()
             .child(
                 row()
-                    .h(px(if compact || self.agent.capture.is_some() {
-                        52.0
-                    } else {
-                        72.0
-                    }))
+                    .h(px(if compact { 52.0 } else { 72.0 }))
                     .flex_shrink_0()
                     .px(px(PANEL_GUTTER))
                     .gap(px(12.0))

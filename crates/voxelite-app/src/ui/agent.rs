@@ -182,12 +182,12 @@ impl EditorView {
                     this.set_agent_view(view,cx);
                 }
                 cx.notify();
-            }).border_0().tooltip(hint("Follow the agent’s requested preset views. Manual navigation turns following off.",t)))
+            }).h(px(32.0)).border_0().tooltip(hint("Follow the agent’s requested preset views. Manual navigation turns following off.",t)))
             .child(
                 div()
                     .id("agent-feed")
                     .flex_1()
-                    .min_h(px(0.0))
+                    .min_h(px(64.0))
                     .overflow_y_scroll()
                     .children(self.agent.events.iter().enumerate().rev().filter(|(_,e)| e.entry.is_some() || e.changes.voxel_count()>0 || !e.success).map(|(i, e)| {
                         let entry = e.entry;

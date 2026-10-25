@@ -204,7 +204,7 @@ impl EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .overflow_y_scroll()
-                    .when(!comments.iter().any(|c| matching(&c)), |d| {
+                    .when(!comments.iter().any(&matching), |d| {
                         d.child(div().py(px(16.0)).text_color(t.muted()).child(
                             if comments.is_empty() {
                                 "Pin a discussion to your model."
