@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the recorded three-voxel edit through real MCP and capture its detail."""
+"""Record a visible three-voxel garden edit through real MCP and capture its detail."""
 import base64
 import hashlib
 import json
@@ -37,12 +37,12 @@ try:
     model = opened['model_id']
     fixture = json.loads((ROOT / 'examples/autumn-workshop.voxl').read_text())
     layer = fixture['layers'][-1]['id']
-    camera = dict(eye=[26, 18, 35], target=[12.5, 4, 17.5], up=[0, 1, 0], projection='orthographic', ortho_height=13)
-    evidence = dict(source='examples/autumn-workshop.voxl', source_sha256=hashlib.sha256((ROOT / 'examples/autumn-workshop.voxl').read_bytes()).hexdigest(), camera=camera, captures=[])
+    camera = dict(eye=[26, 22, 35], target=[12.5, 8, 17.5], up=[0, 1, 0], projection='orthographic', ortho_height=9)
+    evidence = dict(source='examples/autumn-workshop.voxl', operation=dict(tool='voxelite_voxels_box', region=dict(min=[11,8,17], max=[14,9,18]), slot=21), source_sha256=hashlib.sha256((ROOT / 'examples/autumn-workshop.voxl').read_bytes()).hexdigest(), camera=camera, captures=[])
     for state in ['before', 'after']:
         revision = call('document_info', dict(model_id=model))['structuredContent']['data']['revision']
         if state == 'after':
-            result = call('voxels_box', dict(model_id=model, expected_epoch=epoch, expected_revision=revision, operation_id=str(uuid.uuid4()), layer=layer, region=dict(min=[11, 4, 17], max=[14, 5, 18]), slot=17, label='Add an amber garden detail'))['structuredContent']['data']
+            result = call('voxels_box', dict(model_id=model, expected_epoch=epoch, expected_revision=revision, operation_id=str(uuid.uuid4()), layer=layer, region=dict(min=[11, 8, 17], max=[14, 9, 18]), slot=21, label='Add an amber garden detail'))['structuredContent']['data']
             assert result['added'] == 3, result
             evidence['edit'] = {key: result[key] for key in ['added', 'removed', 'recolored', 'revision']}
             revision = result['revision']
