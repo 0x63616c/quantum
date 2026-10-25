@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 case "${1:-}" in
   --skip-web) ;; # Reuse an already verified web/dist bundle for content iteration.
-  '') scripts/build-web.sh ;;
+  '') scripts/build-web.sh ;; # Includes source-path remapping for the published wasm.
   *) printf 'Usage: scripts/build-site.sh [--skip-web]\n' >&2; exit 2 ;;
 esac
 for asset in index.html voxelite_app.js voxelite_app_bg.wasm; do
