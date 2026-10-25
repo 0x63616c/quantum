@@ -20,12 +20,12 @@
   "camera": {
     "eye": [
       26,
-      18,
+      22,
       35
     ],
     "target": [
       12.5,
-      4,
+      8,
       17.5
     ],
     "up": [
@@ -34,28 +34,28 @@
       0
     ],
     "projection": "orthographic",
-    "ortho_height": 13
+    "ortho_height": 9
   },
   "captures": [
     {
       "file": "before-dark.png",
       "revision": "0",
-      "sha256": "9e44237b829d02ac7d3c0db328b7b78e7838dc141445dadc46c3bf79ef74c602"
+      "sha256": "c92227d1db0e86bc9126f888fe9fb9e41fadc6f28844e32d56c9cd3542e4ad90"
     },
     {
       "file": "before-light.png",
       "revision": "0",
-      "sha256": "520374deb11de56a7108d94602ee263e4bbe489002c54990bd51eb80790cb1db"
+      "sha256": "c92227d1db0e86bc9126f888fe9fb9e41fadc6f28844e32d56c9cd3542e4ad90"
     },
     {
       "file": "after-dark.png",
       "revision": "1",
-      "sha256": "b3fb6160fc7f009ff267a5afbbf2ebe2ec07acc30741f236fa77726e8227a2b1"
+      "sha256": "0a6010b23e0c407698aa1646902fd7e4c783c132da245ab2a495ef2a4673bfe1"
     },
     {
       "file": "after-light.png",
       "revision": "1",
-      "sha256": "d506aaa4f9b73ff8975938305e2c53a5480ec575edba7893bdfeaec1a9546de8"
+      "sha256": "0a6010b23e0c407698aa1646902fd7e4c783c132da245ab2a495ef2a4673bfe1"
     }
   ],
   "edit": {

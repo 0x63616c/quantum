@@ -66,3 +66,21 @@ This is a credible, disciplined product page. It is not yet a top-tier creative-
 ## Recommended next pass
 
 Prioritize an intelligible prompt-to-visible-change demonstration, move a compact piece of that proof into the mobile hero, and remove the repeated introduction. Then fix the mobile closing CTA and the three wrapping details. Those changes would improve the page more than additional cards, animation, ornamental graphics, or another typography pass.
+
+## Implemented response
+
+The final revision replaces the repeated introduction and small session card
+with an actual before/after MCP render comparison. Replaying the earlier native
+capture's edit revealed it was hidden below the ground and used a slate slot;
+therefore it is not presented as a visible amber change. A new headless recording
+adds exactly three visible amber cells at Y=8 using palette slot 21. The script,
+matching camera, source hash, revision and PNG hashes are recorded under
+`screenshots/site/proof/`; the new comparison is labeled revision 1, separate
+from the native hero's revision 8.
+
+Mobile gets a readable native activity crop directly beneath the hero, a shorter
+single workflow introduction, a setup-guide closing action, and deliberate caption,
+file-label and open-source headline wrapping. A 320px docs overflow found during
+browser testing was fixed with text wrapping. Final recaptures are in
+`screenshots/site/final/`. Scores above remain the independent pre-fix scores;
+these changes have not been assigned an inflated retrospective score.

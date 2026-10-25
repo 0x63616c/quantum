@@ -55,7 +55,11 @@ try:
             (OUTPUT / name).write_bytes(data)
             (ROOT / 'site/assets' / name).write_bytes(data)
             evidence['captures'].append(dict(file=name, revision=revision, sha256=hashlib.sha256(data).hexdigest()))
-    (OUTPUT / 'provenance.json').write_text(json.dumps(evidence, indent=2) + '\n')
+    for theme in ('dark', 'light'):
+        assert (OUTPUT / f'before-{theme}.png').read_bytes() != (OUTPUT / f'after-{theme}.png').read_bytes(), 'Edit must be visible'
+    manifest = json.dumps(evidence, indent=2) + '\n'
+    (OUTPUT / 'provenance.json').write_text(manifest)
+    (ROOT / 'site/assets/proof-provenance.json').write_text(manifest)
     print('Captured four actual MCP detail renders; verified exactly three added voxels.')
 finally:
     process.stdin.close()
