@@ -150,3 +150,57 @@ operation. Linux screenshots do not establish macOS native-menu, VoiceOver,
 full keyboard accessibility or platform IME acceptance. Hosting, wasm parity,
 plugin hosting and release distribution remain separate release work. Plugins
 are still required by PLAN.md; they have not been silently dropped from v1.
+
+## Product-owner restoration — tool rail and local Share
+
+The product owner explicitly superseded the prior P02/P10 recommendations.
+`PLAN.md` now requires the left rail and the local sharing preview. Hosted
+permission enforcement remains v1.x; local controls must not be removed on
+that basis.
+
+- Restored Place, Erase, Paint, Fill, Box and Picker as Lucide rail controls,
+  plus independent Mirror X/Y/Z toggles. Active tools have a border and tinted
+  fill; all controls use the existing actions, shortcuts and tooltip labels.
+  Removed the toolbar tool-selection dropdown. Camera sizing accounts for the
+  56px rail, including the minimum window size and history previews.
+- Restored the Concept A Share popover with stable `voxelite://share/<id>`
+  identifiers, Copy/Copied feedback, explicit View / Comment / Remix choices,
+  and editable per-person access. `ShareBackend` and atomic `LocalShareBackend`
+  persist the settings separately from the document. The popover states
+  “Local preview — hosted sharing coming soon” and sends no invitations.
+- Kept Save a copy as a secondary action that preserves the working file's
+  path and dirty state. The title, local-preview label and copy-file action
+  stay visible while settings scroll at 1024×640. Escape, close and outside
+  click restore editor focus. Tab focuses participant entry; Enter adds it.
+
+The native capture workflow now clicks the tool/mirror rail, verifies clipboard
+contents by pasting the copied URI through the native text field, removes that
+temporary participant, adds two local labels, changes each access level and
+checks persisted JSON. It reopens Share before capturing Copy feedback. The
+subsequent MCP checks still verify human replies, named versions and unchanged
+live revision during history preview. Screenshot labels are entered through the
+real UI; they do not imply connected people or agents.
+
+Both-theme main/share images are in `screenshots/app-{dark,light}.png` and
+`screenshots/share-{dark,light}.png`, with matching feature captures under
+`screenshots/polish-2/`. Small Share captures show the initial and scrolled
+settings while the title and Save a copy remain visible. The restored rail,
+active states, framing and popover were visually inspected in both themes.
+
+Validation for the restoration:
+
+- `cargo fmt --all -- --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace` — 109 tests passed.
+- `cargo build --workspace` — includes the native Linux GPUI application.
+- Share backend contract tests cover stable links, access persistence,
+  participant updates/removal, rejected names and reopening local storage.
+- `bash scripts/capture-native.sh` — native screenshots and persisted Share,
+  palette, comment, version and live-revision assertions.
+- `bash scripts/review-polish-2.sh` — native HEX/GPL dialogs and Save a copy,
+  then ordinary Save to a separate working destination.
+- `git diff --check`; `design/` remains unchanged and `/target/` stays ignored.
+
+This is a local preview, not a hosted sharing release. macOS and accessibility
+certification remain outside the Linux validation performed here. The original
+review's scores and high-density images remain historical evidence.

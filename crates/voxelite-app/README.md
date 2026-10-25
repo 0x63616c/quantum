@@ -124,7 +124,9 @@ mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
 It also captures both themes at 1024×640. The round 2 capture workflow verifies
 palette authoring, a human reply, a named version and
 preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
-exercises real native HEX/GPL file dialogs and Share → Save a copy. Earlier review captures and reports
+exercises real native HEX/GPL file dialogs and Share → Save a copy. The Share
+captures also verify clipboard contents, participant updates and persisted
+access choices through the native UI. Earlier review captures and reports
 remain historical evidence for the preceding shell revision.
 `bash scripts/capture-native-scales.sh` adds native 150% and 200% density captures
 in both themes while preserving a logical 1440×900 workspace.
@@ -170,8 +172,9 @@ focuses the name field and Enter adds it. Settings persist atomically through
 The popover is labeled **Local preview — hosted sharing coming soon**: these
 links are local identifiers, not published URLs or enforced online permissions;
 no invitations are sent. **Save a copy…** remains a secondary native `.voxl`
-action and preserves the working path and dirty state. The popover scrolls at
-the minimum window size, and Escape/outside click restores editor focus.
+action and preserves the working path and dirty state. The settings scroll at
+the minimum window size while the title, local-preview label and Save a copy
+stay visible. Escape/outside click restores editor focus.
 
 **Comments** lists Open/Resolved/All threads. Click a projected numbered pin to
 open its docked sidebar thread, or Add/C then click a voxel. Switch Anchor to Region and click
