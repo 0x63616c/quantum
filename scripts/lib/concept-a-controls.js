@@ -1002,6 +1002,8 @@
   function setHistoryPreview(value) {
     historyPreview = value;
     $('.tool-picker').disabled = value;
+    $('[data-current-tool]').textContent = value ? 'Read only' : tools.find(t => t[0] === tool)?.[1] || 'Scatter moss';
+    $('[data-tool-icon]').innerHTML = value ? icons.lock : icons[tool] || icons.agent;
     $('.tool-picker').title = value ? 'Editing is disabled during history preview' : 'Choose a tool';
     $$('[data-step-undo],[data-tool-density],[data-tool-seed],[data-layer-lock]').forEach(b => b.disabled = value);
     $('.app').classList.toggle('previewing-history', value);
