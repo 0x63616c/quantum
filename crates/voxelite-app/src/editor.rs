@@ -1,9 +1,8 @@
 //! Human tool gestures translated into atomic shared-core commands.
+use crate::persistence::{self, Fingerprint};
+pub use crate::persistence::{SaveTask, SavedProject};
 use glam::DVec3;
-use std::{
-    fs::File,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use voxelite_core::*;
 use voxelite_format::Project;
 use voxelite_render::{Camera, PresetView, Projection};
@@ -79,7 +78,7 @@ impl Tool {
 }
 
 /// Orthographic orbit rig shared by rendering and picking.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OrbitCamera {
     /// World-space look-at point, including pan.
     pub target: DVec3,
@@ -298,10 +297,19 @@ pub struct Editor {
     /// Current successful open/save path; examples start untitled.
     pub path: Option<PathBuf>,
     project: Project,
+    saved_file: Option<(PathBuf, Fingerprint)>,
 }
 impl Editor {
     /// Open a validated portable project, preserving unknown optional metadata.
     pub fn new(project: Project, path: Option<PathBuf>) -> EditorResult<Self> {
+        let saved_file = path
+            .as_deref()
+            .map(|path| {
+                let path = path.canonicalize()?;
+                let hash = persistence::fingerprint(&persistence::read(&path)?);
+                Ok::<_, EditorError>((path, hash))
+            })
+            .transpose()?;
         let engine = Engine::new(project.document.clone())?;
         let s = &engine.document().content;
         let layer = s
@@ -327,6 +335,7 @@ impl Editor {
             box_start: None,
             path,
             project,
+            saved_file,
         })
     }
     /// Load the bundled diorama, independent of the current working directory.
@@ -347,10 +356,12 @@ impl Editor {
     }
     /// Read a file without touching the current editor on failure.
     pub fn open(path: &Path) -> EditorResult<Self> {
-        Self::new(
-            voxelite_format::read(File::open(path)?)?,
-            Some(path.to_path_buf()),
-        )
+        let path = path.canonicalize()?;
+        let bytes = persistence::read(&path)?;
+        let mut editor = Self::new(voxelite_format::read(bytes.as_slice())?, None)?;
+        editor.saved_file = Some((path.clone(), persistence::fingerprint(&bytes)));
+        editor.path = Some(path);
+        Ok(editor)
     }
     /// Current document content.
     pub fn snapshot(&self) -> &Snapshot {
@@ -359,20 +370,32 @@ impl Editor {
     /// Save through a synced temporary file in the destination directory, then atomically rename.
     /// Dirty state is cleared only after successful persistence.
     pub fn save(&mut self, path: &Path) -> EditorResult<()> {
-        let parent = path
-            .parent()
-            .filter(|p| !p.as_os_str().is_empty())
-            .unwrap_or(Path::new("."));
+        let saved = self.prepare_save(path).write()?;
+        self.finish_save(saved);
+        Ok(())
+    }
+    /// Capture the current document without performing filesystem I/O.
+    pub fn prepare_save(&self, path: &Path) -> SaveTask {
         let mut project = self.project.clone();
         project.document = self.engine.document().clone();
-        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-        project.write(temporary.as_file_mut())?;
-        temporary.as_file().sync_all()?;
-        temporary.persist(path).map_err(|e| e.error)?;
-        self.project = project;
-        self.path = Some(path.to_path_buf());
-        self.engine.mark_saved();
-        Ok(())
+        SaveTask {
+            project,
+            path: path.to_path_buf(),
+            baseline: self.saved_file.clone(),
+            revision: self.engine.revision(),
+        }
+    }
+    /// Adopt a successful save; edits made after its snapshot remain dirty.
+    pub fn finish_save(&mut self, saved: SavedProject) {
+        if saved.project.document.id != self.engine.document().id {
+            return;
+        }
+        self.project = saved.project;
+        self.path = Some(saved.path.clone());
+        self.saved_file = Some((saved.path, saved.fingerprint));
+        if self.engine.revision() == saved.revision {
+            self.engine.mark_saved();
+        }
     }
     /// Execute a single attributed, atomic command.
     pub fn execute(&mut self, label: &str, command: Command) -> EditorResult<bool> {
@@ -502,12 +525,6 @@ impl Editor {
     }
     /// Apply a tool at an explicit integer coordinate, also used by the keyboard cursor.
     pub fn apply_at(&mut self, at: Pos) -> EditorResult<bool> {
-        let layer = self.snapshot().layer(self.layer)?;
-        if layer.locked || !layer.visible {
-            return Err(EditorError::Gesture(
-                "The active layer is locked or hidden".into(),
-            ));
-        }
         if !self.snapshot().bounds.contains(at) {
             return Err(EditorError::Gesture("Outside document bounds".into()));
         }
@@ -522,12 +539,19 @@ impl Editor {
             }
             return Ok(false);
         }
+        let layer = self.snapshot().layer(self.layer)?;
+        if layer.locked || !layer.visible {
+            return Err(EditorError::Gesture(
+                "The active layer is locked or hidden".into(),
+            ));
+        }
         if self.tool == Tool::Box && self.box_start.is_none() {
             self.box_start = Some(at);
             return Ok(false);
         }
         // A no-op brush must not add unused palette entries.
-        if matches!(self.tool, Tool::Paint | Tool::Erase) && layer.voxels.get(at) == 0 {
+        if matches!(self.tool, Tool::Paint | Tool::Erase | Tool::Fill) && layer.voxels.get(at) == 0
+        {
             return Ok(false);
         }
         let mut commands = Vec::new();
@@ -660,6 +684,93 @@ mod tests {
         assert!(!e.apply_at([2, 2, 2]).unwrap());
         assert_eq!(e.snapshot().palette.slots.len(), 1);
         assert!(!e.engine.is_dirty());
+    }
+    #[test]
+    fn fill_empty_cell_does_not_flood_space_or_import_a_color() {
+        let mut e = editor();
+        let original = e.engine.document().clone();
+        e.tool = Tool::Fill;
+        e.color = Swatch::rgb(1, 2, 3);
+        assert!(!e.apply_at([2, 2, 2]).unwrap());
+        assert_eq!(e.engine.document(), &original);
+        assert_eq!(e.engine.revision(), 0);
+        assert!(!e.engine.is_dirty());
+    }
+    #[test]
+    fn keyboard_picker_samples_visible_composite_with_locked_or_hidden_active_layer() {
+        let mut e = editor();
+        e.color = Swatch::rgb(1, 2, 3);
+        e.apply_at([2, 2, 2]).unwrap();
+        e.add_layer().unwrap();
+        e.update_layer(e.layer, Some(false), Some(true)).unwrap();
+        let revision = e.engine.revision();
+        e.tool = Tool::Picker;
+        e.color = Swatch::rgb(4, 5, 6);
+        assert!(!e.apply_at([2, 2, 2]).unwrap());
+        assert_eq!(e.color.rgba, [1, 2, 3, 255]);
+        assert_eq!(e.engine.revision(), revision);
+    }
+    #[test]
+    fn save_rejects_external_changes_and_deletion_without_losing_edits() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project.voxl");
+        let mut e = editor();
+        e.save(&path).unwrap();
+        let mut external = Editor::open(&path).unwrap();
+        e.apply_at([1, 2, 3]).unwrap();
+        external.apply_at([4, 5, 6]).unwrap();
+        external.save(&path).unwrap();
+        let outside_bytes = std::fs::read(&path).unwrap();
+        assert!(e.save(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), outside_bytes);
+        assert!(e.engine.is_dirty());
+        std::fs::remove_file(&path).unwrap();
+        assert!(e.save(&path).is_err());
+        assert!(!path.exists());
+        e.save(&dir.path().join("recovered.voxl")).unwrap();
+        assert!(!e.engine.is_dirty());
+    }
+    #[test]
+    fn background_save_keeps_subsequent_edits_dirty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project.voxl");
+        let mut e = editor();
+        e.apply_at([1, 2, 3]).unwrap();
+        let save = e.prepare_save(&path);
+        e.apply_at([4, 5, 6]).unwrap();
+        e.finish_save(save.write().unwrap());
+        assert!(e.engine.is_dirty());
+        let opened = Editor::open(&path).unwrap();
+        assert_eq!(opened.snapshot().layers[0].voxels.len(), 1);
+        e.save(&path).unwrap();
+        assert!(!e.engine.is_dirty());
+        assert_eq!(
+            Editor::open(&path).unwrap().snapshot().layers[0]
+                .voxels
+                .len(),
+            2
+        );
+    }
+    #[cfg(unix)]
+    #[test]
+    fn opening_symlink_saves_target_and_save_as_rejects_symlink() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project.voxl");
+        let link = dir.path().join("alias.voxl");
+        let mut e = editor();
+        e.save(&path).unwrap();
+        std::os::unix::fs::symlink(&path, &link).unwrap();
+        let mut opened = Editor::open(&link).unwrap();
+        opened.apply_at([1, 2, 3]).unwrap();
+        opened.save(&opened.path.clone().unwrap()).unwrap();
+        assert!(link.is_symlink());
+        assert_eq!(
+            Editor::open(&path).unwrap().snapshot().layers[0]
+                .voxels
+                .len(),
+            1
+        );
+        assert!(opened.save(&link).is_err());
     }
     #[test]
     fn save_roundtrip_and_failed_save_preserve_dirty_state() {
