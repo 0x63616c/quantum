@@ -99,7 +99,7 @@ impl EditorView {
     pub(super) fn panel_tabs(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         row()
-            .px(px(16.0))
+            .px(px(PANEL_GUTTER - 8.0))
             .gap(px(4.0))
             .py(px(8.0))
             .border_b_1()
