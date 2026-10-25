@@ -179,6 +179,7 @@ export async function renderConceptA(browser, root, output) {
     );
     await menuItem(page, 'Export').focus();
     await page.keyboard.press('ArrowRight');
+    assert.equal(await menuItem(page, 'Export').getAttribute('aria-expanded'), 'true');
     await capture("menu");
     await page.keyboard.press("Escape");
     await menu(page, "Palette");
@@ -188,25 +189,29 @@ export async function renderConceptA(browser, root, output) {
     await page.locator('[data-edit-palette="pico8"]').click();
     assert.ok(await page.locator('[data-hex-edit]').isDisabled());
     assert.ok(await page.locator('.duplicate-preset').isVisible());
+    assert.ok(await page.locator('[data-menu="SwatchEdit"]').isDisabled());
+    assert.ok(await page.locator('[data-action="add-swatch"]').isDisabled());
+    assert.equal(await page.locator('[data-editor-status]').textContent(), 'Applies to new voxels');
+    const sheet = await page.locator('.palette-dialog').boundingBox();
+    assert.ok(sheet.x >= 1200 && sheet.x + sheet.width === 1600, 'Palette manager is a right sheet');
     await capture("palettes");
     await page.keyboard.press("Escape");
     await page.locator('[data-pin="1"]').click();
     assert.equal(await page.locator("#comments-panel").isVisible(), true);
-    assert.equal(
-      await page.locator(".mcp-note").textContent(),
-      "MCP · comments.reply",
-    );
+    assert.equal(await page.locator(".mcp-note").count(), 0);
+    assert.ok(await page.locator('.thread-meta .agent-avatar').isVisible());
     assert.ok(
       await page
         .locator(".sidebar")
         .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
       "Comments sidebar overflow",
     );
-    assert.ok(!(await page.locator('.mcp-note').isVisible()));
-    assert.ok(await page.locator('.comment-anchor path').count() >= 13);
+    assert.equal(await page.locator('.viewport .pin-thread,.comment-anchor').count(), 0);
+    assert.equal(await page.getByText('Could the canopy feel a little less symmetrical?', {exact:true}).count(), 1);
+    const threadBox = await page.locator('.pin-thread').boundingBox();
+    const viewBox = await page.locator('.viewport').boundingBox();
+    assert.ok(threadBox.x >= viewBox.x + viewBox.width, 'Discussion must never overlap artwork');
     await capture("comments");
-    await page.locator('.message-provenance summary').click();
-    assert.ok(await page.locator('.mcp-note').isVisible());
     await page.locator('[data-tab="session"]').click();
     await page.locator('[data-action="share"]').click();
     await page.locator('[data-access-scope]').selectOption('restricted');
@@ -217,19 +222,54 @@ export async function renderConceptA(browser, root, output) {
     await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async text => window.__copiedLink = text}}));
     await page.locator('[data-action="copy-link"]').click();
     assert.equal(await page.locator('.copy-link span').textContent(), 'Copied');
+    assert.equal(await page.locator('.share-feedback').textContent(), '');
+    assert.ok((await page.locator('.permission-description').textContent()).includes('comment'));
+    assert.ok((await page.locator('.access-rule').textContent()).includes('whichever is higher'));
+    assert.ok((await page.locator('.share-popover').boundingBox()).height < 430);
     await capture("share");
     await page.locator('[data-close="share"]').click();
     await page.locator('[data-action="history"]').click();
     await page.locator("[data-timeline]").fill("4");
     assert.ok((await count(page)) < 2079);
+    assert.ok(await page.locator('.tool-picker').isDisabled());
+    assert.equal(await page.locator('[data-action="save-version"]').textContent(), 'Name version');
+    const previewTool = await page.locator('[data-current-tool]').textContent();
+    const previewCount = await count(page);
+    await page.keyboard.press('p');
+    await page.keyboard.press('Meta+z');
+    assert.equal(await count(page), previewCount);
+    assert.equal(await page.locator('[data-current-tool]').textContent(), previewTool);
+    await menu(page, 'Tools');
+    assert.ok(await menuItem(page, 'Paint').isDisabled());
+    await page.keyboard.press('Escape');
+    // Menu Escape dismisses only the menu, retaining the read-only preview.
+    assert.equal(await count(page), previewCount);
+    await menu(page, 'Edit');
+    assert.ok(await menuItem(page, 'Undo').isDisabled());
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Meta+k');
+    await page.locator('.command-search input').fill('Paint');
+    assert.ok(await page.locator('.command-empty').isVisible());
+    await page.keyboard.press('Escape');
+    // Closing command search must preserve the preview as well.
+    assert.equal(await count(page), previewCount);
+    assert.equal(await page.locator('.timeline-ticks').count(), 0);
+    assert.equal(await page.locator('.history-event small').first().textContent(), 'Artist 01');
+    const rows = await page.locator('.history-event-list').evaluate(el => {
+      const outer = el.getBoundingClientRect();
+      return [...el.children].filter(row => {
+        const r = row.getBoundingClientRect(); return r.top >= outer.top && r.bottom <= outer.bottom;
+      }).length;
+    });
+    assert.equal(rows, 9, 'All nine fixture states should fit');
+    await page.locator('.history-event[data-history-tick="4"]').click();
     await capture("history");
     await page.locator('[data-close="history"]').click();
     assert.equal(await count(page), 2079, "History close restores live scene");
 
     await page.locator('.tool-picker').click();
-    await menuItem(page, 'Scatter moss Agent').click();
-    await page.locator('.tool-picker').click();
-    await menuItem(page, 'Scatter moss Agent').focus();
+    assert.ok(await page.getByRole('textbox', {name:'Search tools',exact:true}).isVisible());
+    assert.equal(await page.locator('.dropdown-menu .tool-configuration').count(), 0);
     await capture('tools');
     await page.keyboard.press('Escape');
     await page.keyboard.press('b');
@@ -306,10 +346,23 @@ export async function renderConceptA(browser, root, output) {
     await menu(page, 'Tools');
     assert.equal(await menuItem(page, 'Paint').getAttribute('aria-checked'), 'true');
     await page.keyboard.press('Escape');
+    await page.locator('.tool-picker').click();
+    await page.getByRole('textbox', {name:'Search tools',exact:true}).fill('paint');
+    assert.equal(await page.locator('.dropdown-menu [data-menu-index]:visible').count(), 1);
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Paint');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('[data-current-tool]').textContent(), 'Paint');
     await menu(page, 'Extensions');
-    await menuItem(page, 'Scatter moss Agent').click();
+    await page.getByRole('textbox', {name:'Search extensions',exact:true}).fill('no-match');
+    assert.ok(await page.locator('.menu-empty').isVisible());
+    await page.getByRole('textbox', {name:'Search extensions',exact:true}).fill('scatter');
+    assert.equal(await page.locator('.dropdown-menu [data-menu-index]:visible').count(), 1);
+    await page.keyboard.press('Enter');
+    assert.ok(await page.locator('.tool-settings').isVisible());
     await menu(page, 'Extensions');
     assert.equal(await menuItem(page, 'Scatter moss Agent').getAttribute('aria-checked'), 'true');
+    await page.keyboard.press('Escape');
     await page.locator('[data-tool-density]').fill('36');
     await page.locator('[data-tool-seed]').fill('7');
     assert.deepEqual(await page.evaluate(() => window.__aPreview.toolConfig), {density:36,seed:7});
@@ -470,7 +523,27 @@ export async function renderConceptA(browser, root, output) {
     await page.keyboard.press("Escape");
 
     // Progressive disclosure and immutable captures across edits/camera changes.
+    await page.keyboard.press('b');
     const initialCaptures = await hashes(page);
+    assert.ok((await page.locator('[data-thumbnail="front"]').boundingBox()).height >= 140);
+    for (const angle of ['right','back','front']) {
+      await page.locator('[data-capture-angle="' + angle + '"]').click();
+      assert.ok(await page.locator('[data-view-angle="' + angle + '"]').isVisible());
+      assert.equal(await page.locator('.render-preview:visible').count(), 1);
+      assert.deepEqual(await hashes(page), initialCaptures);
+    }
+    for (const layer of ['Canopy','Roof','Cottage','Garden']) {
+      for (const control of ['eye','lock']) {
+        const button = page.locator('[data-layer-' + control + '="' + layer + '"]');
+        assert.ok(await button.isVisible());
+        assert.equal(await button.evaluate(el => getComputedStyle(el).opacity), '1');
+      }
+    }
+    const lock = page.locator('[data-layer-lock="Canopy"]');
+    await lock.click();
+    assert.equal(await lock.getAttribute('aria-pressed'), 'true');
+    await lock.click();
+    assert.equal(await lock.getAttribute('aria-pressed'), 'false');
     await page.locator('[data-step="18"]').evaluate(el => el.open = true);
     assert.equal(
       (await page.locator('[data-step-coordinates="18"]').textContent()).split(
@@ -528,8 +601,17 @@ export async function renderConceptA(browser, root, output) {
     );
     await page.locator("[data-pause]").click();
 
-    // Comment reply, resolve/reopen, filters and share permission/clipboard fallback.
+    // Camera changes cannot collide the docked thread with the artwork.
     await page.locator('[data-pin="1"]').click();
+    for (const angle of ['right','back','front']) {
+      await page.evaluate(angle => window.__setViewAngle(angle), angle);
+      const dock = await page.locator('.pin-thread').boundingBox();
+      const canvas = await page.locator('.viewport').boundingBox();
+      assert.ok(dock.x >= canvas.x + canvas.width);
+      assert.equal(await page.locator('.viewport .pin-thread,.comment-anchor').count(), 0);
+    }
+    // Comment reply, resolve/reopen, filters and share permission/clipboard fallback.
+
     await page
       .locator(".reply-form textarea")
       .fill("The softer silhouette works.");
@@ -620,14 +702,17 @@ export async function renderConceptA(browser, root, output) {
     await page.locator('[data-timeline]').fill('4');
     assert.ok(midway < latest && midway > 1000);
     await page.locator('[data-action="save-version"]').click();
+    assert.equal(await page.locator('[data-version-save-context]').textContent(), 'Saves the previewed geometry at step 4.');
     await page.locator(".version-form input").fill("Garden checkpoint");
     await page.locator(".version-form button").click();
     assert.equal(
       await page.locator(".version-item h3").first().textContent(),
       "Garden checkpoint",
     );
+    assert.equal(await page.evaluate(() => window.__aPreview.versions[0].snapshot.length), midway);
     await page.locator('[data-action="history-live"]').click();
     assert.equal(await count(page), latest);
+    assert.ok(await page.locator('.tool-picker').isEnabled());
     await versionAction(page, 'Compare with current');
     assert.ok(
       (await page.locator(".compare-badge").textContent()).includes(
@@ -714,7 +799,9 @@ export async function renderConceptA(browser, root, output) {
     await page.locator('[data-action="history"]').click();
     await page.locator('[data-timeline]').fill('4');
     assert.ok(await page.locator('.history-preview-banner').isVisible());
-    assert.ok(await page.locator('.history-panel').evaluate(el => el.clientHeight < el.scrollHeight));
+    assert.ok(await page.locator('.history-event-list').evaluate(el => el.scrollHeight > el.clientHeight));
+    await page.locator('.history-event-list [data-history-tick="8"]').scrollIntoViewIfNeeded();
+    assert.ok(await page.locator('.history-event-list [data-history-tick="8"]').isVisible());
     await page.locator('[data-close="history"]').click();
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('Scatter');
