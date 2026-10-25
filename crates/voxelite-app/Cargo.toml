@@ -22,6 +22,8 @@ voxelite-export = { path = "../voxelite-export" }
 glam.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
+serde.workspace = true
+anyhow = "1"
 tempfile = "3"
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
 gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
