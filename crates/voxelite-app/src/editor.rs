@@ -97,8 +97,7 @@ impl OrbitCamera {
     }
     /// Fit a named orthographic view using its own projected bounds.
     pub fn fit_view(snapshot: &Snapshot, aspect: f64, view: PresetView) -> Self {
-        let camera = Camera::fit(snapshot, view, aspect, false)
-            .expect("validated editor document");
+        let camera = Camera::fit(snapshot, view, aspect, false).expect("validated editor document");
         let Projection::Orthographic { height } = camera.projection else {
             unreachable!()
         };
@@ -890,6 +889,38 @@ mod tests {
         assert!(c.camera().validate().is_ok());
         assert!(c.span >= 2.0);
         assert!(c.ray([f64::NAN, 0.5], 1.4).is_none());
+    }
+    #[test]
+    fn named_views_fit_bounds_and_top_points_exactly_down() {
+        let mut e = editor();
+        e.apply_at([0, 0, 0]).unwrap();
+        e.apply_at([31, 10, 20]).unwrap();
+        for view in [
+            PresetView::Iso,
+            PresetView::Front,
+            PresetView::Right,
+            PresetView::Top,
+        ] {
+            let camera = OrbitCamera::fit_view(e.snapshot(), 0.8, view);
+            assert!(camera.camera().validate().is_ok());
+            for bits in 0..8 {
+                let corner = DVec3::new(
+                    if bits & 1 == 0 { 0.0 } else { 32.0 },
+                    if bits & 2 == 0 { 0.0 } else { 11.0 },
+                    if bits & 4 == 0 { 0.0 } else { 21.0 },
+                );
+                assert!(
+                    camera
+                        .project(corner, 0.8)
+                        .into_iter()
+                        .all(|v| (0.0..=1.0).contains(&v))
+                );
+            }
+            if view == PresetView::Top {
+                let ray = camera.ray([0.5, 0.5], 0.8).unwrap();
+                assert!((ray.direction - DVec3::NEG_Y).length() < 1e-12);
+            }
+        }
     }
     #[test]
     fn ground_plane_allows_empty_document_editing() {
