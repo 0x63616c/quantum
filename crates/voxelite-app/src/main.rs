@@ -14,6 +14,7 @@ struct Options {
     theme: Option<Theme>,
     exit_after: Option<u64>,
     viewport_png: Option<PathBuf>,
+    session_socket: Option<PathBuf>,
 }
 fn options() -> anyhow::Result<Options> {
     let mut options = Options {
@@ -21,10 +22,18 @@ fn options() -> anyhow::Result<Options> {
         theme: None,
         exit_after: None,
         viewport_png: None,
+        session_socket: None,
     };
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--session-socket" => {
+                options.session_socket = Some(
+                    args.next()
+                        .ok_or_else(|| anyhow::anyhow!("missing socket path"))?
+                        .into(),
+                );
+            }
             "--theme" => {
                 options.theme = Some(match args.next().as_deref() {
                     Some("dark") => Theme::Dark,
@@ -122,7 +131,11 @@ fn main() -> anyhow::Result<()> {
                     app_id: Some("dev.voxelite.editor".into()),
                     ..Default::default()
                 },
-                |window, cx| cx.new(|cx| ui::EditorView::new(editor, theme, window, cx)),
+                |window, cx| {
+                    cx.new(|cx| {
+                        ui::EditorView::new(editor, theme, options.session_socket, window, cx)
+                    })
+                },
             ) {
                 eprintln!("Cannot open Voxelite: {error}");
                 cx.quit();

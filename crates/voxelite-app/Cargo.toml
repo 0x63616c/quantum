@@ -15,6 +15,7 @@ path = "src/main.rs"
 required-features = ["native"]
 
 [dependencies]
+voxelite-mcp = { path = "../voxelite-mcp" }
 voxelite-core.workspace = true
 voxelite-format.workspace = true
 voxelite-render.workspace = true

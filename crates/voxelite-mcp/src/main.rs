@@ -7,6 +7,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut root = std::env::current_dir()?;
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            #[cfg(unix)]
+            "--connect" => {
+                let path = args.next().ok_or("--connect needs a socket path")?;
+                voxelite_mcp::attached::proxy_stdio(std::path::Path::new(&path)).await?;
+                return Ok(());
+            }
             "--root" => root = args.next().ok_or("--root needs a directory")?.into(),
             "--schema" => {
                 println!(
@@ -17,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "--help" | "-h" => {
                 println!(
-                    "voxelite-mcp [--root DIRECTORY]\n\nServe voxelite.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
+                    "voxelite-mcp [--root DIRECTORY]\nvoxelite-mcp --connect SOCKET\n\nServe voxelite.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
                 );
                 return Ok(());
             }

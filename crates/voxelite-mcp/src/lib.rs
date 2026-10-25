@@ -3,6 +3,9 @@
 //! The server owns a bounded local editing session. Content edits go through the
 //! shared core engine with agent attribution. No display, GPU, plugin host, or
 //! application runtime is needed. See `docs/mcp.md` for the wire contract.
+/// Local socket attachment to a running native editor.
+#[cfg(unix)]
+pub mod attached;
 mod catalog;
 mod edit;
 mod error;
