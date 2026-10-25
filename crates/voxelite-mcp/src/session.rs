@@ -15,12 +15,19 @@ use voxelite_format::Project;
 
 const MAX_RECEIPTS: usize = 4096;
 const MAX_RECEIPT_BYTES: usize = 8 * 1024 * 1024;
+const RECEIPT_RESERVATION: usize = 65536;
 const MAX_RESULT_BYTES: usize = 12 * 1024 * 1024;
+const MAX_EXPLICIT_VOXELS: usize = 65536;
 
 pub(crate) struct OpenDocument {
     engine: Engine,
     project: Project,
     files: BTreeMap<PathBuf, String>,
+}
+impl OpenDocument {
+    fn dirty(&self) -> bool {
+        self.engine.is_dirty() || self.files.is_empty()
+    }
 }
 pub(crate) struct Session {
     pub id: Uuid,
@@ -92,15 +99,6 @@ impl Session {
                     ))
                 };
             }
-            // Reserve a conservative upper bound before any edit or I/O. Refuse
-            // further writes instead of evicting a still-retryable receipt.
-            if self.receipts.len() >= MAX_RECEIPTS || self.receipt_bytes + 65536 > MAX_RECEIPT_BYTES
-            {
-                return Err(Failure::new(
-                    "limit_exceeded",
-                    "session receipt budget exhausted; save documents and start a new session",
-                ));
-            }
             let epoch: Uuid = a.get("expected_epoch")?;
             if epoch != self.epoch {
                 return Err(Failure::new(
@@ -108,11 +106,14 @@ impl Session {
                     "session epoch changed; inspect capabilities and document state before retrying",
                 ));
             }
-            if let Some(label) = a.optional::<String>("label")?
-                && label.len() > 80
-            {
-                return Err(Failure::invalid("label exceeds 80 UTF-8 bytes"));
+            if let Some(label) = a.optional::<String>("label")? {
+                if label.len() > 80 || validate_name(&label).is_err() {
+                    return Err(Failure::invalid(
+                        "label must be 1..80 UTF-8 bytes without control characters",
+                    ).at("/label"));
+                }
             }
+            self.reserve_receipt(name, &a)?;
             identity = Some((id, signature));
         }
         let (data, images) = match name {
@@ -160,11 +161,31 @@ impl Session {
         }
         if let Some((id, signature)) = identity {
             // Mutation results contain only bounded summaries, never image data.
-            debug_assert!(size <= 65536);
+            debug_assert!(size <= RECEIPT_RESERVATION);
             self.receipt_bytes += size;
             self.receipts.insert(id, (signature, result.clone()));
         }
         Ok(result)
+    }
+    fn reserve_receipt(&self, name: &str, a: &Args<'_>) -> Result<()> {
+        // An edit must leave room to save every open document, including a
+        // document about to be created. A save may consume its own reservation,
+        // but cannot spend the capacity needed by other dirty documents. This
+        // also prevents repeated saves of a clean document starving dirty ones.
+        let saves = if name == "document_save" {
+            let target: Uuid = a.get("model_id")?;
+            self.documents.iter().filter(|(id, doc)| **id != target && doc.dirty()).count()
+        } else {
+            self.documents.len() + usize::from(matches!(name, "document_create" | "document_open"))
+        };
+        if self.receipts.len() + 1 + saves > MAX_RECEIPTS
+            || self.receipt_bytes + (1 + saves) * RECEIPT_RESERVATION > MAX_RECEIPT_BYTES
+        {
+            let mut error = Failure::new("limit_exceeded", "session receipt budget exhausted; remaining capacity is reserved for saving dirty documents");
+            error.recovery = "Save each dirty document, preserving operation_id on exact retries, then start a new session.";
+            return Err(error);
+        }
+        Ok(())
     }
     fn open(&mut self, name: &str, a: &Args<'_>) -> Result<Value> {
         if self.documents.len() >= 8 {
@@ -292,10 +313,19 @@ fn dispatch(
         "voxels_batch" => {
             let operations: Vec<Value> = a.get("operations")?;
             let mut commands = Vec::new();
+            let mut explicit_voxels = 0;
             for (index, v) in operations.iter().enumerate() {
+                explicit_voxels += v.get("voxels").and_then(Value::as_array).map_or(0, Vec::len);
+                if explicit_voxels > MAX_EXPLICIT_VOXELS {
+                    let mut error = Failure::new("limit_exceeded", "a request may contain at most 65,536 explicit voxel entries across all batch operations")
+                        .at(format!("/operations/{index}/voxels"));
+                    error.command_index = Some(index);
+                    return Err(error);
+                }
                 let parsed = edit::voxel_command(s, &Args(v).get::<String>("kind")?, &Args(v))
                     .map_err(|mut e| {
                         e.command_index = Some(index);
+                        e.path = Some(format!("/operations/{index}{}", e.path.unwrap_or_default()));
                         e
                     })?;
                 commands.push(parsed);

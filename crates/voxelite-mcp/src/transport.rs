@@ -6,7 +6,10 @@
 //! the awaiting caller is cancelled.
 use rmcp::{
     RoleServer,
-    model::{ClientJsonRpcMessage, ErrorCode, ErrorData, RequestId, ServerJsonRpcMessage},
+    model::{
+        CallToolRequestParams, ClientJsonRpcMessage, ErrorCode, ErrorData, InitializeRequestParams,
+        PaginatedRequestParams, RequestId, ServerJsonRpcMessage,
+    },
     transport::Transport,
 };
 use serde_json::Value;
@@ -70,7 +73,13 @@ impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin + Send + 'static> JsonLines<R, 
         // A detached write must finish its frame; dropping a write_all future
         // halfway through would corrupt the next newline-delimited response.
         let task = tokio::spawn(async move {
-            let mut bytes = serde_json::to_vec(&item).map_err(io::Error::other)?;
+            let mut value = serde_json::to_value(&item).map_err(io::Error::other)?;
+            // rmcp omits an absent error ID; JSON-RPC requires an explicit null
+            // when a malformed message cannot be correlated with a request.
+            if matches!(item, ServerJsonRpcMessage::Error(_)) && value.get("id").is_none() {
+                value["id"] = Value::Null;
+            }
+            let mut bytes = serde_json::to_vec(&value).map_err(io::Error::other)?;
             bytes.push(b'\n');
             let mut write = write.lock().await;
             write.write_all(&bytes).await?;
@@ -126,6 +135,26 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send + 'static> Transp
             let valid = value.is_object()
                 && value["jsonrpc"] == "2.0"
                 && (value.get("id").is_none() || id.is_some());
+            let method = value.get("method").and_then(Value::as_str);
+            if valid && let Some(method) = method {
+                if value.get("id").is_none() {
+                    // Invalid notification parameters must not turn a one-way
+                    // message into an uncorrelated response. Valid notifications
+                    // still reach rmcp for lifecycle/cancellation handling.
+                    if !valid_params(method, value.get("params")) {
+                        continue;
+                    }
+                } else if !valid_params(method, value.get("params")) {
+                    self.output(ServerJsonRpcMessage::error(
+                        ErrorData::invalid_params("Invalid MCP method parameters", None),
+                        id,
+                    ))
+                    .await
+                    .ok()?;
+                    continue;
+                }
+            }
+            let notification = valid && method.is_some() && value.get("id").is_none();
             let parsed = if valid {
                 serde_json::from_value(value).ok()
             } else {
@@ -133,6 +162,9 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send + 'static> Transp
             };
             if let Some(message) = parsed {
                 return Some(message);
+            }
+            if notification {
+                continue;
             }
             self.output(ServerJsonRpcMessage::error(
                 ErrorData::invalid_request("Invalid JSON-RPC request", None),
@@ -144,6 +176,31 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send + 'static> Transp
     }
     async fn close(&mut self) -> io::Result<()> {
         self.write.lock().await.shutdown().await
+    }
+}
+
+/// Validate wire parameters before rmcp's custom-method fallback can obscure a
+/// malformed known request or discard optional pagination fields. Unknown
+/// methods remain the SDK's responsibility, including version negotiation.
+fn valid_params(method: &str, params: Option<&Value>) -> bool {
+    let empty = serde_json::json!({});
+    let params = params.unwrap_or(&empty);
+    if !params.is_object() || params.get("_meta").is_some_and(|m| !m.is_object()) {
+        return false;
+    }
+    match method {
+        "initialize" => serde_json::from_value::<InitializeRequestParams>(params.clone()).is_ok(),
+        "tools/list" => {
+            params.get("cursor").is_none_or(Value::is_string)
+                && serde_json::from_value::<PaginatedRequestParams>(params.clone()).is_ok()
+        }
+        "tools/call" => {
+            params.get("arguments").is_none_or(Value::is_object)
+                // No task-augmented execution is advertised by this server.
+                && params.get("task").is_none()
+                && serde_json::from_value::<CallToolRequestParams>(params.clone()).is_ok()
+        }
+        _ => true,
     }
 }
 
