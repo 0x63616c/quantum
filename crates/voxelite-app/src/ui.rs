@@ -461,8 +461,8 @@ impl EditorView {
             return false;
         }
         match op {
-            Op::Undo => self.editor.engine.head().is_some(),
-            Op::Redo => self.editor.engine.redo_head().is_some(),
+            Op::Undo => self.editor.preview.is_none() && self.editor.engine.head().is_some(),
+            Op::Redo => self.editor.preview.is_none() && self.editor.engine.redo_head().is_some(),
             _ => true,
         }
     }
@@ -914,6 +914,32 @@ impl EditorView {
             return;
         }
         if self.info.is_some() || self.pending.is_some() || self.palette_open {
+            cx.stop_propagation();
+            return;
+        }
+        if self.panel == Panel::History && matches!(key, "left" | "right") {
+            let ids: Vec<_> = std::iter::once(None)
+                .filter(|_| self.editor.engine.initial_retained())
+                .chain(self.editor.engine.timeline().map(|e| Some(e.id)))
+                .collect();
+            let index = self
+                .editor
+                .preview
+                .as_ref()
+                .and_then(|p| {
+                    ids.iter().position(|id| {
+                        p.source == voxelite_app::history::PreviewSource::History(*id)
+                    })
+                })
+                .unwrap_or(ids.len().saturating_sub(1));
+            self.scrub(
+                if key == "left" {
+                    index.saturating_sub(1)
+                } else {
+                    (index + 1).min(ids.len().saturating_sub(1))
+                },
+                cx,
+            );
             cx.stop_propagation();
             return;
         }

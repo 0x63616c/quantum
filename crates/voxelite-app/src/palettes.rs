@@ -152,6 +152,40 @@ mod tests {
         assert_eq!(lib.entries[0].palette.slots.len(), 16);
     }
     #[test]
+    fn duplicate_edit_delete_and_io_failure_are_isolated() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("palettes.json");
+        let mut lib = PaletteLibrary::default();
+        let original = voxelite_core::Preset::Pico8.palette();
+        lib.update(&path, |l| {
+            l.create("Original".into(), original.clone())?;
+            l.create("Copy".into(), original.clone())?;
+            Ok(())
+        })
+        .unwrap();
+        let mut colors = vec![Swatch::rgb(1, 2, 3), Swatch::rgb(4, 5, 6)];
+        lib.update(&path, |l| l.set_colors(1, colors.clone()))
+            .unwrap();
+        colors.swap(0, 1);
+        lib.update(&path, |l| l.set_colors(1, colors)).unwrap();
+        assert_eq!(lib.entries[0].palette, original);
+        assert_eq!(lib.entries[1].palette.slots[0].color.rgba, [4, 5, 6, 255]);
+        assert!(
+            lib.update(dir.path(), |l| {
+                l.entries[1].name = "Should not install".into();
+                Ok(())
+            })
+            .is_err()
+        );
+        assert_eq!(lib.entries[1].name, "Copy");
+        lib.update(&path, |l| {
+            l.entries.remove(1);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(PaletteLibrary::load(&path).unwrap().entries.len(), 1);
+    }
+    #[test]
     fn colors_and_interchange_preserve_duplicates() {
         assert!(parse_color("112233\n445566").is_err());
         assert!(parse_color("#xyz000").is_err());

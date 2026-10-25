@@ -34,6 +34,8 @@ struct Request {
 pub struct SessionEvent {
     /// Public MCP tool name.
     pub tool: String,
+    /// Committed history label, or the public tool name for a read.
+    pub label: String,
     /// Whether domain execution succeeded.
     pub success: bool,
     /// Resulting shared revision.
@@ -238,6 +240,15 @@ impl AttachedSession {
                 .map(str::to_string)
                 .or_else(|| result.as_ref().err().map(|e| e.message.to_string()));
             events.push(SessionEvent {
+                label: if engine.revision() != revision {
+                    engine
+                        .history()
+                        .next_back()
+                        .map(|e| e.label.clone())
+                        .unwrap_or_else(|| request.name.clone())
+                } else {
+                    request.name.clone()
+                },
                 tool: request.name,
                 success,
                 revision: engine.revision(),

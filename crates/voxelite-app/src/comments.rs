@@ -34,12 +34,16 @@ impl Editor {
     /// Add a plain-text thread anchored to a voxel or a half-open region.
     pub fn comment(&mut self, anchor: Anchor, text: String) -> EditorResult<Uuid> {
         let id = Uuid::new_v4();
+        let layer = match &anchor {
+            Anchor::Voxel { at } => self.snapshot().sample(*at).map(|(_, id)| id),
+            Anchor::Region { .. } => None,
+        };
         self.execute(
             "Add comment",
             Command::CreateComment {
                 id,
                 anchor,
-                layer: Some(self.layer),
+                layer,
                 message: Uuid::new_v4(),
                 text,
             },

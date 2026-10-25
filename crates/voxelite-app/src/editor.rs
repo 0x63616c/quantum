@@ -449,7 +449,7 @@ impl Editor {
         self.box_start = None;
     }
     /// Compensate one applied step, retaining unrelated newer work.
-    pub fn ensure_live_revert(&mut self, id: Uuid) -> EditorResult<()> {
+    pub fn revert_step(&mut self, id: Uuid) -> EditorResult<()> {
         self.ensure_live()?;
         self.engine.revert(
             self.engine.revision(),

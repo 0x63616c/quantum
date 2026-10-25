@@ -554,6 +554,10 @@ impl EditorView {
             .child(
                 self.floating()
                     .w(px(780.0))
+                    .h(px(620.0))
+                    .max_h(relative(0.95))
+                    .flex()
+                    .flex_col()
                     .p(px(0.0))
                     .child(
                         row()
@@ -574,7 +578,14 @@ impl EditorView {
                                 },
                             )),
                     )
-                    .child(row().items_stretch().child(left).child(right)),
+                    .child(
+                        row()
+                            .flex_1()
+                            .min_h(px(0.0))
+                            .items_stretch()
+                            .child(left)
+                            .child(right),
+                    ),
             )
             .into_any_element()
     }
