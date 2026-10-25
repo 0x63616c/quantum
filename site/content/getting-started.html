@@ -2,7 +2,8 @@
 <nav class="setup-paths" aria-label="Quick start"><a href="#build">Build the app <span aria-hidden="true">↘</span></a><a href="#connect">Connect MCP <span aria-hidden="true">↘</span></a></nav>
 <p class="explore-note">Just exploring? <a href="/app/">Try the web editor</a> on desktop.<br>Keyboard &amp; mouse required · 1024 × 640 minimum.</p>
 <h2 id="build">Build from source</h2><p>Install Rust with rustup, then run from a repository checkout. The pinned toolchain is Rust 1.99.1.</p><pre><code class="language-sh">export PATH="$HOME/.cargo/bin:$PATH"
-cargo build --locked --release -p voxelite-app -p voxelite-mcp
+cargo build --locked --release \
+  -p voxelite-app -p voxelite-mcp
 ./target/release/voxelite</code></pre><p>Signed macOS downloads and Homebrew packages are not available yet. On macOS, install the Xcode command line tools (<code>xcode-select --install</code>) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.</p><details><summary>Linux build and desktop dependencies (Debian / Ubuntu)</summary><pre><code class="language-sh">sudo apt-get install build-essential pkg-config clang libclang-dev \
   libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev \
   libx11-xcb-dev libxcb1-dev libfontconfig-dev libasound2-dev libssl-dev \

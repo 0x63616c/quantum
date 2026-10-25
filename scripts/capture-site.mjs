@@ -51,7 +51,7 @@ try {
           report.captures.push({ name: `proof-${state}-${theme}`, width, element: '.edit-proof', state });
         }
       }
-      report.captures.push({ name, width, height: 900, fullPage: true });
+      report.captures.push({ name, width, height: 900, fullPage: true, pageHeight: await page.locator('body').evaluate(body => body.scrollHeight) });
       await page.getByRole('button', { name: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` }).click();
       await page.reload({ waitUntil: 'networkidle' });
       assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme === 'dark' ? 'light' : 'dark');
@@ -68,11 +68,39 @@ try {
         assert.equal(response.status(), 200);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} fits ${width}`);
         assert.equal(await page.getByRole('heading', { level: 1 }).count(), 1);
+        const sections = await page.locator('.docs-content h2[id]').evaluateAll(headings => headings.map(heading => `#${heading.id}`));
+        if (sections.length) {
+          const index = page.locator(width < 1100 ? '.docs-mobile-nav nav[aria-label="Page sections"]' : '.docs-toc nav');
+          assert.deepEqual(await index.locator('a').evaluateAll(links => links.map(link => link.getAttribute('href'))), sections, 'Section index matches the article');
+        }
         if (route === '/docs/getting-started/' && (width === 1440 || width === 390)) {
           await page.evaluate(() => document.fonts.ready);
           const name = `docs-${width === 1440 ? 'desktop' : 'mobile'}-${theme}`;
           await page.screenshot({ path: `${directory}/${name}.png` });
           report.captures.push({ name, width, height: 900, fullPage: false });
+          if (width === 390) {
+            const example = await page.locator('.code-example').first().boundingBox();
+            assert.ok(example.y + example.height <= 900, 'First build example fits the phone viewport');
+            assert.equal(await page.locator('.docs-content pre').first().evaluate(pre => pre.scrollWidth <= pre.clientWidth), true, 'First build command needs no horizontal scrolling');
+            const menus = page.locator('.docs-mobile-nav');
+            await menus.getByText('Browse docs', { exact: true }).click();
+            await page.screenshot({ path: `${directory}/${name}-navigation.png` });
+            await menus.getByText('On this page', { exact: true }).click();
+            assert.equal(await menus.locator('details[open]').count(), 1, 'Only one navigation menu opens at a time');
+            await page.screenshot({ path: `${directory}/${name}-sections.png` });
+            for (const state of ['navigation', 'sections']) report.captures.push({ name: `${name}-${state}`, width, height: 900, fullPage: false });
+            await page.keyboard.press('Escape');
+            assert.equal(await menus.locator('details[open]').count(), 0);
+            assert.equal(await page.locator(':focus').textContent(), 'On this page');
+            await page.keyboard.press('Enter');
+            await menus.getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
+            assert.equal(new URL(page.url()).hash, '#first-model');
+            assert.equal(await page.locator(':focus').getAttribute('id'), 'first-model');
+            assert.equal(await menus.locator('details[open]').count(), 0);
+            await menus.getByText('Browse docs', { exact: true }).click();
+            await page.locator('.header').click({ position: { x: 4, y: 4 } });
+            assert.equal(await menus.locator('details[open]').count(), 0, 'Click outside dismisses navigation');
+          }
         }
       }
       await page.goto(base);
@@ -84,6 +112,7 @@ try {
     }
   }
   report.checks.push('Homepage and all five docs routes fit 1440, 1024, 768, 390 and 320px in both themes; keyboard skip link; reduced motion; no third-party homepage requests');
+  report.checks.push('Generated section indexes match article headings; mobile docs menus support mutual exclusion, keyboard, Escape with focus restoration, outside dismissal and anchor focus; first mobile build example fits without scrolling');
   const clipboard = await browser.newPage();
   await clipboard.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await clipboard.goto(base + '/docs/getting-started/');
@@ -101,6 +130,14 @@ try {
   assert.equal(await page.locator('.proof-after').isVisible(), false);
   await page.getByText('After +3 voxels', { exact: true }).click();
   assert.equal(await page.locator('.proof-after').isVisible(), true);
+  await page.goto(base + '/docs/getting-started/');
+  await page.getByText('On this page', { exact: true }).click();
+  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
+  assert.equal(new URL(page.url()).hash, '#first-model');
+  await page.goto(base + '/docs/getting-started/');
+  await page.getByText('Browse docs', { exact: true }).click();
+  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'The .voxl format', exact: true }).click();
+  assert.equal(new URL(page.url()).pathname, '/docs/format/');
   await page.goto(base + '/docs/getting-started/');
   await page.getByRole('link', { name: 'Connect MCP', exact: false }).click();
   assert.equal(new URL(page.url()).hash, '#connect');
