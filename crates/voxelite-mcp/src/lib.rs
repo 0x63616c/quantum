@@ -31,6 +31,7 @@ pub const API_VERSION: &str = "voxelite.v1";
 pub struct VoxeliteServer {
     state: Arc<Mutex<session::Session>>,
     admission: Arc<Semaphore>,
+    identity: (voxelite_core::Uuid, voxelite_core::Uuid),
 }
 impl VoxeliteServer {
     /// Create an empty session scoped to an existing project directory.
@@ -44,8 +45,11 @@ impl VoxeliteServer {
         }
         // Validate/compile the complete catalog before accepting protocol input.
         let _ = catalog::CATALOG.len();
+        let state = session::Session::new(root);
+        let identity = (state.id, state.epoch);
         Ok(Self {
-            state: Arc::new(Mutex::new(session::Session::new(root))),
+            state: Arc::new(Mutex::new(state)),
+            identity,
             admission: Arc::new(Semaphore::new(16)),
         })
     }
@@ -70,9 +74,7 @@ impl VoxeliteServer {
         let spec = catalog::CATALOG
             .iter()
             .find(|s| s.tool.name == name)
-            .ok_or_else(|| {
-                ErrorData::invalid_params("Unknown tool", Some(serde_json::json!({"name":name})))
-            })?;
+            .ok_or_else(|| ErrorData::invalid_params("Unknown tool", None))?;
         let mut state = self.state.lock().map_err(|_| {
             ErrorData::internal_error("session lock poisoned; restart the server", None)
         })?;
@@ -116,38 +118,40 @@ impl ServerHandler for VoxeliteServer {
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
+        let spec = catalog::CATALOG
+            .iter()
+            .find(|s| s.tool.name == request.name)
+            .ok_or_else(|| ErrorData::invalid_params("Unknown tool", None))?;
         let permit = match self.admission.clone().try_acquire_owned() {
             Ok(p) => p,
             Err(_) => {
-                let state = self
-                    .state
-                    .lock()
-                    .map_err(|_| ErrorData::internal_error("session unavailable", None))?;
-                return Ok(state
-                    .error(error::Failure::new(
+                return Ok(session::Session::error_for(
+                    self.identity.0,
+                    self.identity.1,
+                    error::Failure::new(
                         "model_busy",
                         "request queue is full; retry after pending requests finish",
-                    ))
-                    .into());
+                    ),
+                )
+                .into());
             }
         };
         let server = self.clone();
         tokio::task::spawn_blocking(move || {
             let _permit = permit;
+            let mut state = server
+                .state
+                .lock()
+                .map_err(|_| ErrorData::internal_error("session unavailable", None))?;
+            // Cancellation must be rechecked after waiting for the document
+            // authority. Once synchronous preparation starts, it runs atomically.
             if context.ct.is_cancelled() {
-                let state = server
-                    .state
-                    .lock()
-                    .map_err(|_| ErrorData::internal_error("session unavailable", None))?;
                 return Ok(state.error(error::Failure::new(
                     "cancelled",
                     "request cancelled before execution",
                 )));
             }
-            server.call(
-                &request.name,
-                Value::Object(request.arguments.unwrap_or_default()),
-            )
+            Ok(state.call(spec, Value::Object(request.arguments.unwrap_or_default())))
         })
         .await
         .map_err(|_| ErrorData::internal_error("tool worker failed", None))?

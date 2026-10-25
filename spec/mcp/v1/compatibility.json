@@ -1,0 +1,15 @@
+{
+  "api_version": "voxelite.v1",
+  "application_version": "0.1.0",
+  "protocol_profiles": ["2025-11-25", "2026-07-28"],
+  "sdk": {"crate": "rmcp", "version": "3.7.0"},
+  "transport": "stdio",
+  "catalog": "tools.json",
+  "tool_count": 38,
+  "project_format": "voxl/1.0",
+  "stage": "standalone-headless-mcp",
+  "durability": "explicit-document-save",
+  "wire_test": "crates/voxelite-mcp/tests/stdio.rs",
+  "host_configs": ["cursor", "claude", "codex"],
+  "host_applications_tested": false
+}
