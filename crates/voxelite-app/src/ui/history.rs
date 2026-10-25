@@ -5,12 +5,14 @@ use voxelite_core::{Origin, Uuid};
 pub(super) struct Timeline {
     pub name: Entity<crate::text_field::TextField>,
     pub dragging: bool,
+    pub scroll: ScrollHandle,
 }
 impl Timeline {
     pub fn new(cx: &mut App) -> Self {
         Self {
             name: crate::text_field::TextField::new("Name this version…", cx),
             dragging: false,
+            scroll: ScrollHandle::new(),
         }
     }
 }
@@ -36,6 +38,9 @@ impl EditorView {
             }
             let r = self.editor.preview_history(*id);
             if r.is_ok() {
+                self.timeline
+                    .scroll
+                    .scroll_to_item(ids.len().saturating_sub(index + 1));
                 self.refresh_preview(cx);
             }
             self.report(r, "History preview · read-only", cx);
@@ -213,6 +218,7 @@ impl EditorView {
             .child(
                 div()
                     .id("timeline-events")
+                    .track_scroll(&self.timeline.scroll)
                     .flex_1()
                     .min_h(px(70.0))
                     .overflow_y_scroll()

@@ -74,6 +74,11 @@ capture_feature agent
 xdotool windowsize "$window" 1024 640
 sleep 3
 capture_feature agent-small
+# Reach the lower sidebar at the minimum window height.
+xdotool mousemove 950 570 click --repeat 12 --delay 30 5
+sleep 0.4
+capture_feature agent-small-scrolled
+xdotool mousemove 950 570 click --repeat 20 --delay 30 4
 xdotool windowsize "$window" 1440 900
 sleep 3
 # Open the discussion panel and its first real thread.
@@ -91,6 +96,10 @@ capture_feature comments
 xdotool windowsize "$window" 1024 640
 sleep 3
 capture_feature comments-small
+# The message viewport scrolls independently of the pinned reply controls.
+xdotool mousemove 850 390 click --repeat 8 --delay 30 5
+sleep 0.4
+capture_feature comments-small-scrolled
 xdotool windowsize "$window" 1440 900
 sleep 3
 xdotool key Escape
