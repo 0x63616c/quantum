@@ -1,93 +1,56 @@
-# Native app polish round 2
+# App polish round 2 — independent review
 
-Implemented on `build-v1`, 2026-10-25, from the `e141449` round 1 baseline.
-This is an implementation review and executable local verification, not
-independent design approval or macOS certification. `design/` was read only.
-Plugin hosting is excluded from v1 as requested.
+Baseline: `12cfee0`, branch `build-v1`, 2026-10-25. Reviewed the supplied
+screenshots, Concept A, PLAN.md §§1/7–9/17 and design/ART-CHECKLIST.md, then the
+native app and attached MCP implementation. This reviewer did not implement the
+baseline. Fixes below are subsequently self-verified, not independent signoff.
+`design/` is read-only. The required Lucide pass was completed first in `b4bb684`.
 
-## Delivered
+## Before scores
 
-| Item | Implementation | Evidence |
+Scores judge a finished creative application, not progress against an early demo.
+The art is the strongest part; operational hierarchy and interaction integrity
+are substantially below the requested bar.
+
+| Supplied image | Score /10 | Concrete defects |
+| --- | ---: | --- |
+| 1 · app-dark | 6.0 | Bottom palette value touches the status divider; lengthy gesture caption; unlicensed bespoke glyphs; text-only Save; unnecessary permanent rail against the current Concept A contract. |
+| 2 · app-light | 6.2 | Same layout defects; faint floor is acceptable, but the black-on-white interface exposes inconsistent control outlines and weak section hierarchy. |
+| 3 · agent-dark | 4.5 | Calls presented as an undifferentiated list; no captured views/follow-camera; no disclosure affordance for per-step revert; says “Live” after the agent disconnected. |
+| 4 · agent-light | 4.7 | Same missing agent inspection controls; large empty list space and metadata overwhelm a weak activity heading. |
+| 5 · comments-dark | 4.0 | A second 300px thread panel covers the artwork and duplicates the selected card; raw coordinates/state names; 28px pins; no consistent thread number in the sidebar. |
+| 6 · comments-light | 4.2 | Floating discussion casts a conspicuous shadow over the model; redundant text competes with the thread; same docking and identity defects. |
+| 7 · history-dark | 4.5 | Restore is the primary action despite replacing content; a bare slider has no human/agent landmarks; raw “comments add” labels; no viewport return action. |
+| 8 · history-light | 4.7 | Same defects; selected blue strip is louder than the read-only context; named versions have no stable order or selected treatment. |
+| 9 · main-dark | 6.0 | Duplicate of image 1; same concrete defects. |
+| 10 · main-light | 6.2 | Duplicate of image 2; same concrete defects. |
+| 11 · concept-a-dark | 8.3 | Strong hierarchy, docked inspection and real tool context. Grey surfaces conflict with the newer pure-black rule; tiny metadata and large empty viewport at this scale. Reference only. |
+| 12 · concept-a-dark-share | 8.0 | Clear permission hierarchy; truncated URL and permission-cycling affordances need care. Hosting is future scope, so this cannot be copied as a fake working feature. Reference only. |
+| 13 · concept-a-dark-comments | 8.5 | Correct docked thread with numbered identity. Long replies need scrolling, draft preservation and explicit keyboard focus. Reference only. |
+| 14 · concept-a-dark-history | 8.4 | Proper preview exit and actor landmarks. Timeline needs a keyboard model and small-window proof. Reference only. |
+
+## Findings to fix
+
+| ID | Severity | Finding and required correction |
 | --- | --- | --- |
-| Tool rail | Six tools, permanent X/Y/Z mirror toggles, shortcut tooltips, selected states; redundant toolbar picker removed | `afa35d8`; tools dark/light captures |
-| Palette authoring | Persistent custom library, create/rename/duplicate/delete, slot hex/RGB picker, add/remove/reorder, exact presets, native HEX/GPL dialogs | `c62004e`; library tests; native input and dialog scripts |
-| Share | Local-only popover, stable copyable link, access choices, participant editing, memory/file backend trait | `de28dfc`; backend contracts; native participant persistence assertion |
-| Comments | Projected voxel/region anchors, occlusion/detached treatment, selection outline, threads, replies, resolve/reopen, filters | `00a0d8b`; core-backed tests; native reply verified through MCP |
-| History | Read-only slider/keyboard previews, human/agent markers, persistent named versions, explicit guarded restore | `d51ef1f`; preview/restore tests; native named save and unchanged preview revision verified through MCP |
-| Live agent | Private Unix socket, stdio bridge, shared engine, actual call/diff/error feed, pause and compensating per-step revert | `8ac3ffb`; real child-process integration test; real native MCP capture workflow |
+| P01 | Medium | Replace bespoke icons and prose gesture legend; audited action glyphs and full tooltips. **Fixed first, `b4bb684`.** |
+| P02 | Medium | Restore Concept A unified tool picker; remove the permanent rail, correct camera width, and keep the palette footer inside the sidebar at 1024×640 and 1440×900. |
+| P03 | High | Dock comments; the current overlay obscures art. Pins incorrectly enumerate the live snapshot during history preview, and Resolved filtering includes open pins. Use the displayed snapshot and one filter for list/pins; preserve thread numbering and show filtered empty states. |
+| P04 | High | History points to the last retained step after Undo rather than the actual live head. Add correct live selection, actor landmarks, readable operation labels, stable version ordering, a persistent viewport exit, and secondary Restore styling. |
+| P05 | Medium | Agent activity lacks captured views, opt-in camera following, discoverable detail/revert and honest connected/idle state. Capture immutable revisions, expose actual inspection views, and stop following on manual navigation. |
+| P06 | High | Attached MCP undo reports the remaining head as a newly committed entry, offering a revert of the wrong edit. Associate events with actual transaction receipts, including no-op/retry handling. |
+| P07 | High | CPU render MCP requests run synchronously on the UI owner and can freeze pause/navigation. Render immutable snapshots on a bounded worker; preserve revision/epoch identity and keep mutations serialized. |
+| P08 | High | Text selection has no moving end: Shift-left then Shift-right expands instead of contracting; arrow keys skip past selections; long input loses its caret outside the field. Track anchor/head, normalize UTF-16/IME ranges, and scroll the caret into view. |
+| P09 | Medium | Palette reordering leaves selection at the old index, so repeated Move operations affect the wrong swatch. Keep selection attached to the moved color and verify persistence. |
+| P10 | Medium | Share presents a copyable nonfunctional URI and editable imaginary permissions. Replace the prototype surface with useful local file sharing and accurate scope; no pretend hosted controls. |
+| P11 | Medium | Hidden text fields retain focus when switching panels; subsequent tool shortcuts silently go nowhere. Restore focus when changing panels/threads. Named-save controls must not offer mutation during preview. |
 
-The common native text field supports selection, clipboard, Unicode/IME input
-and Tab focus navigation. Palette selection changes available brush colors;
-existing geometry retains its document slots. Comments and versions use portable
-core structures and survive `.voxl` saves.
+The existing documentation incorrectly says plugins were removed from v1;
+PLAN.md explicitly includes them. Correct that statement without claiming this
+polish pass implements the entire remaining release program. Native macOS,
+VoiceOver, wasm parity, plugin hosting and release distribution are separate
+unverified acceptance gates; this Linux review cannot certify them.
 
-## Native capture review
+## After review
 
-All images are actual GPUI windows rendered with Xvfb and Mesa lavapipe, using
-bundled Geist fonts. No HTML images, composites or post-production edits are used.
-The capture workflow opens the bundled art, drives real UI controls, then connects
-an actual `voxelite-mcp --connect` child process to that window.
-
-The first review found the Session empty state crowded the layer section. The
-compact layout now uses a smaller empty state and keeps its palette accessible.
-Comments and History use the available sidebar height. The palette manager has
-bounded scrolling so custom controls fit within the minimum window. Tool rail
-width participates in camera fitting and screen-ray geometry. Final review
-checked dark/light contrast, pure black/white surfaces, selected states, swatch
-legibility, model-space pins, thread text, and history preview visibility.
-
-The native input checks duplicate PICO-8, rename it to a fixture label, edit its
-first color, and assert the actual library JSON. They also add a local participant
-and assert access settings. A human reply and named version are read back through
-MCP, with role attribution. Scrubbing remains at live revision 8; it cannot invoke
-editing shortcuts or silently commit the viewed state. Small waits after focusing
-native fields let GPUI register their platform input handlers before synthetic
-keystrokes are delivered.
-
-| Artifact | Dark | Light |
-| --- | --- | --- |
-| Main, 1440×900 | [dark](../../screenshots/app-dark.png) | [light](../../screenshots/app-light.png) |
-| Main, 1024×640 | [dark](../../screenshots/app-dark-small.png) | [light](../../screenshots/app-light-small.png) |
-| Tool rail | [dark](../../screenshots/polish-2/tools-dark.png) | [light](../../screenshots/polish-2/tools-light.png) |
-| Palette authoring | [dark](../../screenshots/polish-2/palettes-dark.png) | [light](../../screenshots/polish-2/palettes-light.png) |
-| Local Share | [dark](../../screenshots/polish-2/share-dark.png) | [light](../../screenshots/polish-2/share-light.png) |
-| Comments | [dark](../../screenshots/polish-2/comments-dark.png) | [light](../../screenshots/polish-2/comments-light.png) |
-| History preview | [dark](../../screenshots/polish-2/history-dark.png) | [light](../../screenshots/polish-2/history-light.png) |
-| Real agent activity | [dark](../../screenshots/polish-2/agent-dark.png) | [light](../../screenshots/polish-2/agent-light.png) |
-
-The `mcp-*.json` capture receipts record six actual MCP mutations, including six
-recolored voxels and three added voxels. `ui-*.json` records the live revision
-after the human reply and version save, checked while the viewport is previewing
-an older state. The immutable art fixture itself is unchanged.
-
-## Verification
-
-- `cargo fmt --all -- --check`
-- `cargo clippy --workspace --all-targets -- -D warnings`
-- `cargo test --workspace` — 107 tests, including the real stdio/socket process test.
-- `cargo build --workspace` — native GPUI builds on Linux; no platform stub.
-- `cargo test -p voxelite-app --no-default-features` — display-independent logic.
-- `bash scripts/capture-native.sh` — both themes and sizes, fourteen feature PNGs,
-  actual live agent edits, native palette/share input, and MCP verification of UI edits.
-- `bash scripts/review-polish-2.sh` — real native HEX/GPL exports and GPL import,
-  asserting all 36 original colors survive.
-
-The socket test verifies private permissions, existing-path refusal, shared
-geometry/history, agent origin, actual event differences, exact retry no-ops,
-human revision conflicts, pause, stale epochs after replacement, EOF and socket
-cleanup. Library tests cover validation, duplicate isolation, ordering,
-interchange, persistence failure and deletion. Comment/history tests cover
-orphaned anchors, replies, undo, save/reopen, immutable previews, redo previews,
-intervening agent edits, and new reversible restores.
-
-## Explicit boundaries
-
-Sharing is a labeled local stub, not a hosted service or enforced remote access.
-The live MCP bridge is supported on Unix (Linux/macOS); native macOS execution
-and VoiceOver/IME platform certification were not available in this Linux box.
-The app owns open/save operations while attached, preserving its existing file
-conflict checks; the standalone MCP server retains its document lifecycle tools.
-Session changes are memory-resident until the app saves. Recovery journaling,
-hosted collaboration and runtime plugins are outside this round. Expensive MCP
-renders run on the owner thread and may briefly stall native interaction; a
-worker-rendering refactor remains separate from the shared mutation authority.
+Pending fixes, native captures, visual inspection, and workspace verification.
