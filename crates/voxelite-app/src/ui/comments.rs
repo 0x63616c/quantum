@@ -9,6 +9,7 @@ pub(super) enum Panel {
 }
 pub(super) struct Discussion {
     pub selected: Option<Uuid>,
+    pub numbers: std::collections::BTreeMap<Uuid, usize>,
     pub placing: bool,
     pub region: bool,
     pub first: Option<Pos>,
@@ -20,6 +21,7 @@ impl Discussion {
     pub fn new(cx: &mut App) -> Self {
         Self {
             selected: None,
+            numbers: Default::default(),
             placing: false,
             region: false,
             first: None,
@@ -125,7 +127,8 @@ impl EditorView {
     }
     pub(super) fn comments_panel(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
-        let comments = &self.editor.display_snapshot().comments;
+        let mut comments: Vec<_> = self.editor.display_snapshot().comments.iter().collect();
+        comments.sort_by_key(|c| self.discussion.numbers.get(&c.id).copied().unwrap_or(0));
         if let Some(thread) = self.thread_panel(cx) {
             return div()
                 .flex_1()
@@ -234,7 +237,17 @@ impl EditorView {
                                     .child(
                                         row()
                                             .gap(px(8.0))
-                                            .child(mono((i + 1).to_string()).text_color(t.accent()))
+                                            .child(
+                                                mono(
+                                                    self.discussion
+                                                        .numbers
+                                                        .get(&id)
+                                                        .copied()
+                                                        .unwrap_or(i + 1)
+                                                        .to_string(),
+                                                )
+                                                .text_color(t.accent()),
+                                            )
                                             .child(
                                                 icon(if c.resolved { "check" } else { "comment" })
                                                     .text_color(t.muted()),
@@ -332,7 +345,16 @@ impl EditorView {
                         .when(c.resolved, |d| {
                             d.child(icon("check").text_color(t.accent()))
                         })
-                        .when(!c.resolved, |d| d.child((i + 1).to_string()))
+                        .when(!c.resolved, |d| {
+                            d.child(
+                                self.discussion
+                                    .numbers
+                                    .get(&id)
+                                    .copied()
+                                    .unwrap_or(i + 1)
+                                    .to_string(),
+                            )
+                        })
                         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                         .on_mouse_move(|_, _, cx| cx.stop_propagation())
                         .on_click(cx.listener(move |this, _, window, cx| {
@@ -390,8 +412,13 @@ impl EditorView {
                             .border_0(),
                         )
                         .child(
-                            mono(thread.map_or("New".into(), |(i, _)| format!("#{}", i + 1)))
-                                .text_color(t.muted()),
+                            mono(thread.map_or("New".into(), |(i, c)| {
+                                format!(
+                                    "#{}",
+                                    self.discussion.numbers.get(&c.id).copied().unwrap_or(i + 1)
+                                )
+                            }))
+                            .text_color(t.muted()),
                         ),
                 )
                 .when_some(thread, |d, (_, c)| {

@@ -420,6 +420,7 @@ impl EditorView {
                 .extend(old.views.into_iter().map(|v| v.2));
         }
         self.discussion.selected = None;
+        self.discussion.numbers.clear();
         self.discussion.draft = None;
         self.discussion.placing = false;
         self.discussion.first = None;
@@ -2003,7 +2004,11 @@ impl EditorView {
             .flex_col()
             .child(
                 row()
-                    .h(px(if compact { 52.0 } else { 72.0 }))
+                    .h(px(if compact || self.agent.capture.is_some() {
+                        52.0
+                    } else {
+                        72.0
+                    }))
                     .flex_shrink_0()
                     .px(px(PANEL_GUTTER))
                     .gap(px(12.0))
@@ -2029,6 +2034,8 @@ impl EditorView {
                                         self.agent.clients,
                                         if self.agent.clients == 1 { "" } else { "s" }
                                     )
+                                } else if !self.agent.events.is_empty() {
+                                    "Agent disconnected".into()
                                 } else {
                                     "Editing on this device".into()
                                 }),
@@ -2512,6 +2519,16 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        for comment in self
+            .editor
+            .snapshot()
+            .comments
+            .iter()
+            .chain(self.editor.display_snapshot().comments.iter())
+        {
+            let next = self.discussion.numbers.len() + 1;
+            self.discussion.numbers.entry(comment.id).or_insert(next);
+        }
         for image in self.agent.retired.drain(..) {
             let _ = window.drop_image(image);
         }
