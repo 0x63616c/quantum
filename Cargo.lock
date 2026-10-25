@@ -749,6 +749,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "voxelite-core",
+ "voxelite-format",
  "voxelite-render",
 ]
 

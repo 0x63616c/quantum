@@ -23,3 +23,10 @@ workspace = true
 [dev-dependencies]
 gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
 proptest.workspace = true
+
+[dev-dependencies.voxelite-format]
+workspace = true
+
+[[example]]
+name = "cottage"
+path = "../../examples/cottage.rs"
