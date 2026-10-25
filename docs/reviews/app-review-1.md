@@ -52,9 +52,9 @@ required for these checks. Native GPUI builds without a Linux exclusion.
 | `cargo clippy --workspace --all-targets -- -D warnings` | Pass |
 | `cargo test --workspace` | Pass; **96 tests**, including **22 editor tests** |
 | `cargo test -p voxelite-app --no-default-features` | Pass; **22 tests**, no GPUI |
-| `cargo build --workspace` | Pending final build |
-| `bash scripts/capture-native.sh` | Pending final capture inspection |
-| `bash scripts/review-native.sh` | Core workflows passed; final boundary capture run in progress |
+| `cargo build --workspace` | Pass, including the native GPUI app |
+| `bash scripts/capture-native.sh` | Pass; dark/light at 1440×900 and 1024×640 plus display-free viewport |
+| `bash scripts/review-native.sh` | Pass; workflows, boundary layouts and dark/light at 1.5×/2× |
 
 Native regression script assertions cover command typing isolation, searchable
 tool selection, keyboard palette selection, dirty-title transitions, successful
