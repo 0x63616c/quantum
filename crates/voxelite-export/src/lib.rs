@@ -166,3 +166,12 @@ fn srgb_to_linear(value: u8) -> f32 {
         ((c + 0.055) / 1.055).powf(2.4)
     }
 }
+
+/// Render through the shared CPU renderer, then encode its straight-alpha pixels.
+pub fn render_png(
+    snapshot: &Snapshot,
+    options: &voxelite_render::RenderOptions,
+) -> ExportResult<Vec<u8>> {
+    let image = voxelite_render::render(snapshot, options)?;
+    png_rgba(image.width, image.height, &image.rgba)
+}
