@@ -120,6 +120,13 @@ and tool/mirror state **8.2** in this review.
 - `bash scripts/capture-native-scales.sh` — 150% and 200% density captures.
 - `git diff --check`; no changes under `design/`.
 
+Final native rerun completed successfully in both themes. The
+[dark](../../screenshots/polish-2/history-keyboard-dark.png) and
+[light](../../screenshots/polish-2/history-keyboard-light.png) keyboard captures
+show the first retained edit selected after Tab → Right from Initial state;
+Left returns to Initial state. This verifies that hidden version fields no
+longer consume navigation during preview.
+
 ### Remaining limits
 
 This is a substantially more coherent native editor, not a 10/10 release
