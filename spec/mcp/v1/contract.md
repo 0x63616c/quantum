@@ -27,6 +27,9 @@ upload/artifact store, durable session journal, or recovery daemon in this stage
   tools/list cursor rejects. No sampling, resources, prompts, or subscriptions.
 - Parse errors are `-32700`; invalid JSON-RPC requests are `-32600`; unknown
   methods are `-32601`; unknown tools/invalid protocol parameters are `-32602`.
+  Uncorrelated errors include `id: null`. Malformed known method parameters
+  (including nonobject arguments and nonstring cursors) are rejected before SDK
+  dispatch; task-augmented calls reject because no task support is advertised.
   Invalid tool arguments and domain errors are normal tool results with
   `isError:true`, never an apparent success or an opaque internal error.
 - Notifications have no response. Oversized lines are discarded through newline
@@ -55,8 +58,12 @@ Successful mutations retain their exact receipts, including no-ops, for the
 process lifetime. Identical operation ID/name/arguments returns the original
 result even after later edits. Different arguments with that ID reject. Failed
 operations do not reserve IDs. Receipt admission is checked before side effects;
-when the count/byte budget is exhausted, save before that point and start a new
-process. Receipts are not retained across restart. Use the original request when
+when the count/byte budget is exhausted, save documents and start a new process.
+Admission reserves capacity for saving every dirty document, so an edit
+refused for receipt exhaustion does not prevent final saves. A save cannot spend
+another dirty document's reservation, including repeated saves of a clean model.
+Failed saves retain the reservation and consume no receipt. Receipts are not
+retained across restart. Use the original request when
 a response is lost; do not generate a new ID for an uncertain mutation.
 
 An admitted blocking worker checks cancellation after acquiring the authority.
@@ -99,9 +106,9 @@ null. Include the captured revision on subsequent pages; stale reads reject.
 | Open documents | 8 per process |
 | Retained undo history | 16 MiB per document, bounded core eviction |
 | Concurrent admitted tool workers | 16, serialized authority |
-| Successful operation receipts | 4096 / 8 MiB, conservative 64 KiB reservation |
+| Successful operation receipts | 4096 / 8 MiB; 64 KiB per receipt reserved before writes, with capacity held for final dirty-document saves |
 | Encoded request / tool result | 16 MiB / 12 MiB |
-| Explicit writes / batch operations / charged work | 65,536 / 256 / 1,048,576 |
+| Explicit writes / batch operations / charged work | 65,536 entries summed across the entire request / 256 / 1,048,576 |
 | Voxel read page | default 1000, maximum 10,000 |
 | Comments/history page; messages per thread | default 50, maximum 200 |
 | Comment text | 4096 UTF-8 bytes per message |
@@ -119,6 +126,12 @@ without adding unaccounted pixels. Default is four 512² views and one 1024² sh
 `individual` returns only views; `both` returns the sheet first then views.
 An explicit camera replaces named views and perspective fitting. PNG export
 requires exactly one output image; a contact sheet counts as one.
+
+Schemas encode box mode/slot requirements, camera projection fields and selector
+exclusivity, and opaque palette alpha. Name/label limits are UTF-8 byte limits;
+JSON Schema's character limits are supplemented by runtime byte validation.
+Nested output rows have typed fields and accept additive fields within this API
+major. Core batch errors report both `command_index` and an operation JSON Pointer.
 
 ## Files and persistence
 
