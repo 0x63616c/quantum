@@ -1,6 +1,7 @@
 //! Voxelite native GPUI editor and display-free viewport capture.
 mod actions;
 mod assets;
+mod text_field;
 mod theme;
 mod ui;
 use gpui::{prelude::*, *};

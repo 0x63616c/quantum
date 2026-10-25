@@ -1,4 +1,5 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+mod palettes;
 use crate::{
     actions::{MENUS, Op},
     theme::Theme,
@@ -28,6 +29,7 @@ struct FrameIdentity {
 }
 
 pub struct EditorView {
+    palettes: palettes::PaletteManager,
     editor: Editor,
     theme: Theme,
     focus: FocusHandle,
@@ -185,7 +187,16 @@ impl EditorView {
             }
         })
         .detach();
+        let mut palettes = palettes::PaletteManager::new(cx);
+        let library = voxelite_app::palettes::PaletteLibrary::load(
+            &voxelite_app::palettes::data_dir().join("palettes.json"),
+        );
+        let library_error = library.as_ref().err().map(ToString::to_string);
+        if let Ok(library) = library {
+            palettes.library = library;
+        }
         Self {
+            palettes,
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
             document_generation: 0,
@@ -224,8 +235,8 @@ impl EditorView {
             dialog_open: false,
             info: None,
             pending: None,
-            status: "Ready".into(),
-            error: false,
+            status: library_error.clone().unwrap_or_else(|| "Ready".into()),
+            error: library_error.is_some(),
         }
     }
     fn report<T>(&mut self, result: EditorResult<T>, message: &str, cx: &mut Context<Self>) {
@@ -361,6 +372,13 @@ impl EditorView {
         self.request_render(cx);
     }
     fn active_palette(&self) -> Palette {
+        if let Some(p) = self
+            .palettes
+            .custom
+            .and_then(|id| self.palettes.library.entries.iter().find(|e| e.id == id))
+        {
+            return p.palette.clone();
+        }
         PALETTES[self.palette_index]
             .1
             .map(|p| p.palette())
@@ -498,6 +516,7 @@ impl EditorView {
                 let r = self.editor.add_layer();
                 self.report(r, "Layer added", cx);
             }
+            Op::ManagePalettes => self.manage_palettes(cx),
             Op::Palette => {
                 self.palette_open = true;
                 self.palette_cursor = self.palette_index;
@@ -716,7 +735,15 @@ impl EditorView {
             return;
         }
         let key = e.keystroke.key.as_str();
+        if key != "escape"
+            && (self.palettes.name.read(cx).focused(window)
+                || self.palettes.hex.read(cx).focused(window))
+        {
+            return;
+        }
         if key == "escape" {
+            self.palettes.open = false;
+            window.focus(&self.focus, cx);
             self.menu = None;
             self.command_open = false;
             self.palette_open = false;
@@ -729,6 +756,10 @@ impl EditorView {
             self.error = false;
             cx.stop_propagation();
             cx.notify();
+            return;
+        }
+        if self.palettes.open {
+            cx.stop_propagation();
             return;
         }
         if self.pending.is_some() {
@@ -754,6 +785,7 @@ impl EditorView {
                 }
                 "enter" => {
                     self.palette_index = self.palette_cursor;
+                    self.palettes.custom = None;
                     self.palette_open = false;
                 }
                 _ => {}
@@ -1423,7 +1455,11 @@ impl EditorView {
                             .cursor_pointer()
                             .tooltip(hint("Choose a project or preset palette", t))
                             .hover(move |d| d.bg(t.hover()))
-                            .child(section_title(PALETTES[self.palette_index].0))
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(self.palette_name()),
+                            )
                             .child(icon("chevron").size(px(14.0)).text_color(t.muted()))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.palette_open = !this.palette_open;
@@ -1870,6 +1906,9 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        if self.palettes.open && !self.dialog_open {
+            return Some(self.palette_manager(cx));
+        }
         if self.dialog_open {
             return Some(
                 div()
@@ -2168,6 +2207,7 @@ impl EditorView {
                                                 )
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     this.palette_index = i;
+                                                    this.palettes.custom = None;
                                                     this.palette_open = false;
                                                     cx.notify();
                                                 }))
@@ -2183,7 +2223,16 @@ impl EditorView {
                                     .border_color(t.line())
                                     .text_size(px(12.0))
                                     .text_color(t.muted())
-                                    .child("Applies to new voxels"),
+                                    .child(self.control(
+                                        "manage-palettes",
+                                        "Manage palettes…",
+                                        cx,
+                                        |this, _, cx| {
+                                            this.palette_open = false;
+                                            this.manage_palettes(cx);
+                                            cx.notify();
+                                        },
+                                    )),
                             ),
                     )
                     .into_any_element(),
@@ -2221,6 +2270,12 @@ impl Render for EditorView {
             }
             self.painted_image = self.image.clone();
         }
+        self.palettes
+            .name
+            .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.palettes
+            .hex
+            .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
         let height =
@@ -2284,6 +2339,7 @@ impl Render for EditorView {
                 || self.pending.is_some()
                 || self.info.is_some()
                 || self.dialog_open
+                || self.palettes.open
             {
                 "Modal"
             } else {
@@ -2300,7 +2356,7 @@ impl Render for EditorView {
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
             .on_action(cx.listener(|this, op: &Op, window, cx| {
-                if this.info.is_none() && this.pending.is_none() {
+                if this.info.is_none() && this.pending.is_none() && !this.palettes.open {
                     this.invoke(*op, window, cx);
                 }
             }))
@@ -2325,6 +2381,7 @@ impl Render for EditorView {
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(|this, _, _, cx| {
+                            this.palettes.open = false;
                             this.menu = None;
                             this.palette_open = false;
                             this.command_open = false;
