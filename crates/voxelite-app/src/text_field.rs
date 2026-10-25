@@ -235,6 +235,11 @@ impl EntityInputHandler for TextField {
         Some(self.to_utf16(byte..byte).start)
     }
 }
+impl Focusable for TextField {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus.clone()
+    }
+}
 impl Render for TextField {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;

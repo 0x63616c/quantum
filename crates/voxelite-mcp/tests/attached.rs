@@ -158,6 +158,22 @@ fn live_socket_shares_history_conflicts_pause_and_receipts() {
     );
     assert_eq!(owner.document().content.name, "Together");
     assert_eq!(owner.history().count(), 2);
+    session.paused = false;
+    session
+        .replace(Project::new(owner.document().clone()).unwrap())
+        .unwrap();
+    let stale_epoch = json!({"model_id":model,"expected_epoch":epoch,"expected_revision":owner.revision().to_string(),"operation_id":Uuid::new_v4(),"layer":layer,"voxels":[{"at":[2,2,3],"slot":1}]});
+    let (response, _) = rpc(
+        "tools/call",
+        json!({"name":"voxelite_voxels_set","arguments":stale_epoch}),
+        &mut session,
+        &mut owner,
+    );
+    assert_eq!(
+        response["result"]["structuredContent"]["error"]["code"],
+        "epoch_conflict"
+    );
+    assert_eq!(owner.document().content.layers[0].voxels.get([2, 2, 3]), 0);
     drop(rpc);
     drop(stdin);
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -170,4 +186,5 @@ fn live_socket_shares_history_conflicts_pause_and_receipts() {
         std::thread::sleep(Duration::from_millis(10));
     }
     drop(session);
+    assert!(!path.exists(), "normal shutdown removes the owned socket");
 }

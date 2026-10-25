@@ -24,11 +24,18 @@ search 'manage palettes'
 xdotool mousemove 420 307 click 1
 xdotool mousemove 590 298 click 1
 sleep 0.3
-xdotool mousemove 700 251 click 1 key ctrl+a
+xdotool mousemove 700 251 click 1
+sleep 0.25
+xdotool key ctrl+a
 xdotool type --clearmodifiers --delay 15 'Studio warm'
+sleep 0.25
 xdotool mousemove 1040 251 click 1
-xdotool mousemove 620 429 click 1 key ctrl+a
+sleep 0.25
+xdotool mousemove 620 429 click 1
+sleep 0.25
+xdotool key ctrl+a
 xdotool type --clearmodifiers --delay 15 '#CC8844'
+sleep 0.25
 xdotool mousemove 780 429 click 1
 sleep 0.3
 python3 - "$VOXELITE_DATA_DIR/palettes.json" <<'PYTEST'
@@ -42,6 +49,7 @@ capture_feature palettes
 xdotool key Escape
 search 'share project'
 xdotool mousemove 1150 422 click 1
+sleep 0.25
 xdotool type --clearmodifiers --delay 15 'Reviewer'
 xdotool mousemove 1375 423 click 1
 sleep 0.3
@@ -65,15 +73,17 @@ xdotool mousemove 566 374 click 1
 sleep 0.4
 # Reply with native text input. The field contains tool shortcut letters.
 xdotool mousemove 900 487 click 1
+sleep 0.25
 xdotool type --clearmodifiers --delay 12 'The warm highlights look balanced.'
 xdotool mousemove 920 535 click 1
-sleep 0.4
+sleep 3
 capture_feature comments
 xdotool key Escape
 # Named versions and a draggable history preview.
 xdotool mousemove 1370 193 click 1
 sleep 0.4
 xdotool mousemove 1230 829 click 1
+sleep 0.25
 xdotool type --clearmodifiers --delay 12 'Human review'
 xdotool mousemove 1395 829 click 1
 sleep 0.4

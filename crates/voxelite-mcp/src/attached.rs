@@ -113,6 +113,7 @@ pub struct AttachedSession {
     session: Session,
     requests: mpsc::Receiver<Request>,
     stop: Option<oneshot::Sender<()>>,
+    worker: Option<std::thread::JoinHandle<()>>,
     path: PathBuf,
     clients: Arc<AtomicUsize>,
     /// Human pause rejects new agent mutations; reads remain available.
@@ -144,7 +145,7 @@ impl AttachedSession {
             .worker_threads(2)
             .enable_all()
             .build()?;
-        std::thread::Builder::new().name("voxelite-mcp".into()).spawn(move||{
+        let worker = std::thread::Builder::new().name("voxelite-mcp".into()).spawn(move||{
             runtime.block_on(async move{
                 let Ok(listener)=tokio::net::UnixListener::from_std(listener)else{return};let mut tasks=tokio::task::JoinSet::new();tokio::pin!(stopped);
                 loop {tokio::select!{
@@ -165,6 +166,7 @@ impl AttachedSession {
             session,
             requests,
             stop: Some(stop),
+            worker: Some(worker),
             path,
             clients,
             paused: false,
@@ -282,6 +284,9 @@ impl Drop for AttachedSession {
     fn drop(&mut self) {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
+        }
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
         }
     }
 }

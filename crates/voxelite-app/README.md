@@ -7,11 +7,11 @@ toolbar with a dedicated left tool rail, compact palette previews, layers and re
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
-The [polish round 1 review](../../docs/reviews/app-polish-1.md) records the
-current visual assessment and both-theme captures. The toolbar uses a primary
-Save action, with secondary commands in menus; the sidebar pairs recent changes
-with compact Undo/Redo, layers and full-size color tiles. Static medium and
-semibold Geist faces preserve the intended weight hierarchy on Linux.
+The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
+current visual assessment, verification and both-theme captures. The sidebar
+switches between Session, Comments and History; the toolbar keeps Save and the
+local Share prototype within reach. Static medium and semibold Geist faces
+preserve the intended weight hierarchy on Linux.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -121,13 +121,11 @@ bash scripts/capture-native.sh
 
 The capture script uses real GPUI windows under Xvfb, not HTML or a composited
 mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
-It also captures both themes at 1024×640. `bash scripts/review-native.sh` exercises
-real command search, tool/palette selection, save-and-continue, cancel/discard,
-native Open, dialog input isolation, boundary layouts, and 1.5×/2× captures.
-See [review round 1](../../docs/reviews/app-review-1.md) for findings and evidence.
-Set `VOXELITE_REVIEW_ARTIFACTS` to an absolute directory to retain a separate
-capture set. The script also checks camera-axis input isolation, mirror controls,
-both preset choosers and the local-history keyboard guide.
+It also captures both themes at 1024×640. The round 2 capture workflow verifies
+palette authoring, local share settings, a human reply, a named version and
+preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
+exercises real native HEX/GPL file dialogs. Earlier review captures and reports
+remain historical evidence for the preceding shell revision.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
 a minimal server without them can still open paths through the CLI and render
 PNGs. Dialog errors appear in the status bar and preserve the current project.
