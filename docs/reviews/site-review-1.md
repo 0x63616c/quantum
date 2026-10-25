@@ -52,3 +52,11 @@ The real cottage scene is doing almost all the emotional and product-specific wo
 ## Retain
 
 Keep the real editor capture, restrained theme palette, consistent content alignment, and clear primary/secondary button distinction. The main mobile buttons already have useful height. The next revision should strengthen product evidence and device clarity before adding more styling. A redesign that merely brightens borders or adds decorative color would leave the central weaknesses intact.
+
+## Implemented response
+
+The next capture adds immediate device/agent requirements, an enlarged mobile
+canvas crop with a full-workspace image link, an authentic cropped native session
+showing a three-voxel edit and three captured angles, real workshop palette
+swatches, and larger supporting links with touch spacing. These are fixes, not a
+revised score. Recapture: `screenshots/site/round-2/`.
