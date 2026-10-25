@@ -110,55 +110,73 @@ impl EditorView {
     pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let paused = self.agent.session.as_ref().is_some_and(|s| s.paused);
-        if compact && self.agent.events.is_empty() {
-            return row()
-                .h(px(72.0))
-                .flex_shrink_0()
-                .px(px(20.0))
-                .justify_between()
-                .child(div().text_color(t.muted()).child("No edits yet"))
-                .child(self.control(
-                    "connect-agent-compact",
-                    "plug",
-                    "Connect agent",
-                    cx,
-                    |this, _, cx| {
-                        this.agent.open = true;
-                        cx.notify();
-                    },
-                ));
-        }
         if self.agent.events.is_empty() {
-            return div()
-                .flex_1()
-                .min_h(px(160.0))
-                .flex()
-                .flex_col()
+            let connected = self.agent.clients > 0;
+            let has_history = self.editor.engine.history().next().is_some();
+            let invitation = div()
+                .px(px(PANEL_GUTTER))
+                .py(px(if compact { 16.0 } else { 20.0 }))
                 .child(
                     row()
-                        .px(px(20.0))
-                        .pt(px(12.0))
-                        .gap(px(8.0))
-                        .child(self.control(
-                            "connect-agent",
-                            "plug",
-                            "Connect agent",
-                            cx,
-                            |this, _, cx| {
-                                this.agent.open = true;
-                                cx.notify();
-                            },
-                        )),
+                        .gap(px(12.0))
+                        .justify_between()
+                        .child(div().font_weight(FontWeight::MEDIUM).child(if connected {
+                            "Ready for agent edits"
+                        } else {
+                            "Build with an agent"
+                        }))
+                        .when(compact && !connected, |d| {
+                            d.child(self.control(
+                                "connect-agent-compact",
+                                "plug",
+                                "Connect",
+                                cx,
+                                |this, _, cx| {
+                                    this.agent.open = true;
+                                    cx.notify();
+                                },
+                            ))
+                        }),
                 )
-                .child(self.history_panel(true, cx));
+                .when(!compact, |d| {
+                    d.child(div().mt(px(6.0)).text_color(t.muted()).child(if connected {
+                        "Edits will appear here as they happen."
+                    } else {
+                        "Watch your scene take shape, live."
+                    }))
+                    .when(!connected, |d| {
+                        d.child(
+                            self.control(
+                                "connect-agent",
+                                "plug",
+                                "Connect agent",
+                                cx,
+                                |this, _, cx| {
+                                    this.agent.open = true;
+                                    cx.notify();
+                                },
+                            )
+                            .mt(px(14.0)),
+                        )
+                    })
+                });
+            return div()
+                .flex_shrink_0()
+                .flex()
+                .flex_col()
+                .child(invitation)
+                .when(has_history, |d| {
+                    d.child(self.history_panel(true, cx).h(px(156.0)))
+                });
         }
         div()
             .flex_1()
             .min_h(px(310.0))
             .flex()
             .flex_col()
-            .p(px(12.0))
-            .gap(px(8.0))
+            .px(px(PANEL_GUTTER))
+            .py(px(16.0))
+            .gap(px(12.0))
             .child(
                 row()
                     .justify_between()

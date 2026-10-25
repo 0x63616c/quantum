@@ -71,6 +71,7 @@ pub struct EditorView {
     tools_only: bool,
     palette_cursor: usize,
     palette_scroll: ScrollHandle,
+    swatch_scroll: ScrollHandle,
     pending_choice: usize,
     after_save: Option<Op>,
     query: String,
@@ -274,6 +275,7 @@ impl EditorView {
             tools_only: false,
             palette_cursor: 0,
             palette_scroll: ScrollHandle::new(),
+            swatch_scroll: ScrollHandle::new(),
             pending_choice: 2,
             after_save: None,
             query: String::new(),
@@ -1428,6 +1430,7 @@ impl EditorView {
 
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
+        let compact = self.render_size[0] < 800;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
         let camera = self.display_camera;
@@ -1555,27 +1558,62 @@ impl EditorView {
                         .gap(px(8.0))
                         .child(icon("lock").text_color(t.accent()))
                         .child("Read-only preview")
-                        .child(self.control("preview-exit", "play", "Return to live", cx, |this, window, cx| {
-                            this.editor.return_live();
-                            this.refresh_preview(cx);
-                            window.focus(&this.focus, cx);
-                        }).border_0()),
+                        .child(
+                            self.control(
+                                "preview-exit",
+                                "play",
+                                "Return to live",
+                                cx,
+                                |this, window, cx| {
+                                    this.editor.return_live();
+                                    this.refresh_preview(cx);
+                                    window.focus(&this.focus, cx);
+                                },
+                            )
+                            .border_0(),
+                        ),
                 )
             })
             .child(self.orientation(cx))
             .child(
-                div()
-                    .absolute()
-                    .bottom(px(28.0))
-                    .left(px(24.0))
-                    .child(
-                        row().id("camera-hints").h(px(32.0)).gap(px(14.0))
-                            .text_color(t.muted())
-                            .tooltip(hint("Right-drag to orbit · Shift-right-drag or middle-drag to pan · Scroll to zoom · F to frame", t))
-                            .child(row().gap(px(4.0)).child(icon("mouse").text_color(t.muted())).child(icon("orbit").text_color(t.muted())))
-                            .child(row().gap(px(4.0)).child(icon("arrow-up").text_color(t.muted())).child(icon("mouse").text_color(t.muted())).child(icon("move").text_color(t.muted())))
-                            .child(row().gap(px(4.0)).child(icon("mouse").text_color(t.muted())).child(icon("zoom-in").text_color(t.muted())))
-                    ),
+                div().absolute().bottom(px(20.0)).left(px(24.0)).child(
+                    row()
+                        .id("camera-hints")
+                        .h(px(32.0))
+                        .gap(px(12.0))
+                        .text_size(px(12.0))
+                        .text_color(t.muted())
+                        .child(
+                            row()
+                                .id("orbit-hint")
+                                .gap(px(4.0))
+                                .tooltip(hint("Right-drag to orbit", t))
+                                .child(icon("mouse").text_color(t.muted()))
+                                .child(icon("orbit").text_color(t.muted()))
+                                .when(!compact, |d| d.child("Orbit")),
+                        )
+                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
+                        .child(
+                            row()
+                                .id("pan-hint")
+                                .gap(px(4.0))
+                                .tooltip(hint("Shift-right-drag or middle-drag to pan", t))
+                                .child(icon("arrow-up").text_color(t.muted()))
+                                .child(icon("mouse").text_color(t.muted()))
+                                .child(icon("move").text_color(t.muted()))
+                                .when(!compact, |d| d.child("Pan")),
+                        )
+                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
+                        .child(
+                            row()
+                                .id("zoom-hint")
+                                .gap(px(4.0))
+                                .tooltip(hint("Scroll to zoom · F to frame the model", t))
+                                .child(icon("mouse").text_color(t.muted()))
+                                .child(icon("zoom-in").text_color(t.muted()))
+                                .when(!compact, |d| d.child("Zoom")),
+                        ),
+                ),
             )
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
@@ -1703,7 +1741,7 @@ impl EditorView {
                     ScrollDelta::Pixels(p) => f64::from(f32::from(p.y)),
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
                 };
-                this.agent.follow=false;
+                this.agent.follow = false;
                 this.editor.camera.zoom(delta);
                 this.camera_fitted = false;
                 this.request_navigation(cx);
@@ -1715,6 +1753,10 @@ impl EditorView {
         let t = self.theme;
         let palette = self.active_palette();
         let color = self.editor.color.rgba;
+        // Eight 32px swatches, 6px gaps and 2px focus-ring padding per row.
+        let visible_rows = if compact { 2 } else { 5 };
+        let swatch_height = visible_rows as f32 * 38.0 - 2.0;
+        let overflowing = palette.order.len() > visible_rows * 8;
         let hex = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
         div()
             .flex_shrink_0()
@@ -1756,7 +1798,8 @@ impl EditorView {
             .child(
                 div()
                     .id("swatch-scroll")
-                    .max_h(px(if compact { 76.0 } else { 152.0 }))
+                    .track_scroll(&self.swatch_scroll)
+                    .max_h(px(swatch_height))
                     .overflow_y_scroll()
                     .child(div().flex().flex_wrap().gap(px(6.0)).p(px(2.0)).children(
                         palette.order.iter().enumerate().map(|(i, slot)| {
@@ -1800,14 +1843,44 @@ impl EditorView {
                     .text_color(t.muted())
                     .child(mono(hex))
                     .child(div().flex_1())
-                    .child("Brush color"),
+                    .when(!overflowing, |d| d.child("Brush color"))
+                    .when(overflowing, |d| {
+                        d.child("Scroll colors")
+                            .child(
+                                self.control("colors-up", "arrow-up", "", cx, |this, _, cx| {
+                                    let offset = this.swatch_scroll.offset();
+                                    this.swatch_scroll
+                                        .set_offset(point(px(0.0), offset.y + px(76.0)));
+                                    cx.notify();
+                                })
+                                .size(px(24.0))
+                                .px(px(0.0))
+                                .justify_center()
+                                .border_0()
+                                .tooltip(hint("Scroll to previous colors", t)),
+                            )
+                            .child(
+                                self.control("colors-down", "chevron", "", cx, |this, _, cx| {
+                                    let offset = this.swatch_scroll.offset();
+                                    this.swatch_scroll
+                                        .set_offset(point(px(0.0), offset.y - px(76.0)));
+                                    cx.notify();
+                                })
+                                .size(px(24.0))
+                                .px(px(0.0))
+                                .justify_center()
+                                .border_0()
+                                .tooltip(hint("Scroll to more colors", t)),
+                            )
+                    }),
             )
     }
     fn layers_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         div()
-            .flex_shrink_0()
-            .px(px(16.0))
+            .flex_1()
+            .min_h(px(if compact { 180.0 } else { 216.0 }))
+            .px(px(PANEL_GUTTER - 8.0))
             .py(px(if compact { 8.0 } else { 16.0 }))
             .border_t_1()
             .border_color(t.line())
@@ -1838,7 +1911,8 @@ impl EditorView {
                                 row()
                                     .id(("layer", i))
                                     .h(px(if compact { 32.0 } else { 36.0 }))
-                                    .px(px(8.0))
+                                    .pl(px(6.0))
+                                    .pr(px(8.0))
                                     .gap(px(8.0))
                                     .rounded(px(6.0))
                                     .cursor_pointer()
