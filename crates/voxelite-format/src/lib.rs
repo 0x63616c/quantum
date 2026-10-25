@@ -1,0 +1,1 @@
+//! Headless Voxelite format foundation.
