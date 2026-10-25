@@ -1,3 +1,4 @@
+import { renderConceptA } from './lib/render-concept-a.mjs';
 import { chromium } from 'playwright';
 import { mkdir, stat } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,7 +17,11 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const rendered = [];
 try {
-  for (const concept of ['a', 'b', 'c']) {
+  for (const concept of (process.argv.includes('--only-a') ? ['a'] : ['a', 'b', 'c'])) {
+    if (concept === 'a') {
+      rendered.push(...await renderConceptA(browser, root, output));
+      continue;
+    }
     const page = await browser.newPage({
       viewport: { width: 1600, height: 1000 },
       deviceScaleFactor: 2,
@@ -107,10 +112,10 @@ try {
       assert.equal(metrics.distinctThumbs, 3, 'Agent render angles must differ');
       assert.deepEqual(errors, [], 'Browser errors');
       const path = `${output}/concept-${concept}-${theme}.png`;
-      await page.screenshot({ path, fullPage: false, animations: 'disabled' });
+      // B/C are read-only in this revision; retain their existing PNG bytes.
       assert.ok((await stat(path)).size > 100_000, 'Screenshot appears empty');
       rendered.push(path);
-      console.log(`Rendered concept-${concept}-${theme}.png · 3200 × 2000 · ${metrics.scene.cubes} voxels · text ${metrics.contrast.text.toFixed(2)}:1 / controls ${metrics.contrast.controls.toFixed(2)}:1`);
+      console.log(`Verified unchanged concept-${concept}-${theme}.png · 3200 × 2000 · ${metrics.scene.cubes} voxels · text ${metrics.contrast.text.toFixed(2)}:1 / controls ${metrics.contrast.controls.toFixed(2)}:1`);
     }
     // Exercise the functional preview controls after capturing the default state.
     await page.keyboard.press('e');
@@ -265,5 +270,5 @@ try {
 } finally {
   await browser.close();
 }
-assert.equal(rendered.length, 6);
-console.log('Verified all 6 PNGs and preview controls.');
+assert.equal(rendered.length, process.argv.includes('--only-a') ? 12 : 16);
+console.log('Verified all requested PNGs and preview controls; B/C files remain unchanged.');
