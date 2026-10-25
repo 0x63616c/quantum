@@ -154,7 +154,7 @@ impl EditorView {
         }
         div()
             .flex_1()
-            .min_h(px(330.0))
+            .min_h(px(310.0))
             .flex()
             .flex_col()
             .p(px(12.0))
@@ -189,7 +189,7 @@ impl EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .overflow_y_scroll()
-                    .children(self.agent.events.iter().enumerate().rev().map(|(i, e)| {
+                    .children(self.agent.events.iter().enumerate().rev().filter(|(_,e)| e.entry.is_some() || e.changes.voxel_count()>0 || !e.success).map(|(i, e)| {
                         let entry = e.entry;
                         let expanded = self.agent.expanded == Some(i);
                         div()
@@ -270,21 +270,28 @@ impl EditorView {
                             }))
                     })),
             )
-            .when_some(self.agent.capture.as_ref(), |d,capture| {
-                d.child(row().justify_between().child(div().font_weight(FontWeight::MEDIUM).child("Captured views"))
-                    .child(mono(format!("r{:03}",capture.revision)).text_color(t.muted())))
-                .child(row().gap(px(4.0)).children(capture.views.iter().enumerate().map(|(i,(name,view,_))| {
-                    let view=*view;
-                    self.control(("capture-view",i),"camera",name.clone(),cx,move |this,_,cx| {
-                        if let Some(c)=&mut this.agent.capture {c.selected=i;}
-                        this.agent.follow=false; this.set_agent_view(view,cx); cx.notify();
-                    }).flex_1().px(px(6.0)).justify_center().border_0()
-                    .when(i == capture.selected,|d|d.bg(t.selected()))
+            .when_some(self.agent.capture.as_ref(), |d, capture| {
+                d.child(row().justify_between()
+                    .child(div().font_weight(FontWeight::MEDIUM).child("Captured views"))
+                    .child(mono(format!("r{:03}", capture.revision)).text_color(t.muted())))
+                .child(row().gap(px(6.0)).children(capture.views.iter().enumerate().map(|(i, (name, view, image))| {
+                    let view = *view;
+                    div().id(("capture-view", i)).flex_1().min_w(px(0.0)).h(px(100.0))
+                        .flex().flex_col().items_center().rounded(px(6.0)).border_1()
+                        .border_color(if i == capture.selected {t.accent()} else {t.line()})
+                        .cursor_pointer().hover(move |d|d.bg(t.hover()))
+                        .tooltip(hint(format!("{} view · captured at r{} · click to orient the live camera", name, capture.revision),t))
+                        .child(img(image.clone()).w(px(96.0)).h(px(76.0)).object_fit(ObjectFit::Contain))
+                        .child(row().gap(px(4.0)).text_size(px(12.0)).text_color(t.muted())
+                            .child(icon("camera").size(px(12.0)).text_color(t.muted()))
+                            .child(name[..1].to_uppercase() + &name[1..]))
+                        .on_click(cx.listener(move |this,_,_,cx| {
+                            if let Some(c) = &mut this.agent.capture {c.selected=i;}
+                            this.agent.follow=false;
+                            this.set_agent_view(view,cx);
+                            cx.notify();
+                        }))
                 })))
-                .when_some(capture.views.get(capture.selected),|d,(_,_,image)|d.child(
-                    div().h(px(84.0)).flex_shrink_0().rounded(px(8.0)).border_1().border_color(t.line()).overflow_hidden()
-                        .child(img(image.clone()).size_full().object_fit(ObjectFit::Contain))
-                ))
             })
             .when(self.agent.capturing, |d|d.child(div().text_size(px(12.0)).text_color(t.muted()).child("Capturing views…")))
     }
@@ -330,8 +337,8 @@ impl EditorView {
                     let mut frame = voxelite_render::render(
                         &snapshot,
                         &RenderOptions {
-                            width: 300,
-                            height: 116,
+                            width: 180,
+                            height: 160,
                             supersampling: 2,
                             background: [0; 4],
                             view: View::Preset {
