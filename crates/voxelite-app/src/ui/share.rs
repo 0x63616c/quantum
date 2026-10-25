@@ -145,7 +145,7 @@ impl EditorView {
                     .id("share-panel")
                     .w_full()
                     .max_h_full()
-                    .overflow_y_scroll()
+                    .overflow_hidden()
                     .p(px(20.0))
                     .flex()
                     .flex_col()
@@ -174,224 +174,245 @@ impl EditorView {
                     )
                     .child(
                         div()
-                            .flex_shrink_0()
+                            .id("share-content")
+                            .min_h(px(0.0))
+                            .overflow_y_scroll()
                             .flex()
                             .flex_col()
-                            .gap(px(10.0))
-                            .child(
-                                row().justify_between().child("Link access").child(
-                                    div()
-                                        .text_size(px(12.0))
-                                        .text_color(t.muted())
-                                        .child("Local link"),
-                                ),
-                            )
-                            .child(self.share_access_choices(share.access, None, cx))
-                            .child(div().text_size(px(12.0)).text_color(t.muted()).child(
-                                match share.access {
-                                    Access::View => "View the project without making changes.",
-                                    Access::Comment => "View the project and join the discussion.",
-                                    Access::Remix => {
-                                        "View, comment and create an independent copy."
-                                    }
-                                },
-                            )),
-                    )
-                    .child(
-                        row()
-                            .flex_shrink_0()
-                            .h(px(44.0))
-                            .px(px(10.0))
-                            .gap(px(8.0))
-                            .border_1()
-                            .border_color(t.line())
-                            .rounded(px(6.0))
-                            .child(icon("link").text_color(t.muted()))
+                            .gap(px(16.0))
                             .child(
                                 div()
-                                    .id("share-link")
-                                    .flex_1()
-                                    .min_w(px(0.0))
-                                    .text_size(px(12.0))
-                                    .overflow_hidden()
-                                    .text_ellipsis()
-                                    .tooltip(hint(share.link(), t))
-                                    .child(share.link()),
-                            )
-                            .child(
-                                self.control(
-                                    "copy-share",
-                                    if self.sharing.copied { "check" } else { "copy" },
-                                    if self.sharing.copied {
-                                        "Copied"
-                                    } else {
-                                        "Copy"
-                                    },
-                                    cx,
-                                    |this, _, cx| {
-                                        if let Some(share) = &this.sharing.record {
-                                            cx.write_to_clipboard(ClipboardItem::new_string(
-                                                share.link(),
-                                            ));
-                                            this.sharing.copied = true;
-                                            this.status = "Local share link copied".into();
-                                            this.error = false;
-                                            cx.notify();
-                                        }
-                                    },
-                                )
-                                .border_0()
-                                .flex_shrink_0(),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex_shrink_0()
-                            .pt(px(16.0))
-                            .border_t_1()
-                            .border_color(t.line())
-                            .flex()
-                            .flex_col()
-                            .gap(px(10.0))
-                            .child(section_title("People & agents"))
-                            .child(
-                                div().text_size(px(12.0)).text_color(t.muted()).child(
-                                    "Settings stay on this device. No invitations are sent.",
-                                ),
-                            )
-                            .child(
-                                row()
-                                    .h(px(36.0))
+                                    .flex_shrink_0()
+                                    .flex()
+                                    .flex_col()
                                     .gap(px(10.0))
                                     .child(
-                                        row()
-                                            .size(px(28.0))
-                                            .justify_center()
-                                            .rounded_full()
-                                            .bg(t.hover())
-                                            .child(icon("user").text_color(t.muted())),
-                                    )
-                                    .child(div().flex_1().child("You"))
-                                    .child(div().text_color(t.muted()).child("Owner")),
-                            )
-                            .child(
-                                div()
-                                    .id("share-people")
-                                    .max_h(px(150.0))
-                                    .overflow_y_scroll()
-                                    .children(share.people.iter().enumerate().map(
-                                        |(i, person)| {
-                                            let id = person.id;
+                                        row().justify_between().child("Link access").child(
                                             div()
-                                                .mb(px(4.0))
-                                                .child(
-                                                    row()
-                                                        .gap(px(8.0))
-                                                        .h(px(36.0))
-                                                        .child(
-                                                            row()
-                                                                .size(px(28.0))
-                                                                .flex_shrink_0()
-                                                                .justify_center()
-                                                                .rounded_full()
-                                                                .bg(t.hover())
-                                                                .child(
-                                                                    icon("user")
-                                                                        .text_color(t.muted()),
-                                                                ),
-                                                        )
-                                                        .child(
-                                                            div()
-                                                                .flex_1()
-                                                                .min_w(px(0.0))
-                                                                .overflow_hidden()
-                                                                .text_ellipsis()
-                                                                .child(person.name.clone()),
-                                                        )
-                                                        .child(
-                                                            self.control(
-                                                                ("person-access", i),
-                                                                "chevron",
-                                                                format!(
-                                                                    "Can {}",
-                                                                    person
-                                                                        .access
-                                                                        .label()
-                                                                        .to_lowercase()
-                                                                ),
-                                                                cx,
-                                                                move |this, _, cx| {
-                                                                    this.sharing.expanded =
-                                                                        if this.sharing.expanded
-                                                                            == Some(id)
-                                                                        {
-                                                                            None
-                                                                        } else {
-                                                                            Some(id)
-                                                                        };
-                                                                    cx.notify();
-                                                                },
-                                                            )
-                                                            .border_0()
-                                                            .flex_shrink_0(),
-                                                        )
-                                                        .child(
-                                                            self.control(
-                                                                ("person-remove", i),
-                                                                "close",
-                                                                "",
-                                                                cx,
-                                                                move |this, _, cx| {
-                                                                    this.edit_share(cx, |share| {
-                                                                        share
-                                                                            .people
-                                                                            .retain(|p| p.id != id)
-                                                                    });
-                                                                },
-                                                            )
-                                                            .border_0()
-                                                            .px(px(6.0))
-                                                            .tooltip(hint(
-                                                                "Remove local participant",
-                                                                t,
-                                                            )),
-                                                        ),
-                                                )
-                                                .when(self.sharing.expanded == Some(id), |d| {
-                                                    d.child(self.share_access_choices(
-                                                        person.access,
-                                                        Some(id),
-                                                        cx,
-                                                    ))
-                                                })
+                                                .text_size(px(12.0))
+                                                .text_color(t.muted())
+                                                .child("Local link"),
+                                        ),
+                                    )
+                                    .child(self.share_access_choices(share.access, None, cx))
+                                    .child(div().text_size(px(12.0)).text_color(t.muted()).child(
+                                        match share.access {
+                                            Access::View => {
+                                                "View the project without making changes."
+                                            }
+                                            Access::Comment => {
+                                                "View the project and join the discussion."
+                                            }
+                                            Access::Remix => {
+                                                "View, comment and create an independent copy."
+                                            }
                                         },
                                     )),
                             )
                             .child(
                                 row()
+                                    .flex_shrink_0()
+                                    .h(px(44.0))
+                                    .px(px(10.0))
                                     .gap(px(8.0))
+                                    .border_1()
+                                    .border_color(t.line())
+                                    .rounded(px(6.0))
+                                    .child(icon("link").text_color(t.muted()))
                                     .child(
                                         div()
+                                            .id("share-link")
                                             .flex_1()
                                             .min_w(px(0.0))
-                                            .child(self.sharing.person.clone()),
+                                            .text_size(px(12.0))
+                                            .overflow_hidden()
+                                            .text_ellipsis()
+                                            .tooltip(hint(share.link(), t))
+                                            .child(share.link()),
                                     )
-                                    .child(self.control(
-                                        "add-person",
-                                        "plus",
-                                        "Add",
-                                        cx,
-                                        |this, _, cx| this.add_share_person(cx),
-                                    )),
+                                    .child(
+                                        self.control(
+                                            "copy-share",
+                                            if self.sharing.copied { "check" } else { "copy" },
+                                            if self.sharing.copied {
+                                                "Copied"
+                                            } else {
+                                                "Copy"
+                                            },
+                                            cx,
+                                            |this, _, cx| {
+                                                if let Some(share) = &this.sharing.record {
+                                                    cx.write_to_clipboard(
+                                                        ClipboardItem::new_string(share.link()),
+                                                    );
+                                                    this.sharing.copied = true;
+                                                    this.status = "Local share link copied".into();
+                                                    this.error = false;
+                                                    cx.notify();
+                                                }
+                                            },
+                                        )
+                                        .border_0()
+                                        .flex_shrink_0(),
+                                    ),
                             )
-                            .when_some(self.sharing.error.clone(), |d, error| {
-                                d.child(
-                                    div()
-                                        .text_size(px(12.0))
-                                        .text_color(t.danger())
-                                        .child(error),
-                                )
-                            }),
+                            .child(
+                                div()
+                                    .flex_shrink_0()
+                                    .pt(px(16.0))
+                                    .border_t_1()
+                                    .border_color(t.line())
+                                    .flex()
+                                    .flex_col()
+                                    .gap(px(10.0))
+                                    .child(section_title("People & agents"))
+                                    .child(div().text_size(px(12.0)).text_color(t.muted()).child(
+                                        "Settings stay on this device. No invitations are sent.",
+                                    ))
+                                    .child(
+                                        row()
+                                            .h(px(36.0))
+                                            .gap(px(10.0))
+                                            .child(
+                                                row()
+                                                    .size(px(28.0))
+                                                    .justify_center()
+                                                    .rounded_full()
+                                                    .bg(t.hover())
+                                                    .child(icon("user").text_color(t.muted())),
+                                            )
+                                            .child(div().flex_1().child("You"))
+                                            .child(div().text_color(t.muted()).child("Owner")),
+                                    )
+                                    .child(
+                                        div()
+                                            .id("share-people")
+                                            .max_h(px(150.0))
+                                            .overflow_y_scroll()
+                                            .children(share.people.iter().enumerate().map(
+                                                |(i, person)| {
+                                                    let id = person.id;
+                                                    div()
+                                                        .mb(px(4.0))
+                                                        .child(
+                                                            row()
+                                                                .gap(px(8.0))
+                                                                .h(px(36.0))
+                                                                .child(
+                                                                    row()
+                                                                        .size(px(28.0))
+                                                                        .flex_shrink_0()
+                                                                        .justify_center()
+                                                                        .rounded_full()
+                                                                        .bg(t.hover())
+                                                                        .child(
+                                                                            icon("user")
+                                                                                .text_color(
+                                                                                    t.muted(),
+                                                                                ),
+                                                                        ),
+                                                                )
+                                                                .child(
+                                                                    div()
+                                                                        .flex_1()
+                                                                        .min_w(px(0.0))
+                                                                        .overflow_hidden()
+                                                                        .text_ellipsis()
+                                                                        .child(person.name.clone()),
+                                                                )
+                                                                .child(
+                                                                    self.control(
+                                                                        ("person-access", i),
+                                                                        "chevron",
+                                                                        format!(
+                                                                            "Can {}",
+                                                                            person
+                                                                                .access
+                                                                                .label()
+                                                                                .to_lowercase()
+                                                                        ),
+                                                                        cx,
+                                                                        move |this, _, cx| {
+                                                                            this.sharing.expanded =
+                                                                                if this
+                                                                                    .sharing
+                                                                                    .expanded
+                                                                                    == Some(id)
+                                                                                {
+                                                                                    None
+                                                                                } else {
+                                                                                    Some(id)
+                                                                                };
+                                                                            cx.notify();
+                                                                        },
+                                                                    )
+                                                                    .border_0()
+                                                                    .flex_shrink_0(),
+                                                                )
+                                                                .child(
+                                                                    self.control(
+                                                                        ("person-remove", i),
+                                                                        "close",
+                                                                        "",
+                                                                        cx,
+                                                                        move |this, _, cx| {
+                                                                            this.edit_share(
+                                                                                cx,
+                                                                                |share| {
+                                                                                    share
+                                                                            .people
+                                                                            .retain(|p| p.id != id)
+                                                                                },
+                                                                            );
+                                                                        },
+                                                                    )
+                                                                    .border_0()
+                                                                    .px(px(6.0))
+                                                                    .tooltip(hint(
+                                                                        "Remove local participant",
+                                                                        t,
+                                                                    )),
+                                                                ),
+                                                        )
+                                                        .when(
+                                                            self.sharing.expanded == Some(id),
+                                                            |d| {
+                                                                d.child(self.share_access_choices(
+                                                                    person.access,
+                                                                    Some(id),
+                                                                    cx,
+                                                                ))
+                                                            },
+                                                        )
+                                                },
+                                            )),
+                                    )
+                                    .child(
+                                        row()
+                                            .gap(px(8.0))
+                                            .child(
+                                                div()
+                                                    .flex_1()
+                                                    .min_w(px(0.0))
+                                                    .child(self.sharing.person.clone()),
+                                            )
+                                            .child(self.control(
+                                                "add-person",
+                                                "plus",
+                                                "Add",
+                                                cx,
+                                                |this, _, cx| this.add_share_person(cx),
+                                            )),
+                                    )
+                                    .when_some(self.sharing.error.clone(), |d, error| {
+                                        d.child(
+                                            div()
+                                                .text_size(px(12.0))
+                                                .text_color(t.danger())
+                                                .child(error),
+                                        )
+                                    }),
+                            ),
                     )
                     .child(
                         row()
