@@ -49,8 +49,8 @@ This table is the release boundary agreed on 2026-10-25. v1 is the working produ
 | Palette system | v1 | User-created palettes plus exact PICO-8, Endesga 32, Sweetie 16, grayscale and original presets; create/rename/edit/reorder/duplicate/delete; `.hex`/`.gpl` import/export and bounded PNG import. |
 | Anchored 3D comments | v1 | Voxel/region anchors, threads, replies, resolve/reopen, filters and human/agent attribution; equivalent MCP create/list/read/reply/resolve operations. |
 | Scrubbable history and named versions | v1 | Read-only timeline previews with human/agent markers; persistent named save/restore/compare/branch via UI and MCP; explicit restore creates an edit. |
-| Open Linux-like plugin core | v1 | Minimal core; nearly everything, including built-in tools, uses the plugin interfaces. Users and agents create runtime tools adding toolbar buttons, menu items and commands; agents register/invoke through MCP, including external API calls. |
-| Native script/WASM plugin host foundation | v1 | Native script and WASM host adapters, shared versioned ABI and a tested web-compatible plugin path. Local plugins just run; a lightweight one-time prompt only for network access or files outside the project. |
+| Open Linux-like plugin core | DEFERRED — v1.x/v2 | Dropped from v1. Built-in editing tools remain internal Rust modules using the shared command engine. Runtime extension registration, public plugin interfaces and agent-authored tools follow v1. |
+| Native script/WASM plugin host foundation | DEFERRED — v1.x/v2 | Dropped from v1 with the plugin core. Runtime adapters, versioned ABI and capability grants require a separate future feasibility gate. |
 | Canonical JSON `.voxl`, GLB/PNG, agent engine | v1 | A single UTF-8 JSON project with deterministic voxel lines; CPU render-to-image, shared commands/undo/layers/palette, versioned MCP and GPUI shell in the build order below. |
 | Local Share preview | v1 | Concept A popover with Copy, stable `voxelite://share/<id>` identifier, View / Comment / Remix choices and a per-person list backed by the local share backend. Label “Local preview — hosted sharing coming soon”; Save a copy is secondary. No hosted authorization or invitations are implied. |
 | Hosted share links: view/comment/remix | v1.x | Requires hosting/persistence and enforced permissions; remix creates independent lineage. Local editing remains account-free. |
@@ -61,9 +61,9 @@ This table is the release boundary agreed on 2026-10-25. v1 is the working produ
 
 ### Open core product contract
 
-Voxelite is an open Linux-like system: a tiny MIT-licensed core with nearly everything implemented as replaceable plugins, including its built-in editing tools. Humans and agents can create, swap, fork and extend tools, brushes, palettes, importers/exporters, panels, toolbar buttons, menu items, commands and MCP extensions. This replaces the older runtime-plugin exclusion. Agent-host integration packages (§10) connect external assistants; editor runtime plugins (§3) extend Voxelite itself.
+**2026-10-25 web-stage scope amendment:** plugin core is deferred to v1.x/v2 and dropped from v1. Built-in tools remain internal Rust modules over the shared validated command engine. No runtime plugin ABI, host, registration, script/WASM adapter or plugin-created toolbar action is required for v1. Agent-host integration packages (§10) remain in v1; they connect external assistants and are distinct from editor runtime plugins.
 
-The v1 foundation must demonstrate an agent authoring, registering and invoking a new tool via MCP in a running app, with its toolbar/menu actions appearing immediately. External APIs are supported. Local plugins run without an installation approval ceremony; network access and access outside the project each use a lightweight one-time scoped permission prompt. Built-ins use the same host interface and command validation as contributed tools. Runtime feasibility is an M0 gate, while a public editor plugin marketplace is later work.
+The plugin architecture, tool contracts, F29, A19 and plugin-specific M0–M8 requirements retained below describe future work only. This amendment and the scope table override those historical v1 labels, build dependencies and acceptance gates. A future release must establish its own plugin feasibility and acceptance evidence.
 
 ### Scope and support envelope
 
@@ -71,7 +71,7 @@ The v1 foundation must demonstrate an agent authoring, registering and invoking 
 - The web editor runs at ≥1024×640 CSS pixels with keyboard and mouse/trackpad. Test stable Safari, Chromium, and Firefox at release, record exact versions and actual WebGPU/WebGL2 support. Both GPUI chrome and 3D viewport must work with WebGPU disabled before advertising fallback support. The companion can serve the exact wasm bundle when hosted-to-local pairing is blocked.
 - Shared document limits: ≤256 cells per axis; coordinates in `[-32768,32768)`; ≤64 layers; ≤256 opaque palette slots; ≤1,048,576 occupied layer-voxels; ≤8,192 allocated layer-chunks. Overlaps count separately. Memory/geometry budgets can reject pathological operations before commit; publish the reason and measured limits.
 - Native/web share model, tools, history, renderer semantics, and GPUI views. `.voxl`, GLB, and PNG are required. The browser can edit offline after loading; MCP connectivity requires a native local companion. Cloud relays/accounts and embedded model-provider keys are outside v1.
-- Animation timelines (distinct from edit history), rigging, sculpting, arbitrary mesh editing, transparent voxel materials, texture painting, physics, mobile editing, native Windows/Linux GUI, and MagicaVoxel `.vox` import/export are outside v1. Hosted sharing, real-time collaboration/presence, Git integration, CAD precision and the editor plugin marketplace follow the scope table. Runtime plugins and agent-host integration packages are both included in v1.
+- Animation timelines (distinct from edit history), rigging, sculpting, arbitrary mesh editing, transparent voxel materials, texture painting, physics, mobile editing, native Windows/Linux GUI, and MagicaVoxel `.vox` import/export are outside v1. Hosted sharing, real-time collaboration/presence, Git integration, CAD precision and the editor plugin marketplace follow the scope table. Runtime plugins are deferred to v1.x/v2; agent-host integration packages remain included in v1.
 - Follow [design/ART-CHECKLIST.md](design/ART-CHECKLIST.md). Its updated pure-black theme and agents-first positioning are binding. Finish the sample art before visual acceptance; produce the full launch showcase only after v1 works (M9).
 
 ## 2. Verified facts and feasibility gates
@@ -119,9 +119,9 @@ Create the Cargo workspace and implement these foundations in this order. M0 use
 2. **`voxelite-format`** — canonical JSON `.voxl` reader/writer, schema/fixtures, bounded parsing, identity and portable metadata.
 3. **`voxelite-export`** — deterministic GLB and PNG encoding. PNG takes bounded RGBA input so the encoder can be tested before rendering exists.
 4. **`voxelite-render`** — CPU software renderer for render-to-image, cameras, depth, lighting/AO and multi-angle feedback; GPU viewport acceleration follows behind features.
-5. **`voxelite-plugin`** — open host/registration/lifecycle, native script/WASM host foundation, contribution/action registry and built-in tools implemented as plugins.
-6. **`voxelite-mcp`** — versioned server over the shared engine, artifacts, comments/versions/history, headless rendering and runtime plugin authoring/registration/invocation.
-7. **`voxelite-app`** — GPUI shell consuming the tested engine and plugin contributions; Concept A menus, viewport, palettes, layers, session, comments and history. Reuse shared GPUI views in the wasm entry.
+5. **Built-in tool modules** — internal Rust tools over the validated command engine. `voxelite-plugin`, runtime registration and host adapters are deferred to v1.x/v2.
+6. **`voxelite-mcp`** — versioned server over the shared engine, artifacts, comments/versions/history, headless rendering; runtime plugin authoring/registration/invocation is deferred.
+7. **`voxelite-app`** — GPUI shell consuming the tested engine and internal tool modules; Concept A menus, viewport, palettes, layers, session, comments and history. Reuse shared GPUI views in the wasm entry.
 
 ### Crate boundaries
 
@@ -187,7 +187,7 @@ The native app normally owns one authoritative session host on a background runt
 
 Supporting dependency candidates: `serde`/`serde_json` for explicit schemas, `uuid` for IDs, `glam` for math, `png` for bounded image decoding/encoding, `proptest`/Criterion for verification, and Tokio plus a Rust HTTP/WebSocket stack behind native session features. Audit licenses, wasm support, default features, and MSRV before pinning. Prefer feature-minimal dependencies; do not pull image formats or native compression libraries into the core unnecessarily.
 
-### Plugin host foundation and permissions
+### Plugin host foundation and permissions (DEFERRED — v1.x/v2)
 
 The core owns document invariants and transactions; plugins provide product features. Built-in Place/Erase/Paint/Fill/Box/Picker, mirror/shape/transform tools and palette/IO contributions register through the same public interfaces as extensions. The shell projects their declared actions into toolbar buttons, the Tools/Extensions menus, context menus and command search; it never maintains a separate hardcoded built-in tool path. Panel contributions use a bounded declarative view/action interface rather than requiring plugin access to GPUI internals.
 
