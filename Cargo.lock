@@ -5837,20 +5837,27 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
+ "futures-channel",
  "glam",
  "gpui-platform-gpui-unofficial",
  "gpui-unofficial",
+ "gpui-web-gpui-unofficial",
  "image",
+ "js-sys",
  "serde",
  "serde_json",
  "sha2",
  "tempfile",
  "thiserror 2.0.21",
+ "uuid",
  "voxelite-core",
  "voxelite-export",
  "voxelite-format",
  "voxelite-mcp",
  "voxelite-render",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

@@ -8,6 +8,10 @@ pub enum Op {
     Open,
     Save,
     SaveAs,
+    #[cfg(target_family = "wasm")]
+    ExportGlb,
+    #[cfg(target_family = "wasm")]
+    ExportPng,
     Share,
     Comment,
     Quit,
@@ -45,6 +49,8 @@ impl Op {
             Self::Open => "folder-open",
             Self::Save => "save",
             Self::SaveAs => "file-output",
+            #[cfg(target_family = "wasm")]
+            Self::ExportGlb | Self::ExportPng => "download",
             Self::Share => "share-2",
             Self::Comment => "comment",
             Self::Quit => "log-out",
@@ -81,6 +87,10 @@ impl Op {
             Self::Open => "Open project…",
             Self::Save => "Save",
             Self::SaveAs => "Save as…",
+            #[cfg(target_family = "wasm")]
+            Self::ExportGlb => "Export GLB…",
+            #[cfg(target_family = "wasm")]
+            Self::ExportPng => "Export PNG…",
             Self::Share => "Share project…",
             Self::Comment => "Add comment pin",
             Self::Quit => "Quit Voxelite",
@@ -218,7 +228,18 @@ impl Op {
 pub const MENUS: &[(&str, &[Op])] = &[
     (
         "File",
-        &[Op::New, Op::Open, Op::Save, Op::SaveAs, Op::Share, Op::Quit],
+        &[
+            Op::New,
+            Op::Open,
+            Op::Save,
+            Op::SaveAs,
+            #[cfg(target_family = "wasm")]
+            Op::ExportGlb,
+            #[cfg(target_family = "wasm")]
+            Op::ExportPng,
+            Op::Share,
+            Op::Quit,
+        ],
     ),
     ("Edit", &[Op::Undo, Op::Redo, Op::Commands]),
     (

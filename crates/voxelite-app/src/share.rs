@@ -113,14 +113,11 @@ impl LocalShareBackend {
         Self { path }
     }
     fn load(&self) -> EditorResult<BTreeMap<Uuid, Share>> {
-        if !self.path.exists() {
+        let Some(bytes) = crate::palettes::read_local(&self.path)? else {
             return Ok(BTreeMap::new());
-        }
-        if std::fs::metadata(&self.path)?.len() > 4 * 1024 * 1024 {
-            return Err(EditorError::Gesture("Share metadata too large".into()));
-        }
-        let records: BTreeMap<Uuid, Share> = serde_json::from_slice(&std::fs::read(&self.path)?)
-            .map_err(|e| EditorError::Gesture(e.to_string()))?;
+        };
+        let records: BTreeMap<Uuid, Share> =
+            serde_json::from_slice(&bytes).map_err(|e| EditorError::Gesture(e.to_string()))?;
         for (id, s) in &records {
             s.validate()?;
             if *id != s.document {

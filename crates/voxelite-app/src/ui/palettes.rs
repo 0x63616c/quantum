@@ -162,6 +162,7 @@ impl EditorView {
                 callback(this, window, cx)
             }))
     }
+    #[cfg(not(target_family = "wasm"))]
     fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
         self.dialog_open = true;
         let palette = self.active_palette();
@@ -252,6 +253,75 @@ impl EditorView {
                     Ok(())
                 });
                 this.report(result, "Palette file operation complete", cx);
+            });
+        })
+        .detach();
+    }
+    #[cfg(target_family = "wasm")]
+    fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
+        if let Some(ext) = export {
+            let palette = self.active_palette();
+            let result = if ext == "gpl" {
+                palette.to_gpl(&self.palette_name())
+            } else {
+                Ok(palette.to_hex())
+            }
+            .map_err(Into::into)
+            .and_then(|text| {
+                crate::web::download(&format!("palette.{ext}"), "text/plain", text.as_bytes())
+            });
+            self.report(result, "Palette download started", cx);
+            return;
+        }
+        let upload = match crate::web::upload(".hex,.gpl", 256 * 1024) {
+            Ok(upload) => upload,
+            Err(error) => {
+                self.report::<()>(Err(error), "", cx);
+                return;
+            }
+        };
+        self.dialog_open = true;
+        cx.spawn(async move |this, cx| {
+            let result = upload.await.and_then(|selection| {
+                selection
+                    .map(|(name, bytes)| {
+                        let text = std::str::from_utf8(&bytes).map_err(|e| {
+                            voxelite_app::editor::EditorError::Gesture(e.to_string())
+                        })?;
+                        let palette = if name.to_ascii_lowercase().ends_with(".gpl") {
+                            Palette::from_gpl(text)?
+                        } else {
+                            Palette::from_hex(text)?
+                        };
+                        let name = name
+                            .rsplit_once('.')
+                            .map(|(stem, _)| stem)
+                            .unwrap_or(&name)
+                            .chars()
+                            .take(100)
+                            .collect::<String>();
+                        Ok((name, palette))
+                    })
+                    .transpose()
+            });
+            let _ = this.update(cx, |this, cx| {
+                this.dialog_open = false;
+                let result = result.and_then(|selection| {
+                    if let Some((name, palette)) = selection {
+                        let mut id = None;
+                        this.palettes.library.update(
+                            &data_dir().join("palettes.json"),
+                            |library| {
+                                id = Some(library.create(name, palette)?);
+                                Ok(())
+                            },
+                        )?;
+                        this.palettes.custom = id;
+                        this.sync_palette_fields(cx);
+                    }
+                    Ok(())
+                });
+                this.report(result, "Palette imported", cx);
             });
         })
         .detach();

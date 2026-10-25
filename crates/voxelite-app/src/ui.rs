@@ -1,5 +1,11 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+#[cfg(not(target_family = "wasm"))]
 mod agent;
+#[cfg(target_family = "wasm")]
+#[path = "ui/agent_web.rs"]
+mod agent;
+#[cfg(target_family = "wasm")]
+mod browser;
 mod comments;
 mod history;
 use comments::Panel;
@@ -213,20 +219,13 @@ impl EditorView {
         if let Ok(library) = library {
             palettes.library = library;
         }
-        let agent_result = agent::Agent::new(&editor, socket);
-        let agent_error = agent_result.as_ref().err().map(ToString::to_string);
-        let agent = agent_result.unwrap_or_else(|_| agent::Agent {
-            session: None,
-            events: Default::default(),
-            open: false,
-            clients: 0,
-            expanded: None,
-            capture: None,
-            capture_generation: 0,
-            capturing: false,
-            follow: false,
-            retired: vec![],
-        });
+        let agent = agent::Agent::new(&editor, socket);
+        #[cfg(not(target_family = "wasm"))]
+        let agent_error = agent.as_ref().err().map(ToString::to_string);
+        #[cfg(target_family = "wasm")]
+        let agent_error: Option<String> = None;
+        let agent = agent.unwrap_or_default();
+        #[cfg(not(target_family = "wasm"))]
         cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor()
@@ -407,6 +406,7 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
         {
@@ -562,6 +562,10 @@ impl EditorView {
             Op::Open => self.open_dialog(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
+            #[cfg(target_family = "wasm")]
+            Op::ExportGlb => self.export_browser(false, cx),
+            #[cfg(target_family = "wasm")]
+            Op::ExportPng => self.export_browser(true, cx),
             Op::Share => self.open_share(cx),
             Op::Comment => self.begin_comment(cx),
             Op::Undo => {
@@ -648,6 +652,7 @@ impl EditorView {
         }
         cx.notify();
     }
+    #[cfg(not(target_family = "wasm"))]
     fn open_dialog(&mut self, cx: &mut Context<Self>) {
         self.dialog_open = true;
         self.status = "Choose a project to open…".into();
@@ -689,6 +694,7 @@ impl EditorView {
             });
         }).detach();
     }
+    #[cfg(not(target_family = "wasm"))]
     fn write_project(&mut self, path: PathBuf, copy: bool, cx: &mut Context<Self>) {
         self.dialog_open = true;
         self.status = "Saving project…".into();
@@ -722,6 +728,7 @@ impl EditorView {
         })
         .detach();
     }
+    #[cfg(not(target_family = "wasm"))]
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
             self.write_project(path, false, cx);
@@ -730,6 +737,7 @@ impl EditorView {
         self.choose_save_path(false, cx);
     }
     /// A shared copy must not adopt its destination or clear the working file's dirty state.
+    #[cfg(not(target_family = "wasm"))]
     fn choose_save_path(&mut self, copy: bool, cx: &mut Context<Self>) {
         let directory = self
             .editor

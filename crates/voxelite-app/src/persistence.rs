@@ -3,7 +3,7 @@ use crate::editor::{EditorError, EditorResult};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
-    io::{Read, Write},
+    io::Read,
     path::{Path, PathBuf},
 };
 use voxelite_format::Project;
@@ -72,7 +72,9 @@ pub struct SavedProject {
 impl SaveTask {
     /// Serialize and persist, rejecting external changes to an open destination.
     /// Save As may replace a selected regular file; changes during writing still reject.
+    #[cfg(not(target_family = "wasm"))]
     pub fn write(self) -> EditorResult<SavedProject> {
+        use std::io::Write;
         let path = destination(&self.path)?;
         let current = match read(&path) {
             Ok(bytes) => Some(fingerprint(&bytes)),
