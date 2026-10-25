@@ -2,129 +2,31 @@
 
 Scanned on 2026-10-25. Values are deliberately redacted; locations and categories are sufficient for follow-up. No history was rewritten and no Git identity was changed.
 
-Scope: 471 working-tree/generated files; 120 commits and 2839 unique historical blobs reachable through all local refs and reflogs. Includes `design/` read-only, source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.
+Scope: 493 working-tree/generated files; 122 commits and 2863 unique historical blobs reachable through all local refs and reflogs. Includes `design/` read-only, source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.
 
-Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.
+Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.
 
+Identity rows were triaged against the detected Git names/usernames; generic project and contributor labels were excluded. Historical build-directory paths remain in immutable blobs, even though those directories are now ignored. The spec contains a personal display-name example at the location below; it was reported, not silently rewritten.
 ## Git metadata
 
-- 4 distinct author/committer identity pairs are present across 120 commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.
+- 4 distinct author/committer identity pairs are present across 122 commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.
 - `.git:1` is a worktree pointer containing a local machine path. It is untracked Git plumbing, not a distributable source file; changing it would break the checkout.
 
 ## Working tree findings
 
 | File:line | Category | Disposition |
 | --- | --- | --- |
-| `LICENSE:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `PLAN.md:1,27,55,139,144,198,262,286,290,309,350,351,360,392,414,415,434,641,642,645,647,693,697,700,729,742,748,830,835` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/Cargo.toml:17` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/README.md:1,3,18,19,104,167,199,228` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/assets/icons/LICENSE:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/actions.rs:96` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/main.rs:1,64,131,140` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/palettes.rs:33` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/persistence.rs:86` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/share.rs:58,166` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/ui.rs:1198,2735` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-app/src/ui/agent.rs:104` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-core/src/lib.rs:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-core/src/palette.rs:225,227,229` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-export/src/lib.rs:70,103` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-format/src/lib.rs:21,179,206,208` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-format/tests/roundtrip.rs:40` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-mcp/Cargo.toml:7` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-mcp/src/catalog.rs:213,331,466` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-mcp/src/lib.rs:1,27,95` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-mcp/src/main.rs:26` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-mcp/tests/stdio.rs:92` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `crates/voxelite-site/src/main.rs:61,63,64,167` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `design/ART-CHECKLIST.md:1,27` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/assets/fonts/Geist.ttf:793` | email | Read-only design ownership; retained and reported. |
-| `design/concepts/README.md:1` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/concept-a/index.html:2,1916,1926,3295` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/concept-b/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/concept-c/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v2/concept-c-dark.png:815` | email | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v5/README.md:1` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v5/concept-a/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v5/concept-b/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v5/concept-c/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v6/README.md:1` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v6/concept-a/index.html:2,1479,1489,3231` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v6/concept-b/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v6/concept-c/index.html:2,599` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/history/v7/concept-a/index.html:2,1677,1687,3044` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/concepts/png/concept-a-dark-history.png:2353` | email | Read-only design ownership; retained and reported. |
-| `design/plan-history/PLAN-v1.md:1,3,55,125,129,139,309,365,371` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/plan-history/PLAN-v2.md:1,27,91,96,191,234,235,264,285,439,440,443,487,491,494,519,538,611,616` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `design/plan-history/PLAN-v3.md:1,27,94,99,204,249,250,259,289,311,312,493,494,497,499,544,548,551,580,593,599,679,684` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `docs/architecture/core.md:16` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `docs/mcp.md:1,121,150,263` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `docs/reviews/app-polish-2.md:166` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `docs/screenshots/autumn-workshop.glb:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `docs/verification/native-app.md:11,18` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `examples/autumn-workshop.voxl:28` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `integrations/README.md:17,22,29` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `integrations/claude/mcp.json:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `integrations/codex/config.toml:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `integrations/cursor/mcp.json:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `package-lock.json:2,8` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `package.json:2,4` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/build-concepts.mjs:58,105` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/capture-native-scales.sh:33,37` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/capture-native.sh:35,39,63` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/lib/capture-share.sh:13` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/lib/concept-a-controls.js:937` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/lib/concept-a.mjs:25,35` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/review-native.sh:6,28,32,75,80,85,89,96,101,104,108,124,128,142,144,146,148,161` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `scripts/review-polish-2.sh:28,32` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/404.html:3,5,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/app/index.html:7,8,19` | Git identity name/username | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
+| `PLAN.md:262` | Git identity name/username | Personal display-name example; retained because automatic fixes are limited to path leaks. |
+| `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
+| `design/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
+| `design/concepts/history/v2/concept-c-dark.png:815` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
+| `design/concepts/png/concept-a-dark-history.png:2353` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
+| `design/plan-history/PLAN-v1.md:371` | Git identity name/username | Read-only design ownership; retained and reported. |
 | `site/app/voxelite_app_bg.wasm:130885` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
 | `site/app/voxelite_app_bg.wasm:72619` | absolute machine path | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `site/app/voxelite_app_bg.wasm:72575,72627,72749,72772,73886` | Git identity name/username | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `site/assets/LICENSE:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/fonts/Geist.ttf:793` | email | Inspect; do not reproduce matched value. |
-| `site/assets/integrations/README.md:17,22,29` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/integrations/claude/mcp.json:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/integrations/codex/config.toml:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/integrations/cursor/mcp.json:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/mcp-tools.json:9,54,60,561,868,1241,1543,1845,2168,2450,2745,3051,3227,3586,4001,4338,4642,4958,5232,5452,5747,6050,6350,6649,6949,7252,7447,7742,8036,8380,8866,9254,9490,9793,10534,10943,11304,11696,11989,12282` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/minimal.voxl:10` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/skills/README.md:1,3,36,54` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/skills/voxelite-palettes/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/skills/voxelite-primitives/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/skills/voxelite-render-review/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/assets/skills/voxelite-workflow/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/content/format.html:1,2,15` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/content/getting-started.html:4,14,19,21,22` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/content/mcp.html:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/content/overview.html:1,4` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/content/skills.html:1,3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/docs/format/index.html:3,5,6,7,20,33` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/docs/getting-started/index.html:3,5,6,9,19,24,26,27,65` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/docs/index.html:3,5,6,9,10` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/docs/mcp/index.html:3,5,6,11,53,59,548,843,1204,1494,1784,2095,2365,2648,2942,3106,3453,3856,4181,4473,4777,5039,5247,5530,5821,6109,6396,6684,6975,7158,7441,7723,8055,8529,8905,9129,9420,10149,10546,10895,11275,11556,11837,12040` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/docs/skills/index.html:3,5,6,8,9` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `site/index.html:5,7,12,15,29,30` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `skills/README.md:1,3,36,54` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `skills/voxelite-palettes/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `skills/voxelite-primitives/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `skills/voxelite-render-review/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `skills/voxelite-workflow/SKILL.md:3,6` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/mcp/v1/compatibility.json:2` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/mcp/v1/contract.md:1,12` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/mcp/v1/tools.json:4,48,54,555,862,1235,1537,1839,2162,2444,2739,3045,3221,3580,3995,4332,4636,4952,5226,5446,5741,6044,6344,6643,6943,7246,7441,7736,8030,8374,8860,9248,9484,9787,10528,10937,11298,11690,11983,12276` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/voxl/1.0/README.md:3` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/voxl/1.0/fixtures/populated.canonical.voxl:10` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/voxl/1.0/fixtures/populated.input.voxl:1` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `spec/voxl/1.0/schema.json:3,15` | Git identity name/username | Inspect; do not reproduce matched value. |
-| `web/dist/index.html:7,8,19` | Git identity name/username | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
+| `site/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
 | `web/dist/voxelite_app_bg.wasm:130885` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
 | `web/dist/voxelite_app_bg.wasm:72619` | absolute machine path | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `web/dist/voxelite_app_bg.wasm:72575,72627,72749,72772,73886` | Git identity name/username | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `web/index.html:7,8,19` | Git identity name/username | Inspect; do not reproduce matched value. |
 
 ## Historical blob findings
 
@@ -132,98 +34,11 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 
 | Blob · file:line | Category |
 | --- | --- |
-| `d31807356d9a` · `LICENSE:3` | Git identity name/username |
-| `0a8274603156` · `PLAN.md:1,27,55,139,144,198,262,286,290,309,350,351,360,392,414,415,434,641,642,645,647,693,697,700,729,742,748,830,835` | Git identity name/username |
-| `5fcc0fe8b92c` · `crates/voxelite-app/Cargo.toml:17` | Git identity name/username |
-| `0077396158ef` · `crates/voxelite-app/README.md:1,3,18,19,104,167,199,228` | Git identity name/username |
+| `0a8274603156` · `PLAN.md:262` | Git identity name/username |
 | `99be836ad05d` · `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email |
-| `325e8ff0aae2` · `crates/voxelite-app/assets/icons/LICENSE:3` | Git identity name/username |
-| `35c7d20b9e6a` · `crates/voxelite-app/src/actions.rs:96` | Git identity name/username |
-| `e53ab9bb4344` · `crates/voxelite-app/src/main.rs:1,64,131,140` | Git identity name/username |
-| `2f9e1574ca86` · `crates/voxelite-app/src/palettes.rs:33` | Git identity name/username |
-| `c530e246b4d6` · `crates/voxelite-app/src/persistence.rs:86` | Git identity name/username |
-| `ef4cefb25f3d` · `crates/voxelite-app/src/share.rs:58,166` | Git identity name/username |
-| `76872e23529d` · `crates/voxelite-app/src/ui.rs:1198,2735` | Git identity name/username |
-| `7450d4c1a155` · `crates/voxelite-app/src/ui/agent.rs:104` | Git identity name/username |
-| `d287402847fa` · `crates/voxelite-core/src/lib.rs:1` | Git identity name/username |
-| `53f842fa9337` · `crates/voxelite-core/src/palette.rs:225,227,229` | Git identity name/username |
-| `ca85f8785b41` · `crates/voxelite-export/src/lib.rs:70,103` | Git identity name/username |
-| `10a4b41c2665` · `crates/voxelite-format/src/lib.rs:21,179,206,208` | Git identity name/username |
-| `9e41faf732b7` · `crates/voxelite-format/tests/roundtrip.rs:40` | Git identity name/username |
-| `44fb5c1fbf87` · `crates/voxelite-mcp/Cargo.toml:7` | Git identity name/username |
-| `3772532e9661` · `crates/voxelite-mcp/src/catalog.rs:213,331,466` | Git identity name/username |
-| `103ef2da7eac` · `crates/voxelite-mcp/src/lib.rs:1,27,95` | Git identity name/username |
-| `3fef042b140e` · `crates/voxelite-mcp/src/main.rs:26` | Git identity name/username |
-| `6e5b25793899` · `crates/voxelite-mcp/tests/stdio.rs:92` | Git identity name/username |
-| `8d8e43a9e70b` · `crates/voxelite-site/src/main.rs:61,63,64,167` | Git identity name/username |
-| `5ba95d573b4c` · `design/ART-CHECKLIST.md:1,27` | Git identity name/username |
-| `86750f9cc5d2` · `design/concepts/README.md:1` | Git identity name/username |
-| `5a40d1ae64fe` · `design/concepts/concept-a/index.html:2,1916,1926,3295` | Git identity name/username |
-| `654d96961085` · `design/concepts/concept-b/index.html:2,599` | Git identity name/username |
-| `ff8633508919` · `design/concepts/concept-c/index.html:2,599` | Git identity name/username |
 | `78be1e3e9d08` · `design/concepts/history/v2/concept-c-dark.png:815` | email |
-| `a50361c85767` · `design/concepts/history/v5/README.md:1` | Git identity name/username |
-| `371681bd8589` · `design/concepts/history/v5/concept-a/index.html:2,599` | Git identity name/username |
-| `38def5993ac0` · `design/concepts/history/v6/README.md:1` | Git identity name/username |
-| `9f529724f478` · `design/concepts/history/v6/concept-a/index.html:2,1479,1489,3231` | Git identity name/username |
-| `7f659033dbbc` · `design/concepts/history/v7/concept-a/index.html:2,1677,1687,3044` | Git identity name/username |
 | `4e44bfa3e485` · `design/concepts/png/concept-a-dark-history.png:2353` | email |
-| `d6834508408e` · `design/plan-history/PLAN-v1.md:1,3,55,125,129,139,309,365,371` | Git identity name/username |
-| `4824c75e2577` · `design/plan-history/PLAN-v2.md:1,27,91,96,191,234,235,264,285,439,440,443,487,491,494,519,538,611,616` | Git identity name/username |
-| `0f782c6e80be` · `design/plan-history/PLAN-v3.md:1,27,94,99,204,249,250,259,289,311,312,493,494,497,499,544,548,551,580,593,599,679,684` | Git identity name/username |
-| `a0973168db20` · `docs/architecture/core.md:16` | Git identity name/username |
-| `13bcbb53527b` · `docs/mcp.md:1,121,150,263` | Git identity name/username |
-| `01f260380d03` · `docs/reviews/app-polish-2.md:166` | Git identity name/username |
-| `c4798230e3b5` · `docs/screenshots/autumn-workshop.glb:1` | Git identity name/username |
-| `dab1d36addbe` · `docs/verification/native-app.md:11,18` | Git identity name/username |
-| `4624b700a9fd` · `examples/autumn-workshop.voxl:28` | Git identity name/username |
-| `9f4eef6ab599` · `integrations/README.md:17,22,29` | Git identity name/username |
-| `a023fe987a25` · `integrations/claude/mcp.json:3` | Git identity name/username |
-| `f20dfe0ff361` · `integrations/codex/config.toml:1` | Git identity name/username |
-| `d31752eeba22` · `integrations/cursor/mcp.json:3` | Git identity name/username |
-| `9607eee17a0f` · `package-lock.json:2,8` | Git identity name/username |
-| `0ee4d23b9585` · `package.json:2,4` | Git identity name/username |
-| `b20fac740515` · `scripts/build-concepts.mjs:58,105` | Git identity name/username |
-| `9cc2426adad3` · `scripts/capture-native-scales.sh:33,37` | Git identity name/username |
-| `1989881c03b2` · `scripts/capture-native.sh:35,39,63` | Git identity name/username |
-| `8678779ef4cc` · `scripts/lib/capture-share.sh:13` | Git identity name/username |
-| `b3dd2ef5cbe8` · `scripts/lib/concept-a-controls.js:937` | Git identity name/username |
-| `271d91ecbfd2` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `7017eb815c98` · `scripts/review-native.sh:6,28,32,75,80,85,89,96,101,104,108,124,128,142,144,146,148,161` | Git identity name/username |
-| `9030ec1bce23` · `scripts/review-polish-2.sh:28,32` | Git identity name/username |
-| `047f7b296941` · `site/404.html:3,5,6` | Git identity name/username |
-| `132c1e40d610` · `site/assets/mcp-tools.json:9,54,60,561,868,1241,1543,1845,2168,2450,2745,3051,3227,3586,4001,4338,4642,4958,5232,5452,5747,6050,6350,6649,6949,7252,7447,7742,8036,8380,8866,9254,9490,9793,10534,10943,11304,11696,11989,12282` | Git identity name/username |
-| `716eef91a7c1` · `site/assets/minimal.voxl:10` | Git identity name/username |
-| `425336a2648f` · `site/assets/skills/README.md:1,3,36,54` | Git identity name/username |
-| `e363a582b898` · `site/assets/skills/voxelite-palettes/SKILL.md:3,6` | Git identity name/username |
-| `8442ade327a2` · `site/assets/skills/voxelite-primitives/SKILL.md:3,6` | Git identity name/username |
-| `d1bb88573085` · `site/assets/skills/voxelite-render-review/SKILL.md:3,6` | Git identity name/username |
-| `90c69550f4d0` · `site/assets/skills/voxelite-workflow/SKILL.md:3,6` | Git identity name/username |
-| `d592682e25ef` · `site/content/format.html:1,2,15` | Git identity name/username |
-| `0675afcc7964` · `site/content/getting-started.html:4,14,19,21,22` | Git identity name/username |
-| `dfcfb2ed581b` · `site/content/mcp.html:1` | Git identity name/username |
-| `bb9c6f45e5b2` · `site/content/overview.html:1,4` | Git identity name/username |
-| `d4b3e0dc44f2` · `site/content/skills.html:1,3` | Git identity name/username |
-| `8ab12205ce5f` · `site/docs/format/index.html:3,5,6,7,20,33` | Git identity name/username |
-| `8989966cd7e1` · `site/docs/getting-started/index.html:3,5,6,9,19,24,26,27,65` | Git identity name/username |
-| `a8519eacd62e` · `site/docs/index.html:3,5,6,9,10` | Git identity name/username |
-| `5e7b0b1196cd` · `site/docs/mcp/index.html:3,5,6,11,53,59,548,843,1204,1494,1784,2095,2365,2648,2942,3106,3453,3856,4181,4473,4777,5039,5247,5530,5821,6109,6396,6684,6975,7158,7441,7723,8055,8529,8905,9129,9420,10149,10546,10895,11275,11556,11837,12040` | Git identity name/username |
-| `5af91b7beb52` · `site/docs/skills/index.html:3,5,6,8,9` | Git identity name/username |
-| `6d834237bab1` · `site/index.html:5,7,12,15,29,30` | Git identity name/username |
-| `40059a519e2a` · `spec/mcp/v1/compatibility.json:2` | Git identity name/username |
-| `df247710e094` · `spec/mcp/v1/contract.md:1,12` | Git identity name/username |
-| `92cd38b8a814` · `spec/mcp/v1/tools.json:4,48,54,555,862,1235,1537,1839,2162,2444,2739,3045,3221,3580,3995,4332,4636,4952,5226,5446,5741,6044,6344,6643,6943,7246,7441,7736,8030,8374,8860,9248,9484,9787,10528,10937,11298,11690,11983,12276` | Git identity name/username |
-| `9564be32b76f` · `spec/voxl/1.0/README.md:3` | Git identity name/username |
-| `bbb3fcdfada8` · `spec/voxl/1.0/fixtures/populated.canonical.voxl:10` | Git identity name/username |
-| `beb7334975c1` · `spec/voxl/1.0/fixtures/populated.input.voxl:1` | Git identity name/username |
-| `b34f1a608663` · `spec/voxl/1.0/schema.json:3,15` | Git identity name/username |
-| `b8d07805a356` · `web/index.html:7,8,19` | Git identity name/username |
-| `1d3a6f5f0326` · `site/index.html:5,7,12,15,29,30` | Git identity name/username |
-| `23eca4103fe6` · `site/assets/skills/voxelite-workflow/SKILL.md:3,6` | Git identity name/username |
-| `747170834966` · `site/content/getting-started.html:4,14,19,21,22` | Git identity name/username |
-| `f37da3193efe` · `site/docs/getting-started/index.html:3,5,6,9,19,24,26,27,60` | Git identity name/username |
-| `c6276d759369` · `crates/voxelite-site/src/main.rs:32,34,35,87` | Git identity name/username |
-| `1ea123ba489b` · `site/index.html:5,7,12,15,29,30` | Git identity name/username |
+| `d6834508408e` · `design/plan-history/PLAN-v1.md:371` | Git identity name/username |
 | `fe7e86da348e` · `target-webdeploy/.rustc_info.json:1` | absolute machine path |
 | `7106f3e7d6ba` · `target-webdeploy/wasm32-unknown-unknown/web/.fingerprint/voxelite-app-a1e0bf24d878e85a/dep-lib-voxelite_app:1` | absolute machine path |
 | `1598c5aa6ac3` · `target-webdeploy/wasm32-unknown-unknown/web/build/anyhow-fe5737645ec3b66a/root-output:1` | absolute machine path |
@@ -838,19 +653,12 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 | `ef20c743e101` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libuuid-150872a78aed0f8d.rmeta:3551,3578,3581,3597,3631,3677,3678,3698,3768,3770` | absolute machine path |
 | `6765a74ced75` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_app.rlib:69709` | email |
 | `6765a74ced75` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_app.rlib:3743,3747,3795,3797,3802,3810,3817,3886,3900,3901,3903,3910,3913,3917,3920,7698,7704,9508,9510,10016,10339,11915,11916,11922,12130,68798,68799,68914,68916,73114,73600,74403,74410,74411,74518,74519,74725,74727,74849,75196` | absolute machine path |
-| `6765a74ced75` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_app.rlib:7720,7732,7750,9534,10339,12167,68801,74412,74729,74843` | Git identity name/username |
 | `b9e0de479fcc` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_core-387de1f7042374a7.rlib:6910,6937,6941,6953,6999,7017,7032,10363,10482,10539` | absolute machine path |
-| `b9e0de479fcc` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_core-387de1f7042374a7.rlib:4381,4895` | Git identity name/username |
 | `08ef5f15237a` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_core-387de1f7042374a7.rmeta:6890,6917,6921,6933,6979,6997,7012` | absolute machine path |
-| `08ef5f15237a` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_core-387de1f7042374a7.rmeta:4361,4875` | Git identity name/username |
 | `af46ae4b9c8b` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_export-3e8142faad86f79a.rlib:1660,1765,2160,2251,2346,2366,2452,2467,2476,2492` | absolute machine path |
-| `af46ae4b9c8b` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_export-3e8142faad86f79a.rlib:1604` | Git identity name/username |
 | `adb78b1fd52f` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_export-3e8142faad86f79a.rmeta:1640` | absolute machine path |
-| `adb78b1fd52f` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_export-3e8142faad86f79a.rmeta:1584` | Git identity name/username |
 | `e55f1b58d71d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_format-faeccfc19e3fb839.rlib:1217,1228,1665,1673,2060,2154,2178,2712,3243,3244,3245` | absolute machine path |
-| `e55f1b58d71d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_format-faeccfc19e3fb839.rlib:477,1104,1105,1665` | Git identity name/username |
 | `159d9c342fc3` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_format-faeccfc19e3fb839.rmeta:1086,1097` | absolute machine path |
-| `159d9c342fc3` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_format-faeccfc19e3fb839.rmeta:346,973,974` | Git identity name/username |
 | `3f619ea7d4dc` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_render-3d6572dd7d1e40ca.rlib:356,360,370,396` | absolute machine path |
 | `20602aa2ed90` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libvoxelite_render-3d6572dd7d1e40ca.rmeta:336,340,350,376` | absolute machine path |
 | `9e598fbdcb3b` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwaker_fn-cb27adc71c5bdf85.rlib:90` | absolute machine path |
@@ -876,9 +684,7 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 | `1fed1ede1593` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_core_deps_wasm-493cbd2a00c6013d.rlib:10` | absolute machine path |
 | `c7101698316d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_core_deps_wasm-493cbd2a00c6013d.rmeta:5` | absolute machine path |
 | `7d871593d28f` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_hal-d063d53d1190bf35.rlib:10815,10845,10855,10884,10886,10892,10906,10969,11019,11029,11035,11039,11040,11047,11048,11064,11065,11068,11069,11582,11663,11683,12284,12290,12312,12318,12622,12690,12795,12835,13008,13026,13082,13133,13179,13202,13266,13367,13386` | absolute machine path |
-| `7d871593d28f` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_hal-d063d53d1190bf35.rlib:5658` | Git identity name/username |
 | `737f10370f06` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_hal-d063d53d1190bf35.rmeta:10795,10825,10835,10864,10866,10872,10886,10949,10999,11009,11015,11019,11020,11027,11028,11044,11045,11048,11049` | absolute machine path |
-| `737f10370f06` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_hal-d063d53d1190bf35.rmeta:5638` | Git identity name/username |
 | `d556a978ce99` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_naga_bridge-4ae6a95c9ff6fdcb.rlib:59` | absolute machine path |
 | `9508199b5e42` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_naga_bridge-4ae6a95c9ff6fdcb.rmeta:53` | absolute machine path |
 | `11c7f97d1d22` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libwgpu_types-1a876d57c819325d.rlib:22831` | email |
@@ -897,10 +703,8 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 | `7f8d1940b120` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzeno-8a19d53d1525b3dd.rmeta:4047,4055,4064,4087,4097,4110,4148,4162,4175,4209,4225,4233,4241,4287` | absolute machine path |
 | `8cf48931a926` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rlib:39768,45603` | email |
 | `8cf48931a926` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rlib:45660,45948,45983,46006,46035,46042,46101,46143,46162,46268,46331,46342,46439,46531,46603,46628,46644` | absolute machine path |
-| `8cf48931a926` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rlib:20174,33602` | Git identity name/username |
 | `4c43a2078e5d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rmeta:39763,45598` | email |
 | `4c43a2078e5d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rmeta:45655,45943,45978,46001,46030,46037,46096,46138,46157,46263,46326,46337,46434,46526,46598,46623,46639` | absolute machine path |
-| `4c43a2078e5d` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerocopy-96d60c44bc5b5380.rmeta:20169,33597` | Git identity name/username |
 | `7cfa3f1d5bf1` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerofrom-62f7362069a4c5ee.rlib:404,405,407` | absolute machine path |
 | `c30ebc97c351` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerofrom-62f7362069a4c5ee.rmeta:399,400,402` | absolute machine path |
 | `625fe7469138` · `target-webdeploy/wasm32-unknown-unknown/web/deps/libzerotrie-31a94bc6aaa25a55.rlib:1866,1868,1869,1878,1888,1903,1919,1964,1965,1971,1987,1991,2000,2004,2048,2072,2078` | absolute machine path |
@@ -1038,7 +842,6 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 | `8af9d5799589` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_app.d:1,3,5` | absolute machine path |
 | `03c5df36a387` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_app.wasm:129011` | email |
 | `03c5df36a387` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_app.wasm:70745` | absolute machine path |
-| `03c5df36a387` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_app.wasm:70701,70753,70875,70898,72012` | Git identity name/username |
 | `0f63b3f40b71` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_core-387de1f7042374a7.d:1,3,5` | absolute machine path |
 | `4d4389f265b9` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_export-3e8142faad86f79a.d:1,3,5` | absolute machine path |
 | `5751aef40661` · `target-webdeploy/wasm32-unknown-unknown/web/deps/voxelite_format-faeccfc19e3fb839.d:1,3,5` | absolute machine path |
@@ -1287,216 +1090,21 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 | `8584d8b38d5f` · `target-webdeploy/web/deps/zerofrom_derive-6804d03aa2a25beb.d:1,3,5,6` | absolute machine path |
 | `e4a64685e2c6` · `target-webdeploy/web/deps/zerovec_derive-396cd6c74f100cc8.d:1,3,5,6,7,8,9,10` | absolute machine path |
 | `bb30aa0a6ced` · `target-webdeploy/web/deps/ztracing_macro_gpui_unofficial-c43c5e0342d41974.d:1,3,5` | absolute machine path |
-| `49f5d04c37d0` · `crates/voxelite-app/Cargo.toml:17` | Git identity name/username |
-| `9d55667d1fe8` · `crates/voxelite-app/src/actions.rs:96` | Git identity name/username |
-| `10823a203ac2` · `crates/voxelite-app/src/palettes.rs:33` | Git identity name/username |
-| `244398dbe8a5` · `crates/voxelite-app/src/ui.rs:1198,2733` | Git identity name/username |
-| `2c9f681d8c7e` · `web/index.html:7,8,18` | Git identity name/username |
-| `93c81839463f` · `crates/voxelite-app/Cargo.toml:13` | Git identity name/username |
-| `88256749e8f8` · `crates/voxelite-app/src/actions.rs:86` | Git identity name/username |
-| `7f9f320c4f86` · `crates/voxelite-app/src/palettes.rs:36` | Git identity name/username |
-| `51954440730b` · `crates/voxelite-app/src/persistence.rs:84` | Git identity name/username |
-| `54cb64fd71d0` · `crates/voxelite-app/src/share.rs:58,169` | Git identity name/username |
-| `74ec0419c111` · `crates/voxelite-app/src/ui.rs:1190,2725` | Git identity name/username |
-| `c001c22425cc` · `crates/voxelite-app/src/ui/agent.rs:103` | Git identity name/username |
-| `4d958637c9c1` · `PLAN.md:1,27,55,64,139,144,198,262,286,290,309,350,351,360,392,414,415,434,641,642,645,647,693,697,700,729,742,748,830,835` | Git identity name/username |
-| `23768d4dc8d6` · `crates/voxelite-app/src/ui.rs:1188,2651` | Git identity name/username |
-| `ccb6fe467c82` · `crates/voxelite-app/src/ui/agent.rs:103` | Git identity name/username |
-| `2caaec1bab4e` · `scripts/capture-native.sh:34,38,62` | Git identity name/username |
+| `4d958637c9c1` · `PLAN.md:262` | Git identity name/username |
 | `b35719407a90` · `screenshots/polish-2/agent-light.png:582` | email |
-| `e7c85840461f` · `crates/voxelite-app/README.md:1,3,18,19,104,165,196,225` | Git identity name/username |
-| `bcc9b195c58a` · `PLAN.md:1,27,55,64,139,144,198,262,286,290,309,350,351,360,392,414,415,434,641,642,645,647,693,697,700,729,742,748,830,835` | Git identity name/username |
-| `c02b2c9945e8` · `scripts/capture-native.sh:34,38,62` | Git identity name/username |
-| `69610e6b531e` · `scripts/review-polish-2.sh:28,32` | Git identity name/username |
-| `c286d465829d` · `PLAN.md:1,27,63,138,143,197,261,285,289,308,349,350,359,391,413,414,433,640,641,644,646,692,696,699,728,741,747,829,834` | Git identity name/username |
-| `5ec3eeab697d` · `crates/voxelite-app/README.md:1,3,18,19,104,190,219` | Git identity name/username |
-| `a0d6401346c1` · `crates/voxelite-app/src/ui.rs:1181,2641` | Git identity name/username |
-| `8190eb607611` · `crates/voxelite-app/README.md:1,3,18,19,104,188,217` | Git identity name/username |
-| `5e329e850164` · `crates/voxelite-app/src/ui.rs:1180,2628` | Git identity name/username |
-| `89d6faacb963` · `crates/voxelite-app/README.md:1,3,18,19,104,186,215` | Git identity name/username |
-| `42242bfacf05` · `crates/voxelite-app/src/ui.rs:1165,2613` | Git identity name/username |
-| `8556bf34ce9c` · `scripts/review-polish-2.sh:28,32` | Git identity name/username |
-| `f8cf03999de1` · `scripts/capture-native.sh:29,33,57` | Git identity name/username |
-| `972f932162c8` · `crates/voxelite-app/src/ui.rs:1138,2578` | Git identity name/username |
-| `d5000bf548f0` · `crates/voxelite-app/README.md:1,3,18,19,104,186,209` | Git identity name/username |
-| `28bab98ef69e` · `crates/voxelite-app/src/ui.rs:1138,2582` | Git identity name/username |
-| `907e75214280` · `crates/voxelite-app/src/ui/agent.rs:103` | Git identity name/username |
-| `4bd33da4e8de` · `scripts/review-polish-2.sh:28,32` | Git identity name/username |
-| `04ef24362d6b` · `crates/voxelite-app/src/ui.rs:1137,2565` | Git identity name/username |
-| `1faa10728c59` · `crates/voxelite-app/src/ui/agent.rs:103` | Git identity name/username |
-| `5a7cf9ba9e50` · `crates/voxelite-app/src/ui.rs:1137,2565` | Git identity name/username |
-| `0903032f5ee7` · `crates/voxelite-app/src/ui/agent.rs:103` | Git identity name/username |
-| `d54ac02da932` · `crates/voxelite-app/src/ui.rs:1117,2555` | Git identity name/username |
-| `307c61fb8cd6` · `crates/voxelite-app/src/ui/agent.rs:79` | Git identity name/username |
-| `48e2751cb944` · `crates/voxelite-app/src/actions.rs:49` | Git identity name/username |
-| `088a78f076f0` · `crates/voxelite-app/src/ui.rs:1115,2540` | Git identity name/username |
-| `542713318c51` · `crates/voxelite-app/src/ui/agent.rs:79` | Git identity name/username |
-| `976d3810d331` · `crates/voxelite-app/README.md:1,3,18,19,104,188,211` | Git identity name/username |
-| `1ea551e4c868` · `crates/voxelite-app/src/main.rs:1,64,131,140` | Git identity name/username |
-| `7d3aaaeb0cf8` · `crates/voxelite-app/src/ui.rs:1080,2505` | Git identity name/username |
-| `4d8f4b822378` · `docs/mcp.md:1,121,150` | Git identity name/username |
-| `38ea412b2b4e` · `scripts/capture-native.sh:25,29,53` | Git identity name/username |
-| `dc4ac43bc654` · `crates/voxelite-app/README.md:1,3,18,19,107` | Git identity name/username |
-| `f21ee004175a` · `crates/voxelite-app/src/palettes.rs:36` | Git identity name/username |
-| `523cbb032367` · `crates/voxelite-app/src/ui.rs:1054,2479` | Git identity name/username |
-| `0e9fea607fcf` · `crates/voxelite-app/src/ui/agent.rs:79` | Git identity name/username |
-| `166023d00c80` · `scripts/capture-native.sh:6,24,28,51` | Git identity name/username |
-| `04529277c441` · `crates/voxelite-app/src/ui.rs:1054,2477` | Git identity name/username |
-| `8728cbe0be4b` · `crates/voxelite-app/src/ui/agent.rs:79` | Git identity name/username |
-| `4317fd9f0811` · `crates/voxelite-app/Cargo.toml:13` | Git identity name/username |
-| `a28bcb32523a` · `crates/voxelite-app/src/main.rs:1,55,122,127` | Git identity name/username |
-| `d7bdec37f291` · `crates/voxelite-app/src/ui.rs:1014,2426` | Git identity name/username |
-| `93ec15a372aa` · `crates/voxelite-mcp/Cargo.toml:7` | Git identity name/username |
-| `192fef512bcd` · `crates/voxelite-mcp/src/lib.rs:1,24,92` | Git identity name/username |
-| `2c669372ce64` · `crates/voxelite-mcp/src/main.rs:20` | Git identity name/username |
-| `ecb3195311a1` · `crates/voxelite-app/src/ui.rs:1006,2377` | Git identity name/username |
-| `d24a166c2edc` · `crates/voxelite-app/src/actions.rs:47` | Git identity name/username |
-| `10e0e138df7c` · `crates/voxelite-app/src/ui.rs:991,2325` | Git identity name/username |
-| `6856147e9364` · `crates/voxelite-app/src/actions.rs:45` | Git identity name/username |
-| `a0a42db7a407` · `crates/voxelite-app/src/ui.rs:985,2308` | Git identity name/username |
-| `6f8b36d5c206` · `crates/voxelite-app/src/actions.rs:44` | Git identity name/username |
-| `2ec8c894b035` · `crates/voxelite-app/src/main.rs:1,54,121,126` | Git identity name/username |
-| `99780d6c9136` · `crates/voxelite-app/src/ui.rs:953,2253` | Git identity name/username |
-| `a0bd42cd4b4a` · `crates/voxelite-app/src/actions.rs:44` | Git identity name/username |
-| `e46293b8c8f8` · `crates/voxelite-app/src/ui.rs:953,2270` | Git identity name/username |
-| `74069021eddc` · `crates/voxelite-app/README.md:1,3,12,13,98` | Git identity name/username |
-| `9184b64e136b` · `docs/verification/native-app.md:8,15` | Git identity name/username |
-| `f3199fa34752` · `scripts/review-native.sh:6,28,32,75,80,85,88,92,108,112,126,128,130,132` | Git identity name/username |
-| `ecc6abdcf2eb` · `crates/voxelite-app/src/ui.rs:953,2270` | Git identity name/username |
-| `cd32f695899f` · `scripts/review-native.sh:6,27,31,74,79,84,87,91,107,111,125,127,129,131` | Git identity name/username |
-| `834622594828` · `crates/voxelite-app/src/main.rs:1,54,117,122` | Git identity name/username |
-| `446b60b3ac3e` · `crates/voxelite-app/src/ui.rs:941,2146` | Git identity name/username |
-| `4d58bd1d8f99` · `crates/voxelite-app/src/ui.rs:887,1993` | Git identity name/username |
-| `56391baf19c1` · `scripts/capture-native.sh:6,24,28,48` | Git identity name/username |
-| `294fb928eb42` · `scripts/review-native.sh:6,27,31,72,77,82,85,89,105,109,123,125,127,129` | Git identity name/username |
-| `aa51c949e0bb` · `crates/voxelite-app/src/ui.rs:887,1991` | Git identity name/username |
-| `5ad25ea27a0f` · `docs/verification/native-app.md:4,11` | Git identity name/username |
-| `2886e9c657ad` · `crates/voxelite-app/README.md:1,3,10,11,80` | Git identity name/username |
-| `81906b8e7230` · `crates/voxelite-app/src/ui.rs:882,1986` | Git identity name/username |
-| `e4e99012a5ea` · `scripts/review-native.sh:6,27,31,71,76,81,84,88,104,108,116,118,120,122` | Git identity name/username |
-| `480a08ed629a` · `crates/voxelite-app/src/persistence.rs:80` | Git identity name/username |
-| `e5f87d0f802a` · `crates/voxelite-app/src/ui.rs:878,1972` | Git identity name/username |
-| `68552cde9348` · `scripts/capture-native.sh:6,24,28,45` | Git identity name/username |
-| `7518de1939a1` · `crates/voxelite-app/src/actions.rs:44` | Git identity name/username |
-| `7a4f88ed8cbe` · `crates/voxelite-app/src/ui.rs:792,1750` | Git identity name/username |
-| `8c78cf8e9ca0` · `crates/voxelite-app/src/actions.rs:43` | Git identity name/username |
-| `99eb55f8f808` · `crates/voxelite-app/src/ui.rs:423,670,1628` | Git identity name/username |
-| `31842e9bed1d` · `crates/voxelite-app/Cargo.toml:13` | Git identity name/username |
-| `c794e9256012` · `docs/verification/native-app.md:4,11` | Git identity name/username |
-| `62030e756fb6` · `crates/voxelite-app/Cargo.toml:13` | Git identity name/username |
-| `ffb0021d3d2c` · `crates/voxelite-app/src/main.rs:1,54,116,121` | Git identity name/username |
-| `4e347a084c82` · `crates/voxelite-app/src/ui.rs:423,670,1628` | Git identity name/username |
-| `57f9602bb346` · `crates/voxelite-app/src/main.rs:1,54,115,120` | Git identity name/username |
-| `c8d8200eadb1` · `crates/voxelite-app/src/ui.rs:419,666,1618` | Git identity name/username |
-| `4beac0219d4c` · `crates/voxelite-app/src/ui.rs:415,662,1611` | Git identity name/username |
-| `e25798899bd8` · `crates/voxelite-app/src/ui.rs:359,595,1533` | Git identity name/username |
-| `de9bd5d078a8` · `crates/voxelite-app/src/ui.rs:353,583,1509` | Git identity name/username |
-| `489798319a83` · `crates/voxelite-app/src/actions.rs:9` | Git identity name/username |
-| `8408f09df382` · `crates/voxelite-app/src/main.rs:1` | Git identity name/username |
-| `fef62d317d60` · `crates/voxelite-app/src/ui.rs:130,202` | Git identity name/username |
-| `0d6449236737` · `crates/voxelite-app/Cargo.toml:13` | Git identity name/username |
-| `7db670596be0` · `docs/mcp.md:1,116,145` | Git identity name/username |
-| `10bb54f39b3e` · `spec/mcp/v1/contract.md:1,12` | Git identity name/username |
-| `24502cbc34b8` · `crates/voxelite-mcp/src/catalog.rs:206,234,366` | Git identity name/username |
-| `68fa416d3cbd` · `spec/mcp/v1/tools.json:4,48,54,314,608,804,1091,1378,1683,1910,2148,2397,2569,2847,3023,3253,3530,3817,4078,4261,4540,4825,5109,5392,5677,5948,6141,6404,6595,6913,7282,7489,7678,7964,8661,9031,9375,9750,10029,10295` | Git identity name/username |
-| `40239328a68c` · `crates/voxelite-mcp/src/catalog.rs:183,211,328` | Git identity name/username |
-| `052758066162` · `crates/voxelite-mcp/tests/stdio.rs:92` | Git identity name/username |
-| `58cd44fb2df5` · `docs/mcp.md:1,116,145` | Git identity name/username |
-| `8af61be693bd` · `spec/mcp/v1/compatibility.json:2` | Git identity name/username |
-| `4cff4c014ebf` · `crates/voxelite-mcp/src/catalog.rs:183,211,328` | Git identity name/username |
-| `f17114a94679` · `crates/voxelite-mcp/tests/stdio.rs:92` | Git identity name/username |
-| `b7b44980f045` · `spec/mcp/v1/tools.json:4,48,54,314,608,804,1091,1378,1683,1910,2148,2397,2569,2847,3023,3253,3530,3817,4078,4261,4540,4825,5109,5392,5677,5948,6141,6404,6595,6913,7282,7489,7678,7964,8661,9031,9375,9750,10029,10295` | Git identity name/username |
-| `510d550e8cbe` · `crates/voxelite-mcp/src/catalog.rs:182,224` | Git identity name/username |
-| `4964c81b9e7b` · `docs/mcp.md:1,114,143` | Git identity name/username |
-| `57cd646d754d` · `spec/mcp/v1/contract.md:1,12` | Git identity name/username |
-| `9673fd4c3210` · `spec/mcp/v1/tools.json:4,48,279,430,584,748,902,1084,1217,1361,1516,1655,1900,2043,2197,2351,2515,2648,2808,2964,3126,3287,3447,3609,3750,3913,4046,4217,4412,4651,4784,4950,5113,5682,5929,6150,6402,6558,6796` | Git identity name/username |
-| `c92319427e06` · `crates/voxelite-mcp/src/lib.rs:1,24,90` | Git identity name/username |
-| `1498a8d2959e` · `crates/voxelite-mcp/src/lib.rs:1,23,76` | Git identity name/username |
-| `a8c2efcdb2f9` · `crates/voxelite-mcp/src/main.rs:21` | Git identity name/username |
-| `d73ec5b4630a` · `crates/voxelite-mcp/src/catalog.rs:52,67` | Git identity name/username |
-| `3c7fb3c530f2` · `crates/voxelite-mcp/src/lib.rs:1,11,21` | Git identity name/username |
-| `c30a6a5c3d71` · `crates/voxelite-export/src/lib.rs:70,103` | Git identity name/username |
-| `c4b57df8dde2` · `crates/voxelite-export/src/lib.rs:71,104` | Git identity name/username |
-| `0642b6e2c657` · `crates/voxelite-export/src/lib.rs:1` | Git identity name/username |
-| `d232e7950a3a` · `crates/voxelite-format/src/lib.rs:21,179,206,208` | Git identity name/username |
-| `70f00c75f772` · `crates/voxelite-render/src/lib.rs:1` | Git identity name/username |
-| `ee68e94a4002` · `crates/voxelite-format/src/lib.rs:1` | Git identity name/username |
-| `41ff19b68c8f` · `PLAN.md:1,3,18,65,135,137,148,168,204,318,414,420` | Git identity name/username |
+| `bcc9b195c58a` · `PLAN.md:262` | Git identity name/username |
+| `c286d465829d` · `PLAN.md:261` | Git identity name/username |
+| `41ff19b68c8f` · `PLAN.md:420` | Git identity name/username |
 | `94ff0e955ccf` · `design/REVISIONS.md:423` | absolute machine path |
-| `94ff0e955ccf` · `design/REVISIONS.md:1,252,407` | Git identity name/username |
-| `8ec2cd4aa90f` · `design/REVISIONS.md:1,252` | Git identity name/username |
-| `2a3d0a9ed864` · `design/concepts/concept-a/index.html:2,1904,1914,3283` | Git identity name/username |
-| `1dec35a40938` · `scripts/lib/concept-a-controls.js:937` | Git identity name/username |
-| `8dc2852aea63` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `1cda23b27a34` · `design/REVISIONS.md:3,254,381,399,405,441` | Git identity name/username |
-| `ad6225d0dde5` · `design/concepts/README.md:1` | Git identity name/username |
-| `14661d2606ec` · `design/concepts/concept-a/index.html:2,1901,1911,3280` | Git identity name/username |
-| `eb55ee4a2df9` · `scripts/lib/concept-a-controls.js:937` | Git identity name/username |
-| `7b0553d0ac9a` · `PLAN.md:1,3,18,65,135,137,148,168,204,318,414,420` | Git identity name/username |
-| `baaf5c77ebe9` · `design/REVISIONS.md:1,252` | Git identity name/username |
-| `b200879acdee` · `design/concepts/concept-a/index.html:2,1904,1914,3283` | Git identity name/username |
-| `8a104869e900` · `scripts/lib/concept-a-controls.js:937` | Git identity name/username |
-| `58021dd59b6e` · `design/concepts/concept-a/index.html:2,1845,1855,3191` | Git identity name/username |
-| `8f5374522776` · `scripts/lib/concept-a-controls.js:904` | Git identity name/username |
-| `5bbde93bf692` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `4401f08cd702` · `design/concepts/concept-a/index.html:2,1798,1808,3144` | Git identity name/username |
-| `58019df8a99e` · `scripts/lib/concept-a-controls.js:904` | Git identity name/username |
-| `38f92d90616d` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `62ef15896d2b` · `scripts/lib/concept-a-controls.js:925` | Git identity name/username |
-| `297064f0d58b` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `42a95de53d8b` · `design/REVISIONS.md:1,252` | Git identity name/username |
-| `53bf48876353` · `design/concepts/concept-a/index.html:2,1673,1683,3039` | Git identity name/username |
-| `9736d51fc766` · `scripts/lib/concept-a-controls.js:924` | Git identity name/username |
-| `63ff81bf62a1` · `scripts/lib/concept-a-controls.js:1310` | Git identity name/username |
-| `c526c7a79a70` · `scripts/lib/concept-a.mjs:25,35` | Git identity name/username |
-| `a481c722002f` · `design/REVISIONS.md:1,252` | Git identity name/username |
-| `74803a202262` · `design/concepts/concept-a/index.html:2,10,20,633` | Git identity name/username |
-| `902e3ea936d9` · `scripts/build-concepts.mjs:58,105` | Git identity name/username |
-| `210a7f863c29` · `scripts/lib/concept-a-controls.js:181` | Git identity name/username |
-| `d2e39a391911` · `scripts/lib/concept-a.mjs:15,25` | Git identity name/username |
-| `257ec5f4583a` · `PLAN.md:1,3,57,127,129,140,160,196,310,406,412` | Git identity name/username |
-| `750f2996b69b` · `design/ART-CHECKLIST.md:1,24` | Git identity name/username |
-| `06ad6c6fd8dd` · `design/REVISIONS.md:1` | Git identity name/username |
-| `fef49cc44c06` · `design/concepts/concept-a/index.html:2,9,19,631` | Git identity name/username |
-| `be40bca4b83b` · `scripts/lib/concept-a-controls.js:181` | Git identity name/username |
-| `b479712caef2` · `scripts/lib/concept-a.mjs:15,25` | Git identity name/username |
-| `948016b39e96` · `scripts/build-concepts.mjs:57,99` | Git identity name/username |
-| `0726ebb62c1b` · `scripts/lib/concept-a.mjs:15,25` | Git identity name/username |
-| `5c3674b835e9` · `design/ART-CHECKLIST.md:1,24` | Git identity name/username |
-| `2548f0b0f651` · `design/REVISIONS.md:14,32,38,74` | Git identity name/username |
-| `d08c4437d373` · `design/concepts/README.md:1` | Git identity name/username |
-| `a929978d3c18` · `design/concepts/concept-a/index.html:7,39` | Git identity name/username |
-| `7fa61c8c0a12` · `design/concepts/concept-b/index.html:7,39` | Git identity name/username |
-| `a18a1d2ac971` · `design/concepts/concept-c/index.html:7,39` | Git identity name/username |
-| `6d28bf0f070c` · `scripts/build-concepts.mjs:47,127` | Git identity name/username |
-| `8066c9d551a2` · `design/REVISIONS.md:1` | Git identity name/username |
-| `63b22f06fce8` · `PLAN.md:1,3,57,127,129,140,160,196,306,402,408` | Git identity name/username |
-| `00c6600db2cb` · `design/REVISIONS.md:1` | Git identity name/username |
-| `42da1072b39a` · `design/concepts/README.md:1` | Git identity name/username |
-| `0b51fa1be252` · `design/concepts/concept-a/index.html:2,555` | Git identity name/username |
-| `fa82a8cd05c9` · `design/concepts/concept-b/index.html:2,555` | Git identity name/username |
-| `102c5d78cf4a` · `design/concepts/concept-c/index.html:2,555` | Git identity name/username |
-| `1fe9642f1f13` · `scripts/build-concepts.mjs:55,97` | Git identity name/username |
-| `a40b8352ecb9` · `design/REVISIONS.md:14,32,38` | Git identity name/username |
-| `7b1126e512b9` · `PLAN.md:1,3,57,127,129,140,160,196,304,400,406` | Git identity name/username |
-| `19f7e5b07e65` · `design/REVISIONS.md:1` | Git identity name/username |
-| `3c7bf6e5c4fd` · `design/concepts/README.md:1` | Git identity name/username |
-| `f23988864125` · `design/concepts/concept-a/index.html:2,27` | Git identity name/username |
-| `9db4c019d2f1` · `design/concepts/concept-b/index.html:2,27` | Git identity name/username |
-| `c7b4894c93f5` · `design/concepts/concept-c/index.html:2,27` | Git identity name/username |
-| `e41cb2d9ac2c` · `scripts/build-concepts.mjs:55,96` | Git identity name/username |
-| `815505bdd86f` · `design/ART-CHECKLIST.md:1` | Git identity name/username |
-| `beb8dfa8be90` · `design/concepts/concept-a/index.html:7,39` | Git identity name/username |
-| `0e2755e8abe2` · `design/concepts/concept-b/index.html:7,39` | Git identity name/username |
-| `1953aa0cd59c` · `design/concepts/concept-c/index.html:7,39` | Git identity name/username |
-| `0ad4c7eb97be` · `scripts/build-concepts.mjs:47,127` | Git identity name/username |
+| `94ff0e955ccf` · `design/REVISIONS.md:407` | Git identity name/username |
+| `7b0553d0ac9a` · `PLAN.md:420` | Git identity name/username |
+| `257ec5f4583a` · `PLAN.md:412` | Git identity name/username |
+| `63b22f06fce8` · `PLAN.md:408` | Git identity name/username |
+| `7b1126e512b9` · `PLAN.md:406` | Git identity name/username |
 
 ## Commit messages
 
-- `1e6f8aaa1462:message:1` — Git identity name/username.
-- `1240ffb9115b:message:1` — Git identity name/username.
-- `e6a9adf1b364:message:1` — Git identity name/username.
-- `60388338a09d:message:1` — Git identity name/username.
+No pattern matches in commit messages.
 
 ## Outcome
 
