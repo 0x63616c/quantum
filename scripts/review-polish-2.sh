@@ -82,7 +82,7 @@ xdotool key Escape ctrl+k
 xdotool type --clearmodifiers 'share project'
 xdotool key Return
 sleep 0.5
-xdotool mousemove 1210 255 click 1
+xdotool mousemove 1070 586 click 1
 chooser Save "$VOXELITE_DATA_DIR/shared-copy.voxl"
 python3 - "$VOXELITE_DATA_DIR/shared-copy.voxl" <<'PY'
 import json, sys

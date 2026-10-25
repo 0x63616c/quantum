@@ -9,7 +9,7 @@ search() {
 }
 capture_feature() {
   # Stay inside either window size so the previous control receives mouse-out.
-  xdotool mousemove 24 200
+  xdotool mousemove 80 200
   sleep 0.5
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$artifact/$1-$theme.png"
@@ -17,9 +17,14 @@ capture_feature() {
 xdotool windowsize "$window" 1440 900 windowfocus "$window"
 sleep 3
 capture_feature main
-xdotool key p shift+x shift+z
+# Pointer selection and keyboard reset share the same tool/mirror actions.
+xdotool mousemove 28 211 click 1
+xdotool mousemove 28 395 click 1
+xdotool mousemove 28 435 click 1
+xdotool mousemove 28 475 click 1
 capture_feature tools
-xdotool key b shift+x shift+z
+xdotool key b shift+x shift+y shift+z
+source scripts/lib/capture-share.sh
 search 'manage palettes'
 # Presets stay immutable; duplicate PICO-8 and author a custom brush palette.
 xdotool mousemove 420 307 click 1
@@ -64,9 +69,6 @@ sleep 0.2
 xdotool click 1
 sleep 0.3
 capture_feature palettes
-xdotool key Escape
-search 'share project'
-capture_feature share
 xdotool key Escape
 # Populate live history via the actual stdio bridge, not seeded UI data.
 timeout 30s python3 scripts/lib/capture-mcp.py "$XDG_RUNTIME_DIR/$theme.sock" seed > "$artifact/mcp-$theme.json"

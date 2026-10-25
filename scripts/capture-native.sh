@@ -31,7 +31,7 @@ cleanup() {
 trap cleanup EXIT
 for theme in dark light; do
   export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$theme"
-  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 180 --session-socket "$XDG_RUNTIME_DIR/$theme.sock" >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
+  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 240 --session-socket "$XDG_RUNTIME_DIR/$theme.sock" >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..50}; do

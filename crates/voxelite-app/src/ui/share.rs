@@ -105,7 +105,8 @@ impl EditorView {
                     .cursor_pointer()
                     .text_color(if active { t.text() } else { t.muted() })
                     .when(active, |d| {
-                        d.bg(t.background()).child(icon("check").size(px(14.0)))
+                        d.bg(t.background())
+                            .child(icon("check").size(px(14.0)).text_color(t.text()))
                     })
                     .hover(move |d| d.text_color(t.text()))
                     .child(access.label())
@@ -153,7 +154,7 @@ impl EditorView {
                         row()
                             .flex_shrink_0()
                             .justify_between()
-                            .child(section_title("Share this project"))
+                            .child(section_title("Share this project").text_size(px(16.0)))
                             .child(
                                 self.control("close-share", "close", "", cx, |this, _, cx| {
                                     this.sharing.open = false;
