@@ -55,21 +55,256 @@
             },
             "documents": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "bounds": {
+                    "additionalProperties": true,
+                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                    "properties": {
+                      "max": {
+                        "items": {
+                          "maximum": 32768,
+                          "minimum": -32767,
+                          "type": "integer"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      },
+                      "min": {
+                        "items": {
+                          "maximum": 32767,
+                          "minimum": -32768,
+                          "type": "integer"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "min",
+                      "max"
+                    ],
+                    "type": "object"
+                  },
+                  "comments": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "dirty": {
+                    "type": "boolean"
+                  },
+                  "head_id": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "layers": {
+                    "items": {
+                      "additionalProperties": true,
+                      "properties": {
+                        "id": {
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                          "type": "string"
+                        },
+                        "locked": {
+                          "type": "boolean"
+                        },
+                        "name": {
+                          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                          "type": "string"
+                        },
+                        "visible": {
+                          "type": "boolean"
+                        },
+                        "voxel_count": {
+                          "maximum": 9223372036854775807,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "visible",
+                        "locked",
+                        "voxel_count"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 64,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "model_id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "palette_slots": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "redo_id": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "revision": {
+                    "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$",
+                    "type": "string"
+                  },
+                  "versions": {
+                    "maximum": 64,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "voxel_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "model_id",
+                  "revision",
+                  "name",
+                  "bounds",
+                  "layers",
+                  "dirty",
+                  "voxel_count",
+                  "palette_slots",
+                  "comments",
+                  "versions",
+                  "head_id",
+                  "redo_id"
+                ],
                 "type": "object"
               },
+              "maxItems": 8,
+              "minItems": 0,
+              "type": "array"
+            },
+            "durability": {
+              "const": "memory"
+            },
+            "formats": {
+              "items": {
+                "maxLength": 16,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 5,
+              "minItems": 1,
               "type": "array"
             },
             "limits": {
+              "additionalProperties": true,
+              "properties": {
+                "batch_operations": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "explicit_voxels": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "open_documents": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "operation_receipts": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "read_voxels": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "receipt_bytes": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "request_bytes": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "result_bytes": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "work_units": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "open_documents",
+                "request_bytes",
+                "result_bytes",
+                "batch_operations",
+                "explicit_voxels",
+                "read_voxels",
+                "work_units",
+                "operation_receipts",
+                "receipt_bytes"
+              ],
               "type": "object"
             },
-            "protocol_versions": {
+            "presets": {
               "items": {
                 "maxLength": 32,
                 "minLength": 1,
                 "type": "string"
               },
-              "maxItems": 2,
+              "maxItems": 7,
               "minItems": 1,
+              "type": "array"
+            },
+            "protocol_versions": {
+              "items": {
+                "enum": [
+                  "2025-11-25",
+                  "2026-07-28"
+                ],
+                "type": "string"
+              },
+              "maxItems": 2,
+              "minItems": 2,
               "type": "array"
             },
             "renderer": {
@@ -81,7 +316,10 @@
             "protocol_versions",
             "limits",
             "documents",
-            "renderer"
+            "renderer",
+            "formats",
+            "presets",
+            "durability"
           ],
           "type": "object"
         },
@@ -233,14 +471,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "message_id": {
@@ -324,7 +565,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -374,6 +616,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "message_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -434,6 +687,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -612,8 +866,183 @@
           "properties": {
             "comments": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "anchor_state": {
+                    "enum": [
+                      "visible",
+                      "hidden",
+                      "orphaned"
+                    ],
+                    "type": "string"
+                  },
+                  "message_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "next_message_offset": {
+                    "anyOf": [
+                      {
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "thread": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "anchor": {
+                        "oneOf": [
+                          {
+                            "additionalProperties": true,
+                            "properties": {
+                              "at": {
+                                "items": {
+                                  "maximum": 32767,
+                                  "minimum": -32768,
+                                  "type": "integer"
+                                },
+                                "maxItems": 3,
+                                "minItems": 3,
+                                "type": "array"
+                              },
+                              "kind": {
+                                "const": "voxel"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "at"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": true,
+                            "properties": {
+                              "kind": {
+                                "const": "region"
+                              },
+                              "max": {
+                                "items": {
+                                  "maximum": 32768,
+                                  "minimum": -32767,
+                                  "type": "integer"
+                                },
+                                "maxItems": 3,
+                                "minItems": 3,
+                                "type": "array"
+                              },
+                              "min": {
+                                "items": {
+                                  "maximum": 32767,
+                                  "minimum": -32768,
+                                  "type": "integer"
+                                },
+                                "maxItems": 3,
+                                "minItems": 3,
+                                "type": "array"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "min",
+                              "max"
+                            ],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "id": {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "layer": {
+                        "anyOf": [
+                          {
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "messages": {
+                        "items": {
+                          "additionalProperties": true,
+                          "properties": {
+                            "id": {
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "origin": {
+                              "enum": [
+                                "agent",
+                                "human"
+                              ],
+                              "type": "string"
+                            },
+                            "text": {
+                              "maxLength": 8192,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "tool": {
+                              "anyOf": [
+                                {
+                                  "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "origin",
+                            "text",
+                            "tool"
+                          ],
+                          "type": "object"
+                        },
+                        "maxItems": 200,
+                        "minItems": 0,
+                        "type": "array"
+                      },
+                      "resolved": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "anchor",
+                      "layer",
+                      "resolved",
+                      "messages"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "thread",
+                  "message_count",
+                  "next_message_offset",
+                  "anchor_state"
+                ],
                 "type": "object"
               },
+              "maxItems": 200,
+              "minItems": 0,
               "type": "array"
             },
             "model_id": {
@@ -739,8 +1168,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -814,7 +1245,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -864,6 +1296,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -916,6 +1359,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -1016,8 +1460,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "message_id": {
@@ -1101,7 +1547,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -1151,6 +1598,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "message_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -1211,6 +1669,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -1313,8 +1772,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -1388,7 +1849,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -1438,6 +1900,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -1490,6 +1963,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -1582,6 +2056,7 @@
       "properties": {
         "bounds": {
           "additionalProperties": false,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
           "properties": {
             "max": {
               "items": {
@@ -1615,8 +2090,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer_id": {
@@ -1628,8 +2105,10 @@
           "type": "string"
         },
         "name": {
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -1686,7 +2165,8 @@
           "additionalProperties": true,
           "properties": {
             "bounds": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -1715,6 +2195,11 @@
               ],
               "type": "object"
             },
+            "comments": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
             "dirty": {
               "type": "boolean"
             },
@@ -1731,8 +2216,42 @@
             },
             "layers": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  },
+                  "voxel_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "visible",
+                  "locked",
+                  "voxel_count"
+                ],
                 "type": "object"
               },
+              "maxItems": 64,
+              "minItems": 1,
               "type": "array"
             },
             "model_id": {
@@ -1740,9 +2259,16 @@
               "type": "string"
             },
             "name": {
+              "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
               "maxLength": 128,
               "minLength": 1,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
               "type": "string"
+            },
+            "palette_slots": {
+              "maximum": 256,
+              "minimum": 1,
+              "type": "integer"
             },
             "redo_id": {
               "anyOf": [
@@ -1760,6 +2286,11 @@
               "pattern": "^(0|[1-9][0-9]{0,19})$",
               "type": "string"
             },
+            "versions": {
+              "maximum": 64,
+              "minimum": 0,
+              "type": "integer"
+            },
             "voxel_count": {
               "maximum": 9223372036854775807,
               "minimum": 0,
@@ -1774,6 +2305,9 @@
             "layers",
             "dirty",
             "voxel_count",
+            "palette_slots",
+            "comments",
+            "versions",
             "head_id",
             "redo_id"
           ],
@@ -1913,7 +2447,8 @@
           "additionalProperties": true,
           "properties": {
             "bounds": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -1942,6 +2477,11 @@
               ],
               "type": "object"
             },
+            "comments": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
             "dirty": {
               "type": "boolean"
             },
@@ -1958,8 +2498,42 @@
             },
             "layers": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  },
+                  "voxel_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "visible",
+                  "locked",
+                  "voxel_count"
+                ],
                 "type": "object"
               },
+              "maxItems": 64,
+              "minItems": 1,
               "type": "array"
             },
             "model_id": {
@@ -1967,9 +2541,16 @@
               "type": "string"
             },
             "name": {
+              "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
               "maxLength": 128,
               "minLength": 1,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
               "type": "string"
+            },
+            "palette_slots": {
+              "maximum": 256,
+              "minimum": 1,
+              "type": "integer"
             },
             "redo_id": {
               "anyOf": [
@@ -1987,6 +2568,11 @@
               "pattern": "^(0|[1-9][0-9]{0,19})$",
               "type": "string"
             },
+            "versions": {
+              "maximum": 64,
+              "minimum": 0,
+              "type": "integer"
+            },
             "voxel_count": {
               "maximum": 9223372036854775807,
               "minimum": 0,
@@ -2001,6 +2587,9 @@
             "layers",
             "dirty",
             "voxel_count",
+            "palette_slots",
+            "comments",
+            "versions",
             "head_id",
             "redo_id"
           ],
@@ -2088,8 +2677,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -2151,7 +2742,8 @@
           "additionalProperties": true,
           "properties": {
             "bounds": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -2180,6 +2772,11 @@
               ],
               "type": "object"
             },
+            "comments": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
             "dirty": {
               "type": "boolean"
             },
@@ -2196,8 +2793,42 @@
             },
             "layers": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  },
+                  "voxel_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "visible",
+                  "locked",
+                  "voxel_count"
+                ],
                 "type": "object"
               },
+              "maxItems": 64,
+              "minItems": 1,
               "type": "array"
             },
             "model_id": {
@@ -2205,9 +2836,16 @@
               "type": "string"
             },
             "name": {
+              "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
               "maxLength": 128,
               "minLength": 1,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
               "type": "string"
+            },
+            "palette_slots": {
+              "maximum": 256,
+              "minimum": 1,
+              "type": "integer"
             },
             "redo_id": {
               "anyOf": [
@@ -2225,6 +2863,11 @@
               "pattern": "^(0|[1-9][0-9]{0,19})$",
               "type": "string"
             },
+            "versions": {
+              "maximum": 64,
+              "minimum": 0,
+              "type": "integer"
+            },
             "voxel_count": {
               "maximum": 9223372036854775807,
               "minimum": 0,
@@ -2239,6 +2882,9 @@
             "layers",
             "dirty",
             "voxel_count",
+            "palette_slots",
+            "comments",
+            "versions",
             "head_id",
             "redo_id"
           ],
@@ -2331,8 +2977,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -2404,6 +3052,9 @@
               "minimum": 0,
               "type": "integer"
             },
+            "dirty": {
+              "const": false
+            },
             "model_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
               "type": "string"
@@ -2428,7 +3079,8 @@
             "revision",
             "path",
             "bytes",
-            "sha256"
+            "sha256",
+            "dirty"
           ],
           "type": "object"
         },
@@ -2576,6 +3228,9 @@
               "minimum": 0,
               "type": "integer"
             },
+            "mime_type": {
+              "const": "model/gltf-binary"
+            },
             "model_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
               "type": "string"
@@ -2600,7 +3255,8 @@
             "revision",
             "path",
             "bytes",
-            "sha256"
+            "sha256",
+            "mime_type"
           ],
           "type": "object"
         },
@@ -2680,6 +3336,33 @@
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
+      "if": {
+        "properties": {
+          "image_mode": {
+            "const": "individual"
+          }
+        },
+        "required": [
+          "image_mode"
+        ]
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "views"
+            ]
+          },
+          {
+            "required": [
+              "perspective"
+            ]
+          }
+        ],
+        "required": [
+          "camera"
+        ]
+      },
       "properties": {
         "background": {
           "items": {
@@ -2693,6 +3376,38 @@
         },
         "camera": {
           "additionalProperties": false,
+          "oneOf": [
+            {
+              "not": {
+                "required": [
+                  "fov_y_degrees"
+                ]
+              },
+              "properties": {
+                "projection": {
+                  "const": "orthographic"
+                }
+              },
+              "required": [
+                "ortho_height"
+              ]
+            },
+            {
+              "not": {
+                "required": [
+                  "ortho_height"
+                ]
+              },
+              "properties": {
+                "projection": {
+                  "const": "perspective"
+                }
+              },
+              "required": [
+                "fov_y_degrees"
+              ]
+            }
+          ],
           "properties": {
             "eye": {
               "items": {
@@ -2758,8 +3473,7 @@
         "image_mode": {
           "enum": [
             "contact_sheet",
-            "individual",
-            "both"
+            "individual"
           ],
           "type": "string"
         },
@@ -2806,6 +3520,25 @@
         "model_id",
         "path"
       ],
+      "then": {
+        "anyOf": [
+          {
+            "required": [
+              "camera"
+            ]
+          },
+          {
+            "properties": {
+              "views": {
+                "maxItems": 1
+              }
+            },
+            "required": [
+              "views"
+            ]
+          }
+        ]
+      },
       "type": "object"
     },
     "outputSchema": {
@@ -2849,10 +3582,102 @@
         "data": {
           "additionalProperties": true,
           "properties": {
+            "backend": {
+              "const": "cpu"
+            },
+            "bounds": {
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "properties": {
+                "max": {
+                  "items": {
+                    "maximum": 32768,
+                    "minimum": -32767,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "min": {
+                  "items": {
+                    "maximum": 32767,
+                    "minimum": -32768,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
             "bytes": {
               "maximum": 9223372036854775807,
               "minimum": 0,
               "type": "integer"
+            },
+            "image_mode": {
+              "enum": [
+                "contact_sheet",
+                "individual",
+                "both"
+              ],
+              "type": "string"
+            },
+            "images": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "height": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "view": {
+                    "enum": [
+                      "iso",
+                      "front",
+                      "back",
+                      "left",
+                      "right",
+                      "top",
+                      "camera",
+                      "contact_sheet"
+                    ],
+                    "type": "string"
+                  },
+                  "width": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "view",
+                  "width",
+                  "height",
+                  "sha256",
+                  "bytes"
+                ],
+                "type": "object"
+              },
+              "maxItems": 7,
+              "minItems": 1,
+              "type": "array"
             },
             "model_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -2871,6 +3696,148 @@
             "sha256": {
               "pattern": "^[0-9a-f]{64}$",
               "type": "string"
+            },
+            "views": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "camera": {
+                    "additionalProperties": true,
+                    "oneOf": [
+                      {
+                        "not": {
+                          "required": [
+                            "fov_y_degrees"
+                          ]
+                        },
+                        "properties": {
+                          "projection": {
+                            "const": "orthographic"
+                          }
+                        },
+                        "required": [
+                          "ortho_height"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "required": [
+                            "ortho_height"
+                          ]
+                        },
+                        "properties": {
+                          "projection": {
+                            "const": "perspective"
+                          }
+                        },
+                        "required": [
+                          "fov_y_degrees"
+                        ]
+                      }
+                    ],
+                    "properties": {
+                      "eye": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      },
+                      "fov_y_degrees": {
+                        "exclusiveMaximum": 179,
+                        "exclusiveMinimum": 1,
+                        "type": "number"
+                      },
+                      "ortho_height": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 1000000000.0,
+                        "type": "number"
+                      },
+                      "projection": {
+                        "enum": [
+                          "orthographic",
+                          "perspective"
+                        ],
+                        "type": "string"
+                      },
+                      "target": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      },
+                      "up": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "eye",
+                      "target",
+                      "up",
+                      "projection"
+                    ],
+                    "type": "object"
+                  },
+                  "height": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "view": {
+                    "enum": [
+                      "iso",
+                      "front",
+                      "back",
+                      "left",
+                      "right",
+                      "top",
+                      "camera",
+                      "contact_sheet"
+                    ],
+                    "type": "string"
+                  },
+                  "width": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "view",
+                  "width",
+                  "height",
+                  "sha256",
+                  "bytes",
+                  "camera"
+                ],
+                "type": "object"
+              },
+              "maxItems": 6,
+              "minItems": 1,
+              "type": "array"
             }
           },
           "required": [
@@ -2878,7 +3845,12 @@
             "revision",
             "path",
             "bytes",
-            "sha256"
+            "sha256",
+            "backend",
+            "bounds",
+            "views",
+            "images",
+            "image_mode"
           ],
           "type": "object"
         },
@@ -3027,8 +3999,113 @@
           "properties": {
             "entries": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "added": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "base_revision": {
+                    "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$",
+                    "type": "string"
+                  },
+                  "changed_bounds": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                        "properties": {
+                          "max": {
+                            "items": {
+                              "maximum": 32768,
+                              "minimum": -32767,
+                              "type": "integer"
+                            },
+                            "maxItems": 3,
+                            "minItems": 3,
+                            "type": "array"
+                          },
+                          "min": {
+                            "items": {
+                              "maximum": 32767,
+                              "minimum": -32768,
+                              "type": "integer"
+                            },
+                            "maxItems": 3,
+                            "minItems": 3,
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "entry_id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "label": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "origin": {
+                    "enum": [
+                      "agent",
+                      "human"
+                    ],
+                    "type": "string"
+                  },
+                  "recolored": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "removed": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "result_revision": {
+                    "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$",
+                    "type": "string"
+                  },
+                  "tool": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "entry_id",
+                  "origin",
+                  "tool",
+                  "label",
+                  "base_revision",
+                  "result_revision",
+                  "added",
+                  "removed",
+                  "recolored",
+                  "changed_bounds"
+                ],
                 "type": "object"
               },
+              "maxItems": 200,
+              "minItems": 0,
               "type": "array"
             },
             "head_id": {
@@ -3192,8 +4269,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -3263,7 +4342,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -3314,6 +4394,17 @@
             "durability": {
               "const": "memory"
             },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "metadata_changed": {
               "type": "boolean"
             },
@@ -3332,6 +4423,17 @@
               "maximum": 9223372036854775807,
               "minimum": 0,
               "type": "integer"
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "removed": {
               "maximum": 9223372036854775807,
@@ -3365,6 +4467,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -3374,7 +4477,8 @@
             "palette_changed",
             "metadata_changed",
             "work_units",
-            "durability"
+            "durability",
+            "redo_id"
           ],
           "type": "object"
         },
@@ -3469,8 +4573,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -3540,7 +4646,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -3591,6 +4698,17 @@
             "durability": {
               "const": "memory"
             },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "metadata_changed": {
               "type": "boolean"
             },
@@ -3609,6 +4727,17 @@
               "maximum": 9223372036854775807,
               "minimum": 0,
               "type": "integer"
+            },
+            "redo_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "removed": {
               "maximum": 9223372036854775807,
@@ -3642,6 +4771,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -3651,7 +4781,8 @@
             "palette_changed",
             "metadata_changed",
             "work_units",
-            "durability"
+            "durability",
+            "redo_id"
           ],
           "type": "object"
         },
@@ -3747,8 +4878,10 @@
           "type": "integer"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer_id": {
@@ -3760,8 +4893,10 @@
           "type": "string"
         },
         "name": {
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -3827,7 +4962,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -3877,6 +5013,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "layer_id": {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -3933,6 +5080,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -4082,8 +5230,42 @@
           "properties": {
             "layers": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  },
+                  "voxel_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "visible",
+                  "locked",
+                  "voxel_count"
+                ],
                 "type": "object"
               },
+              "maxItems": 64,
+              "minItems": 1,
               "type": "array"
             },
             "model_id": {
@@ -4190,14 +5372,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "locked": {
@@ -4271,7 +5456,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -4321,6 +5507,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -4373,6 +5570,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -4473,14 +5671,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -4550,7 +5751,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -4600,6 +5802,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -4652,6 +5865,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -4752,14 +5966,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -4767,8 +5984,10 @@
           "type": "string"
         },
         "name": {
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -4835,7 +6054,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -4885,6 +6105,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -4937,6 +6168,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -5037,8 +6269,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -5054,6 +6288,7 @@
             "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
             "maxLength": 128,
             "minLength": 1,
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
             "type": "string"
           },
           "maxItems": 64,
@@ -5119,7 +6354,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -5169,6 +6405,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -5221,6 +6468,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -5321,14 +6569,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -5402,7 +6653,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -5452,6 +6704,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -5504,6 +6767,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -5604,8 +6868,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -5687,7 +6953,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -5738,6 +7005,17 @@
             "durability": {
               "const": "memory"
             },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "metadata_changed": {
               "type": "boolean"
             },
@@ -5769,8 +7047,27 @@
             },
             "slot_mapping": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "slot": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "source": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "source",
+                  "slot"
+                ],
                 "type": "object"
               },
+              "maxItems": 256,
+              "minItems": 1,
               "type": "array"
             },
             "undo_entry_id": {
@@ -5795,6 +7092,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -6074,8 +7372,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -6151,7 +7451,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -6202,6 +7503,17 @@
             "durability": {
               "const": "memory"
             },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "metadata_changed": {
               "type": "boolean"
             },
@@ -6233,8 +7545,27 @@
             },
             "slot_mapping": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "slot": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "source": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "source",
+                  "slot"
+                ],
                 "type": "object"
               },
+              "maxItems": 256,
+              "minItems": 1,
               "type": "array"
             },
             "undo_entry_id": {
@@ -6259,6 +7590,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -6411,7 +7743,88 @@
               "type": "string"
             },
             "palette": {
+              "additionalProperties": true,
+              "properties": {
+                "order": {
+                  "items": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "maxItems": 256,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "slots": {
+                  "items": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "index": {
+                        "maximum": 256,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "name": {
+                        "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                        "type": "string"
+                      },
+                      "rgba": {
+                        "description": "Opaque sRGB RGBA8; alpha must equal 255.",
+                        "items": false,
+                        "maxItems": 4,
+                        "minItems": 4,
+                        "prefixItems": [
+                          {
+                            "maximum": 255,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "maximum": 255,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "maximum": 255,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "const": 255
+                          }
+                        ],
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "index",
+                      "rgba"
+                    ],
+                    "type": "object"
+                  },
+                  "maxItems": 256,
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "slots",
+                "order"
+              ],
               "type": "object"
+            },
+            "presets": {
+              "items": {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 7,
+              "minItems": 1,
+              "type": "array"
             },
             "revision": {
               "description": "Captured monotonic revision, encoded as a decimal u64 string.",
@@ -6422,7 +7835,8 @@
           "required": [
             "model_id",
             "revision",
-            "palette"
+            "palette",
+            "presets"
           ],
           "type": "object"
         },
@@ -6513,8 +7927,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -6522,8 +7938,10 @@
           "type": "string"
         },
         "name": {
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -6531,13 +7949,30 @@
           "type": "string"
         },
         "rgba": {
-          "items": {
-            "maximum": 255,
-            "minimum": 0,
-            "type": "integer"
-          },
+          "description": "Opaque sRGB RGBA8; alpha must equal 255.",
+          "items": false,
           "maxItems": 4,
           "minItems": 4,
+          "prefixItems": [
+            {
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "const": 255
+            }
+          ],
           "type": "array"
         },
         "slot": {
@@ -6605,7 +8040,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -6655,6 +8091,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -6707,6 +8154,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -6796,6 +8244,17 @@
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
+      "not": {
+        "properties": {
+          "view": {
+            "const": "composite"
+          }
+        },
+        "required": [
+          "view",
+          "layer"
+        ]
+      },
       "properties": {
         "kind": {
           "enum": [
@@ -6809,6 +8268,7 @@
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "limit": {
@@ -6827,6 +8287,7 @@
         },
         "region": {
           "additionalProperties": false,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
           "properties": {
             "max": {
               "items": {
@@ -6916,7 +8377,8 @@
           "additionalProperties": true,
           "properties": {
             "bounds": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -6949,10 +8411,23 @@
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
               "type": "string"
             },
+            "next_offset": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "occupied_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -6987,7 +8462,8 @@
               ]
             },
             "region": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -7021,6 +8497,17 @@
               "pattern": "^(0|[1-9][0-9]{0,19})$",
               "type": "string"
             },
+            "slots": {
+              "additionalProperties": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "propertyNames": {
+                "pattern": "^[0-9]{1,3}$"
+              },
+              "type": "object"
+            },
             "view": {
               "enum": [
                 "layers",
@@ -7032,6 +8519,48 @@
               "maximum": 9223372036854775807,
               "minimum": 0,
               "type": "integer"
+            },
+            "voxels": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "at": {
+                    "items": {
+                      "maximum": 32767,
+                      "minimum": -32768,
+                      "type": "integer"
+                    },
+                    "maxItems": 3,
+                    "minItems": 3,
+                    "type": "array"
+                  },
+                  "layer_id": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "slot": {
+                    "maximum": 256,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "layer_id",
+                  "at",
+                  "slot"
+                ],
+                "type": "object"
+              },
+              "maxItems": 10000,
+              "minItems": 0,
+              "type": "array"
             }
           },
           "required": [
@@ -7121,6 +8650,23 @@
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "views"
+            ]
+          },
+          {
+            "required": [
+              "perspective"
+            ]
+          }
+        ],
+        "required": [
+          "camera"
+        ]
+      },
       "properties": {
         "background": {
           "items": {
@@ -7134,6 +8680,38 @@
         },
         "camera": {
           "additionalProperties": false,
+          "oneOf": [
+            {
+              "not": {
+                "required": [
+                  "fov_y_degrees"
+                ]
+              },
+              "properties": {
+                "projection": {
+                  "const": "orthographic"
+                }
+              },
+              "required": [
+                "ortho_height"
+              ]
+            },
+            {
+              "not": {
+                "required": [
+                  "ortho_height"
+                ]
+              },
+              "properties": {
+                "projection": {
+                  "const": "perspective"
+                }
+              },
+              "required": [
+                "fov_y_degrees"
+              ]
+            }
+          ],
           "properties": {
             "eye": {
               "items": {
@@ -7288,7 +8866,8 @@
               "const": "cpu"
             },
             "bounds": {
-              "additionalProperties": false,
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
               "properties": {
                 "max": {
                   "items": {
@@ -7327,8 +8906,52 @@
             },
             "images": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "height": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "view": {
+                    "enum": [
+                      "iso",
+                      "front",
+                      "back",
+                      "left",
+                      "right",
+                      "top",
+                      "camera",
+                      "contact_sheet"
+                    ],
+                    "type": "string"
+                  },
+                  "width": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "view",
+                  "width",
+                  "height",
+                  "sha256",
+                  "bytes"
+                ],
                 "type": "object"
               },
+              "maxItems": 7,
+              "minItems": 1,
               "type": "array"
             },
             "model_id": {
@@ -7342,8 +8965,144 @@
             },
             "views": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "camera": {
+                    "additionalProperties": true,
+                    "oneOf": [
+                      {
+                        "not": {
+                          "required": [
+                            "fov_y_degrees"
+                          ]
+                        },
+                        "properties": {
+                          "projection": {
+                            "const": "orthographic"
+                          }
+                        },
+                        "required": [
+                          "ortho_height"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "required": [
+                            "ortho_height"
+                          ]
+                        },
+                        "properties": {
+                          "projection": {
+                            "const": "perspective"
+                          }
+                        },
+                        "required": [
+                          "fov_y_degrees"
+                        ]
+                      }
+                    ],
+                    "properties": {
+                      "eye": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      },
+                      "fov_y_degrees": {
+                        "exclusiveMaximum": 179,
+                        "exclusiveMinimum": 1,
+                        "type": "number"
+                      },
+                      "ortho_height": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 1000000000.0,
+                        "type": "number"
+                      },
+                      "projection": {
+                        "enum": [
+                          "orthographic",
+                          "perspective"
+                        ],
+                        "type": "string"
+                      },
+                      "target": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      },
+                      "up": {
+                        "items": {
+                          "maximum": 1000000000.0,
+                          "minimum": -1000000000.0,
+                          "type": "number"
+                        },
+                        "maxItems": 3,
+                        "minItems": 3,
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "eye",
+                      "target",
+                      "up",
+                      "projection"
+                    ],
+                    "type": "object"
+                  },
+                  "height": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "view": {
+                    "enum": [
+                      "iso",
+                      "front",
+                      "back",
+                      "left",
+                      "right",
+                      "top",
+                      "camera",
+                      "contact_sheet"
+                    ],
+                    "type": "string"
+                  },
+                  "width": {
+                    "maximum": 2048,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "view",
+                  "width",
+                  "height",
+                  "sha256",
+                  "bytes",
+                  "camera"
+                ],
                 "type": "object"
               },
+              "maxItems": 6,
+              "minItems": 1,
               "type": "array"
             }
           },
@@ -7502,8 +9261,53 @@
             },
             "versions": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "content_hash": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "type": "string"
+                  },
+                  "origin": {
+                    "enum": [
+                      "agent",
+                      "human"
+                    ],
+                    "type": "string"
+                  },
+                  "parent_id": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "parent_id",
+                  "origin",
+                  "content_hash"
+                ],
                 "type": "object"
               },
+              "maxItems": 64,
+              "minItems": 0,
               "type": "array"
             }
           },
@@ -7612,8 +9416,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -7688,7 +9494,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -7738,6 +9545,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -7790,6 +9608,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -7890,8 +9709,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -7899,8 +9720,10 @@
           "type": "string"
         },
         "name": {
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "operation_id": {
@@ -7974,7 +9797,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -8024,6 +9848,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -8080,6 +9915,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -8181,8 +10017,10 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -8206,6 +10044,7 @@
                     "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
                     "maxLength": 128,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
                     "type": "string"
                   },
                   "mirror": {
@@ -8307,6 +10146,7 @@
                     "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
                     "maxLength": 128,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
                     "type": "string"
                   },
                   "mirror": {
@@ -8345,6 +10185,7 @@
                   },
                   "region": {
                     "additionalProperties": false,
+                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                     "properties": {
                       "max": {
                         "items": {
@@ -8396,6 +10237,7 @@
                     "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
                     "maxLength": 128,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
                     "type": "string"
                   },
                   "mirror": {
@@ -8434,6 +10276,7 @@
                   },
                   "region": {
                     "additionalProperties": false,
+                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                     "properties": {
                       "max": {
                         "items": {
@@ -8498,6 +10341,21 @@
               },
               {
                 "additionalProperties": false,
+                "else": {
+                  "required": [
+                    "slot"
+                  ]
+                },
+                "if": {
+                  "properties": {
+                    "mode": {
+                      "const": "erase"
+                    }
+                  },
+                  "required": [
+                    "mode"
+                  ]
+                },
                 "properties": {
                   "hollow": {
                     "type": "boolean"
@@ -8509,6 +10367,7 @@
                     "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
                     "maxLength": 128,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
                     "type": "string"
                   },
                   "mirror": {
@@ -8555,6 +10414,7 @@
                   },
                   "region": {
                     "additionalProperties": false,
+                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                     "properties": {
                       "max": {
                         "items": {
@@ -8604,6 +10464,13 @@
                   "region",
                   "kind"
                 ],
+                "then": {
+                  "not": {
+                    "required": [
+                      "slot"
+                    ]
+                  }
+                },
                 "type": "object"
               }
             ]
@@ -8671,7 +10538,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -8721,6 +10589,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -8773,6 +10652,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -8862,6 +10742,21 @@
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
+      "else": {
+        "required": [
+          "slot"
+        ]
+      },
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "erase"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
       "properties": {
         "expected_epoch": {
           "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -8876,14 +10771,17 @@
           "type": "boolean"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "mirror": {
@@ -8938,6 +10836,7 @@
         },
         "region": {
           "additionalProperties": false,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
           "properties": {
             "max": {
               "items": {
@@ -8990,6 +10889,13 @@
         "layer",
         "region"
       ],
+      "then": {
+        "not": {
+          "required": [
+            "slot"
+          ]
+        }
+      },
       "type": "object"
     },
     "outputSchema": {
@@ -9041,7 +10947,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -9091,6 +10998,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -9143,6 +11061,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -9243,14 +11162,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "mirror": {
@@ -9297,6 +11219,7 @@
         },
         "region": {
           "additionalProperties": false,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
           "properties": {
             "max": {
               "items": {
@@ -9385,7 +11308,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -9435,6 +11359,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -9487,6 +11422,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -9592,14 +11528,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "mirror": {
@@ -9646,6 +11585,7 @@
         },
         "region": {
           "additionalProperties": false,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
           "properties": {
             "max": {
               "items": {
@@ -9760,7 +11700,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -9810,6 +11751,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -9862,6 +11814,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
@@ -9956,6 +11909,7 @@
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "model_id": {
@@ -10046,8 +12000,32 @@
             },
             "voxels": {
               "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "at": {
+                    "items": {
+                      "maximum": 32767,
+                      "minimum": -32768,
+                      "type": "integer"
+                    },
+                    "maxItems": 3,
+                    "minItems": 3,
+                    "type": "array"
+                  },
+                  "slot": {
+                    "maximum": 256,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "at",
+                  "slot"
+                ],
                 "type": "object"
               },
+              "maxItems": 10000,
+              "minItems": 1,
               "type": "array"
             }
           },
@@ -10146,14 +12124,17 @@
           "type": "string"
         },
         "label": {
+          "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
           "maxLength": 80,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "layer": {
           "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
           "maxLength": 128,
           "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
           "type": "string"
         },
         "mirror": {
@@ -10305,7 +12286,8 @@
             "changed_bounds": {
               "anyOf": [
                 {
-                  "additionalProperties": false,
+                  "additionalProperties": true,
+                  "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
                   "properties": {
                     "max": {
                       "items": {
@@ -10355,6 +12337,17 @@
             },
             "durability": {
               "const": "memory"
+            },
+            "head_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "metadata_changed": {
               "type": "boolean"
@@ -10407,6 +12400,7 @@
             "revision",
             "operation_id",
             "undo_entry_id",
+            "head_id",
             "changed_voxels",
             "added",
             "removed",
