@@ -22,3 +22,34 @@ for (const pre of document.querySelectorAll('.docs-content pre')) {
   pre.before(wrapper);
   wrapper.append(bar, pre);
 }
+
+// Native disclosures keep both menus usable without JavaScript. Enhancement
+// dismisses them on navigation, outside clicks and Escape without trapping focus.
+const docsMenus = document.querySelectorAll('.docs-mobile-nav details');
+for (const menu of docsMenus) {
+  menu.addEventListener('click', event => {
+    const anchor = event.target.closest('a');
+    if (!anchor) return;
+    menu.open = false;
+    if (anchor.hash && anchor.pathname === location.pathname) {
+      const target = document.getElementById(decodeURIComponent(anchor.hash.slice(1)));
+      if (target) {
+        target.tabIndex = -1;
+        target.focus({ preventScroll: true });
+      }
+    }
+  });
+}
+document.addEventListener('click', event => {
+  for (const menu of docsMenus) {
+    if (!menu.contains(event.target)) menu.open = false;
+  }
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  for (const menu of docsMenus) {
+    if (!menu.open) continue;
+    menu.open = false;
+    menu.querySelector('summary').focus();
+  }
+});
