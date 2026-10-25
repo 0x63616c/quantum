@@ -85,6 +85,9 @@ impl Op {
             Self::Fill => Some("g"),
             Self::Box => Some("u"),
             Self::Picker => Some("i"),
+            Self::MirrorX => Some("shift-x"),
+            Self::MirrorY => Some("shift-y"),
+            Self::MirrorZ => Some("shift-z"),
             _ => None,
         }
     }
@@ -160,6 +163,9 @@ impl Op {
             Self::Fill => "G",
             Self::Box => "U",
             Self::Picker => "I",
+            Self::MirrorX => "Shift X",
+            Self::MirrorY => "Shift Y",
+            Self::MirrorZ => "Shift Z",
             _ => "",
         }
     }
