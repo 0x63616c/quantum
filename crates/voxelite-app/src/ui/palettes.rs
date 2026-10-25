@@ -116,6 +116,11 @@ impl EditorView {
             });
         if result.is_ok() {
             self.palettes.custom = selected;
+            self.palettes.slot = match operation {
+                "Move left" => slot.saturating_sub(1),
+                "Move right" => (slot + 1).min(current.order.len() - 1),
+                _ => slot,
+            };
             self.sync_palette_fields(cx);
         }
         self.report(result, "Palette library saved", cx);
@@ -144,7 +149,13 @@ impl EditorView {
             } else {
                 t.muted()
             }))
-            .child(text.into())
+            .child(
+                div()
+                    .min_w(px(0.0))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(text.into()),
+            )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| callback(this, window, cx)))
     }

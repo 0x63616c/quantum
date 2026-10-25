@@ -21,7 +21,7 @@ use std::{
     },
 };
 use tokio::sync::oneshot;
-use voxelite_core::{Changes, Engine, Uuid, compare};
+use voxelite_core::{Changes, Engine, Snapshot, Uuid, compare};
 use voxelite_format::Project;
 
 struct Request {
@@ -46,6 +46,10 @@ pub struct SessionEvent {
     pub changes: Changes,
     /// Useful failure detail, when present.
     pub error: Option<String>,
+    /// Immutable content inspected by a successful render; absent for other calls.
+    pub inspection: Option<Arc<Snapshot>>,
+    /// Requested preset views, validated by the renderer. Custom cameras omit presets.
+    pub views: Vec<String>,
 }
 fn allowed(name: &str) -> bool {
     !matches!(
@@ -116,6 +120,7 @@ pub struct AttachedSession {
     worker: Option<std::thread::JoinHandle<()>>,
     path: PathBuf,
     clients: Arc<AtomicUsize>,
+    render: Option<mpsc::Receiver<(Uuid, SessionEvent)>>,
     /// Human pause rejects new agent mutations; reads remain available.
     pub paused: bool,
 }
@@ -170,6 +175,7 @@ impl AttachedSession {
             path,
             clients,
             paused: false,
+            render: None,
         })
     }
     /// Socket advertised in the app's connection panel.
@@ -190,6 +196,18 @@ impl AttachedSession {
     /// No request executes after its awaiting protocol caller has cancelled.
     pub fn poll(&mut self, engine: &mut Engine) -> Vec<SessionEvent> {
         let mut events = Vec::new();
+        if let Some(receiver) = &self.render {
+            match receiver.try_recv() {
+                Ok((epoch, event)) => {
+                    if epoch == self.session.epoch {
+                        events.push(event);
+                    }
+                    self.render = None;
+                }
+                Err(mpsc::TryRecvError::Disconnected) => self.render = None,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+        }
         let model = engine.document().id;
         if !self.session.documents.contains_key(&model) {
             return events;
@@ -213,10 +231,73 @@ impl AttachedSession {
             }
             let before = self.session.documents[&model].engine.snapshot();
             let revision = self.session.documents[&model].engine.revision();
+            if request.name == "voxelite_render" && self.render.is_none() {
+                match self.session.prepare_render(request.arguments.clone()) {
+                    Ok(task) => {
+                        let snapshot = task.snapshot.clone();
+                        let epoch = self.session.epoch;
+                        let (send, receive) = mpsc::channel();
+                        let views = if request.arguments.get("camera").is_some() {
+                            vec![]
+                        } else {
+                            request
+                                .arguments
+                                .get("views")
+                                .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+                                .unwrap_or_else(|| {
+                                    vec![
+                                        "iso".into(),
+                                        "front".into(),
+                                        "right".into(),
+                                        "back".into(),
+                                    ]
+                                })
+                        };
+                        self.render = Some(receive);
+                        // One bounded render worker per attachment. Mutations remain on the owner.
+                        std::thread::spawn(move || {
+                            if request.reply.is_closed() {
+                                return;
+                            }
+                            let result = task.run();
+                            let success = result.is_error != Some(true);
+                            let error = result
+                                .structured_content
+                                .as_ref()
+                                .and_then(|v| v.pointer("/error/message"))
+                                .and_then(Value::as_str)
+                                .map(str::to_string);
+                            let event = SessionEvent {
+                                tool: request.name,
+                                label: "Inspect model views".into(),
+                                success,
+                                revision,
+                                entry: None,
+                                changes: Changes::default(),
+                                error,
+                                inspection: success.then_some(snapshot),
+                                views,
+                            };
+                            let _ = send.send((epoch, event));
+                            let _ = request.reply.send(Ok(result));
+                        });
+                        continue;
+                    }
+                    Err(error) => {
+                        let _ = request.reply.send(Ok(self.session.error(error)));
+                        continue;
+                    }
+                }
+            }
             let spec = catalog::CATALOG
                 .iter()
                 .find(|s| s.tool.name == request.name);
-            let result = if !allowed(&request.name) {
+            let result = if request.name == "voxelite_render" {
+                Ok(self.session.error(Failure::new(
+                    "render_busy",
+                    "A render is in progress; retry after it completes",
+                )))
+            } else if !allowed(&request.name) {
                 Ok(self.session.error(Failure::new(
                     "app_lifecycle_required",
                     "Open, create and save through the app while attached",
@@ -251,11 +332,21 @@ impl AttachedSession {
                 } else {
                     request.name.clone()
                 },
-                tool: request.name,
+                tool: request.name.clone(),
                 success,
                 revision: engine.revision(),
-                entry: if engine.revision() != revision {
-                    engine.head()
+                entry: if engine.revision() != revision
+                    && !matches!(
+                        request.name.as_str(),
+                        "voxelite_history_undo" | "voxelite_history_redo"
+                    ) {
+                    result
+                        .as_ref()
+                        .ok()
+                        .and_then(|r| r.structured_content.as_ref())
+                        .and_then(|v| v.pointer("/data/undo_entry_id"))
+                        .and_then(Value::as_str)
+                        .and_then(|s| Uuid::parse_str(s).ok())
                 } else {
                     None
                 },
@@ -265,6 +356,8 @@ impl AttachedSession {
                     Changes::default()
                 },
                 error,
+                inspection: None,
+                views: vec![],
             });
             let _ = request.reply.send(result);
         }

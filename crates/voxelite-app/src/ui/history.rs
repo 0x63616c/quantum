@@ -1,6 +1,6 @@
 //! Timeline slider and named version library.
 use super::*;
-use voxelite_app::history::PreviewSource;
+use voxelite_app::history::{PreviewSource, display_label};
 use voxelite_core::{Origin, Uuid};
 pub(super) struct Timeline {
     pub name: Entity<crate::text_field::TextField>,
@@ -53,14 +53,10 @@ impl EditorView {
                     .map(|e| (Some(e.id), e.label.clone(), e.actor.origin)),
             )
             .collect();
-        let selected = p
-            .and_then(|p| {
-                steps
-                    .iter()
-                    .position(|(id, _, _)| p.source == PreviewSource::History(*id))
-            })
-            .unwrap_or(steps.len().saturating_sub(1));
+        let selected = self.editor.timeline_index();
         let count = steps.len();
+        let mut versions: Vec<_> = self.editor.engine.versions().collect();
+        versions.sort_by(|a, b| a.name.cmp(&b.name).then(a.id.cmp(&b.id)));
         let bounds = Rc::new(Cell::new(Bounds::<Pixels>::default()));
         let paint = bounds.clone();
         let drag = bounds.clone();
@@ -77,7 +73,7 @@ impl EditorView {
         };
         div()
             .flex_1()
-            .min_h(px(140.0))
+            .min_h(px(0.0))
             .flex()
             .flex_col()
             .p(px(20.0))
@@ -89,10 +85,10 @@ impl EditorView {
                     .child(mono(format!("{} steps", steps.len())).text_color(t.muted())),
             )
             .child(
-                div()
-                    .text_color(t.muted())
-                    .text_size(px(12.0))
-                    .child(p.map_or("Live document", |p| p.label.as_str()).to_string()),
+                div().text_color(t.muted()).text_size(px(12.0)).child(
+                    p.map_or("Live document", |p| display_label(&p.label))
+                        .to_string(),
+                ),
             )
             .child(
                 div()
@@ -115,19 +111,49 @@ impl EditorView {
                                     ),
                                     t.line(),
                                 ));
-                                let x = b.left()
-                                    + b.size.width
-                                        * (selected as f32 / count.saturating_sub(1).max(1) as f32);
-                                window.paint_quad(fill(
-                                    Bounds::new(
-                                        point(x - px(4.0), b.top() + px(7.0)),
-                                        size(px(8.0), px(12.0)),
-                                    ),
-                                    t.accent(),
-                                ));
                             },
                         )
                         .size_full(),
+                    )
+                    .children(
+                        steps
+                            .iter()
+                            .enumerate()
+                            .filter(|(i, _)| {
+                                count <= 32 || *i == selected || i % count.div_ceil(32) == 0
+                            })
+                            .map(|(i, (_, label, origin))| {
+                                row()
+                                    .id(("timeline-mark", i))
+                                    .absolute()
+                                    .left(relative(
+                                        i as f32 / count.saturating_sub(1).max(1) as f32,
+                                    ))
+                                    .top(px(5.0))
+                                    .ml(px(-8.0))
+                                    .size(px(16.0))
+                                    .rounded_full()
+                                    .justify_center()
+                                    .bg(t.background())
+                                    .border_1()
+                                    .border_color(if i == selected {
+                                        t.accent()
+                                    } else {
+                                        t.background()
+                                    })
+                                    .tooltip(hint(format!("{} · {}", i, display_label(label)), t))
+                                    .child(
+                                        icon(if *origin == Origin::Agent {
+                                            "diamond"
+                                        } else {
+                                            "circle"
+                                        })
+                                        .size(px(8.0))
+                                        .text_color(
+                                            if i == selected { t.accent() } else { t.muted() },
+                                        ),
+                                    )
+                            }),
                     )
                     .on_mouse_down(
                         MouseButton::Left,
@@ -179,8 +205,7 @@ impl EditorView {
                                     this.report(r, "History restored as a new edit", cx);
                                 },
                             )
-                            .bg(t.text())
-                            .text_color(t.background()),
+                            .text_color(t.text()),
                         ),
                 )
             })
@@ -203,7 +228,7 @@ impl EditorView {
                                     } else {
                                         "circle"
                                     },
-                                    label.clone(),
+                                    display_label(label).to_string(),
                                     cx,
                                     move |this, _, cx| this.scrub(i, cx),
                                 )
@@ -217,13 +242,27 @@ impl EditorView {
                             }),
                     ),
             )
-            .child(section_title("Named versions"))
+            .child(
+                row()
+                    .justify_between()
+                    .child(section_title("Named versions"))
+                    .child(
+                        row()
+                            .gap(px(5.0))
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child(icon("circle").size(px(10.0)).text_color(t.muted()))
+                            .child("Human")
+                            .child(icon("diamond").size(px(10.0)).text_color(t.accent()))
+                            .child("Agent"),
+                    ),
+            )
             .child(
                 div()
                     .id("versions-scroll")
                     .max_h(px(110.0))
                     .overflow_y_scroll()
-                    .children(self.editor.engine.versions().enumerate().map(|(i, v)| {
+                    .children(versions.into_iter().enumerate().map(|(i, v)| {
                         let id = v.id;
                         self.control(
                             ("named-version", i),
@@ -245,25 +284,40 @@ impl EditorView {
                         .w_full()
                         .border_0()
                         .mb(px(3.0))
+                        .when(
+                            p.is_some_and(|p| p.source == PreviewSource::Version(id)),
+                            |d| d.bg(t.selected()).text_color(t.accent()),
+                        )
                     })),
             )
-            .child(
-                row()
-                    .gap(px(8.0))
-                    .child(div().flex_1().child(self.timeline.name.clone()))
-                    .child(
-                        self.control("save-version", "save", "Save", cx, |this, window, cx| {
-                            let name = this.timeline.name.read(cx).text.trim().to_string();
-                            let r = this.editor.save_version(name);
-                            if r.is_ok() {
-                                this.timeline
-                                    .name
-                                    .update(cx, |f, cx| f.set(String::new(), cx));
-                            }
-                            window.focus(&this.focus, cx);
-                            this.report(r, "Named version saved", cx);
-                        }),
-                    ),
-            )
+            .when(p.is_none(), |d| {
+                d.child(
+                    row()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(0.0))
+                                .child(self.timeline.name.clone()),
+                        )
+                        .child(self.control(
+                            "save-version",
+                            "save",
+                            "Save",
+                            cx,
+                            |this, window, cx| {
+                                let name = this.timeline.name.read(cx).text.trim().to_string();
+                                let r = this.editor.save_version(name);
+                                if r.is_ok() {
+                                    this.timeline
+                                        .name
+                                        .update(cx, |f, cx| f.set(String::new(), cx));
+                                }
+                                window.focus(&this.focus, cx);
+                                this.report(r, "Named version saved", cx);
+                            },
+                        )),
+                )
+            })
     }
 }

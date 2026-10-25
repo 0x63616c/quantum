@@ -8,6 +8,8 @@ pub struct TextField {
     focus: FocusHandle,
     selection: Range<usize>,
     marked: Option<Range<usize>>,
+    reversed: bool,
+    scroll_x: Pixels,
     placeholder: &'static str,
     theme: Theme,
     layout: Option<ShapedLine>,
@@ -20,6 +22,8 @@ impl TextField {
             focus: cx.focus_handle(),
             selection: 0..0,
             marked: None,
+            reversed: false,
+            scroll_x: px(0.0),
             placeholder,
             theme: Theme::Dark,
             layout: None,
@@ -30,6 +34,7 @@ impl TextField {
         self.selection = text.len()..text.len();
         self.text = text;
         self.marked = None;
+        self.reversed = false;
         cx.notify();
     }
     pub fn appearance(&mut self, theme: Theme, cx: &mut Context<Self>) {
@@ -52,24 +57,26 @@ impl TextField {
         self.text.len()
     }
     fn range_from_utf16(&self, r: Range<usize>) -> Range<usize> {
-        self.byte(r.start)..self.byte(r.end)
+        self.byte(r.start.min(r.end))..self.byte(r.start.max(r.end))
     }
     fn to_utf16(&self, r: Range<usize>) -> Range<usize> {
         self.text[..r.start].encode_utf16().count()..self.text[..r.end].encode_utf16().count()
     }
-    fn replace(&mut self, range: Option<Range<usize>>, text: &str, cx: &mut Context<Self>) {
+    fn replace(&mut self, range: Option<Range<usize>>, text: &str, cx: &mut Context<Self>) -> bool {
         let r = range
             .map(|r| self.range_from_utf16(r))
             .or(self.marked.clone())
             .unwrap_or(self.selection.clone());
         let text: String = text.chars().filter(|c| !c.is_control()).collect();
         if self.text.len() - r.len() + text.len() > 8192 {
-            return;
+            return false;
         }
         self.text.replace_range(r.clone(), &text);
         self.selection = r.start + text.len()..r.start + text.len();
         self.marked = None;
+        self.reversed = false;
         cx.notify();
+        true
     }
     fn key(&mut self, e: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         let key = e.keystroke.key.as_str();
@@ -77,6 +84,7 @@ impl TextField {
         let handled = match key {
             "a" if cmd => {
                 self.selection = 0..self.text.len();
+                self.reversed = false;
                 true
             }
             "c" | "x" if cmd => {
@@ -112,26 +120,14 @@ impl TextField {
                 true
             }
             "left" | "right" | "home" | "end" => {
-                let p = match key {
-                    "home" => 0,
-                    "end" => self.text.len(),
-                    "left" => self.text[..self.selection.start]
-                        .char_indices()
-                        .next_back()
-                        .map_or(0, |(i, _)| i),
-                    _ => {
-                        self.selection.end
-                            + self.text[self.selection.end..]
-                                .chars()
-                                .next()
-                                .map_or(0, char::len_utf8)
-                    }
-                };
-                if e.keystroke.modifiers.shift {
-                    self.selection = self.selection.start.min(p)..self.selection.end.max(p);
-                } else {
-                    self.selection = p..p;
-                }
+                (self.selection, self.reversed) = move_selection(
+                    &self.text,
+                    self.selection.clone(),
+                    self.reversed,
+                    key,
+                    e.keystroke.modifiers.shift,
+                );
+                self.marked = None;
                 true
             }
             "enter" => true,
@@ -163,7 +159,7 @@ impl EntityInputHandler for TextField {
     ) -> Option<UTF16Selection> {
         Some(UTF16Selection {
             range: self.to_utf16(self.selection.clone()),
-            reversed: false,
+            reversed: self.reversed,
         })
     }
     fn marked_text_range(&self, _: &mut Window, _: &mut Context<Self>) -> Option<Range<usize>> {
@@ -194,7 +190,9 @@ impl EntityInputHandler for TextField {
             .map(|r| self.byte(r.start))
             .or_else(|| self.marked.as_ref().map(|r| r.start))
             .unwrap_or(self.selection.start);
-        self.replace(r, text, cx);
+        if !self.replace(r, text, cx) {
+            return;
+        }
         let end = self.selection.end;
         self.marked = Some(start..end);
         if let Some(r) = selected {
@@ -213,11 +211,11 @@ impl EntityInputHandler for TextField {
         let l = self.layout.as_ref()?;
         Some(Bounds::from_corners(
             point(
-                self.bounds.left() + l.x_for_index(r.start),
+                self.bounds.left() - self.scroll_x + l.x_for_index(r.start),
                 self.bounds.top(),
             ),
             point(
-                self.bounds.left() + l.x_for_index(r.end),
+                self.bounds.left() - self.scroll_x + l.x_for_index(r.end),
                 self.bounds.bottom(),
             ),
         ))
@@ -231,7 +229,7 @@ impl EntityInputHandler for TextField {
         let byte = self
             .layout
             .as_ref()?
-            .closest_index_for_x(p.x - self.bounds.left());
+            .closest_index_for_x(p.x - self.bounds.left() + self.scroll_x);
         Some(self.to_utf16(byte..byte).start)
     }
 }
@@ -269,7 +267,7 @@ impl Render for TextField {
                         .layout
                         .as_ref()
                         .map_or(this.text.len(), |l| {
-                            l.closest_index_for_x(e.position.x - this.bounds.left())
+                            l.closest_index_for_x(e.position.x - this.bounds.left() + this.scroll_x)
                         })
                         .min(this.text.len());
                     this.selection = if e.click_count > 1 {
@@ -277,6 +275,8 @@ impl Render for TextField {
                     } else {
                         p..p
                     };
+                    this.reversed = false;
+                    this.marked = None;
                     cx.stop_propagation();
                     cx.notify();
                 }),
@@ -315,12 +315,27 @@ impl Render for TextField {
                                 }],
                                 None,
                             );
+                            let caret = if this.reversed {
+                                this.selection.start
+                            } else {
+                                this.selection.end
+                            };
+                            let caret_x = line.x_for_index(caret);
+                            if focused {
+                                let width = (bounds.size.width - px(2.0)).max(px(1.0));
+                                this.scroll_x =
+                                    this.scroll_x.min(caret_x).max(caret_x - width).max(px(0.0));
+                            }
+                            if this.text.is_empty() {
+                                this.scroll_x = px(0.0);
+                            }
+                            let origin = point(bounds.left() - this.scroll_x, bounds.top());
                             if focused {
                                 let a = line.x_for_index(this.selection.start);
                                 let b = line.x_for_index(this.selection.end);
                                 window.paint_quad(fill(
                                     Bounds::new(
-                                        point(bounds.left() + a, bounds.top()),
+                                        point(origin.x + a, bounds.top()),
                                         size(
                                             if a == b { px(1.0) } else { b - a },
                                             bounds.size.height,
@@ -329,14 +344,7 @@ impl Render for TextField {
                                     t.accent().opacity(if a == b { 1.0 } else { 0.25 }),
                                 ));
                             }
-                            let _ = line.paint(
-                                bounds.origin,
-                                px(19.0),
-                                TextAlign::Left,
-                                None,
-                                window,
-                                cx,
-                            );
+                            let _ = line.paint(origin, px(19.0), TextAlign::Left, None, window, cx);
                             this.layout = Some(line);
                             this.bounds = bounds;
                         });
@@ -344,5 +352,67 @@ impl Render for TextField {
                 )
                 .size_full(),
             )
+    }
+}
+
+/// Move the active end while preserving the selection anchor, including reversals.
+fn move_selection(
+    text: &str,
+    selection: Range<usize>,
+    reversed: bool,
+    key: &str,
+    shift: bool,
+) -> (Range<usize>, bool) {
+    let head = if reversed {
+        selection.start
+    } else {
+        selection.end
+    };
+    let anchor = if reversed {
+        selection.end
+    } else {
+        selection.start
+    };
+    let next = match key {
+        "home" => 0,
+        "end" => text.len(),
+        "left" if !shift && !selection.is_empty() => selection.start,
+        "right" if !shift && !selection.is_empty() => selection.end,
+        "left" => text[..head]
+            .char_indices()
+            .next_back()
+            .map_or(0, |(i, _)| i),
+        _ => head + text[head..].chars().next().map_or(0, char::len_utf8),
+    };
+    if shift {
+        (anchor.min(next)..anchor.max(next), next < anchor)
+    } else {
+        (next..next, false)
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::move_selection;
+    #[test]
+    fn selection_reverses_and_collapses_without_skipping() {
+        let (range, reversed) = move_selection("aé猫z", 6..6, false, "left", true);
+        assert_eq!(range, 3..6);
+        assert!(reversed);
+        assert_eq!(
+            move_selection("aé猫z", range.clone(), reversed, "right", true),
+            (6..6, false)
+        );
+        assert_eq!(
+            move_selection("aé猫z", range.clone(), reversed, "left", false),
+            (3..3, false)
+        );
+        assert_eq!(
+            move_selection("aé猫z", range, reversed, "right", false),
+            (6..6, false)
+        );
+        assert_eq!(
+            move_selection("aé猫z", 1..6, false, "home", true),
+            (0..1, true)
+        );
     }
 }
