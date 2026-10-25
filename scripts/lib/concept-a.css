@@ -1667,3 +1667,7 @@ body { width: 100vw; height: 100dvh; min-width: 900px; }
   .presence .avatar { width: 24px; height: 24px; }
   .history-preview-banner { gap: 6px; font-size: 12px; }
 }
+.palette-dialog { backdrop-filter: blur(24px) saturate(1.1); }
+input[type="range"] { appearance: none; background: transparent; border: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: color-mix(in srgb, var(--muted) 36%, transparent); border-radius: 3px; }
+input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; border: 2px solid var(--float); border-radius: 50%; background: var(--accent); margin-top: -4.5px; }

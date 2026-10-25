@@ -270,5 +270,5 @@ try {
 } finally {
   await browser.close();
 }
-assert.equal(rendered.length, process.argv.includes('--only-a') ? 12 : 16);
+assert.equal(rendered.length, process.argv.includes('--only-a') ? 14 : 18);
 console.log('Verified all requested PNGs and preview controls; B/C files remain unchanged.');

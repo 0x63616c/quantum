@@ -644,7 +644,7 @@
           ? '<div role="separator" class="separator"></div>'
           : it.heading
             ? `<div class="menu-label">${esc(it.label)}</div>`
-            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.checked !== undefined ? `<span class="menu-check">${it.checked ? icons.check : ""}</span>` : it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
+            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} aria-label="${esc(it.label)}${it.badge ? ` ${it.badge}` : ""}" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.checked !== undefined ? `<span class="menu-check">${it.checked ? icons.check : ""}</span>` : it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
                 it.ramp
                   ? `<span class="mini-ramp">${it.ramp
                       .slice(0, 8)
@@ -658,7 +658,7 @@
     if ($('.menu-root').parentElement !== host) host.append($('.menu-root'));
     $('.menu-root').append(element);
     if (['Tools', 'ToolPicker', 'Extensions'].includes(name) && tool === 'scatter') {
-      element.insertAdjacentHTML('beforeend', `<div class="tool-configuration" role="group" aria-label="Scatter moss configuration"><div>Scatter moss <span>Agent tool</span></div><label>Density <input type="range" min="1" max="100" value="${toolConfig.density}" data-tool-density aria-label="Scatter density"><output>${toolConfig.density}%</output></label><label>Seed <input type="number" value="${toolConfig.seed}" min="0" max="9999" data-tool-seed aria-label="Scatter seed"></label><p>Canopy · surface only</p></div>`);
+      element.insertAdjacentHTML('beforeend', `<div class="tool-configuration" role="group" aria-label="Scatter moss configuration"><div>Brush settings <span>Agent tool</span></div><label>Density <input type="range" min="1" max="100" value="${toolConfig.density}" data-tool-density aria-label="Scatter density"><output>${toolConfig.density}%</output></label><label>Seed <input type="number" value="${toolConfig.seed}" min="0" max="9999" data-tool-seed aria-label="Scatter seed"></label><p>Canopy · surface only</p></div>`);
     }
     const r = trigger?.getBoundingClientRect();
     let x = point?.x ?? (level ? r.right + 4 : r.left),
@@ -696,6 +696,7 @@
       }
     });
     element.addEventListener("keydown", (e) => {
+      if (/INPUT|SELECT/.test(e.target.tagName) && e.key !== "Escape") return;
       const buttons = [...element.querySelectorAll("button:not(:disabled)")],
         index = buttons.indexOf(document.activeElement);
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
@@ -805,7 +806,7 @@
   }
   const initials = author => author === "Artist 01" ? "A1" : author === "Designer 02" ? "D2" : "You";
   const messageHTML = (author, text, mcp = false) =>
-    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${mcp ? "2 min ago" : "3 min ago"}</time></div><p>${esc(text)}</p>${mcp ? '<details class="message-provenance"><summary>Agent details</summary><div class="mcp-note">MCP · comments.reply</div></details>' : ""}</div>`;
+    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${author === "You" ? "Just now" : mcp ? "2 min ago" : "3 min ago"}</time></div><p>${esc(text)}</p>${mcp ? '<details class="message-provenance"><summary>Agent details</summary><div class="mcp-note">MCP · comments.reply</div></details>' : ""}</div>`;
   function renderComments() {
     $("[data-comment-count]").textContent = comments.filter(
       (c) => !c.resolved,

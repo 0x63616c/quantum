@@ -94,6 +94,12 @@ export async function renderConceptA(browser, root, output) {
           );
         }),
         base: getComputedStyle(document.body).backgroundColor,
+        material: ['.sidebar', '.unified-toolbar'].map(selector => {
+          const style = getComputedStyle(document.querySelector(selector));
+          return {alpha: Number(style.backgroundColor.match(/[\d.]+/g)[3]), blur: style.backdropFilter};
+        }),
+        transparentSession: getComputedStyle(document.querySelector('.agent-session')).backgroundColor === 'rgba(0, 0, 0, 0)',
+        ambient: getComputedStyle(document.querySelector('.app'), '::before').backgroundImage,
         blur: getComputedStyle(document.querySelector(".sidebar"))
           .backdropFilter,
         contrast: (() => {
@@ -144,6 +150,8 @@ export async function renderConceptA(browser, root, output) {
         theme === "dark" ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)",
       );
       assert.ok(audit.blur.includes("blur"));
+      assert.ok(audit.material.every(m => m.alpha > 0 && m.alpha < .75 && m.blur.includes('blur')));
+      assert.ok(audit.transparentSession && audit.ambient.includes('radial-gradient'));
       const path = `${output}/concept-a-${theme}${suffix ? "-" + suffix : ""}.png`;
       await page.screenshot({ path, animations: "disabled" });
       assert.ok((await stat(path)).size > 100000);
@@ -194,7 +202,11 @@ export async function renderConceptA(browser, root, output) {
         .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
       "Comments sidebar overflow",
     );
+    assert.ok(!(await page.locator('.mcp-note').isVisible()));
+    assert.ok(await page.locator('.comment-anchor path').count() >= 13);
     await capture("comments");
+    await page.locator('.message-provenance summary').click();
+    assert.ok(await page.locator('.mcp-note').isVisible());
     await page.locator('[data-tab="session"]').click();
     await page.locator('[data-action="share"]').click();
     await page.locator('[data-access-scope]').selectOption('restricted');
@@ -269,12 +281,14 @@ export async function renderConceptA(browser, root, output) {
       "Paint",
     );
     await menu(page, "View");
+    assert.equal(await menuItem(page, "Show grid").getAttribute('role'), 'menuitemcheckbox');
     await menuItem(page, "Show grid").click();
     assert.equal(
       await page.locator("[data-toggle-grid]").getAttribute("aria-pressed"),
       "false",
     );
     await menu(page, "View");
+    assert.equal(await menuItem(page, "Show grid").getAttribute('role'), 'menuitemcheckbox');
     await menuItem(page, "Show grid").click();
     await menu(page, "Tools");
     await menuItem(page, "Mirror").click();
@@ -285,6 +299,9 @@ export async function renderConceptA(browser, root, output) {
 
     await menu(page, 'Edit');
     assert.ok(await menuItem(page, 'Redo').isDisabled());
+    await menuItem(page, 'Undo').focus();
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Search commands');
     await page.keyboard.press('Escape');
     await menu(page, 'Tools');
     assert.equal(await menuItem(page, 'Paint').getAttribute('aria-checked'), 'true');
@@ -461,6 +478,9 @@ export async function renderConceptA(browser, root, output) {
       ).length,
       6,
     );
+    await page.locator('[data-step="18"] .coordinate-detail summary').click();
+    assert.ok(await page.locator('[data-step-coordinates="18"]').isVisible());
+    await page.locator('[data-step="18"] .coordinate-detail summary').click();
     await page.locator('[data-step-undo="18"]').click();
     assert.equal(await count(page), 2073);
     assert.deepEqual(await hashes(page), initialCaptures);
