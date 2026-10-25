@@ -38,6 +38,8 @@ impl EditorView {
                     .text_color(self.theme.muted())
                     .child("Agent sessions are available in the desktop app."),
             )
-            .child(self.history_panel(true, cx).h(px(156.0)))
+            .when(self.editor.engine.history().next().is_some(), |panel| {
+                panel.child(self.history_panel(true, cx).h(px(156.0)))
+            })
     }
 }

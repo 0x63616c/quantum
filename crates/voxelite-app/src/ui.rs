@@ -2667,6 +2667,8 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(target_family = "wasm")]
+        crate::web::set_unsaved(self.editor.engine.is_dirty());
         for comment in self
             .editor
             .snapshot()

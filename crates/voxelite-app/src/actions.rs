@@ -238,6 +238,7 @@ pub const MENUS: &[(&str, &[Op])] = &[
             #[cfg(target_family = "wasm")]
             Op::ExportPng,
             Op::Share,
+            #[cfg(not(target_family = "wasm"))]
             Op::Quit,
         ],
     ),

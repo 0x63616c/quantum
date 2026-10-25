@@ -32,7 +32,35 @@ Save As download canonical `.voxl`; the browser manages the destination. The
 status confirms that download started, not that a file was written to disk.
 The File menu exports GLB and PNG. Palette import/export uses browser files;
 custom libraries and local share preview metadata use origin-local storage.
-Projects must be downloaded to preserve edits across reloads.
+Projects must be downloaded to preserve edits across reloads. Browsers warn
+before leaving a page with unsaved edits. PNG export uses the current camera
+at 1024×768, within the renderer’s bounded image budget.
+
+## Browser verification
+
+```sh
+npm ci
+node scripts/capture-web.mjs
+```
+
+The capture script uses Playwright Chromium at 1440×900 and 1× scale. It tests
+WebGPU, forced WebGL2, and automatic WebGL2 fallback with `navigator.gpu`
+unavailable. Each run captures dark mode, clicks the real appearance control,
+and captures light mode. WebGPU uses Vulkan/SwiftShader:
+`--enable-unsafe-webgpu --use-angle=vulkan --use-vulkan=swiftshader
+--enable-features=Vulkan --disable-vulkan-surface`. WebGL2 uses
+`--use-angle=swiftshader --enable-unsafe-swiftshader`.
+
+Using only `--use-angle=swiftshader` for WebGPU caused a Chromium software-device
+loss in this environment; the Vulkan flags resolve it without application or
+GPUI patches. This is a headless test configuration, not a requirement for users
+with working browser graphics.
+
+The script verifies project downloads, GLB/PNG signatures, upload/save equality,
+and preservation of the open project after a malformed upload. It rejects
+browser errors and blank captures. Results and browser version are recorded in
+`screenshots/web-verification.json`; captures are `screenshots/web-{dark,light}.png`
+plus `-webgl` and `-fallback` variants. Inspect captures as well as test results.
 
 ## Missing on web
 
@@ -54,5 +82,11 @@ Projects must be downloaded to preserve edits across reloads.
   bounded uploads, browser downloads and settings storage. Native MCP and
   filesystem persistence are gated out of the web dependency graph.
 - Added reproducible build tooling and backend/theme query switches.
-- Linux workspace tests passed (110 tests); wasm Clippy passed with warnings
-  denied. Optimized bundle generation and browser captures are in progress.
+- Optimized wasm bundle builds on stable Rust 1.99.1 with wasm-bindgen 0.2.129;
+  no upstream patches required. Native build and 110 workspace tests pass.
+- Browser checks cover WebGPU, WebGL2 and automatic fallback, real theme toggling,
+  save, GLB/PNG export, canonical upload/save round trips and invalid uploads.
+- Fixed PNG dimensions after the browser smoke caught the renderer budget error;
+  added unsaved-edit navigation protection and removed redundant empty history.
+- Native and wasm Clippy run with warnings denied; rustfmt and diff checks pass.
+  Dark/light screenshots were inspected for artwork, typography and layout.
