@@ -312,10 +312,10 @@ fn preserve_unknown(current: &mut Value, old: &Value, path: &str) {
                 }
             }
             for (k, v) in new.iter_mut() {
-                if let Some(before) = old.get(k) {
-                    if keys.contains(&k.as_str()) {
-                        preserve_unknown(v, before, &format!("{path}/{k}"));
-                    }
+                if let Some(before) = old.get(k)
+                    && keys.contains(&k.as_str())
+                {
+                    preserve_unknown(v, before, &format!("{path}/{k}"));
                 }
             }
         }
