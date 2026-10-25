@@ -21,7 +21,7 @@ cleanup() {
 }
 trap cleanup EXIT
 for theme in dark light; do
-  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 20 >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
+  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..50}; do
@@ -36,7 +36,10 @@ for theme in dark light; do
   # Allow the full-quality CPU render and compositor upload to finish.
   sleep 6
   kill -0 "$app_pid"
-  import -window root "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme.png"
+  import -window "$window" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme.png"
+  xdotool windowsize "$window" 1024 640
+  sleep 6
+  import -window "$window" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme-small.png"
   kill "$app_pid"
   wait "$app_pid" || true
   app_pid=''
