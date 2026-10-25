@@ -30,6 +30,8 @@ pub struct EditorView {
     command_open: bool,
     query: String,
     command_index: usize,
+    command_scroll: ScrollHandle,
+    dialog_open: bool,
     info: Option<(&'static str, &'static str)>,
     pending: Option<Op>,
     status: String,
@@ -98,6 +100,8 @@ impl EditorView {
             command_open: false,
             query: String::new(),
             command_index: 0,
+            command_scroll: ScrollHandle::new(),
+            dialog_open: false,
             info: None,
             pending: None,
             status: "Ready".into(),
@@ -216,7 +220,7 @@ impl EditorView {
         self.menu = None;
         self.command_open = false;
         self.palette_open = false;
-        if self.pending.is_some() {
+        if self.pending.is_some() || self.dialog_open {
             return;
         }
         if matches!(op, Op::New | Op::Open | Op::Quit) && self.editor.engine.is_dirty() {
@@ -335,6 +339,7 @@ impl EditorView {
         cx.notify();
     }
     fn open_dialog(&mut self, cx: &mut Context<Self>) {
+        self.dialog_open = true;
         let receiver = cx.prompt_for_paths(PathPromptOptions {
             files: true,
             directories: false,
@@ -344,6 +349,7 @@ impl EditorView {
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
             let _ = this.update(cx, |this, cx| {
+                this.dialog_open = false;
                 match result {
                     Ok(Ok(Some(paths))) => if let Some(path) = paths.first() { match Editor::open(path) {
                         Ok(editor) => { this.editor = editor; this.cursor = this.editor.snapshot().bounds.min; this.hover = None; this.image = None; this.status = "Project opened".into(); this.error = false; this.request_render(cx); }
@@ -369,10 +375,12 @@ impl EditorView {
             .map(PathBuf::from)
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
         let suggested = format!("{}.voxl", self.editor.snapshot().name);
+        self.dialog_open = true;
         let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
             let _ = this.update(cx, |this, cx| {
+                this.dialog_open = false;
                 match result {
                     Ok(Ok(Some(mut path))) => { if path.extension().is_none() { path.set_extension("voxl"); } let r = this.editor.save(&path); this.report(r, "Saved", cx); }
                     Ok(Ok(None)) => {},
@@ -394,6 +402,9 @@ impl EditorView {
         )
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.command_open || self.info.is_some() || self.pending.is_some() || self.dialog_open {
+            return;
+        }
         if matches!(
             e.pressed_button,
             Some(MouseButton::Right | MouseButton::Middle)
@@ -436,7 +447,7 @@ impl EditorView {
             return;
         }
         if self.command_open {
-            let count = self.filtered_actions().len().min(9);
+            let count = self.filtered_actions().len();
             match key {
                 "backspace" => {
                     self.query.pop();
@@ -458,6 +469,7 @@ impl EditorView {
                     }
                 }
             }
+            self.command_scroll.scroll_to_item(self.command_index);
             cx.stop_propagation();
             cx.notify();
             return;
@@ -895,7 +907,18 @@ impl EditorView {
                 MouseButton::Left,
                 cx.listener(|this, e: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
-                    this.menu = None;
+                    if this.menu.take().is_some() || this.palette_open {
+                        this.palette_open = false;
+                        cx.notify();
+                        return;
+                    }
+                    if this.command_open
+                        || this.info.is_some()
+                        || this.pending.is_some()
+                        || this.dialog_open
+                    {
+                        return;
+                    }
                     if let Some(ray) = this.ray(e.position) {
                         let r = this.editor.click(ray, e.modifiers.alt);
                         this.report(
@@ -1325,7 +1348,7 @@ impl EditorView {
                                             .size(px(32.0))
                                             .justify_center()
                                             .cursor_pointer()
-                                            .child(icon("close"))
+                                            .child(icon("close").text_color(t.muted()))
                                             .on_click(cx.listener(|this, _, _, cx| {
                                                 this.info = None;
                                                 cx.notify();
@@ -1365,7 +1388,7 @@ impl EditorView {
                                     .gap(px(12.0))
                                     .border_b_1()
                                     .border_color(t.line())
-                                    .child(icon("search"))
+                                    .child(icon("search").text_color(t.muted()))
                                     .child(div().flex_1().text_size(px(16.0)).child(
                                         if self.query.is_empty() {
                                             "Type a command…".to_string()
@@ -1378,10 +1401,11 @@ impl EditorView {
                             .child(
                                 div()
                                     .id("command-results")
+                                    .track_scroll(&self.command_scroll)
                                     .flex_1()
                                     .overflow_y_scroll()
                                     .py(px(6.0))
-                                    .children(matches.iter().take(9).enumerate().map(|(i, op)| {
+                                    .children(matches.iter().enumerate().map(|(i, op)| {
                                         self.action_row(*op, i, self.command_index == i, cx)
                                     }))
                                     .when(matches.is_empty(), |d| {
@@ -1529,7 +1553,18 @@ impl Render for EditorView {
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")
-            .key_context("Editor")
+            .key_context(if self.command_open {
+                "CommandPalette"
+            } else if self.menu.is_some()
+                || self.palette_open
+                || self.pending.is_some()
+                || self.info.is_some()
+                || self.dialog_open
+            {
+                "Modal"
+            } else {
+                "Editor"
+            })
             .track_focus(&self.focus)
             .size_full()
             .relative()
@@ -1557,6 +1592,14 @@ impl Render for EditorView {
                     .child(self.sidebar(cx)),
             )
             .child(self.statusbar())
-            .children(overlay)
+            .children(overlay.map(|overlay| {
+                div()
+                    .id("overlay")
+                    .absolute()
+                    .size_full()
+                    .occlude()
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .child(overlay)
+            }))
     }
 }
