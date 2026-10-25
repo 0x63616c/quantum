@@ -155,20 +155,30 @@ impl EditorView {
                 d.child(
                     row()
                         .gap(px(8.0))
-                        .child(
-                            self.control("history-live", "Return to live", cx, |this, _, cx| {
+                        .child(self.control(
+                            "history-live",
+                            "play",
+                            "Return to live",
+                            cx,
+                            |this, _, cx| {
                                 this.editor.return_live();
                                 this.refresh_preview(cx);
-                            }),
-                        )
+                            },
+                        ))
                         .child(
-                            self.control("history-restore", "Restore", cx, |this, _, cx| {
-                                let r = this.editor.restore_preview();
-                                if r.is_ok() {
-                                    this.refresh_preview(cx);
-                                }
-                                this.report(r, "History restored as a new edit", cx);
-                            })
+                            self.control(
+                                "history-restore",
+                                "rotate-ccw",
+                                "Restore",
+                                cx,
+                                |this, _, cx| {
+                                    let r = this.editor.restore_preview();
+                                    if r.is_ok() {
+                                        this.refresh_preview(cx);
+                                    }
+                                    this.report(r, "History restored as a new edit", cx);
+                                },
+                            )
                             .bg(t.text())
                             .text_color(t.background()),
                         ),
@@ -188,15 +198,12 @@ impl EditorView {
                             .map(|(i, (id, label, origin))| {
                                 self.control(
                                     ("timeline-event", i),
-                                    format!(
-                                        "{}  {}",
-                                        if *origin == Origin::Agent {
-                                            "◇"
-                                        } else {
-                                            "○"
-                                        },
-                                        label
-                                    ),
+                                    if *origin == Origin::Agent {
+                                        "diamond"
+                                    } else {
+                                        "circle"
+                                    },
+                                    label.clone(),
                                     cx,
                                     move |this, _, cx| this.scrub(i, cx),
                                 )
@@ -220,15 +227,12 @@ impl EditorView {
                         let id = v.id;
                         self.control(
                             ("named-version", i),
-                            format!(
-                                "{}  {}",
-                                if v.origin == Origin::Agent {
-                                    "◇"
-                                } else {
-                                    "○"
-                                },
-                                v.name
-                            ),
+                            if v.origin == Origin::Agent {
+                                "diamond"
+                            } else {
+                                "circle"
+                            },
+                            v.name.clone(),
                             cx,
                             move |this, _, cx| {
                                 let r = this.editor.preview_version(id);
@@ -248,7 +252,7 @@ impl EditorView {
                     .gap(px(8.0))
                     .child(div().flex_1().child(self.timeline.name.clone()))
                     .child(
-                        self.control("save-version", "Save", cx, |this, window, cx| {
+                        self.control("save-version", "save", "Save", cx, |this, window, cx| {
                             let name = this.timeline.name.read(cx).text.trim().to_string();
                             let r = this.editor.save_version(name);
                             if r.is_ok() {

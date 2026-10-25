@@ -38,6 +38,43 @@ pub enum Op {
     Help,
 }
 impl Op {
+    /// Bundled Lucide asset shared by menus, search and toolbar controls.
+    pub fn icon(self) -> &'static str {
+        match self {
+            Self::New => "file-plus",
+            Self::Open => "folder-open",
+            Self::Save => "save",
+            Self::SaveAs => "file-output",
+            Self::Share => "share-2",
+            Self::Comment => "comment",
+            Self::Quit => "log-out",
+            Self::Undo => "undo",
+            Self::Redo => "redo",
+            Self::Frame => "cube",
+            Self::Front => "panel-top",
+            Self::Right => "panel-left",
+            Self::Top => "square",
+            Self::Grid => "grid",
+            Self::Theme => "sun",
+            Self::Place => "place",
+            Self::Erase => "erase",
+            Self::Paint => "paint",
+            Self::Fill => "fill",
+            Self::Box => "box",
+            Self::Picker => "picker",
+            Self::MirrorX => "flip-horizontal-2",
+            Self::MirrorY => "flip-vertical-2",
+            Self::MirrorZ => "flip-horizontal-2",
+            Self::AddLayer => "layer",
+            Self::Palette => "palette",
+            Self::ManagePalettes => "sliders-horizontal",
+            Self::Commands => "search",
+            Self::ToolPicker => "wrench",
+            Self::Agent => "spark",
+            Self::Extensions => "puzzle",
+            Self::Help => "keyboard",
+        }
+    }
     pub fn label(self) -> &'static str {
         match self {
             Self::New => "New project",

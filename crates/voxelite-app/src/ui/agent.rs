@@ -74,7 +74,7 @@ impl EditorView {
             .child(row().justify_between().child(section_title("Connect your agent")).child(mono("LOCAL MCP").text_color(t.muted())))
             .child(div().text_color(t.muted()).child("Use the MCP server as a stdio bridge to this window. Edits appear live and share your undo history."))
             .child(mono("voxelite-mcp --connect")).child(mono(path).text_size(px(12.0)).overflow_hidden())
-            .child(self.control("copy-mcp-config","Copy MCP configuration",cx,|this,_,cx|{
+            .child(self.control("copy-mcp-config","copy","Copy MCP configuration",cx,|this,_,cx|{
                 if let Some(s)=&this.agent.session{
                     let config=serde_json::json!({"mcpServers":{"voxelite":{"command":"voxelite-mcp","args":["--connect",s.path()]}}});
                     cx.write_to_clipboard(ClipboardItem::new_string(serde_json::to_string_pretty(&config).unwrap()));this.status="MCP configuration copied".into();cx.notify();
@@ -95,6 +95,7 @@ impl EditorView {
                 .child(div().text_color(t.muted()).child("No edits yet"))
                 .child(self.control(
                     "connect-agent-compact",
+                    "plug",
                     "Connect agent",
                     cx,
                     |this, _, cx| {
@@ -116,6 +117,7 @@ impl EditorView {
                         .gap(px(8.0))
                         .child(self.control(
                             "connect-agent",
+                            "plug",
                             "Connect agent",
                             cx,
                             |this, _, cx| {
@@ -139,6 +141,7 @@ impl EditorView {
                     .child(section_title("Agent activity"))
                     .child(self.control(
                         "pause-agent",
+                        if paused { "play" } else { "pause" },
                         if paused { "Resume" } else { "Pause" },
                         cx,
                         |this, _, cx| {
@@ -227,6 +230,7 @@ impl EditorView {
                                     d.child(
                                         self.control(
                                             ("revert-agent", i),
+                                            "undo",
                                             "Revert this edit",
                                             cx,
                                             move |this, _, cx| {
