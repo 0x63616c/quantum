@@ -22,11 +22,54 @@ Identity rows were triaged against the detected Git names/usernames; generic pro
 | `design/concepts/history/v2/concept-c-dark.png:815` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
 | `design/concepts/png/concept-a-dark-history.png:2353` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
 | `design/plan-history/PLAN-v1.md:371` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `site/app/voxelite_app_bg.wasm:130885` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `site/app/voxelite_app_bg.wasm:72619` | absolute machine path | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
+| `site/app/voxelite_app_bg.wasm:130885` | email-shaped binary match | Verified random binary bytes (for example, `A@oS..So`), not anyone’s email address. False positive. |
+| `site/app/voxelite_app_bg.wasm:72619` | absolute machine path | Resolved by the remapped web rebuild below; original line is retained as scan evidence. |
 | `site/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
-| `web/dist/voxelite_app_bg.wasm:130885` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
-| `web/dist/voxelite_app_bg.wasm:72619` | absolute machine path | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
+| `web/dist/voxelite_app_bg.wasm:130885` | email-shaped binary match | Verified random binary bytes (for example, `A@oS..So`), not anyone’s email address. False positive. |
+| `web/dist/voxelite_app_bg.wasm:72619` | absolute machine path | Resolved by the remapped web rebuild below; original line is retained as scan evidence. |
+
+## Web build remediation — 2026-10-25
+
+The email-shaped matches at original byte-scan line 130885 in both Wasm copies
+were verified to be random binary bytes (for example, `A@oS..So`), not anyone’s
+email. This is a false positive, separate from the genuine embedded compiler
+source paths at the original line 72619. Binary line numbers change on rebuild.
+
+`scripts/build-web.sh` now uses stable Rust `--remap-path-prefix` for the home
+prefix (`~`), repository (`/voxelite`), Cargo registry sources (`/cargo`), and
+Rustup (`/rustup`), plus `-C debuginfo=0`. Broad remaps precede specific ones;
+encoded flags preserve paths with spaces and caller flags. `build-site.sh`
+invokes that build by default and copies the result to `site/app/`.
+`--skip-web` deliberately reuses the existing bundle and does not rebuild it.
+No nightly location-detail flags or binary string replacement were used.
+
+Reproduced with:
+
+```sh
+scripts/build-site.sh
+for wasm in web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm; do
+  strings -n 4 "$wasm" | grep -E '/home|/workspace|/root|box'
+  strings -n 4 "$wasm" | grep -E '/home|/workspace|/root'
+done
+cmp web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm
+sha256sum web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm
+```
+
+Result: build succeeded; both copies are byte-identical. The path-only grep
+returns no lines (exit 1) for either copy. The broader requested grep matches
+750 strings per copy, all due to legitimate `box` text: Rust `boxed::Box`
+symbols, bounding boxes, flexbox/box-blur source names under `/cargo`, editor
+Box-tool labels, and graphics/mailbox terminology. None identifies the build
+machine or an account; deleting those strings would corrupt code or diagnostics.
+A raw-byte check also confirms zero occurrences of the actual home/repository
+prefixes and `/home/`, `/workspace/`, `/root/` in the rebuilt bundle. There are
+700 `/cargo/` occurrences, demonstrating remapped dependency source locations.
+Toolchain sources already use compiler-owned `/rustc/` paths.
+
+SHA-256 (both copies):
+`b9c963a93a712d81c37ceecb20181429ce2c12ac6d22dbb4c8f2b9285350f38e`.
+This remediation covers current distributable bundles; historical blobs and
+licensed font attribution are unchanged.
 
 ## Historical blob findings
 
@@ -1108,4 +1151,4 @@ No pattern matches in commit messages.
 
 ## Outcome
 
-No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. No trivially safe authored working-tree path leak was found outside the read-only design boundary; Git plumbing and generated compiler paths must not be blindly replaced. This report does not certify the repository as free of personal information.
+No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. The current generated web bundle’s compiler paths were remapped by rebuilding as documented above. Git plumbing and historical blobs were not edited. This report does not certify the repository as free of personal information.
