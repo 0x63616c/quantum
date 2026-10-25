@@ -297,3 +297,20 @@ fn protocol_errors_and_domain_errors_are_distinct() {
     assert!(ping["result"].is_object());
     c.exit();
 }
+
+#[test]
+fn newer_profile_rejects_missing_and_unsupported_metadata_then_recovers() {
+    let root = tempfile::tempdir().unwrap();
+    let mut c = Client::start(root.path(), true);
+    c.send(json!({"jsonrpc":"2.0","id":99,"method":"tools/list","params":{}}));
+    let missing = c.receive();
+    assert_eq!(missing["id"], 99);
+    assert!(missing["error"].is_object());
+    c.send(json!({"jsonrpc":"2.0","id":100,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2099-01-01","io.modelcontextprotocol/clientInfo":{"name":"wire-test","version":"1.0"},"io.modelcontextprotocol/clientCapabilities":{}}}}));
+    let unsupported = c.receive();
+    assert_eq!(unsupported["id"], 100);
+    assert!(unsupported["error"].is_object());
+    let tools = c.rpc("tools/list", json!({}));
+    assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 38);
+    c.exit();
+}
