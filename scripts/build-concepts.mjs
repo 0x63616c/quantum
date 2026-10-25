@@ -98,7 +98,7 @@ const css = `@font-face{font-family:Geist;src:url(data:font/ttf;base64,${font.to
 const modernA = conceptA({icon, gizmo, colors});
 const modernStyles = await readFile(new URL('./lib/concept-a.css', import.meta.url), 'utf8');
 const modernControls = await readFile(new URL('./lib/concept-a-controls.js', import.meta.url), 'utf8');
-for (const [id, name, markup] of [['a','Session dock',a],['b','Live build',b],['c','Transaction workbench',c]]) {
+for (const [id, name, markup] of [['a','Woodland studio',a],['b','Live build',b],['c','Transaction workbench',c]]) {
   // Declutter revisions are A-only. Do not rewrite the approved B/C files.
   if (id !== 'a') continue;
   await mkdir(`${root}/design/concepts/concept-${id}`, {recursive:true});
