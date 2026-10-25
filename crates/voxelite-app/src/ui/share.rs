@@ -25,7 +25,7 @@ impl EditorView {
                     }).tooltip(hint("Close sharing",t))))
                 .child(div().line_height(px(21.0)).text_color(t.muted()).child("Save a .voxl copy to send through your preferred app. The file includes the model, comments and named versions."))
                 .child(self.control("share-copy", "file-output", "Save a copy…", cx, |this,_,cx| {
-                    this.sharing.open=false; this.save(true,cx);
+                    this.sharing.open=false; this.choose_save_path(true,cx);
                 }))
                 .when_some(self.editor.path.clone(), |d,path| {
                     let shown=path.display().to_string();

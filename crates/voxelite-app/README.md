@@ -3,14 +3,14 @@
 A Rust/GPUI desktop shell for the shared Voxelite engine. It opens the bundled
 Autumn Workshop diorama, or a `.voxl` path supplied on the command line. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
-toolbar with a dedicated left tool rail, compact palette previews, layers and real
+toolbar with a tool picker, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
 The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
 current visual assessment, verification and both-theme captures. The sidebar
 switches between Session, Comments and History; the toolbar keeps Save and the
-local Share prototype within reach. Static medium and semibold Geist faces
+local file sharing within reach. Static medium and semibold Geist faces
 preserve the intended weight hierarchy on Linux.
 
 ```sh
@@ -126,6 +126,8 @@ palette authoring, a human reply, a named version and
 preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
 exercises real native HEX/GPL file dialogs and Share → Save a copy. Earlier review captures and reports
 remain historical evidence for the preceding shell revision.
+`bash scripts/capture-native-scales.sh` adds native 150% and 200% density captures
+in both themes while preserving a logical 1440×900 workspace.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
 a minimal server without them can still open paths through the CLI and render
 PNGs. Dialog errors appear in the status bar and preserve the current project.

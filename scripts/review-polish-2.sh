@@ -90,5 +90,10 @@ project = json.load(open(sys.argv[1]))
 assert project['document']['name'] == 'Autumn Workshop', project.keys()
 assert sum(len(layer['voxels']) for layer in project['layers']) == 27897
 PY
+# A shared copy must not become the working file. This untitled project must
+# still prompt for a destination on its first ordinary Save.
+xdotool key --clearmodifiers ctrl+s
+chooser Save "$VOXELITE_DATA_DIR/working-project.voxl"
+cmp "$VOXELITE_DATA_DIR/shared-copy.voxl" "$VOXELITE_DATA_DIR/working-project.voxl"
 printf 'Native palette interchange and local Share Save a copy passed.\n' 
 REVIEW
