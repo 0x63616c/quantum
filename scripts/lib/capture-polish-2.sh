@@ -123,6 +123,13 @@ sleep 3
 # Initial preview must not display later comment pins.
 xdotool mousemove 1109 318 click 1
 sleep 2
+# Tab must not focus the hidden named-version field during preview. Right/Left
+# must still navigate history; inspect the intermediate keyboard capture.
+xdotool key Tab Right
+sleep 2
+capture_feature history-keyboard
+xdotool key Left
+sleep 2
 capture_feature history-initial
 xdotool key Escape
 

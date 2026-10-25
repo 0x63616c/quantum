@@ -686,7 +686,7 @@ impl EditorView {
             });
         }).detach();
     }
-    fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+    fn write_project(&mut self, path: PathBuf, copy: bool, cx: &mut Context<Self>) {
         self.dialog_open = true;
         self.status = "Saving project…".into();
         let save = self.editor.prepare_save(&path);
@@ -698,8 +698,12 @@ impl EditorView {
                 let next = this.after_save.take();
                 match result {
                     Ok(saved) => {
-                        this.editor.finish_save(saved);
-                        this.status = "Saved".into();
+                        if copy {
+                            this.status = "Project copy saved".into();
+                        } else {
+                            this.editor.finish_save(saved);
+                            this.status = "Saved".into();
+                        }
                         this.error = false;
                         if let Some(op) = next {
                             this.run(op, cx);
@@ -717,9 +721,13 @@ impl EditorView {
     }
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
-            self.write_project(path, cx);
+            self.write_project(path, false, cx);
             return;
         }
+        self.choose_save_path(false, cx);
+    }
+    /// A shared copy must not adopt its destination or clear the working file's dirty state.
+    fn choose_save_path(&mut self, copy: bool, cx: &mut Context<Self>) {
         let directory = self
             .editor
             .path
@@ -729,10 +737,7 @@ impl EditorView {
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
         let suggested = format!(
             "{}.voxl",
-            self.editor
-                .display_snapshot()
-                .name
-                .replace(['/', '\\'], "-")
+            self.editor.snapshot().name.replace(['/', '\\'], "-")
         );
         self.dialog_open = true;
         self.status = "Choose where to save this project…".into();
@@ -743,7 +748,7 @@ impl EditorView {
                 match result {
                     Ok(Ok(Some(mut path))) => {
                         if path.extension().is_none() { path.set_extension("voxl"); }
-                        this.write_project(path, cx);
+                        this.write_project(path, copy, cx);
                     }
                     Ok(Ok(None)) => { this.dialog_open = false; this.after_save = None; }
                     _ => {
@@ -836,15 +841,25 @@ impl EditorView {
             return;
         }
         let key = e.keystroke.key.as_str();
-        if key == "tab" && self.pending.is_none() && !self.command_open && self.menu.is_none() {
+        if key == "tab"
+            && self.pending.is_none()
+            && !self.command_open
+            && self.menu.is_none()
+            && !self.sharing.open
+            && !self.agent.open
+            && self.info.is_none()
+        {
             let fields = if self.palettes.open {
                 vec![
                     self.palettes.name.focus_handle(cx),
                     self.palettes.hex.focus_handle(cx),
                 ]
-            } else if self.discussion.selected.is_some() || self.discussion.draft.is_some() {
+            } else if self.panel == Panel::Comments
+                && self.editor.preview.is_none()
+                && (self.discussion.selected.is_some() || self.discussion.draft.is_some())
+            {
                 vec![self.discussion.text.focus_handle(cx)]
-            } else if self.panel == Panel::History {
+            } else if self.panel == Panel::History && self.editor.preview.is_none() {
                 vec![self.timeline.name.focus_handle(cx)]
             } else {
                 vec![]
