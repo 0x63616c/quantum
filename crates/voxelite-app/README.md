@@ -50,7 +50,7 @@ is only a preview. Place targets the adjacent face or the bottom work plane.
 Paint, erase and fill require the visible hit to belong to the selected layer;
 select its layer first. Hidden and locked layers reject voxel edits. Mirror
 X/Y/Z reflects around the document's center planes in one undo transaction.
-Enable mirrors in the left rail, Tools, command search or Shift-X/Y/Z. The viewport's projected X/Y/Z controls select Right/Top/
+Enable mirrors in Tools, command search or Shift-X/Y/Z. Active axes appear beside the toolbar tool picker. The viewport's projected X/Y/Z controls select Right/Top/
 Front; Iso and the separate Frame button return to the fitted isometric view.
 
 Selecting a preset does not change existing geometry or dirty the project.
@@ -122,9 +122,9 @@ bash scripts/capture-native.sh
 The capture script uses real GPUI windows under Xvfb, not HTML or a composited
 mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
 It also captures both themes at 1024×640. The round 2 capture workflow verifies
-palette authoring, local share settings, a human reply, a named version and
+palette authoring, a human reply, a named version and
 preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
-exercises real native HEX/GPL file dialogs. Earlier review captures and reports
+exercises real native HEX/GPL file dialogs and Share → Save a copy. Earlier review captures and reports
 remain historical evidence for the preceding shell revision.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
 a minimal server without them can still open paths through the CLI and render
@@ -141,15 +141,15 @@ are copied into the crate with their OFL notices; `design/` is never a build-tim
 mutable output. The default example is embedded at compile time.
 
 This stage implements the native editor polish scope, not every release row in
-`PLAN.md`. Plugin hosting is dropped from v1. Persistent appearance preferences,
+`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Persistent appearance preferences,
 recovery journals, GLB export UI, hosted collaboration and screen-reader
 certification remain outside this round. Portable data is retained on save.
 
 ## Polish round 2: local authoring and live agents
 
-The left rail has Place/Erase/Paint/Fill/Box/Picker and always-visible mirror axes.
+The unified toolbar has a searchable Place/Erase/Paint/Fill/Box/Picker selector.
 Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
-The toolbar has separate Save and Share actions. Plugin hosting is outside v1.
+The toolbar has separate Save and Share actions. Plugin hosting remains an open v1 gate.
 
 **Palette → Manage palettes** opens a persistent custom library. Create, rename,
 duplicate, delete, edit a six-digit hex color, choose a hue or drag RGB channels,
@@ -158,13 +158,13 @@ Presets and project colors are read-only in the manager; Duplicate creates an
 editable brush palette. These operations never silently recolor document slots.
 Libraries are validated and atomically replaced in the app's local data directory.
 
-**Share** is a local prototype with stable `voxelite-local://` links, a copy
-button, View/Comment/Remix metadata and a participant list. It sends no invitations,
-publishes no documents, and does not enforce remote authorization. Both in-memory
-and local-file backends implement the same `ShareBackend` trait.
+**Share** offers **Save a copy…** through the native `.voxl` file dialog and,
+after saving, **Copy file path**. Hosted links and online permissions are future
+scope. The old local prototype backend remains a library API, but its inert
+links and permission controls are no longer exposed as a product workflow.
 
 **Comments** lists Open/Resolved/All threads. Click a projected numbered pin to
-open its thread, or Add/C then click a voxel. Switch Anchor to Region and click
+open its docked sidebar thread, or Add/C then click a voxel. Switch Anchor to Region and click
 two corners for a region discussion. Enter can anchor at the keyboard cursor.
 Reply, resolve and reopen use core commands and shared undo. Occluded/hidden/orphan
 pins are muted and retain coordinates; the selected anchor has a model-space
@@ -173,7 +173,7 @@ outline. The snapshot's own comments appear while previewing history.
 **History** has a draggable timeline (also Left/Right when the panel is active),
 human circles and agent diamonds, and persistent named versions. Scrubbing keeps
 the live document, revision, dirty state and undo stack unchanged. Editing is
-blocked in preview. Return to live discards the preview. Restore creates one new
+blocked in preview. Return to live (also available in the viewport banner) or Escape discards the preview. Restore creates one new
 undoable edit and rejects an intervening live change; reselect a state to capture
 new restore preconditions. Named versions survive normal Save/Open.
 
@@ -198,8 +198,14 @@ the session epoch and clears receipts so stale calls cannot edit a replaced proj
 The bridge supports both MCP protocol profiles already supported by the standalone
 server. It reserves stdout for JSON-RPC. Socket mode is 0600; up to 8 connections
 and 16 queued requests are admitted. The UI processes up to 4 calls per poll.
-Expensive MCP rendering executes on the document owner thread and can briefly
-stall interaction; document mutations are atomic. Changes are memory-resident
+Read-only MCP rendering pins immutable content on the owner, then executes on
+one background worker per attachment. A second render receives `render_busy`;
+mutations and pause remain available. Results retain their captured revision
+and epoch. Completed preset inspections appear as three immutable thumbnails.
+The opt-in Follow agent camera follows requested preset views and turns off on
+manual orbit, pan, zoom, framing or capture selection. Explicit custom MCP camera
+renders are returned to the caller but do not move the orthographic editor camera.
+Document mutations remain atomic on the owner thread. Changes are memory-resident
 until the app saves. Attached document create/open/save are excluded from the
 catalog because file lifecycle and external-change detection belong to the app.
 The standalone server retains those tools. This is a local session, not hosted
@@ -209,5 +215,10 @@ multi-user collaboration or a durable recovery journal.
 The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
 `bash scripts/capture-native.sh` now also captures main/tools/palettes/share/
 comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
-client drives the real stdio bridge and checks edit receipts. See
+client drives the real stdio bridge and checks edit receipts. It also checks selection reversal, repeated swatch moves and small-window feature states. See
 [the round 2 review](../../docs/reviews/app-polish-2.md) for validation and limits.
+
+UI action glyphs are bundled Lucide SVGs with upstream ISC/Feather MIT notices in
+`assets/icons/`. Save uses an icon and label. The viewport mouse/key legend has
+a full hover tooltip. Text fields support selection contraction/reversal,
+clipboard, IME range conversion, pointer selection and horizontal caret scrolling.

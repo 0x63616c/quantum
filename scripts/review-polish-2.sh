@@ -78,5 +78,17 @@ assert [s['rgba'] for s in palette['slots']] == [s['rgba'] for s in source['slot
 assert len((root/'export.hex').read_text().splitlines()) == 36
 assert (root/'export.gpl').read_text().startswith('GIMP Palette\n')
 PY
-printf 'Native palette HEX/GPL export and GPL import passed.\n'
+xdotool key Escape ctrl+k
+xdotool type --clearmodifiers 'share project'
+xdotool key Return
+sleep 0.5
+xdotool mousemove 1210 255 click 1
+chooser Save "$VOXELITE_DATA_DIR/shared-copy.voxl"
+python3 - "$VOXELITE_DATA_DIR/shared-copy.voxl" <<'PY'
+import json, sys
+project = json.load(open(sys.argv[1]))
+assert project['document']['name'] == 'Autumn Workshop', project.keys()
+assert sum(len(layer['voxels']) for layer in project['layers']) == 27897
+PY
+printf 'Native palette interchange and local Share Save a copy passed.\n' 
 REVIEW

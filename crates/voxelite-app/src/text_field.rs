@@ -10,6 +10,7 @@ pub struct TextField {
     marked: Option<Range<usize>>,
     reversed: bool,
     scroll_x: Pixels,
+    drag_anchor: Option<usize>,
     placeholder: &'static str,
     theme: Theme,
     layout: Option<ShapedLine>,
@@ -24,6 +25,7 @@ impl TextField {
             marked: None,
             reversed: false,
             scroll_x: px(0.0),
+            drag_anchor: None,
             placeholder,
             theme: Theme::Dark,
             layout: None,
@@ -272,16 +274,53 @@ impl Render for TextField {
                             l.closest_index_for_x(e.position.x - this.bounds.left() + this.scroll_x)
                         })
                         .min(this.text.len());
+                    let anchor = if e.modifiers.shift {
+                        if this.reversed {
+                            this.selection.end
+                        } else {
+                            this.selection.start
+                        }
+                    } else {
+                        p
+                    };
                     this.selection = if e.click_count > 1 {
                         0..this.text.len()
                     } else {
-                        p..p
+                        anchor.min(p)..anchor.max(p)
                     };
-                    this.reversed = false;
+                    this.reversed = p < anchor;
+                    this.drag_anchor = (e.click_count == 1).then_some(anchor);
                     this.marked = None;
                     cx.stop_propagation();
                     cx.notify();
                 }),
+            )
+            .on_mouse_move(cx.listener(|this, e: &MouseMoveEvent, _, cx| {
+                if e.pressed_button == Some(MouseButton::Left)
+                    && let Some(anchor) = this.drag_anchor
+                {
+                    let p = this
+                        .layout
+                        .as_ref()
+                        .map_or(this.text.len(), |line| {
+                            line.closest_index_for_x(
+                                e.position.x - this.bounds.left() + this.scroll_x,
+                            )
+                        })
+                        .min(this.text.len());
+                    this.selection = anchor.min(p)..anchor.max(p);
+                    this.reversed = p < anchor;
+                    cx.stop_propagation();
+                    cx.notify();
+                }
+            }))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, _, _, _| this.drag_anchor = None),
+            )
+            .on_mouse_up_out(
+                MouseButton::Left,
+                cx.listener(|this, _, _, _| this.drag_anchor = None),
             )
             .child(
                 canvas(

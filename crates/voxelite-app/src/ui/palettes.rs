@@ -157,7 +157,10 @@ impl EditorView {
                     .child(text.into()),
             )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .on_click(cx.listener(move |this, _, window, cx| callback(this, window, cx)))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                window.focus(&this.focus, cx);
+                callback(this, window, cx)
+            }))
     }
     fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
         self.dialog_open = true;
