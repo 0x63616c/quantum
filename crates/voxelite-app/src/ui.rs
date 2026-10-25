@@ -1,4 +1,6 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+mod comments;
+use comments::Panel;
 mod palettes;
 mod share;
 use crate::{
@@ -32,6 +34,8 @@ struct FrameIdentity {
 pub struct EditorView {
     palettes: palettes::PaletteManager,
     sharing: share::Sharing,
+    discussion: comments::Discussion,
+    panel: Panel,
     editor: Editor,
     theme: Theme,
     focus: FocusHandle,
@@ -200,6 +204,8 @@ impl EditorView {
         Self {
             palettes,
             sharing: share::Sharing::new(cx),
+            discussion: comments::Discussion::new(cx),
+            panel: Panel::Session,
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
             document_generation: 0,
@@ -467,6 +473,7 @@ impl EditorView {
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
             Op::Share => self.open_share(cx),
+            Op::Comment => self.begin_comment(cx),
             Op::Undo => {
                 let r = self.editor.undo();
                 self.report(r, "Undone", cx);
@@ -742,11 +749,15 @@ impl EditorView {
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
-                || self.sharing.person.read(cx).focused(window))
+                || self.sharing.person.read(cx).focused(window)
+                || self.discussion.text.read(cx).focused(window))
         {
             return;
         }
         if key == "escape" {
+            self.discussion.placing = false;
+            self.discussion.draft = None;
+            self.discussion.selected = None;
             self.sharing.open = false;
             self.palettes.open = false;
             window.focus(&self.focus, cx);
@@ -874,6 +885,10 @@ impl EditorView {
             );
             self.hover = Some(self.cursor);
             cx.stop_propagation();
+        }
+        if key == "enter" && self.discussion.placing {
+            self.anchor_comment(self.cursor, cx);
+            return;
         }
         if key == "enter" {
             let r = self.editor.apply_at(self.cursor);
@@ -1056,6 +1071,13 @@ impl EditorView {
                         .font_family("Geist Mono")
                 }),
             )
+            .child(div().flex_1())
+            .child(
+                self.button("rail-comment", "comment", "", Op::Comment, cx)
+                    .size(px(36.0))
+                    .justify_center()
+                    .px(px(0.0)),
+            )
     }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
@@ -1229,6 +1251,17 @@ impl EditorView {
         let grid = self.grid;
         let doc_bounds = self.editor.snapshot().bounds;
         let box_start = self.editor.box_start;
+        let comment_region = self
+            .discussion
+            .draft
+            .as_ref()
+            .or_else(|| {
+                self.discussion
+                    .selected
+                    .and_then(|id| self.editor.snapshot().comments.iter().find(|c| c.id == id))
+                    .map(|c| &c.anchor)
+            })
+            .and_then(|a| a.region().ok());
         let surface = canvas(
             move |bounds, _, _| {
                 bounds_cell.set(bounds);
@@ -1264,7 +1297,7 @@ impl EditorView {
                 if let Some(image) = image {
                     let _ = window.paint_image(bounds, bounds, Corners::default(), image, 0, false);
                 }
-                if let Some(at) = hover.or(box_start) {
+                if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
                         .map(|s| std::array::from_fn(|a| s[a].min(at[a])))
                         .unwrap_or(at);
@@ -1272,6 +1305,7 @@ impl EditorView {
                         .map(|s| std::array::from_fn(|a| s[a].max(at[a]) + 1))
                         .unwrap_or(at.map(|v| v + 1));
                     let mut path = PathBuilder::stroke(px(1.4));
+                    let (lo, hi) = comment_region.map(|r| (r.min, r.max)).unwrap_or((lo, hi));
                     for bits in 0..8 {
                         for a in 0..3 {
                             if bits & (1 << a) == 0 {
@@ -1314,6 +1348,8 @@ impl EditorView {
                         }),
                 ),
             )
+            .children(self.comment_pins(cx))
+            .children(self.thread_popover(cx))
             .child(self.orientation(cx))
             .child(
                 div()
@@ -1393,6 +1429,14 @@ impl EditorView {
                         return;
                     }
                     if let Some(ray) = this.ray(e.position) {
+                        if this.discussion.placing {
+                            if let Some(hit) =
+                                voxelite_app::editor::raycast(this.editor.snapshot(), ray)
+                            {
+                                this.anchor_comment(hit.at, cx);
+                            }
+                            return;
+                        }
                         let r = this.editor.click(ray, e.modifiers.alt);
                         this.report(
                             r,
@@ -1827,7 +1871,12 @@ impl EditorView {
                             ),
                     ),
             )
-            .child(self.history_panel(compact, cx))
+            .child(self.panel_tabs(cx))
+            .child(if self.panel == Panel::Comments {
+                self.comments_panel(cx)
+            } else {
+                self.history_panel(compact, cx)
+            })
             .child(self.layers_panel(compact, cx))
             .child(self.palette_panel(compact, cx))
     }
@@ -2292,6 +2341,9 @@ impl Render for EditorView {
             .update(cx, |f, cx| f.appearance(self.theme, cx));
         self.sharing
             .person
+            .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.discussion
+            .text
             .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
