@@ -8,7 +8,7 @@ use gpui::{prelude::*, *};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos, Preset};
-use voxelite_render::{RenderOptions, View};
+use voxelite_render::{PresetView, RenderOptions, View};
 
 pub struct EditorView {
     editor: Editor,
@@ -21,6 +21,9 @@ pub struct EditorView {
     render_pending: bool,
     render_size: [u32; 2],
     display_camera: OrbitCamera,
+    document_generation: u64,
+    displayed: Option<FrameIdentity>,
+    camera_view: Option<Op>,
     navigation_epoch: u64,
     interactive_render: bool,
     viewport: Rc<Cell<Bounds<Pixels>>>,
@@ -33,6 +36,11 @@ pub struct EditorView {
     palette_open: bool,
     palette_index: usize,
     command_open: bool,
+    tools_only: bool,
+    palette_cursor: usize,
+    palette_scroll: ScrollHandle,
+    pending_choice: usize,
+    after_save: Option<Op>,
     query: String,
     command_index: usize,
     command_scroll: ScrollHandle,
@@ -95,6 +103,9 @@ impl EditorView {
         let weak = cx.weak_entity();
         window.on_window_should_close(cx, move |_, cx| {
             weak.update(cx, |this, cx| {
+                if this.dialog_open {
+                    return false;
+                }
                 if this.editor.engine.is_dirty() {
                     this.pending = Some(Op::Quit);
                     cx.notify();
@@ -105,9 +116,19 @@ impl EditorView {
             })
             .unwrap_or(true)
         });
+        cx.observe_window_activation(window, |this, window, cx| {
+            if !window.is_window_active() {
+                this.drag = None;
+                this.hover = None;
+                cx.notify();
+            }
+        }).detach();
         Self {
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
+            document_generation: 0,
+            displayed: None,
+            camera_view: Some(Op::Frame),
             navigation_epoch: 0,
             interactive_render: false,
             editor,
@@ -128,6 +149,11 @@ impl EditorView {
             palette_open: false,
             palette_index: 0,
             command_open: false,
+            tools_only: false,
+            palette_cursor: 0,
+            palette_scroll: ScrollHandle::new(),
+            pending_choice: 2,
+            after_save: None,
             query: String::new(),
             command_index: 0,
             command_scroll: ScrollHandle::new(),
@@ -164,8 +190,7 @@ impl EditorView {
         self.render_pending = false;
         let snapshot = self.editor.engine.snapshot();
         let camera = self.editor.camera;
-        let document_id = snapshot.id;
-        let revision = self.editor.engine.revision();
+        let identity = self.frame_identity();
         let interactive = self.interactive_render;
         let options = RenderOptions {
             width: if interactive {
@@ -191,8 +216,9 @@ impl EditorView {
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
                 // Never install a render from a replaced document or an older edit.
-                if this.editor.engine.document().id == document_id
-                    && this.editor.engine.revision() == revision
+                if this.document_generation == identity.generation
+                    && this.editor.engine.revision() == identity.revision
+                    && this.render_size == identity.size
                 {
                     match result {
                         Ok(mut frame) => {
@@ -203,6 +229,7 @@ impl EditorView {
                                 image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
                                     .expect("renderer dimensions");
                             this.display_camera = camera;
+                            this.displayed = Some(identity);
                             this.image =
                                 Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
                         }
@@ -239,6 +266,25 @@ impl EditorView {
         })
         .detach();
     }
+    fn frame_identity(&self) -> FrameIdentity {
+        FrameIdentity { generation: self.document_generation, revision: self.editor.engine.revision(), camera: self.editor.camera, size: self.render_size }
+    }
+    fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        self.editor = editor;
+        self.document_generation = self.document_generation.wrapping_add(1);
+        self.image = None;
+        self.displayed = None;
+        self.hover = None;
+        self.drag = None;
+        self.cursor = self.editor.snapshot().bounds.min;
+        self.palette_index = 0;
+        self.camera_view = Some(Op::Frame);
+        let aspect = f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1));
+        self.editor.camera = OrbitCamera::fit(self.editor.snapshot(), aspect.max(0.01));
+        self.display_camera = self.editor.camera;
+        self.error = false;
+        self.request_render(cx);
+    }
     fn active_palette(&self) -> Palette {
         PALETTES[self.palette_index]
             .1
@@ -250,7 +296,8 @@ impl EditorView {
             .iter()
             .flat_map(|(_, items)| items.iter().copied())
             .filter(|op| {
-                *op != Op::Commands
+                *op != Op::Commands && *op != Op::ToolPicker
+                    && (!self.tools_only || matches!(op, Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker))
                     && op
                         .label()
                         .to_lowercase()
@@ -259,6 +306,7 @@ impl EditorView {
             .collect()
     }
     fn enabled(&self, op: Op) -> bool {
+        if self.dialog_open { return false; }
         match op {
             Op::Undo => self.editor.engine.head().is_some(),
             Op::Redo => self.editor.engine.redo_head().is_some(),
@@ -274,6 +322,7 @@ impl EditorView {
             Op::Box => self.editor.tool == Tool::Box,
             Op::Picker => self.editor.tool == Tool::Picker,
             Op::Grid => self.grid,
+            Op::Frame | Op::Front | Op::Right | Op::Top => self.camera_view == Some(op),
             Op::MirrorX => self.editor.mirror[0],
             Op::MirrorY => self.editor.mirror[1],
             Op::MirrorZ => self.editor.mirror[2],
@@ -281,6 +330,7 @@ impl EditorView {
         }
     }
     fn invoke(&mut self, op: Op, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.enabled(op) { return; }
         self.menu = None;
         self.command_open = false;
         self.palette_open = false;
@@ -289,22 +339,20 @@ impl EditorView {
         }
         if matches!(op, Op::New | Op::Open | Op::Quit) && self.editor.engine.is_dirty() {
             self.pending = Some(op);
+            self.pending_choice = 2;
             cx.notify();
             return;
         }
-        self.run(op, window, cx);
+        self.run(op, cx);
+        window.focus(&self.focus, cx);
     }
-    fn run(&mut self, op: Op, window: &mut Window, cx: &mut Context<Self>) {
+    fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
             Op::Quit => cx.quit(),
             Op::New => match Editor::blank() {
                 Ok(editor) => {
-                    self.editor = editor;
-                    self.image = None;
-                    self.hover = None;
-                    self.cursor = [0; 3];
+                    self.replace_editor(editor, cx);
                     self.status = "New project".into();
-                    self.request_render(cx);
                 }
                 Err(e) => {
                     self.status = e.to_string();
@@ -327,22 +375,14 @@ impl EditorView {
             Op::Frame | Op::Front | Op::Right | Op::Top => {
                 let b = self.viewport.get();
                 let aspect = (f32::from(b.size.width) / f32::from(b.size.height).max(1.0)) as f64;
-                self.editor.camera = OrbitCamera::fit(self.editor.snapshot(), aspect);
-                match op {
-                    Op::Front => {
-                        self.editor.camera.yaw = 0.0;
-                        self.editor.camera.pitch = 0.0;
-                    }
-                    Op::Right => {
-                        self.editor.camera.yaw = std::f64::consts::FRAC_PI_2;
-                        self.editor.camera.pitch = 0.0;
-                    }
-                    Op::Top => {
-                        self.editor.camera.yaw = 0.0;
-                        self.editor.camera.pitch = 1.5;
-                    }
-                    _ => {}
-                }
+                let view = match op {
+                    Op::Front => PresetView::Front,
+                    Op::Right => PresetView::Right,
+                    Op::Top => PresetView::Top,
+                    _ => PresetView::Iso,
+                };
+                self.editor.camera = OrbitCamera::fit_view(self.editor.snapshot(), aspect, view);
+                self.camera_view = Some(op);
                 self.request_render(cx);
             }
             Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker => {
@@ -374,8 +414,12 @@ impl EditorView {
                 let r = self.editor.add_layer();
                 self.report(r, "Layer added", cx);
             }
-            Op::Palette => self.palette_open = true,
-            Op::Commands => {
+            Op::Palette => {
+                self.palette_open = true;
+                self.palette_cursor = self.palette_index;
+            },
+            Op::Commands | Op::ToolPicker => {
+                self.tools_only = op == Op::ToolPicker;
                 self.command_open = true;
                 self.query.clear();
                 self.command_index = 0;
@@ -399,74 +443,122 @@ impl EditorView {
                 ))
             }
         }
-        window.focus(&self.focus, cx);
         cx.notify();
     }
     fn open_dialog(&mut self, cx: &mut Context<Self>) {
         self.dialog_open = true;
+        self.drag = None;
         let receiver = cx.prompt_for_paths(PathPromptOptions {
-            files: true,
-            directories: false,
-            multiple: false,
+            files: true, directories: false, multiple: false,
             prompt: Some("Open .voxl project".into()),
         });
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
             let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
                 match result {
-                    Ok(Ok(Some(paths))) => if let Some(path) = paths.first() { match Editor::open(path) {
-                        Ok(editor) => { this.editor = editor; this.cursor = this.editor.snapshot().bounds.min; this.hover = None; this.image = None; this.status = "Project opened".into(); this.error = false; this.request_render(cx); }
-                        Err(e) => { this.status = e.to_string(); this.error = true; }
-                    } },
-                    Ok(Ok(None)) => {},
-                    _ => { this.status = "File dialog unavailable. Start voxelite with a .voxl path, or enable your desktop file portal.".into(); this.error = true; }
-                } cx.notify();
+                    Ok(Ok(Some(paths))) if !paths.is_empty() => {
+                        let path = paths[0].clone();
+                        this.status = "Opening project…".into();
+                        let task = cx.background_executor().spawn(async move { Editor::open(&path) });
+                        cx.spawn(async move |this, cx| {
+                            let result = task.await;
+                            let _ = this.update(cx, |this, cx| {
+                                this.dialog_open = false;
+                                match result {
+                                    Ok(editor) => { this.replace_editor(editor, cx); this.status = "Project opened".into(); }
+                                    Err(error) => { this.status = error.to_string(); this.error = true; }
+                                }
+                                cx.notify();
+                            });
+                        }).detach();
+                    }
+                    Ok(Ok(_)) => { this.dialog_open = false; }
+                    _ => {
+                        this.dialog_open = false;
+                        this.status = "Open dialog unavailable. Enable a desktop file portal or open a .voxl path from the command line.".into();
+                        this.error = true;
+                    }
+                }
+                cx.notify();
+            });
+        }).detach();
+    }
+    fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        self.dialog_open = true;
+        self.status = "Saving project…".into();
+        let save = self.editor.prepare_save(&path);
+        let task = cx.background_executor().spawn(async move { save.write() });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, cx| {
+                this.dialog_open = false;
+                let next = this.after_save.take();
+                match result {
+                    Ok(saved) => {
+                        this.editor.finish_save(saved);
+                        this.status = "Saved".into();
+                        this.error = false;
+                        if let Some(op) = next { this.run(op, cx); }
+                    }
+                    Err(error) => { this.status = error.to_string(); this.error = true; }
+                }
+                cx.notify();
             });
         }).detach();
     }
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
-            let result = self.editor.save(&path);
-            self.report(result, "Saved", cx);
+            self.write_project(path, cx);
             return;
         }
-        let directory = self
-            .editor
-            .path
-            .as_ref()
-            .and_then(|p| p.parent())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-        let suggested = format!("{}.voxl", self.editor.snapshot().name);
+        let directory = self.editor.path.as_ref().and_then(|p| p.parent())
+            .map(PathBuf::from).unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+        let suggested = format!("{}.voxl", self.editor.snapshot().name.replace(['/', '\\'], "-"));
         self.dialog_open = true;
         let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
             let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
                 match result {
-                    Ok(Ok(Some(mut path))) => { if path.extension().is_none() { path.set_extension("voxl"); } let r = this.editor.save(&path); this.report(r, "Saved", cx); }
-                    Ok(Ok(None)) => {},
-                    _ => { this.status = "Save dialog unavailable. Enable a desktop file portal; edits are still open.".into(); this.error = true; }
-                } cx.notify();
+                    Ok(Ok(Some(mut path))) => {
+                        if path.extension().is_none() { path.set_extension("voxl"); }
+                        this.write_project(path, cx);
+                    }
+                    Ok(Ok(None)) => { this.dialog_open = false; this.after_save = None; }
+                    _ => {
+                        this.dialog_open = false;
+                        this.after_save = None;
+                        this.status = "Save dialog unavailable. Enable a desktop file portal; edits are still open.".into();
+                        this.error = true;
+                    }
+                }
+                cx.notify();
             });
         }).detach();
     }
+    fn resolve_pending(&mut self, choice: usize, cx: &mut Context<Self>) {
+        let Some(op) = self.pending.take() else { return; };
+        match choice {
+            0 => self.run(op, cx),
+            2 => { self.after_save = Some(op); self.save(false, cx); }
+            _ => {},
+        }
+        cx.notify();
+    }
     fn ray(&self, p: Point<Pixels>) -> Option<voxelite_app::editor::Ray> {
         // Pointer edits must use the exact camera of the image the user can see.
-        if self.rendering {
+        if self.image.is_none() || self.displayed != Some(self.frame_identity()) {
             return None;
         }
         let b = self.viewport.get();
         let w = f64::from(f32::from(b.size.width));
         let h = f64::from(f32::from(b.size.height));
-        self.editor.camera.ray(
+        self.display_camera.ray(
             [
                 f64::from(f32::from(p.x - b.origin.x)) / w,
                 f64::from(f32::from(p.y - b.origin.y)) / h,
             ],
-            w / h,
+            f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1)),
         )
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
@@ -489,6 +581,7 @@ impl EditorView {
                 } else {
                     self.editor.camera.orbit(dx, dy);
                 }
+                self.camera_view = None;
                 self.request_navigation(cx);
             }
             self.drag = Some(e.position);
@@ -500,6 +593,10 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if self.dialog_open {
+            cx.stop_propagation();
+            return;
+        }
         let key = e.keystroke.key.as_str();
         if key == "escape" {
             self.menu = None;
@@ -508,8 +605,33 @@ impl EditorView {
             self.info = None;
             self.pending = None;
             self.editor.box_start = None;
+            self.drag = None;
+            self.hover = None;
             self.status = "Ready".into();
             self.error = false;
+            cx.stop_propagation();
+            cx.notify();
+            return;
+        }
+        if self.pending.is_some() {
+            match key {
+                "left" => self.pending_choice = (self.pending_choice + 2) % 3,
+                "right" | "tab" => self.pending_choice = (self.pending_choice + if e.keystroke.modifiers.shift { 2 } else { 1 }) % 3,
+                "enter" => self.resolve_pending(self.pending_choice, cx),
+                _ => {},
+            }
+            cx.stop_propagation();
+            cx.notify();
+            return;
+        }
+        if self.palette_open {
+            match key {
+                "down" => self.palette_cursor = (self.palette_cursor + 1) % PALETTES.len(),
+                "up" => self.palette_cursor = (self.palette_cursor + PALETTES.len() - 1) % PALETTES.len(),
+                "enter" => { self.palette_index = self.palette_cursor; self.palette_open = false; },
+                _ => {},
+            }
+            self.palette_scroll.scroll_to_item(self.palette_cursor);
             cx.stop_propagation();
             cx.notify();
             return;

@@ -93,15 +93,29 @@ pub struct OrbitCamera {
 impl OrbitCamera {
     /// Fit visible content with a comfortable margin.
     pub fn fit(snapshot: &Snapshot, aspect: f64) -> Self {
-        let camera = Camera::fit(snapshot, PresetView::Iso, aspect, false)
+        Self::fit_view(snapshot, aspect, PresetView::Iso)
+    }
+    /// Fit a named orthographic view using its own projected bounds.
+    pub fn fit_view(snapshot: &Snapshot, aspect: f64, view: PresetView) -> Self {
+        let camera = Camera::fit(snapshot, view, aspect, false)
             .expect("validated editor document");
         let Projection::Orthographic { height } = camera.projection else {
             unreachable!()
         };
         Self {
             target: camera.target.into(),
-            yaw: std::f64::consts::FRAC_PI_4,
-            pitch: (1.0 / 3.0_f64.sqrt()).asin(),
+            yaw: match view {
+                PresetView::Iso => std::f64::consts::FRAC_PI_4,
+                PresetView::Right => std::f64::consts::FRAC_PI_2,
+                PresetView::Left => -std::f64::consts::FRAC_PI_2,
+                PresetView::Back => std::f64::consts::PI,
+                _ => 0.0,
+            },
+            pitch: match view {
+                PresetView::Iso => (1.0 / 3.0_f64.sqrt()).asin(),
+                PresetView::Top => std::f64::consts::FRAC_PI_2,
+                _ => 0.0,
+            },
             span: height,
             distance: DVec3::from(camera.eye).distance(camera.target.into()),
         }
@@ -113,7 +127,8 @@ impl OrbitCamera {
             self.pitch.sin(),
             self.yaw.cos() * self.pitch.cos(),
         );
-        let right = DVec3::Y.cross(back).normalize();
+        // Derive right from yaw so exact top view has no pole singularity.
+        let right = DVec3::new(self.yaw.cos(), 0.0, -self.yaw.sin());
         (right, back.cross(right).normalize(), back)
     }
     /// Renderer camera; no hidden fit or projection adjustments.
