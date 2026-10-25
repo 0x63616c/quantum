@@ -136,12 +136,12 @@
       $(selector).innerHTML = items
         .map(
           (q) =>
-            `<button data-edit-palette="${esc(q.id)}" aria-current="${q.id === p.id}">${esc(q.name)}<small>${q.colors.length}</small></button>`,
+            `<button data-edit-palette="${esc(q.id)}" aria-current="${q.id === p.id}">${esc(q.name)}<small>${q.id === activePalette ? "In use" : q.colors.length}</small></button>`,
         )
         .join("");
     $("[data-editor-title]").textContent = p.name;
     $("[data-editor-subtitle]").textContent =
-      `${p.preset ? "Read-only preset" : "Custom palette"} · ${p.colors.length} colors`;
+      `${p.preset ? (p.id === activePalette ? "Read-only preset" : "Browsing preset · Read-only") : "Custom palette"} · ${p.colors.length} colors`;
     $("[data-palette-rename]").value = p.name;
     $("[data-palette-rename]").disabled = !!p.preset;
     $("[data-palette-rename]").hidden = !!p.preset;
@@ -427,7 +427,7 @@
         sub("Export", "Export"),
       ],
       Export: [
-        item("PNG image", () => {
+        item("PNG image (.png)", () => {
           const a = document.createElement("a");
           a.download = "woodland-cottage.png";
           a.href = $(".viewport>canvas").toDataURL();
@@ -557,7 +557,7 @@
       ],
       Agent: [
         item(paused ? "Resume session" : "Pause session", "pause"),
-        checked(item("Follow agent", "follow", "⇧F", "camera"), follow),
+        checked(item("Follow agent camera", "follow", "⇧F", "camera"), follow),
         null,
         item("Refresh captured views", "refresh", "", "refresh"),
         item("Inspect latest step", () => {
@@ -663,7 +663,7 @@
           ? '<div role="separator" class="separator"></div>'
           : it.heading
             ? `<div class="menu-label">${esc(it.label)}</div>`
-            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} aria-label="${esc(it.label)}${it.badge ? ` ${it.badge}` : ""}" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.checked ? `<span class="menu-check">${icons.check}</span>` : ""}${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
+            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} aria-label="${esc(it.label)}${it.badge ? ` ${it.badge}` : ""}" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${it.checked ? `<span class="menu-check">${icons.check}</span>` : ""}${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${
                 it.ramp
                   ? `<span class="mini-ramp">${it.ramp
                       .slice(0, 8)
@@ -846,7 +846,7 @@
   }
   const initials = author => author === "Artist 01" ? "A1" : author === "Designer 02" ? "D2" : "You";
   const messageHTML = (author, text, mcp = false) =>
-    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${author === "You" ? "Now" : mcp ? "2m" : "3m"}</time></div><p>${esc(text)}</p>${mcp ? '<div class="mcp-note">MCP · comments.reply</div>' : ""}</div>`;
+    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${author === "You" ? "Now" : mcp ? "2m" : "3m"}</time></div><p>${esc(text)}</p></div>`;
   function renderComments() {
     $("[data-comment-count]").textContent = comments.filter(c => !c.resolved).length;
     $(".comment-pins").innerHTML = comments
@@ -935,6 +935,8 @@
     $('.permission-description').textContent = restricted ? 'Only listed people and agents can open this link.' : ({view:'View the model and history. No comments or edits.', comment:'View and comment. No voxel edits.', remix:'View, comment and create an independent copy.'})[permission];
     $('.access-rule').textContent = restricted ? 'Only their individual permission applies.' : 'Link or individual permission, whichever is higher.';
     $('.link-field input').value = `https://voxelite.example/s/woodland?${restricted ? 'scope=restricted' : `access=${permission}`}`;
+    $('.copy-link').classList.remove('is-copied');
+    $('.copy-link .icon').outerHTML = icons.copy;
     $('.copy-link span').textContent = 'Copy link';
   }
   $('[data-access-scope]').addEventListener('change', e => {accessScope = e.target.value; updateShare(); $('.share-feedback').textContent = '';});
@@ -948,8 +950,11 @@
   }
   async function copyLink() {
     const input = $(".link-field input");
+    updateShare();
     try {
       await navigator.clipboard.writeText(input.value);
+      $(".copy-link").classList.add("is-copied");
+      $(".copy-link .icon").outerHTML = icons.check;
       $(".copy-link span").textContent = "Copied";
       $(".share-feedback").textContent = "";
     } catch {
@@ -1002,6 +1007,8 @@
   function setHistoryPreview(value) {
     historyPreview = value;
     $('.tool-picker').disabled = value;
+    $('[data-current-tool]').textContent = value ? 'Read only' : tools.find(t => t[0] === tool)?.[1] || 'Scatter moss';
+    $('[data-tool-icon]').innerHTML = value ? icons.lock : icons[tool] || icons.agent;
     $('.tool-picker').title = value ? 'Editing is disabled during history preview' : 'Choose a tool';
     $$('[data-step-undo],[data-tool-density],[data-tool-seed],[data-layer-lock]').forEach(b => b.disabled = value);
     $('.app').classList.toggle('previewing-history', value);
@@ -1019,7 +1026,7 @@
     $('.version-list').innerHTML = versions.map(v => `<article class="version-item"><div><h3>${esc(v.name)}</h3><p class="version-meta">${v.snapshot.length.toLocaleString()} voxels · Step ${v.step}</p></div><button class="icon-button" data-menu="Version:${v.id}" aria-haspopup="menu" aria-expanded="false" aria-label="Actions for ${esc(v.name)}">${icons.more}</button></article>`).join('');
     const isPreview = window.__sceneSnapshot().map(c => `${c.x},${c.y},${c.z}`).join('|') !== liveSnapshot?.map(c => `${c.x},${c.y},${c.z}`).join('|');
     setHistoryPreview(isPreview);
-    $('[data-action="save-version"]').innerHTML = icons.plus + (isPreview ? 'Save preview' : 'Save this state');
+    $('[data-action="save-version"]').innerHTML = icons.plus + 'Name version';
     $('[data-version-save-context]').textContent = isPreview ? 'Saves the previewed geometry at step ' + timelineStep + '.' : 'Saves the latest document state.';
     $('.history-preview-banner').hidden = !isPreview;
     $('.history-preview-banner span').textContent = `Read-only preview · ${timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`} · ${historyNames[timelineStep]}`;
@@ -1232,7 +1239,7 @@
     item("Comments", "comments", "", "comment"),
     item("Share project", "share", "", "link"),
     item("Frame model", "frame", "Home", "focus"),
-    item("Follow agent", "follow", "⇧F", "camera"),
+    item("Follow agent camera", "follow", "⇧F", "camera"),
     item("Refresh captures", "refresh", "", "refresh"),
     item("Toggle theme", "theme", "", "sun"),
     item("Scatter moss", () => chooseTool("scatter"), "", "agent"),
@@ -1488,6 +1495,7 @@
       return;
     }
     if (e.key === "Escape") {
+      if ($("dialog[open]") && !menuChain.length) return;
       if (menuChain.length) { e.preventDefault(); closeMenus(true); return; }
       closeMenus(true);
       closeFloating();
