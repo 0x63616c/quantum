@@ -83,7 +83,7 @@ impl EditorView {
             .child(div().text_size(px(12.0)).text_color(t.muted()).child("Requires voxelite-mcp on PATH. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
             .into_any_element()
     }
-    pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
+    pub(super) fn agent_feed(&self, _compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let paused = self.agent.session.as_ref().is_some_and(|s| s.paused);
         if self.agent.events.is_empty() {
@@ -107,7 +107,7 @@ impl EditorView {
                             },
                         )),
                 )
-                .child(self.history_panel(compact, cx));
+                .child(self.history_panel(true, cx));
         }
         div()
             .flex_1()
