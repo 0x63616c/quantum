@@ -20,7 +20,7 @@ const MAX_RESULT_BYTES: usize = 12 * 1024 * 1024;
 const MAX_EXPLICIT_VOXELS: usize = 65536;
 
 pub(crate) struct OpenDocument {
-    engine: Engine,
+    pub(crate) engine: Engine,
     project: Project,
     files: BTreeMap<PathBuf, String>,
 }
@@ -33,7 +33,7 @@ pub(crate) struct Session {
     pub id: Uuid,
     pub epoch: Uuid,
     root: PathBuf,
-    documents: BTreeMap<Uuid, OpenDocument>,
+    pub(crate) documents: BTreeMap<Uuid, OpenDocument>,
     receipts: BTreeMap<Uuid, (String, CallToolResult)>,
     receipt_bytes: usize,
 }
@@ -47,6 +47,22 @@ impl Session {
             receipts: BTreeMap::new(),
             receipt_bytes: 0,
         }
+    }
+    pub(crate) fn attach(&mut self, project: Project) -> crate::error::Result<()> {
+        let engine = Engine::new(project.document.clone())?;
+        self.documents.clear();
+        self.receipts.clear();
+        self.receipt_bytes = 0;
+        self.epoch = Uuid::new_v4();
+        self.documents.insert(
+            project.document.id,
+            OpenDocument {
+                engine,
+                project,
+                files: BTreeMap::new(),
+            },
+        );
+        Ok(())
     }
     pub fn error(&self, e: Failure) -> CallToolResult {
         Self::error_for(self.id, self.epoch, e)

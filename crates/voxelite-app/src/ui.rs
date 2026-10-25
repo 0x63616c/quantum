@@ -1,4 +1,5 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+mod agent;
 mod comments;
 mod history;
 use comments::Panel;
@@ -38,6 +39,7 @@ pub struct EditorView {
     discussion: comments::Discussion,
     panel: Panel,
     timeline: history::Timeline,
+    agent: agent::Agent,
     editor: Editor,
     theme: Theme,
     focus: FocusHandle,
@@ -167,7 +169,13 @@ const PALETTES: [(&str, Option<Preset>); 8] = [
 ];
 
 impl EditorView {
-    pub fn new(editor: Editor, theme: Theme, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        editor: Editor,
+        theme: Theme,
+        socket: Option<PathBuf>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let weak = cx.weak_entity();
@@ -203,7 +211,28 @@ impl EditorView {
         if let Ok(library) = library {
             palettes.library = library;
         }
+        let agent_result = agent::Agent::new(&editor, socket);
+        let agent_error = agent_result.as_ref().err().map(ToString::to_string);
+        let agent = agent_result.unwrap_or_else(|_| agent::Agent {
+            session: None,
+            events: Default::default(),
+            open: false,
+            clients: 0,
+            expanded: None,
+        });
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(80))
+                    .await;
+                if this.update(cx, |this, cx| this.poll_agent(cx)).is_err() {
+                    break;
+                }
+            }
+        })
+        .detach();
         Self {
+            agent,
             palettes,
             sharing: share::Sharing::new(cx),
             discussion: comments::Discussion::new(cx),
@@ -247,8 +276,11 @@ impl EditorView {
             dialog_open: false,
             info: None,
             pending: None,
-            status: library_error.clone().unwrap_or_else(|| "Ready".into()),
-            error: library_error.is_some(),
+            status: library_error
+                .clone()
+                .or(agent_error.clone())
+                .unwrap_or_else(|| "Ready".into()),
+            error: library_error.is_some() || agent_error.is_some(),
         }
     }
     fn report<T>(&mut self, result: EditorResult<T>, message: &str, cx: &mut Context<Self>) {
@@ -367,6 +399,16 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        if let Some(session) = &mut self.agent.session {
+            if let Err(e) = session.replace(editor.project()) {
+                self.status = e.to_string();
+                self.error = true;
+            }
+        }
+        self.agent.events.clear();
+        self.discussion.selected = None;
+        self.discussion.draft = None;
+        self.sharing.open = false;
         self.editor = editor;
         self.document_generation = self.document_generation.wrapping_add(1);
         self.image = None;
@@ -543,10 +585,7 @@ impl EditorView {
                 self.command_index = 0;
             }
             Op::Agent => {
-                self.info = Some((
-                    "Agent connection",
-                    "Live agent connections are not available in this build. Use the voxelite-mcp server for agent workflows, then open the saved .voxl project here.",
-                ))
+                self.agent.open = true;
             }
             Op::Extensions => {
                 self.info = Some((
@@ -766,6 +805,7 @@ impl EditorView {
             self.discussion.placing = false;
             self.discussion.draft = None;
             self.discussion.selected = None;
+            self.agent.open = false;
             self.sharing.open = false;
             self.palettes.open = false;
             window.focus(&self.focus, cx);
@@ -783,7 +823,7 @@ impl EditorView {
             cx.notify();
             return;
         }
-        if self.palettes.open || self.sharing.open {
+        if self.palettes.open || self.sharing.open || self.agent.open {
             cx.stop_propagation();
             return;
         }
@@ -1904,7 +1944,15 @@ impl EditorView {
                                 .mt(px(2.0))
                                 .text_size(px(12.0))
                                 .text_color(t.muted())
-                                .child("Editing on this device"),
+                                .child(if self.agent.clients > 0 {
+                                    format!(
+                                        "{} agent connection{}",
+                                        self.agent.clients,
+                                        if self.agent.clients == 1 { "" } else { "s" }
+                                    )
+                                } else {
+                                    "Editing on this device".into()
+                                }),
                         ),
                     )
                     .child(
@@ -1921,7 +1969,7 @@ impl EditorView {
             .child(match self.panel {
                 Panel::Comments => self.comments_panel(cx),
                 Panel::History => self.timeline_panel(cx),
-                Panel::Session => self.history_panel(compact, cx),
+                Panel::Session => self.agent_feed(compact, cx),
             })
             .child(self.layers_panel(compact, cx))
             .child(self.palette_panel(compact, cx))
@@ -2012,6 +2060,9 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        if self.agent.open && !self.dialog_open {
+            return Some(self.agent_popover(cx));
+        }
         if self.sharing.open && !self.dialog_open {
             return Some(self.share_popover(cx));
         }
@@ -2450,20 +2501,30 @@ impl Render for EditorView {
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")
-            .key_context(if self.command_open {
-                "CommandPalette"
-            } else if self.menu.is_some()
-                || self.palette_open
-                || self.pending.is_some()
-                || self.info.is_some()
-                || self.dialog_open
-                || self.palettes.open
-                || self.sharing.open
-            {
-                "Modal"
-            } else {
-                "Editor"
-            })
+            .key_context(
+                if self.palettes.name.read(cx).focused(window)
+                    || self.palettes.hex.read(cx).focused(window)
+                    || self.sharing.person.read(cx).focused(window)
+                    || self.discussion.text.read(cx).focused(window)
+                    || self.timeline.name.read(cx).focused(window)
+                {
+                    "TextField"
+                } else if self.command_open {
+                    "CommandPalette"
+                } else if self.menu.is_some()
+                    || self.palette_open
+                    || self.pending.is_some()
+                    || self.info.is_some()
+                    || self.dialog_open
+                    || self.palettes.open
+                    || self.sharing.open
+                    || self.agent.open
+                {
+                    "Modal"
+                } else {
+                    "Editor"
+                },
+            )
             .track_focus(&self.focus)
             .size_full()
             .relative()
@@ -2500,6 +2561,7 @@ impl Render for EditorView {
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(|this, _, _, cx| {
+                            this.agent.open = false;
                             this.sharing.open = false;
                             this.palettes.open = false;
                             this.menu = None;

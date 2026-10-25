@@ -380,6 +380,17 @@ impl Editor {
         editor.path = Some(path);
         Ok(editor)
     }
+    /// Capture portable metadata and current content for a local MCP attachment.
+    pub fn project(&self) -> Project {
+        let mut p = self.project.clone();
+        p.document = self.engine.document().clone();
+        p
+    }
+    /// Reconcile local selection after commands committed by the attached agent.
+    pub fn agent_updated(&mut self) {
+        self.reconcile();
+        self.box_start = None;
+    }
     /// Current document content.
     pub fn snapshot(&self) -> &Snapshot {
         &self.engine.document().content
@@ -436,6 +447,18 @@ impl Editor {
             self.layer = self.snapshot().layers[0].id;
         }
         self.box_start = None;
+    }
+    /// Compensate one applied step, retaining unrelated newer work.
+    pub fn ensure_live_revert(&mut self, id: Uuid) -> EditorResult<()> {
+        self.ensure_live()?;
+        self.engine.revert(
+            self.engine.revision(),
+            id,
+            Uuid::new_v4(),
+            Actor::new(Origin::Human),
+        )?;
+        self.reconcile();
+        Ok(())
     }
     /// Undo the most recent complete gesture.
     pub fn undo(&mut self) -> EditorResult<()> {
