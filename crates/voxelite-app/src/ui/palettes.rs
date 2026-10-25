@@ -123,6 +123,7 @@ impl EditorView {
     pub(super) fn control(
         &self,
         id: impl Into<ElementId>,
+        name: &'static str,
         text: impl Into<SharedString>,
         cx: &Context<Self>,
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
@@ -138,6 +139,11 @@ impl EditorView {
             .border_color(t.line())
             .cursor_pointer()
             .hover(move |d| d.bg(t.hover()))
+            .child(icon(name).text_color(if matches!(name, "send") {
+                t.background()
+            } else {
+                t.muted()
+            }))
             .child(text.into())
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| callback(this, window, cx)))
@@ -341,12 +347,18 @@ impl EditorView {
                         .overflow_y_scroll()
                         .h(px(350.0))
                         .children(PALETTES.iter().enumerate().map(|(i, (name, _))| {
-                            self.control(("library-preset", i), *name, cx, move |this, _, cx| {
-                                this.palette_index = i;
-                                this.palettes.custom = None;
-                                this.sync_palette_fields(cx);
-                                cx.notify();
-                            })
+                            self.control(
+                                ("library-preset", i),
+                                "palette",
+                                *name,
+                                cx,
+                                move |this, _, cx| {
+                                    this.palette_index = i;
+                                    this.palettes.custom = None;
+                                    this.sync_palette_fields(cx);
+                                    cx.notify();
+                                },
+                            )
                             .w_full()
                             .mb(px(4.0))
                             .when(!custom && i == self.palette_index, |d| d.bg(t.selected()))
@@ -356,6 +368,7 @@ impl EditorView {
                                 let id = e.id;
                                 self.control(
                                     ("library-custom", i),
+                                    "palette",
                                     e.name.clone(),
                                     cx,
                                     move |this, _, cx| {
@@ -370,11 +383,13 @@ impl EditorView {
                             },
                         )),
                 )
-                .child(
-                    self.control("create-palette", "+ Create palette", cx, |this, _, cx| {
-                        this.palette_edit("Create", cx)
-                    }),
-                );
+                .child(self.control(
+                    "create-palette",
+                    "plus",
+                    "Create palette",
+                    cx,
+                    |this, _, cx| this.palette_edit("Create", cx),
+                ));
         let right =
             div()
                 .flex_1()
@@ -387,24 +402,34 @@ impl EditorView {
                         .gap(px(8.0))
                         .child(div().flex_1().child(self.palettes.name.clone()))
                         .when(custom, |d| {
-                            d.child(self.control("rename-palette", "Rename", cx, |this, _, cx| {
-                                this.palette_edit("Rename", cx)
-                            }))
+                            d.child(self.control(
+                                "rename-palette",
+                                "place",
+                                "Rename",
+                                cx,
+                                |this, _, cx| this.palette_edit("Rename", cx),
+                            ))
                         }),
                 )
                 .child(
                     row()
                         .gap(px(8.0))
-                        .child(
-                            self.control("duplicate-palette", "Duplicate", cx, |this, _, cx| {
-                                this.palette_edit("Duplicate", cx)
-                            }),
-                        )
+                        .child(self.control(
+                            "duplicate-palette",
+                            "copy",
+                            "Duplicate",
+                            cx,
+                            |this, _, cx| this.palette_edit("Duplicate", cx),
+                        ))
                         .when(custom, |d| {
                             d.child(
-                                self.control("delete-palette", "Delete", cx, |this, _, cx| {
-                                    this.palette_edit("Delete", cx)
-                                })
+                                self.control(
+                                    "delete-palette",
+                                    "trash-2",
+                                    "Delete",
+                                    cx,
+                                    |this, _, cx| this.palette_edit("Delete", cx),
+                                )
                                 .text_color(t.danger()),
                             )
                         })
@@ -458,6 +483,7 @@ impl EditorView {
                         .when(custom, |d| {
                             d.child(self.control(
                                 "apply-color",
+                                "check",
                                 "Apply color",
                                 cx,
                                 |this, _, cx| this.palette_edit("Apply color", cx),
@@ -471,9 +497,13 @@ impl EditorView {
                                 .into_iter()
                                 .enumerate()
                                 .map(|(i, label)| {
-                                    self.control(("slot-op", i), label, cx, move |this, _, cx| {
-                                        this.palette_edit(label, cx)
-                                    })
+                                    self.control(
+                                        ("slot-op", i),
+                                        ["plus", "trash-2", "arrow-left", "arrow-right"][i],
+                                        label,
+                                        cx,
+                                        move |this, _, cx| this.palette_edit(label, cx),
+                                    )
                                 }),
                         ),
                     )
@@ -525,21 +555,27 @@ impl EditorView {
                 .child(
                     row()
                         .gap(px(8.0))
-                        .child(
-                            self.control("import-palette", "Import…", cx, |this, _, cx| {
-                                this.palette_file(None, cx)
-                            }),
-                        )
-                        .child(
-                            self.control("export-hex", "Export HEX…", cx, |this, _, cx| {
-                                this.palette_file(Some("hex"), cx)
-                            }),
-                        )
-                        .child(
-                            self.control("export-gpl", "Export GPL…", cx, |this, _, cx| {
-                                this.palette_file(Some("gpl"), cx)
-                            }),
-                        ),
+                        .child(self.control(
+                            "import-palette",
+                            "download",
+                            "Import…",
+                            cx,
+                            |this, _, cx| this.palette_file(None, cx),
+                        ))
+                        .child(self.control(
+                            "export-hex",
+                            "upload",
+                            "Export HEX…",
+                            cx,
+                            |this, _, cx| this.palette_file(Some("hex"), cx),
+                        ))
+                        .child(self.control(
+                            "export-gpl",
+                            "upload",
+                            "Export GPL…",
+                            cx,
+                            |this, _, cx| this.palette_file(Some("gpl"), cx),
+                        )),
                 )
                 .child(div().text_size(px(12.0)).text_color(t.muted()).child(
                     "Palette selection applies to new voxels. Existing colors stay intact.",
@@ -569,6 +605,7 @@ impl EditorView {
                             .child(section_title("Palettes"))
                             .child(self.control(
                                 "close-palettes",
+                                "check",
                                 "Done",
                                 cx,
                                 |this, window, cx| {

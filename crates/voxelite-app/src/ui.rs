@@ -1084,6 +1084,8 @@ impl EditorView {
             .when(!name.is_empty(), |d| {
                 d.child(icon(name).text_color(if !enabled {
                     theme.disabled()
+                } else if primary {
+                    theme.background()
                 } else if selected {
                     theme.accent()
                 } else {
@@ -1173,10 +1175,11 @@ impl EditorView {
                 ]
                 .into_iter()
                 .map(|(id, label, op)| {
-                    self.button(id, "", label, op, cx)
+                    self.button(id, op.icon(), label, op, cx)
                         .size(px(36.0))
                         .justify_center()
                         .px(px(0.0))
+                        .gap(px(2.0))
                         .font_family("Geist Mono")
                 }),
             )
@@ -1267,12 +1270,12 @@ impl EditorView {
                 cx,
             ))
             .child(
-                self.button("share", "", "Share", Op::Share, cx)
+                self.button("share", "share-2", "Share", Op::Share, cx)
                     .border_1()
                     .border_color(t.line()),
             )
             .child(
-                self.button("save", "", "Save", Op::Save, cx)
+                self.button("save", "save", "Save", Op::Save, cx)
                     .h(px(36.0))
                     .px(px(20.0))
                     .font_weight(FontWeight::MEDIUM)
@@ -1485,9 +1488,14 @@ impl EditorView {
                     .absolute()
                     .bottom(px(28.0))
                     .left(px(24.0))
-                    .text_color(t.muted())
-                    .text_size(px(12.0))
-                    .child("Right-drag orbit · Shift-right-drag pan · Scroll zoom"),
+                    .child(
+                        row().id("camera-hints").h(px(32.0)).gap(px(14.0))
+                            .text_color(t.muted())
+                            .tooltip(hint("Right-drag to orbit · Shift-right-drag or middle-drag to pan · Scroll to zoom · F to frame", t))
+                            .child(row().gap(px(4.0)).child(icon("mouse").text_color(t.muted())).child(icon("orbit").text_color(t.muted())))
+                            .child(row().gap(px(4.0)).child(icon("arrow-up").text_color(t.muted())).child(icon("mouse").text_color(t.muted())).child(icon("move").text_color(t.muted())))
+                            .child(row().gap(px(4.0)).child(icon("mouse").text_color(t.muted())).child(icon("zoom-in").text_color(t.muted())))
+                    ),
             )
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
@@ -1506,7 +1514,7 @@ impl EditorView {
                                 ("view-top", "Top", Op::Top),
                             ]
                             .map(|(id, label, op)| {
-                                self.button(id, "", label, op, cx)
+                                self.button(id, op.icon(), label, op, cx)
                                     .border_b_2()
                                     .border_color(transparent_black())
                                     .when(self.camera_view == Some(op), |d| {
@@ -2092,6 +2100,7 @@ impl EditorView {
             .child(div().w(px(14.0)).when(self.selected(op), |d| {
                 d.child(icon("check").size(px(14.0)).text_color(t.accent()))
             }))
+            .child(icon(op.icon()).text_color(if enabled { t.muted() } else { t.disabled() }))
             .child(op.label())
             .child(div().flex_1())
             .child(
@@ -2191,6 +2200,11 @@ impl EditorView {
                                                 })
                                                 .cursor_pointer()
                                                 .hover(move |d| d.bg(t.hover()))
+                                                .gap(px(8.0))
+                                                .child(
+                                                    icon(["trash-2", "close", "save"][i])
+                                                        .text_color(t.muted()),
+                                                )
                                                 .child(label)
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     this.resolve_pending(i, cx)
@@ -2448,6 +2462,7 @@ impl EditorView {
                                     .text_color(t.muted())
                                     .child(self.control(
                                         "manage-palettes",
+                                        "palette",
                                         "Manage palettes…",
                                         cx,
                                         |this, _, cx| {

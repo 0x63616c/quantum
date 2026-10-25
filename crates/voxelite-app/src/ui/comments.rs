@@ -103,10 +103,16 @@ impl EditorView {
                 .into_iter()
                 .enumerate()
                 .map(|(i, (panel, label))| {
-                    self.control(("panel-tab", i), label, cx, move |this, _, cx| {
-                        this.panel = panel;
-                        cx.notify();
-                    })
+                    self.control(
+                        ("panel-tab", i),
+                        ["spark", "comment", "history"][i],
+                        label,
+                        cx,
+                        move |this, _, cx| {
+                            this.panel = panel;
+                            cx.notify();
+                        },
+                    )
                     .flex_1()
                     .justify_center()
                     .border_0()
@@ -130,9 +136,11 @@ impl EditorView {
                 row()
                     .justify_between()
                     .child(section_title("Comments"))
-                    .child(self.control("new-comment", "+ Add", cx, |this, _, cx| {
-                        this.begin_comment(cx)
-                    })),
+                    .child(
+                        self.control("new-comment", "plus", "Add", cx, |this, _, cx| {
+                            this.begin_comment(cx)
+                        }),
+                    ),
             )
             .child(
                 row().gap(px(4.0)).children(
@@ -140,10 +148,16 @@ impl EditorView {
                         .into_iter()
                         .enumerate()
                         .map(|(i, label)| {
-                            self.control(("comment-filter", i), label, cx, move |this, _, cx| {
-                                this.discussion.filter = i;
-                                cx.notify();
-                            })
+                            self.control(
+                                ("comment-filter", i),
+                                ["comment", "check-check", "layer"][i],
+                                label,
+                                cx,
+                                move |this, _, cx| {
+                                    this.discussion.filter = i;
+                                    cx.notify();
+                                },
+                            )
                             .border_0()
                             .when(self.discussion.filter == i, |d| d.bg(t.selected()))
                         }),
@@ -152,6 +166,7 @@ impl EditorView {
             .child(
                 self.control(
                     "region-anchor",
+                    "box",
                     if self.discussion.region {
                         "Anchor: Region"
                     } else {
@@ -351,7 +366,8 @@ impl EditorView {
                                 }))
                                 .child(self.control(
                                     "close-thread",
-                                    "×",
+                                    "close",
+                                    "",
                                     cx,
                                     |this, window, cx| {
                                         this.discussion.selected = None;
@@ -394,6 +410,7 @@ impl EditorView {
                             )
                             .child(self.control(
                                 "resolve-comment",
+                                if resolved { "rotate-ccw" } else { "check" },
                                 if resolved {
                                     "Reopen thread"
                                 } else {
@@ -410,6 +427,7 @@ impl EditorView {
                         .child(
                             self.control(
                                 "post-comment",
+                                "send",
                                 if thread.is_some() {
                                     "Reply"
                                 } else {
