@@ -295,6 +295,8 @@ Create `design/tokens.json` as the production source for generated GPUI Rust con
 
 Require ≥4.5:1 normal text contrast and ≥3:1 essential control/focus boundaries in both modes. Test selected/hover/disabled/locked/error states, keyboard focus, and reduced-motion preference. Use concise labels and shortcut tooltips; explain only actionable errors. System theme changes affect chrome/background, not palette values or exported model colors. A finished original sample model uses one top-left key light, soft AO, intentional materials/colors, and a composition worthy of a creative tool.
 
+Round 2 interaction contract: selected tools, mirrors, colors and render cameras have a solid edge or shape cue as well as tint. Follow opt-in and the selected camera stay synchronized; manual orbit clears the preset selection, while framing or selecting a captured view disengages follow. Pause updates the session badge and active call together. Session totals show net applied changes; per-step diffs retain the original operation. Inspectable history exposes the target, coordinate diff, revision and applied/undone state, with neutral Undo/Redo actions. Use `render_views` for batches and label completed captures with their revision separately from the active request. Selection bounds/counts come from the document, never decorative transform fields. Command search keeps typing focus while arrowing through results and has a useful empty state; palette swatches support roving keyboard focus. Shared app/site/docs components inherit these focus, contrast and state conventions. HTML concept fixtures illustrate this contract; production MCP requests/results and native accessibility still require M4/M5 evidence.
+
 ## 9. Build, release, and deployment
 
 ### Native
