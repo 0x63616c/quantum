@@ -371,7 +371,21 @@ fn dispatch(
                 .collect();
             let offset: usize = a.default("offset", 0)?;
             let limit: usize = a.default("limit", 50)?;
-            let page:Vec<_>=comments.iter().skip(offset).take(limit).map(|c|json!({"thread":c,"anchor_state":match s.anchor_state(c){AnchorState::Visible=>"visible",AnchorState::Orphaned=>"orphaned",AnchorState::Hidden=>"hidden"}})).collect();
+            let message_offset: usize = a.default("message_offset", 0)?;
+            let message_limit: usize = a.default("message_limit", 50)?;
+            let page: Vec<_> = comments.iter().skip(offset).take(limit).map(|c| {
+                let messages: Vec<_> = c.messages.iter().skip(message_offset).take(message_limit)
+                    .map(|m| json!({"id":m.id,"origin":m.origin,"text":m.text,"tool":m.tool})).collect();
+                let next_message = (message_offset + messages.len() < c.messages.len())
+                    .then_some(message_offset + messages.len());
+                json!({
+                    "thread":{"id":c.id,"anchor":c.anchor,"layer":c.layer,"resolved":c.resolved,"messages":messages},
+                    "message_count":c.messages.len(),"next_message_offset":next_message,
+                    "anchor_state":match s.anchor_state(c) {
+                        AnchorState::Visible=>"visible", AnchorState::Orphaned=>"orphaned", AnchorState::Hidden=>"hidden"
+                    }
+                })
+            }).collect();
             let next = (offset + page.len() < comments.len()).then_some(offset + page.len());
             return read(
                 engine,

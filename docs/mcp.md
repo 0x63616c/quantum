@@ -20,7 +20,9 @@ examples](../integrations/README.md).
 This stage has no GUI/plugin/web dependency and builds on stable Rust on Linux.
 Edits are held in memory; call `voxelite_document_save` before disconnecting.
 Undo history and retry receipts are session-local. Comments and named versions
-persist inside saved `.voxl` files.
+persist inside saved `.voxl` files. Comment lists page both threads and messages:
+`limit` and `message_limit` default to 50 (maximum 200); use `offset` and
+`message_offset` with the captured revision to read more.
 
 ## Agent workflow
 
@@ -129,7 +131,7 @@ block. Content-edit data includes these fields (UUID placeholders abbreviated):
     "changed_layers": ["<Base layer UUID>"],
     "palette_changed": false,
     "metadata_changed": false,
-    "work_units": 2128,
+    "work_units": 1064,
     "durability": "memory"
   }
 }
