@@ -399,11 +399,11 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
-        if let Some(session) = &mut self.agent.session {
-            if let Err(e) = session.replace(editor.project()) {
-                self.status = e.to_string();
-                self.error = true;
-            }
+        if let Some(session) = &mut self.agent.session
+            && let Err(e) = session.replace(editor.project())
+        {
+            self.status = e.to_string();
+            self.error = true;
         }
         self.agent.events.clear();
         self.discussion.selected = None;
@@ -1971,8 +1971,10 @@ impl EditorView {
                 Panel::History => self.timeline_panel(cx),
                 Panel::Session => self.agent_feed(compact, cx),
             })
-            .child(self.layers_panel(compact, cx))
-            .child(self.palette_panel(compact, cx))
+            .when(self.panel == Panel::Session, |d| {
+                d.child(self.layers_panel(compact, cx))
+                    .child(self.palette_panel(compact, cx))
+            })
     }
     fn statusbar(&self) -> Div {
         let t = self.theme;

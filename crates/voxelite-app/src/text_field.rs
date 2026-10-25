@@ -51,7 +51,7 @@ impl TextField {
         }
         self.text.len()
     }
-    fn from_utf16(&self, r: Range<usize>) -> Range<usize> {
+    fn range_from_utf16(&self, r: Range<usize>) -> Range<usize> {
         self.byte(r.start)..self.byte(r.end)
     }
     fn to_utf16(&self, r: Range<usize>) -> Range<usize> {
@@ -59,7 +59,7 @@ impl TextField {
     }
     fn replace(&mut self, range: Option<Range<usize>>, text: &str, cx: &mut Context<Self>) {
         let r = range
-            .map(|r| self.from_utf16(r))
+            .map(|r| self.range_from_utf16(r))
             .or(self.marked.clone())
             .unwrap_or(self.selection.clone());
         let text: String = text.chars().filter(|c| !c.is_control()).collect();
@@ -151,7 +151,7 @@ impl EntityInputHandler for TextField {
         _: &mut Window,
         _: &mut Context<Self>,
     ) -> Option<String> {
-        let r = self.from_utf16(r);
+        let r = self.range_from_utf16(r);
         *actual = Some(self.to_utf16(r.clone()));
         Some(self.text[r].into())
     }
@@ -199,7 +199,7 @@ impl EntityInputHandler for TextField {
         self.marked = Some(start..end);
         if let Some(r) = selected {
             let base = self.to_utf16(start..start).start;
-            self.selection = self.from_utf16(base + r.start..base + r.end);
+            self.selection = self.range_from_utf16(base + r.start..base + r.end);
         }
     }
     fn bounds_for_range(
@@ -209,7 +209,7 @@ impl EntityInputHandler for TextField {
         _: &mut Window,
         _: &mut Context<Self>,
     ) -> Option<Bounds<Pixels>> {
-        let r = self.from_utf16(r);
+        let r = self.range_from_utf16(r);
         let l = self.layout.as_ref()?;
         Some(Bounds::from_corners(
             point(
