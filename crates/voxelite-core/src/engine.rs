@@ -180,6 +180,29 @@ impl Engine {
     pub fn history(&self) -> impl DoubleEndedIterator<Item = &HistoryEntry> {
         self.undo.iter()
     }
+    /// All retained steps in chronological order, including undone steps.
+    pub fn timeline(&self) -> impl DoubleEndedIterator<Item = &HistoryEntry> {
+        self.undo.iter().chain(self.redo.iter().rev())
+    }
+    /// Restore a retained preview as one new edit without moving the undo cursor backward.
+    /// The caller must still be at the revision and head captured when previewing.
+    pub fn restore_history(
+        &mut self,
+        revision: u64,
+        expected_head: Option<Uuid>,
+        entry: Option<Uuid>,
+        id: Uuid,
+        actor: Actor,
+    ) -> Result<Receipt> {
+        self.guard(revision)?;
+        if self.head() != expected_head {
+            return Err(Error::Conflict("history head changed".into()));
+        }
+        let target = self.preview(entry)?;
+        let mut staged = (*self.document).clone();
+        staged.content = target.content.clone();
+        self.commit_restore(staged, id, actor, "Restore history state".into())
+    }
     /// Retained conservative history byte accounting.
     pub fn history_bytes(&self) -> usize {
         self.history_bytes

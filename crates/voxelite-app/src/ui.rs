@@ -1,5 +1,6 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
 mod comments;
+mod history;
 use comments::Panel;
 mod palettes;
 mod share;
@@ -36,6 +37,7 @@ pub struct EditorView {
     sharing: share::Sharing,
     discussion: comments::Discussion,
     panel: Panel,
+    timeline: history::Timeline,
     editor: Editor,
     theme: Theme,
     focus: FocusHandle,
@@ -206,6 +208,7 @@ impl EditorView {
             sharing: share::Sharing::new(cx),
             discussion: comments::Discussion::new(cx),
             panel: Panel::Session,
+            timeline: history::Timeline::new(cx),
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
             document_generation: 0,
@@ -276,7 +279,7 @@ impl EditorView {
         }
         self.rendering = true;
         self.render_pending = false;
-        let snapshot = self.editor.engine.snapshot();
+        let snapshot = self.editor.display_snapshot().clone();
         let camera = self.editor.camera;
         let identity = self.frame_identity();
         let interactive = self.interactive_render;
@@ -298,7 +301,7 @@ impl EditorView {
         };
         let task = cx
             .background_executor()
-            .spawn(async move { voxelite_render::render(&snapshot.content, &options) });
+            .spawn(async move { voxelite_render::render(&snapshot, &options) });
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
@@ -370,12 +373,12 @@ impl EditorView {
         self.displayed = None;
         self.hover = None;
         self.drag = None;
-        self.cursor = self.editor.snapshot().bounds.min;
+        self.cursor = self.editor.display_snapshot().bounds.min;
         self.palette_index = 0;
         self.camera_view = Some(Op::Frame);
         self.camera_fitted = true;
         let aspect = f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1));
-        self.editor.camera = OrbitCamera::fit(self.editor.snapshot(), aspect.max(0.01));
+        self.editor.camera = OrbitCamera::fit(self.editor.display_snapshot(), aspect.max(0.01));
         self.display_camera = self.editor.camera;
         self.error = false;
         self.request_render(cx);
@@ -391,7 +394,7 @@ impl EditorView {
         PALETTES[self.palette_index]
             .1
             .map(|p| p.palette())
-            .unwrap_or_else(|| self.editor.snapshot().palette.clone())
+            .unwrap_or_else(|| self.editor.display_snapshot().palette.clone())
     }
     fn filtered_actions(&self) -> Vec<Op> {
         MENUS
@@ -493,7 +496,8 @@ impl EditorView {
                     Op::Top => PresetView::Top,
                     _ => PresetView::Iso,
                 };
-                self.editor.camera = OrbitCamera::fit_view(self.editor.snapshot(), aspect, view);
+                self.editor.camera =
+                    OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
                 self.camera_view = Some(op);
                 self.camera_fitted = true;
                 self.request_render(cx);
@@ -643,7 +647,10 @@ impl EditorView {
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
         let suggested = format!(
             "{}.voxl",
-            self.editor.snapshot().name.replace(['/', '\\'], "-")
+            self.editor
+                .display_snapshot()
+                .name
+                .replace(['/', '\\'], "-")
         );
         self.dialog_open = true;
         self.status = "Choose where to save this project…".into();
@@ -750,7 +757,8 @@ impl EditorView {
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.sharing.person.read(cx).focused(window)
-                || self.discussion.text.read(cx).focused(window))
+                || self.discussion.text.read(cx).focused(window)
+                || self.timeline.name.read(cx).focused(window))
         {
             return;
         }
@@ -880,8 +888,8 @@ impl EditorView {
         };
         if let Some((a, delta)) = movement {
             self.cursor[a] = (self.cursor[a] + delta).clamp(
-                self.editor.snapshot().bounds.min[a],
-                self.editor.snapshot().bounds.max[a] - 1,
+                self.editor.display_snapshot().bounds.min[a],
+                self.editor.display_snapshot().bounds.max[a] - 1,
             );
             self.hover = Some(self.cursor);
             cx.stop_propagation();
@@ -1104,7 +1112,7 @@ impl EditorView {
                                     .min_w(px(0.0))
                                     .overflow_hidden()
                                     .text_ellipsis()
-                                    .child(self.editor.snapshot().name.clone()),
+                                    .child(self.editor.display_snapshot().name.clone()),
                             )
                             .child(
                                 div()
@@ -1249,7 +1257,7 @@ impl EditorView {
         let frame_size = self.displayed.map(|_| self.display_size);
         let hover = self.hover;
         let grid = self.grid;
-        let doc_bounds = self.editor.snapshot().bounds;
+        let doc_bounds = self.editor.display_snapshot().bounds;
         let box_start = self.editor.box_start;
         let comment_region = self
             .discussion
@@ -1258,7 +1266,13 @@ impl EditorView {
             .or_else(|| {
                 self.discussion
                     .selected
-                    .and_then(|id| self.editor.snapshot().comments.iter().find(|c| c.id == id))
+                    .and_then(|id| {
+                        self.editor
+                            .display_snapshot()
+                            .comments
+                            .iter()
+                            .find(|c| c.id == id)
+                    })
                     .map(|c| &c.anchor)
             })
             .and_then(|a| a.region().ok());
@@ -1350,6 +1364,20 @@ impl EditorView {
             )
             .children(self.comment_pins(cx))
             .children(self.thread_popover(cx))
+            .when(self.editor.preview.is_some(), |d| {
+                d.child(
+                    div()
+                        .absolute()
+                        .top(px(52.0))
+                        .left(px(24.0))
+                        .px(px(12.0))
+                        .py(px(6.0))
+                        .rounded(px(6.0))
+                        .bg(t.selected())
+                        .text_color(t.accent())
+                        .child("History preview · read-only"),
+                )
+            })
             .child(self.orientation(cx))
             .child(
                 div()
@@ -1428,10 +1456,16 @@ impl EditorView {
                     {
                         return;
                     }
+                    if this.editor.preview.is_some() {
+                        this.status =
+                            "History preview is read-only · Return to live to edit".into();
+                        cx.notify();
+                        return;
+                    }
                     if let Some(ray) = this.ray(e.position) {
                         if this.discussion.placing {
                             if let Some(hit) =
-                                voxelite_app::editor::raycast(this.editor.snapshot(), ray)
+                                voxelite_app::editor::raycast(this.editor.display_snapshot(), ray)
                             {
                                 this.anchor_comment(hit.at, cx);
                             }
@@ -1600,98 +1634,110 @@ impl EditorView {
                     .id("layer-scroll")
                     .max_h(px(if compact { 128.0 } else { 192.0 }))
                     .overflow_y_scroll()
-                    .children(self.editor.snapshot().layers.iter().rev().enumerate().map(
-                        |(i, layer)| {
-                            let id = layer.id;
-                            let visible = layer.visible;
-                            let locked = layer.locked;
-                            row()
-                                .id(("layer", i))
-                                .h(px(if compact { 32.0 } else { 36.0 }))
-                                .px(px(8.0))
-                                .gap(px(8.0))
-                                .rounded(px(6.0))
-                                .cursor_pointer()
-                                .border_l_2()
-                                .border_color(if id == self.editor.layer {
-                                    t.accent()
-                                } else {
-                                    t.background()
-                                })
-                                .when(id == self.editor.layer, |d| {
-                                    d.bg(t.hover()).font_weight(FontWeight::MEDIUM)
-                                })
-                                .hover(move |d| d.bg(t.hover()))
-                                .text_color(if visible { t.text() } else { t.muted() })
-                                .child(icon("layer").size(px(16.0)).text_color(t.muted()))
-                                .child(
-                                    div()
-                                        .flex_1()
-                                        .min_w(px(0.0))
-                                        .overflow_hidden()
-                                        .text_ellipsis()
-                                        .child(layer.name.clone()),
-                                )
-                                .child(
-                                    row()
-                                        .id(("eye", i))
-                                        .w(px(32.0))
-                                        .h(px(32.0))
-                                        .justify_center()
-                                        .rounded(px(6.0))
-                                        .tooltip(hint(
-                                            if visible { "Hide layer" } else { "Show layer" },
-                                            t,
-                                        ))
-                                        .hover(move |d| d.bg(t.selected()))
-                                        .child(
-                                            icon(if visible { "eye" } else { "eye-off" })
-                                                .size(px(15.0))
-                                                .text_color(t.muted()),
-                                        )
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            cx.stop_propagation();
-                                            let r =
-                                                this.editor.update_layer(id, Some(!visible), None);
-                                            this.report(r, "Visibility updated", cx);
-                                        })),
-                                )
-                                .child(
-                                    row()
-                                        .id(("lock", i))
-                                        .w(px(32.0))
-                                        .h(px(32.0))
-                                        .justify_center()
-                                        .rounded(px(6.0))
-                                        .tooltip(hint(
-                                            if locked { "Unlock layer" } else { "Lock layer" },
-                                            t,
-                                        ))
-                                        .when(locked, |d| d.bg(t.selected()))
-                                        .hover(move |d| d.bg(t.selected()))
-                                        .child(
-                                            icon(if locked { "lock" } else { "unlock" })
-                                                .size(px(15.0))
-                                                .text_color(if locked {
-                                                    t.accent()
-                                                } else {
-                                                    t.muted()
-                                                }),
-                                        )
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            cx.stop_propagation();
-                                            let r =
-                                                this.editor.update_layer(id, None, Some(!locked));
-                                            this.report(r, "Lock updated", cx);
-                                        })),
-                                )
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.editor.layer = id;
-                                    this.editor.box_start = None;
-                                    cx.notify();
-                                }))
-                        },
-                    )),
+                    .children(
+                        self.editor
+                            .display_snapshot()
+                            .layers
+                            .iter()
+                            .rev()
+                            .enumerate()
+                            .map(|(i, layer)| {
+                                let id = layer.id;
+                                let visible = layer.visible;
+                                let locked = layer.locked;
+                                row()
+                                    .id(("layer", i))
+                                    .h(px(if compact { 32.0 } else { 36.0 }))
+                                    .px(px(8.0))
+                                    .gap(px(8.0))
+                                    .rounded(px(6.0))
+                                    .cursor_pointer()
+                                    .border_l_2()
+                                    .border_color(if id == self.editor.layer {
+                                        t.accent()
+                                    } else {
+                                        t.background()
+                                    })
+                                    .when(id == self.editor.layer, |d| {
+                                        d.bg(t.hover()).font_weight(FontWeight::MEDIUM)
+                                    })
+                                    .hover(move |d| d.bg(t.hover()))
+                                    .text_color(if visible { t.text() } else { t.muted() })
+                                    .child(icon("layer").size(px(16.0)).text_color(t.muted()))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w(px(0.0))
+                                            .overflow_hidden()
+                                            .text_ellipsis()
+                                            .child(layer.name.clone()),
+                                    )
+                                    .child(
+                                        row()
+                                            .id(("eye", i))
+                                            .w(px(32.0))
+                                            .h(px(32.0))
+                                            .justify_center()
+                                            .rounded(px(6.0))
+                                            .tooltip(hint(
+                                                if visible { "Hide layer" } else { "Show layer" },
+                                                t,
+                                            ))
+                                            .hover(move |d| d.bg(t.selected()))
+                                            .child(
+                                                icon(if visible { "eye" } else { "eye-off" })
+                                                    .size(px(15.0))
+                                                    .text_color(t.muted()),
+                                            )
+                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                cx.stop_propagation();
+                                                let r = this.editor.update_layer(
+                                                    id,
+                                                    Some(!visible),
+                                                    None,
+                                                );
+                                                this.report(r, "Visibility updated", cx);
+                                            })),
+                                    )
+                                    .child(
+                                        row()
+                                            .id(("lock", i))
+                                            .w(px(32.0))
+                                            .h(px(32.0))
+                                            .justify_center()
+                                            .rounded(px(6.0))
+                                            .tooltip(hint(
+                                                if locked { "Unlock layer" } else { "Lock layer" },
+                                                t,
+                                            ))
+                                            .when(locked, |d| d.bg(t.selected()))
+                                            .hover(move |d| d.bg(t.selected()))
+                                            .child(
+                                                icon(if locked { "lock" } else { "unlock" })
+                                                    .size(px(15.0))
+                                                    .text_color(if locked {
+                                                        t.accent()
+                                                    } else {
+                                                        t.muted()
+                                                    }),
+                                            )
+                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                cx.stop_propagation();
+                                                let r = this.editor.update_layer(
+                                                    id,
+                                                    None,
+                                                    Some(!locked),
+                                                );
+                                                this.report(r, "Lock updated", cx);
+                                            })),
+                                    )
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.editor.layer = id;
+                                        this.editor.box_start = None;
+                                        cx.notify();
+                                    }))
+                            }),
+                    ),
             )
     }
     fn history_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
@@ -1872,17 +1918,17 @@ impl EditorView {
                     ),
             )
             .child(self.panel_tabs(cx))
-            .child(if self.panel == Panel::Comments {
-                self.comments_panel(cx)
-            } else {
-                self.history_panel(compact, cx)
+            .child(match self.panel {
+                Panel::Comments => self.comments_panel(cx),
+                Panel::History => self.timeline_panel(cx),
+                Panel::Session => self.history_panel(compact, cx),
             })
             .child(self.layers_panel(compact, cx))
             .child(self.palette_panel(compact, cx))
     }
     fn statusbar(&self) -> Div {
         let t = self.theme;
-        let s = self.editor.snapshot();
+        let s = self.editor.display_snapshot();
         let size: [i32; 3] = std::array::from_fn(|a| s.bounds.max[a] - s.bounds.min[a]);
         row()
             .h(px(STATUSBAR_HEIGHT))
@@ -2199,7 +2245,7 @@ impl EditorView {
                                         |(i, (name, preset))| {
                                             let p =
                                                 preset.map(|p| p.palette()).unwrap_or_else(|| {
-                                                    self.editor.snapshot().palette.clone()
+                                                    self.editor.display_snapshot().palette.clone()
                                                 });
                                             div()
                                                 .id(("preset", i))
@@ -2345,6 +2391,9 @@ impl Render for EditorView {
         self.discussion
             .text
             .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.timeline
+            .name
+            .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
         let height =
@@ -2357,7 +2406,7 @@ impl Render for EditorView {
         if self.render_size != dimensions {
             if self.camera_fitted {
                 self.editor.camera = OrbitCamera::fit_view(
-                    self.editor.snapshot(),
+                    self.editor.display_snapshot(),
                     f64::from(dimensions[0]) / f64::from(dimensions[1].max(1)),
                     match self.camera_view {
                         Some(Op::Front) => PresetView::Front,
@@ -2375,7 +2424,7 @@ impl Render for EditorView {
         }
         let title = format!(
             "{}{} — Voxelite",
-            self.editor.snapshot().name,
+            self.editor.display_snapshot().name,
             if self.editor.engine.is_dirty() {
                 " •"
             } else {

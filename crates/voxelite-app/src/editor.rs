@@ -296,6 +296,8 @@ pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
 pub struct Editor {
     /// Shared validated command engine.
     pub engine: Engine,
+    /// Read-only preview, separate from the live authority.
+    pub preview: Option<crate::history::Preview>,
     /// Active layer identity, reconciled after undo/redo.
     pub layer: Uuid,
     /// Selected editing tool.
@@ -341,6 +343,7 @@ impl Editor {
         let camera = OrbitCamera::fit(s, 1.3);
         Ok(Self {
             engine,
+            preview: None,
             layer,
             tool: Tool::Place,
             mirror: [false; 3],
@@ -413,6 +416,7 @@ impl Editor {
     }
     /// Execute a single attributed, atomic command.
     pub fn execute(&mut self, label: &str, command: Command) -> EditorResult<bool> {
+        self.ensure_live()?;
         let receipt = self.engine.execute(Transaction {
             expected_revision: self.engine.revision(),
             id: Uuid::new_v4(),
@@ -427,7 +431,7 @@ impl Editor {
         self.reconcile();
         Ok(receipt.entry.is_some())
     }
-    fn reconcile(&mut self) {
+    pub(crate) fn reconcile(&mut self) {
         if self.snapshot().layer(self.layer).is_err() {
             self.layer = self.snapshot().layers[0].id;
         }
@@ -435,6 +439,7 @@ impl Editor {
     }
     /// Undo the most recent complete gesture.
     pub fn undo(&mut self) -> EditorResult<()> {
+        self.ensure_live()?;
         if let Some(id) = self.engine.head() {
             self.engine.undo(self.engine.revision(), id)?;
         }
@@ -443,6 +448,7 @@ impl Editor {
     }
     /// Redo the most recently undone gesture.
     pub fn redo(&mut self) -> EditorResult<()> {
+        self.ensure_live()?;
         if let Some(id) = self.engine.redo_head() {
             self.engine.redo(self.engine.revision(), id)?;
         }
@@ -539,6 +545,7 @@ impl Editor {
     }
     /// Apply a tool at an explicit integer coordinate, also used by the keyboard cursor.
     pub fn apply_at(&mut self, at: Pos) -> EditorResult<bool> {
+        self.ensure_live()?;
         if !self.snapshot().bounds.contains(at) {
             return Err(EditorError::Gesture("Outside document bounds".into()));
         }

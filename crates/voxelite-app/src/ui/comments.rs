@@ -118,7 +118,7 @@ impl EditorView {
     }
     pub(super) fn comments_panel(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
-        let comments = &self.editor.snapshot().comments;
+        let comments = &self.editor.display_snapshot().comments;
         div()
             .flex_1()
             .min_h(px(120.0))
@@ -229,7 +229,7 @@ impl EditorView {
                                         mono(format!(
                                             "{} messages · {:?}",
                                             c.messages.len(),
-                                            self.editor.snapshot().anchor_state(c)
+                                            self.editor.display_snapshot().anchor_state(c)
                                         ))
                                         .mt(px(6.0))
                                         .text_color(t.muted()),
@@ -260,14 +260,14 @@ impl EditorView {
             .filter(|(_, c)| !c.resolved || self.discussion.filter != 0)
             .filter_map(|(i, c)| {
                 let (uv, occluded) = voxelite_app::comments::project_pin(
-                    self.editor.snapshot(),
+                    self.editor.display_snapshot(),
                     c,
                     self.display_camera,
                     aspect,
                 )?;
                 let id = c.id;
-                let dim =
-                    occluded || self.editor.snapshot().anchor_state(c) != AnchorState::Visible;
+                let dim = occluded
+                    || self.editor.display_snapshot().anchor_state(c) != AnchorState::Visible;
                 Some(
                     row()
                         .id(("comment-pin", i))
@@ -319,10 +319,13 @@ impl EditorView {
     }
     pub(super) fn thread_popover(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
-        let thread = self
-            .discussion
-            .selected
-            .and_then(|id| self.editor.snapshot().comments.iter().find(|c| c.id == id));
+        let thread = self.discussion.selected.and_then(|id| {
+            self.editor
+                .display_snapshot()
+                .comments
+                .iter()
+                .find(|c| c.id == id)
+        });
         if thread.is_none() && self.discussion.draft.is_none() {
             return None;
         }
