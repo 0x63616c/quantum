@@ -122,7 +122,7 @@ impl EditorView {
             viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
-            grid: false,
+            grid: true,
             menu: None,
             menu_index: 0,
             palette_open: false,
