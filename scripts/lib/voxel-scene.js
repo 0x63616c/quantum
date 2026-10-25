@@ -98,7 +98,6 @@
   const hidden = new Set();
   let grid = true;
   let revision = 18;
-  let sessionAdded = 30, sessionRemoved = 0;
   const undone = new Set();
   const historyGroups = {
     '18': [...cubes.values()].filter(c => c.agent),
@@ -106,6 +105,26 @@
   };
   let thumbnailKey = '';
   const views = { front: [.68, .46], right: [2.25, .42], back: [3.8, .46] };
+  function selectCamera(name) {
+    document.querySelectorAll('[data-view-angle]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.viewAngle === name)));
+  }
+  const bounds = items => [0,1,2].map((axis) => {
+    const values = items.map(c => [c.x,c.y,c.z][axis]);
+    return `${'xyz'[axis]} ${Math.min(...values)}…${Math.max(...values)}`;
+  }).join(' · ').replaceAll('-', '−');
+  window.__getChange = id => ({
+    step: Number(id), tool: id === '18' ? 'set_voxels' : 'fill_box', layer: 'Canopy',
+    revision, state: undone.has(id) ? 'undone' : 'applied',
+    added: historyGroups[id].map(c => [c.x,c.y,c.z]), removed: [],
+  });
+  window.__updateSelection = () => {
+    const selected = document.querySelector('[data-select-layer][aria-pressed=true]')?.dataset.selectLayer;
+    const items = [...cubes.values()].filter(c => c.layer === selected);
+    document.querySelectorAll('[data-selected-layer]').forEach(el => el.textContent = selected);
+    document.querySelectorAll('[data-selection-count]').forEach(el => el.textContent = `${items.length} voxels`);
+    document.querySelectorAll('[data-selection-bounds]').forEach(el => el.textContent = bounds(items));
+    document.querySelectorAll('.selection-inspector [data-inspect-step]').forEach(el => el.hidden = selected !== 'Canopy');
+  };
   const project = p => {
     const offset = subtract(p, camera);
     const depth = dot(offset, forward);
@@ -136,17 +155,19 @@
     camera = [Math.sin(azimuth) * Math.cos(elevation) * radius, 7 + Math.sin(elevation) * radius, Math.cos(azimuth) * Math.cos(elevation) * radius];
     forward = unit(subtract([0,7,0], camera));
     right = unit(cross(forward, [0,1,0])); up = cross(right, forward);
-    focal = thumbnail ? Math.min(width * 2.15, height * 2) : Math.min(width * 1.3, height * (document.body.classList.contains('concept-c') ? 1.55 : 1.43)) * zoom;
+    focal = thumbnail ? Math.min(width * 2.15, height * 2) : Math.min(width * 1.3, height * (document.body.classList.contains('concept-c') ? 1.67 : 1.43)) * zoom;
     center = thumbnail ? [width * .5, height * .51] : [width * .48 + pan[0], height * .49 + pan[1]];
     ctx.clearRect(0, 0, width, height);
     // Perspective grid, gently fading at the edges of the work plane.
     if (!thumbnail && grid) for (let i = -50; i <= 50; i += 2) {
-      const alpha = Math.max(.015, 1 - Math.abs(i) / 55) * (light ? .12 : .11);
       ctx.lineWidth = i % 10 === 0 ? .85 : .6;
-      ctx.strokeStyle = light ? `rgba(100,108,115,${alpha})` : `rgba(163,174,177,${alpha})`;
-      for (const points of [[[i,-.12,-50],[i,-.12,50]], [[-50,-.12,i],[50,-.12,i]]]) {
-        const a = project(points[0]), b = project(points[1]);
-        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+      for (let j = -50; j < 50; j += 5) {
+        const alpha = Math.max(0, 1 - Math.hypot(i, j + 2.5) / 54) ** 1.4 * .10;
+        ctx.strokeStyle = light ? `rgba(100,108,115,${alpha})` : `rgba(163,174,177,${alpha})`;
+        for (const points of [[[i,-.12,j],[i,-.12,j+5]], [[j,-.12,i],[j+5,-.12,i]]]) {
+          const a = project(points[0]), b = project(points[1]);
+          ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+        }
       }
     }
     // Soft ground shadow. Rendered in screen space under the voxel geometry.
@@ -193,11 +214,18 @@
       }
     }
     if (thumbnail) return;
-    const anchor = project([9,15,-1]);
+    const anchor = historyGroups['18'].map(c => project([c.x + .5, c.y + .5, c.z + .5]))
+      .reduce((a,b) => a[0] > b[0] ? a : b);
     const annotation = document.querySelector('.edit-annotation');
-    annotation.style.left = `${anchor[0] + 26}px`;
-    annotation.style.top = `${anchor[1] - 28}px`;
-    annotation.hidden = hidden.has('Canopy') || undone.has('18');
+    annotation.hidden = false;
+    const tagWidth = annotation.offsetWidth;
+    const flipped = anchor[0] + tagWidth > width - 12;
+    const tagLeft = flipped ? anchor[0] - tagWidth : anchor[0];
+    annotation.classList.toggle('flipped', flipped);
+    annotation.style.left = `${tagLeft}px`;
+    annotation.style.top = `${anchor[1] - 15}px`;
+    annotation.hidden = hidden.has('Canopy') || undone.has('18') || tagLeft < 12 ||
+      tagLeft + tagWidth > width - 12 || anchor[1] < 42 || anchor[1] > height - 42;
     const count = document.querySelectorAll('[data-voxel-count]');
     count.forEach(el => el.textContent = cubes.size.toLocaleString('en-US'));
     document.querySelectorAll('[data-zoom]').forEach(el => el.textContent = `${Math.round(100 * zoom)}%`);
@@ -221,22 +249,24 @@
   }
   window.__setViewAngle = name => {
     [azimuth, elevation] = views[name] || views.front;
-    zoom = 1; pan = [0, 0]; draw();
+    zoom = 1; pan = [0, 0]; selectCamera(name); draw();
   };
   window.__toggleStep = id => {
     const group = historyGroups[id];
     if (!group) return;
     if (undone.has(id)) {
       group.forEach(cube => cubes.set(key(cube.x, cube.y, cube.z), cube));
-      undone.delete(id); sessionAdded += group.length;
+      undone.delete(id);
     } else {
       group.forEach(cube => cubes.delete(key(cube.x, cube.y, cube.z)));
-      undone.add(id); sessionRemoved += group.length;
+      undone.add(id);
     }
     revision++;
-    document.querySelectorAll('[data-session-total]').forEach(el => el.innerHTML = `+${sessionAdded} <span>−${sessionRemoved}</span>`);
+    const netAdded = Object.entries(historyGroups).filter(([step]) => !undone.has(step)).reduce((sum,[,items]) => sum + items.length, 0);
+    document.querySelectorAll('[data-session-total]').forEach(el => el.innerHTML = `+${netAdded} <span>−0</span>`);
     document.querySelectorAll('[data-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
-    document.querySelectorAll('[data-render-revision]').forEach(el => el.textContent = 'rev ' + String(revision).padStart(3, '0'));
+    document.querySelectorAll('[data-render-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
+    window.__updateSelection();
     draw();
     return undone.has(id);
   };
@@ -248,6 +278,7 @@
   canvas.addEventListener('pointerdown', e => {
     if (e.button === 2) return;
     document.dispatchEvent(new Event('manual-camera'));
+    selectCamera(null);
     drag = { x:e.clientX, y:e.clientY, pan: e.shiftKey || e.button === 1 };
     canvas.setPointerCapture(e.pointerId); canvas.classList.add('dragging');
   });
@@ -261,15 +292,22 @@
   const stop = () => { drag = null; canvas.classList.remove('dragging'); };
   canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
   canvas.addEventListener('wheel', e => { e.preventDefault(); document.dispatchEvent(new Event('manual-camera')); zoom = Math.max(.55,Math.min(1.8,zoom - e.deltaY * .001)); draw(); }, { passive:false });
-  document.querySelectorAll('[data-reset-view]').forEach(el => el.addEventListener('click', () => { azimuth=.68; elevation=.46; pan=[0,0]; zoom=1; draw(); }));
+  document.querySelectorAll('[data-reset-view]').forEach(el => el.addEventListener('click', () => {
+    document.dispatchEvent(new Event('manual-camera'));
+    window.__setViewAngle('front');
+  }));
   document.querySelectorAll('[data-layer-eye]').forEach(el => el.addEventListener('click', () => {
     const name = el.dataset.layerEye;
     if (hidden.has(name)) hidden.delete(name); else hidden.add(name);
     el.setAttribute('aria-pressed', String(!hidden.has(name)));
+    el.querySelector('svg').innerHTML = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/>' +
+      (hidden.has(name) ? '<path d="m3 3 18 18"/>' : '');
     el.closest('.layer-row').classList.toggle('layer-hidden',hidden.has(name)); draw();
   }));
   new ResizeObserver(draw).observe(viewport);
   new MutationObserver(draw).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
   window.__drawVoxelScene = draw;
+  window.__updateSelection();
+  document.querySelectorAll('[data-change-bounds]').forEach(el => el.textContent = bounds(historyGroups['18']));
   draw();
 })();
