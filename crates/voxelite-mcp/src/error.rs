@@ -17,11 +17,19 @@ pub(crate) struct Failure {
 }
 impl Failure {
     pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+        let (retryable, recovery) = match code {
+            "model_busy" => (true, "Retry the identical request with the original operation_id after pending requests finish."),
+            "cancelled" => (true, "This request was cancelled before execution; retry the identical request with the original operation_id when ready."),
+            "outcome_unknown" => (false, "Inspect the destination file and current document state before taking further action; do not blindly retry or assign a new operation_id."),
+            "operation_id_reused" => (false, "Recover the original request for this operation_id. Use a fresh ID only for a new operation."),
+            "epoch_conflict" | "revision_conflict" | "history_conflict" => (false, "Read current document and history state, rebase the intended change, then use a fresh operation_id."),
+            _ => (false, "Inspect voxelite_document_info and the tool schema, correct the request, then use a new operation_id."),
+        };
         Self {
             code,
             message: bounded(message.into(), 2048).into_boxed_str(),
-            retryable: false,
-            recovery: "Inspect document_info and tool schema, correct the request, then use a new operation_id.",
+            retryable,
+            recovery,
             path: None,
             command_index: None,
             current_revision: None,
@@ -41,6 +49,7 @@ impl From<voxelite_core::Error> for Failure {
         if let Error::Batch { index, source } = e {
             let mut f = Self::from(*source);
             f.command_index = Some(index);
+            f.path = Some(format!("/operations/{index}{}", f.path.unwrap_or_default()));
             return f;
         }
         let code = match &e {

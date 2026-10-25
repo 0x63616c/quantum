@@ -314,3 +314,59 @@ fn newer_profile_rejects_missing_and_unsupported_metadata_then_recovers() {
     assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 38);
     c.exit();
 }
+
+#[test]
+fn malformed_protocol_parameters_are_rejected_in_both_profiles() {
+    for modern in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let mut c = Client::start(root.path(), modern);
+        // Establish a modern connection before probing malformed parameters.
+        c.rpc("tools/list", json!({}));
+        for (method, params) in [
+            ("tools/call", json!({})),
+            ("tools/call", json!({"name":42})),
+            (
+                "tools/call",
+                json!({"name":"voxelite_capabilities_get","arguments":[]}),
+            ),
+            (
+                "tools/call",
+                json!({"name":"voxelite_capabilities_get","arguments":null}),
+            ),
+            (
+                "tools/call",
+                json!({"name":"voxelite_capabilities_get","task":{"ttl":1000}}),
+            ),
+            ("tools/list", json!({"cursor":42})),
+            ("tools/list", json!({"cursor":null})),
+        ] {
+            let result = c.rpc(method, params);
+            assert_eq!(result["error"]["code"], -32602, "{result}");
+        }
+        // Notification errors are silent, including malformed known methods.
+        for params in [json!(42), json!([]), json!(null), json!({"requestId":[]})] {
+            c.send(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":params}));
+        }
+        assert!(c.rpc("tools/list", json!({}))["result"].is_object());
+        for line in [
+            "{bad json}\n",
+            "[]\n",
+            "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"ping\"}\n",
+        ] {
+            c.raw(line);
+            let result = c.receive();
+            assert_eq!(result.get("id"), Some(&Value::Null), "{result}");
+            assert!(result["error"].is_object());
+        }
+        let mut params = json!({"name":false});
+        if modern {
+            params["_meta"] = json!({"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}});
+        }
+        c.send(json!({"jsonrpc":"2.0","id":"string-id","method":"tools/call","params":params}));
+        let result = c.receive();
+        assert_eq!(result["id"], "string-id");
+        assert_eq!(result["error"]["code"], -32602);
+        assert!(c.rpc("tools/list", json!({}))["result"].is_object());
+        c.exit();
+    }
+}
