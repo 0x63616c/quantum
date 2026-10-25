@@ -18,6 +18,7 @@ use voxelite_render::{PresetView, RenderOptions, View};
 
 // Keep render sizing and native layout on the same logical-pixel metrics.
 const SIDEBAR_WIDTH: f32 = 352.0;
+const TOOL_RAIL_WIDTH: f32 = 56.0;
 const MENUBAR_HEIGHT: f32 = 32.0;
 const TOOLBAR_HEIGHT: f32 = 64.0;
 const STATUSBAR_HEIGHT: f32 = 32.0;
@@ -1199,6 +1200,63 @@ impl EditorView {
             }))
             .child(div().flex_1())
     }
+    /// Persistent tool and mirror controls use the same actions as menus and keys.
+    fn tool_rail(&self, cx: &Context<Self>) -> Div {
+        let t = self.theme;
+        div()
+            .w(px(TOOL_RAIL_WIDTH))
+            .flex_shrink_0()
+            .h_full()
+            .flex()
+            .flex_col()
+            .items_center()
+            .py(px(12.0))
+            .gap(px(6.0))
+            .border_r_1()
+            .border_color(t.line())
+            .children(
+                [
+                    ("rail-place", Op::Place),
+                    ("rail-erase", Op::Erase),
+                    ("rail-paint", Op::Paint),
+                    ("rail-fill", Op::Fill),
+                    ("rail-box", Op::Box),
+                    ("rail-picker", Op::Picker),
+                ]
+                .into_iter()
+                .map(|(id, op)| {
+                    self.button(id, op.icon(), "", op, cx)
+                        .size(px(36.0))
+                        .justify_center()
+                        .px(px(0.0))
+                        .border_1()
+                        .border_color(if self.selected(op) {
+                            t.accent().opacity(0.4)
+                        } else {
+                            t.background()
+                        })
+                }),
+            )
+            .child(div().w(px(24.0)).h(px(1.0)).my(px(6.0)).bg(t.line()))
+            .children(
+                [
+                    ("rail-mirror-x", "X", Op::MirrorX),
+                    ("rail-mirror-y", "Y", Op::MirrorY),
+                    ("rail-mirror-z", "Z", Op::MirrorZ),
+                ]
+                .into_iter()
+                .map(|(id, label, op)| {
+                    self.button(id, op.icon(), label, op, cx)
+                        .w(px(44.0))
+                        .h(px(34.0))
+                        .justify_center()
+                        .px(px(0.0))
+                        .gap(px(4.0))
+                        .font_family("Geist Mono")
+                        .text_size(px(12.0))
+                }),
+            )
+    }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         row()
@@ -1245,51 +1303,6 @@ impl EditorView {
                         },
                     )),
             )
-            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
-            .child(
-                self.button(
-                    "tool-picker",
-                    if self.editor.preview.is_some() {
-                        "lock"
-                    } else {
-                        match self.editor.tool {
-                            Tool::Place => "place",
-                            Tool::Erase => "erase",
-                            Tool::Paint => "paint",
-                            Tool::Fill => "fill",
-                            Tool::Box => "box",
-                            Tool::Picker => "picker",
-                        }
-                    },
-                    if self.editor.preview.is_some() {
-                        "Read only"
-                    } else {
-                        self.editor.tool.name()
-                    },
-                    Op::ToolPicker,
-                    cx,
-                )
-                .child(icon("chevron").size(px(14.0)).text_color(t.muted())),
-            )
-            .when(self.editor.mirror.iter().any(|on| *on), |d| {
-                d.child(
-                    row()
-                        .id("mirror-status")
-                        .gap(px(4.0))
-                        .text_color(t.accent())
-                        .tooltip(hint("Mirror axes · Shift X / Y / Z to toggle", t))
-                        .child(icon("flip-horizontal-2").text_color(t.accent()))
-                        .child(mono(
-                            self.editor
-                                .mirror
-                                .iter()
-                                .zip(["X", "Y", "Z"])
-                                .filter_map(|(on, axis)| on.then_some(axis))
-                                .collect::<Vec<_>>()
-                                .join(""),
-                        )),
-                )
-            })
             .child(div().flex_1())
             .child(
                 self.button(
@@ -2597,7 +2610,7 @@ impl Render for EditorView {
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - SIDEBAR_WIDTH).max(1.0);
+        let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
             (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
         let scale = (1024.0 / width.max(height)).min(1.0);
@@ -2697,6 +2710,7 @@ impl Render for EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .items_stretch()
+                    .child(self.tool_rail(cx))
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
