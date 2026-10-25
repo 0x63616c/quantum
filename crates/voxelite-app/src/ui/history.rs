@@ -22,7 +22,7 @@ impl EditorView {
         self.request_render(cx);
         cx.notify();
     }
-    fn scrub(&mut self, index: usize, cx: &mut Context<Self>) {
+    pub(super) fn scrub(&mut self, index: usize, cx: &mut Context<Self>) {
         let ids: Vec<Option<Uuid>> = std::iter::once(None)
             .filter(|_| self.editor.engine.initial_retained())
             .chain(self.editor.engine.timeline().map(|e| Some(e.id)))

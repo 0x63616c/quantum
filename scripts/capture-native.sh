@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo build -p voxelite-app --bin voxelite
+cargo build -p voxelite-app -p voxelite-mcp
 mkdir -p screenshots
 export VOXELITE_CAPTURE_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
@@ -21,7 +21,8 @@ cleanup() {
 }
 trap cleanup EXIT
 for theme in dark light; do
-  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
+  export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$theme"
+  "$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --theme "$theme" --exit-after 180 --session-socket "$XDG_RUNTIME_DIR/$theme.sock" >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..50}; do
@@ -43,6 +44,7 @@ for theme in dark light; do
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
   mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme-small.png"
+  source scripts/lib/capture-polish-2.sh
   kill "$app_pid"
   wait "$app_pid" || true
   app_pid=''

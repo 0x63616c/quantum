@@ -3,7 +3,7 @@
 A Rust/GPUI desktop shell for the shared Voxelite engine. It opens the bundled
 Autumn Workshop diorama, or a `.voxl` path supplied on the command line. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
-toolbar with a searchable tool picker, compact palette previews, layers and real
+toolbar with a dedicated left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
@@ -50,8 +50,7 @@ is only a preview. Place targets the adjacent face or the bottom work plane.
 Paint, erase and fill require the visible hit to belong to the selected layer;
 select its layer first. Hidden and locked layers reject voxel edits. Mirror
 X/Y/Z reflects around the document's center planes in one undo transaction.
-Enable mirrors in Tools or command search; the toolbar shows their toggles while
-any mirror is active. The viewport's projected X/Y/Z controls select Right/Top/
+Enable mirrors in the left rail, Tools, command search or Shift-X/Y/Z. The viewport's projected X/Y/Z controls select Right/Top/
 Front; Iso and the separate Frame button return to the fitted isometric view.
 
 Selecting a preset does not change existing geometry or dirty the project.
@@ -61,9 +60,7 @@ partial edits. Presets use the exact shared-core PICO-8, ENDESGA 32, Sweetie 16,
 grayscale, neutral, warm and vivid colors.
 
 Layers can be added, selected, hidden and locked. Their metadata changes are
-undoable. History shows actual committed edits and counts; no simulated agent
-activity is displayed. Agent and Extensions menus explain the current stage's
-integration boundary.
+undoable. History and the connected MCP feed show actual edits and counts.
 
 ## Files and rendering
 
@@ -145,8 +142,74 @@ web code and plugin crates are not built by this stage. Geist and Geist Mono
 are copied into the crate with their OFL notices; `design/` is never a build-time
 mutable output. The default example is embedded at compile time.
 
-This stage implements the requested native shell, not every later acceptance
-row in `PLAN.md`. Runtime plugins, live MCP session attachment, collaborative
-comments, palette authoring/import UI, persistent appearance preferences,
-recovery journals, GLB export UI and screen-reader certification remain future
-integration work. The underlying portable data is retained on save.
+This stage implements the native editor polish scope, not every release row in
+`PLAN.md`. Plugin hosting is dropped from v1. Persistent appearance preferences,
+recovery journals, GLB export UI, hosted collaboration and screen-reader
+certification remain outside this round. Portable data is retained on save.
+
+## Polish round 2: local authoring and live agents
+
+The left rail has Place/Erase/Paint/Fill/Box/Picker and always-visible mirror axes.
+Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
+The toolbar has separate Save and Share actions. Plugin hosting is outside v1.
+
+**Palette → Manage palettes** opens a persistent custom library. Create, rename,
+duplicate, delete, edit a six-digit hex color, choose a hue or drag RGB channels,
+add/remove/reorder slots, and import/export `.hex` / `.gpl` through native dialogs.
+Presets and project colors are read-only in the manager; Duplicate creates an
+editable brush palette. These operations never silently recolor document slots.
+Libraries are validated and atomically replaced in the app's local data directory.
+
+**Share** is a local prototype with stable `voxelite-local://` links, a copy
+button, View/Comment/Remix metadata and a participant list. It sends no invitations,
+publishes no documents, and does not enforce remote authorization. Both in-memory
+and local-file backends implement the same `ShareBackend` trait.
+
+**Comments** lists Open/Resolved/All threads. Click a projected numbered pin to
+open its thread, or Add/C then click a voxel. Switch Anchor to Region and click
+two corners for a region discussion. Enter can anchor at the keyboard cursor.
+Reply, resolve and reopen use core commands and shared undo. Occluded/hidden/orphan
+pins are muted and retain coordinates; the selected anchor has a model-space
+outline. The snapshot's own comments appear while previewing history.
+
+**History** has a draggable timeline (also Left/Right when the panel is active),
+human circles and agent diamonds, and persistent named versions. Scrubbing keeps
+the live document, revision, dirty state and undo stack unchanged. Editing is
+blocked in preview. Return to live discards the preview. Restore creates one new
+undoable edit and rejects an intervening live change; reselect a state to capture
+new restore preconditions. Named versions survive normal Save/Open.
+
+Each native window hosts MCP on a private Unix socket, shown under **Agent →
+Agent connection**. Copy the MCP configuration there, or choose an explicit path:
+
+```sh
+cargo build -p voxelite-app -p voxelite-mcp
+# In one terminal (the socket's parent directory must already exist):
+target/debug/voxelite --session-socket /tmp/voxelite-session.sock
+# Configure your MCP host to run this stdio bridge:
+target/debug/voxelite-mcp --connect /tmp/voxelite-session.sock
+```
+
+Start with `voxelite_capabilities_get` to discover the current model, epoch and
+revision. Agent edits run through the **same engine** as human tools. The Session
+feed contains completed MCP calls, actual voxel differences, errors and revisions;
+expand a committed edit to revert it. Pause rejects new agent mutations but permits
+reads. Local file dialogs defer agent requests until they close. New/Open changes
+the session epoch and clears receipts so stale calls cannot edit a replaced project.
+
+The bridge supports both MCP protocol profiles already supported by the standalone
+server. It reserves stdout for JSON-RPC. Socket mode is 0600; up to 8 connections
+and 16 queued requests are admitted. The UI processes up to 4 calls per poll.
+Expensive MCP rendering executes on the document owner thread and can briefly
+stall interaction; document mutations are atomic. Changes are memory-resident
+until the app saves. Attached document create/open/save are excluded from the
+catalog because file lifecycle and external-change detection belong to the app.
+The standalone server retains those tools. This is a local session, not hosted
+multi-user collaboration or a durable recovery journal.
+
+`VOXELITE_DATA_DIR` overrides local palette/share/socket storage for isolated runs.
+The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
+`bash scripts/capture-native.sh` now also captures main/tools/palettes/share/
+comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
+client drives the real stdio bridge and checks edit receipts. See
+[the round 2 review](../../docs/reviews/app-polish-2.md) for validation and limits.

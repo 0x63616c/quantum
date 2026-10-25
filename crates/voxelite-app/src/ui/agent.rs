@@ -83,9 +83,26 @@ impl EditorView {
             .child(div().text_size(px(12.0)).text_color(t.muted()).child("Requires voxelite-mcp on PATH. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
             .into_any_element()
     }
-    pub(super) fn agent_feed(&self, _compact: bool, cx: &Context<Self>) -> Div {
+    pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let paused = self.agent.session.as_ref().is_some_and(|s| s.paused);
+        if compact && self.agent.events.is_empty() {
+            return row()
+                .h(px(72.0))
+                .flex_shrink_0()
+                .px(px(20.0))
+                .justify_between()
+                .child(div().text_color(t.muted()).child("No edits yet"))
+                .child(self.control(
+                    "connect-agent-compact",
+                    "Connect agent",
+                    cx,
+                    |this, _, cx| {
+                        this.agent.open = true;
+                        cx.notify();
+                    },
+                ));
+        }
         if self.agent.events.is_empty() {
             return div()
                 .flex_1()
@@ -173,7 +190,7 @@ impl EditorView {
                                             .overflow_hidden()
                                             .font_weight(FontWeight::MEDIUM)
                                             .child(
-                                                e.tool
+                                                e.label
                                                     .trim_start_matches("voxelite_")
                                                     .replace('_', " "),
                                             ),
@@ -213,7 +230,7 @@ impl EditorView {
                                             "Revert this edit",
                                             cx,
                                             move |this, _, cx| {
-                                                let r = this.editor.ensure_live_revert(id);
+                                                let r = this.editor.revert_step(id);
                                                 this.report(r, "Agent edit reverted", cx);
                                             },
                                         )
