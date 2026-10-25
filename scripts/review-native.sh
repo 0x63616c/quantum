@@ -28,7 +28,7 @@ start_app() {
   app_pid=$!
   window=''
   for attempt in {1..100}; do
-    window="$(xdotool search --name '.*Voxelite$' 2>/dev/null | head -1 || true)"
+    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Voxelite$' 2>/dev/null | head -1 || true)"
     [[ -n "$window" ]] && break
     kill -0 "$app_pid" || { cat "$XDG_RUNTIME_DIR/app.log"; exit 1; }
     sleep 0.1
@@ -46,7 +46,7 @@ wait_title() {
     [[ "$(xdotool getwindowname "$window")" == "$1" ]] && return
     sleep 0.1
   done
-  import -window root /tmp/voxelite-review-failure.png
+  timeout 10s import -window root /tmp/voxelite-review-failure.png || true
   printf 'Expected title: %s; got: %s\n' "$1" "$(xdotool getwindowname "$window")" >&2
   exit 1
 }
@@ -59,7 +59,9 @@ search() {
 capture() {
   xdotool mousemove 2879 1799
   sleep 0.3
-  import -window "$window" "$artifact/$1.png"
+  kill -0 "$app_pid"
+  timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
+  mv "$XDG_RUNTIME_DIR/capture.png" "$artifact/$1.png"
 }
 start_app 1 dark "$project"
 xdotool windowsize "$window" 1024 640

@@ -25,7 +25,7 @@ for theme in dark light; do
   app_pid=$!
   window=''
   for attempt in {1..50}; do
-    window="$(xdotool search --name 'Autumn Workshop.*Voxelite' 2>/dev/null | head -1 || true)"
+    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Autumn Workshop.*Voxelite' 2>/dev/null | head -1 || true)"
     [[ -n "$window" ]] && break
     kill -0 "$app_pid"
     sleep 0.2
@@ -36,10 +36,13 @@ for theme in dark light; do
   # Allow the full-quality CPU render and compositor upload to finish.
   sleep 6
   kill -0 "$app_pid"
-  import -window "$window" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme.png"
+  timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
+  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme.png"
   xdotool windowsize "$window" 1024 640
   sleep 6
-  import -window "$window" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme-small.png"
+  kill -0 "$app_pid"
+  timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
+  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme-small.png"
   kill "$app_pid"
   wait "$app_pid" || true
   app_pid=''

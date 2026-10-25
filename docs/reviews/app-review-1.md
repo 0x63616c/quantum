@@ -65,6 +65,11 @@ only copied/temp fixtures. GTK's Location field under bare Xvfb required clickin
 the actual Open button; the script records this rather than pretending the
 chooser's Enter activation was reliable.
 
+Capture scripts select visible windows belonging to the current app PID, enforce
+a timeout on ImageMagick, and replace artifacts only after a successful capture.
+This also fixed an intermittent capture hang encountered during the final rerun;
+the complete native workflow subsequently passed with these safeguards.
+
 ## Evidence
 
 - [Dark, 1440×900](../../screenshots/app-dark.png)
