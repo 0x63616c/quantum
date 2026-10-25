@@ -95,6 +95,7 @@ fn atomic_batches_mirror_noop_and_operation_receipts() {
     let f = Fixture::new();
     let failed=f.fail("voxels_batch",json!({"operations":[{"kind":"set","layer":"Base","voxels":[{"at":[1,1,1],"slot":1}]},{"kind":"box","layer":"Base","region":{"min":[31,0,0],"max":[33,1,1]},"slot":1}]}),"out_of_bounds");
     assert_eq!(failed["error"]["command_index"], 1);
+    assert_eq!(failed["error"]["path"], "/operations/1");
     assert_eq!(f.read("document_info", json!({}))["voxel_count"], 0);
     assert_eq!(f.read("history_read", json!({}))["total"], 0);
     let args=f.args(json!({"layer":"Base","voxels":[{"at":[1,1,1],"slot":1}],"mirror":{"axes":["x"],"plane2":[32,0,0]}}));
@@ -131,6 +132,43 @@ fn atomic_batches_mirror_noop_and_operation_receipts() {
     assert_eq!(f.read("document_info", json!({}))["voxel_count"], 2);
     f.edit("history_redo", json!({"entry_id":history["head_id"]}));
     assert_eq!(f.read("document_info", json!({}))["voxel_count"], 3);
+}
+
+#[test]
+fn batch_explicit_voxel_budget_is_shared_and_rejection_is_atomic() {
+    let f = Fixture::new();
+    let cells = vec![json!({"at":[1,1,1],"slot":1}); 32769];
+    let mut args = f.args(json!({"operations":[
+        {"kind":"set","layer":"Base","voxels":cells},
+        {"kind":"set","layer":"Base","voxels":cells}
+    ]}));
+    let result = f.call("voxels_batch", args.clone());
+    assert_eq!(result["error"]["code"], "limit_exceeded");
+    assert_eq!(result["error"]["command_index"], 1);
+    assert_eq!(result["error"]["path"], "/operations/1/voxels");
+    assert_eq!(f.read("document_info", json!({}))["revision"], "0");
+    assert_eq!(f.read("document_info", json!({}))["voxel_count"], 0);
+    for op in args["operations"].as_array_mut().unwrap() {
+        op["voxels"].as_array_mut().unwrap().pop();
+    }
+    assert_eq!(f.call("voxels_batch", args)["ok"], true);
+    assert_eq!(f.read("document_info", json!({}))["voxel_count"], 1);
+}
+
+#[test]
+fn labels_are_validated_even_when_no_core_transaction_runs() {
+    let f = Fixture::new();
+    for label in ["\n", &"🦀".repeat(21)] {
+        let result = f.fail(
+            "document_save",
+            json!({"path":"invalid.voxl","label":label}),
+            "invalid_argument",
+        );
+        assert_eq!(result["error"]["path"], "/label");
+        assert!(!f.root.path().join("invalid.voxl").exists());
+        let result = f.call("document_create", json!({"name":"Invalid","label":label,"operation_id":Uuid::new_v4(),"expected_epoch":f.epoch}));
+        assert_eq!(result["error"]["code"], "invalid_argument");
+    }
 }
 #[test]
 fn strict_arguments_epoch_and_locked_hidden_layers() {

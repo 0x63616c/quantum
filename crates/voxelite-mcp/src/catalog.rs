@@ -20,6 +20,15 @@ fn opt(name: &'static str, value: Value) -> Field {
 fn string(max: usize) -> Value {
     json!({"type":"string","minLength":1,"maxLength":max})
 }
+fn name(max: usize) -> Value {
+    let mut schema = string(max);
+    schema["pattern"] = json!("^[^\\u0000-\\u001f\\u007f-\\u009f]+$");
+    schema["description"] = json!(format!("Nonempty text, at most {max} UTF-8 bytes, without control characters. The byte limit is also checked at runtime."));
+    schema
+}
+fn rgba() -> Value {
+    json!({"type":"array","prefixItems":[integer(0,255),integer(0,255),integer(0,255),{"const":255}],"items":false,"minItems":4,"maxItems":4,"description":"Opaque sRGB RGBA8; alpha must equal 255."})
+}
 fn integer(min: i64, max: i64) -> Value {
     json!({"type":"integer","minimum":min,"maximum":max})
 }
@@ -53,16 +62,21 @@ fn pos() -> Value {
     array(integer(-32768, 32767), 3, 3)
 }
 fn region() -> Value {
-    object(vec![
+    let mut schema = object(vec![
         req("min", pos()),
         req("max", array(integer(-32767, 32768), 3, 3)),
-    ])
+    ]);
+    schema["description"] = json!("Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.");
+    schema
+}
+fn anchor() -> Value {
+    json!({"oneOf":[object(vec![req("kind",json!({"const":"voxel"})),req("at",pos())]),object(vec![req("kind",json!({"const":"region"})),req("min",pos()),req("max",array(integer(-32767,32768),3,3))])]})
 }
 fn slot(air: bool) -> Value {
     json!({"anyOf":[integer(if air {0} else {1},256),string(128)],"description":"Stable slot number or unique swatch name; zero is air for explicit writes only."})
 }
 fn layer() -> Value {
-    let mut s = string(128);
+    let mut s = name(128);
     s["description"] = json!("Layer UUID or unique exact name. Never inferred from UI selection.");
     s
 }
@@ -130,12 +144,12 @@ fn write_fields(new: bool) -> Vec<Field> {
             req("expected_revision", revision()),
         ]);
     }
-    f.push(opt("label", string(80)));
+    f.push(opt("label", name(80)));
     f
 }
 fn render_fields() -> Vec<Field> {
     let number = json!({"type":"number","minimum":-1e9,"maximum":1e9});
-    let camera = object(vec![
+    let mut camera = object(vec![
         req("eye", array(number.clone(), 3, 3)),
         req("target", array(number.clone(), 3, 3)),
         req("up", array(number, 3, 3)),
@@ -148,6 +162,10 @@ fn render_fields() -> Vec<Field> {
             "fov_y_degrees",
             json!({"type":"number","exclusiveMinimum":1,"exclusiveMaximum":179}),
         ),
+    ]);
+    camera["oneOf"] = json!([
+        {"properties":{"projection":{"const":"orthographic"}},"required":["ortho_height"],"not":{"required":["fov_y_degrees"]}},
+        {"properties":{"projection":{"const":"perspective"}},"required":["fov_y_degrees"],"not":{"required":["ortho_height"]}}
     ]);
     vec![
         opt(
@@ -168,6 +186,11 @@ fn render_fields() -> Vec<Field> {
             choice(&["contact_sheet", "individual", "both"]),
         ),
     ]
+}
+fn box_constraints(schema: &mut Value) {
+    schema["if"] = json!({"properties":{"mode":{"const":"erase"}},"required":["mode"]});
+    schema["then"] = json!({"not":{"required":["slot"]}});
+    schema["else"] = json!({"required":["slot"]});
 }
 fn output_schema(name: &str, scope: u8) -> Value {
     let error = object(vec![
@@ -296,6 +319,21 @@ fn build() -> Vec<Spec> {
             };
             common.append(&mut fields);
             let mut schema = object(common);
+            match name {
+                "voxels_box" => box_constraints(&mut schema),
+                "render" | "export_png" => {
+                    schema["not"] = json!({"required":["camera"],"anyOf":[{"required":["views"]},{"required":["perspective"]}]});
+                    if name == "export_png" {
+                        schema["properties"]["image_mode"] = choice(&["contact_sheet", "individual"]);
+                        schema["if"] = json!({"properties":{"image_mode":{"const":"individual"}},"required":["image_mode"]});
+                        // Without an explicit camera, individual export needs
+                        // exactly one named view instead of the four-view default.
+                        schema["then"] = json!({"anyOf":[{"required":["camera"]},{"required":["views"],"properties":{"views":{"maxItems":1}}}]});
+                    }
+                }
+                "query" => schema["not"] = json!({"required":["view","layer"],"properties":{"view":{"const":"composite"}}}),
+                _ => {}
+            }
             schema["$schema"] = json!("https://json-schema.org/draft/2020-12/schema");
             let validator = jsonschema::validator_for(&schema).expect("built-in input schema");
             let mut tool = Tool::new(
@@ -400,7 +438,11 @@ fn build() -> Vec<Spec> {
     .into_iter()
     .map(|(k, mut f)| {
         f.push(req("kind", json!({"const":k})));
-        object(f)
+        let mut schema = object(f);
+        if k == "box" {
+            box_constraints(&mut schema);
+        }
+        schema
     })
     .collect();
     add(
@@ -479,7 +521,7 @@ fn build() -> Vec<Spec> {
         "Add or replace stable slot 1..256 with opaque RGBA. Existing references change appearance, including locked layers. Omitted name creates an unnamed swatch. One undoable edit.",
         vec![
             req("slot", integer(1, 256)),
-            req("rgba", array(integer(0, 255), 4, 4)),
+            req("rgba", rgba()),
             opt("name", string(128)),
         ],
         2,
@@ -548,12 +590,11 @@ fn build() -> Vec<Spec> {
         ],
         1,
     );
-    let anchor = json!({"oneOf":[object(vec![req("kind",json!({"const":"voxel"})),req("at",pos())]),object(vec![req("kind",json!({"const":"region"})),req("min",pos()),req("max",array(integer(-32767,32768),3,3))])]});
     add(
         "comments_add",
         "Create a persistent voxel/region anchored thread. Author is always agent, never caller-supplied. Text is plain text, max 4096 UTF-8 bytes. Returns thread/message IDs; undoable and saved in .voxl.",
         vec![
-            req("anchor", anchor),
+            req("anchor", anchor()),
             opt("layer", layer()),
             req("text", string(4096)),
             opt("thread_id", uuid()),

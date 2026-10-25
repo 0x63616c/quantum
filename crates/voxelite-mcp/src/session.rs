@@ -110,7 +110,8 @@ impl Session {
                 if label.len() > 80 || validate_name(&label).is_err() {
                     return Err(Failure::invalid(
                         "label must be 1..80 UTF-8 bytes without control characters",
-                    ).at("/label"));
+                    )
+                    .at("/label"));
                 }
             }
             self.reserve_receipt(name, &a)?;
@@ -174,14 +175,20 @@ impl Session {
         // also prevents repeated saves of a clean document starving dirty ones.
         let saves = if name == "document_save" {
             let target: Uuid = a.get("model_id")?;
-            self.documents.iter().filter(|(id, doc)| **id != target && doc.dirty()).count()
+            self.documents
+                .iter()
+                .filter(|(id, doc)| **id != target && doc.dirty())
+                .count()
         } else {
             self.documents.len() + usize::from(matches!(name, "document_create" | "document_open"))
         };
         if self.receipts.len() + 1 + saves > MAX_RECEIPTS
             || self.receipt_bytes + (1 + saves) * RECEIPT_RESERVATION > MAX_RECEIPT_BYTES
         {
-            let mut error = Failure::new("limit_exceeded", "session receipt budget exhausted; remaining capacity is reserved for saving dirty documents");
+            let mut error = Failure::new(
+                "limit_exceeded",
+                "session receipt budget exhausted; remaining capacity is reserved for saving dirty documents",
+            );
             error.recovery = "Save each dirty document, preserving operation_id on exact retries, then start a new session.";
             return Err(error);
         }
@@ -315,7 +322,10 @@ fn dispatch(
             let mut commands = Vec::new();
             let mut explicit_voxels = 0;
             for (index, v) in operations.iter().enumerate() {
-                explicit_voxels += v.get("voxels").and_then(Value::as_array).map_or(0, Vec::len);
+                explicit_voxels += v
+                    .get("voxels")
+                    .and_then(Value::as_array)
+                    .map_or(0, Vec::len);
                 if explicit_voxels > MAX_EXPLICIT_VOXELS {
                     let mut error = Failure::new("limit_exceeded", "a request may contain at most 65,536 explicit voxel entries across all batch operations")
                         .at(format!("/operations/{index}/voxels"));
@@ -638,4 +648,86 @@ fn query(s: &Snapshot, a: &Args<'_>) -> Result<Value> {
         data["voxels"] = json!(page);
     }
     Ok(data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn call(session: &mut Session, name: &str, args: Value) -> Value {
+        let spec = crate::catalog::CATALOG
+            .iter()
+            .find(|s| s.tool.name == name)
+            .unwrap();
+        session.call(spec, args).structured_content.unwrap()
+    }
+
+    #[test]
+    fn exhausted_receipts_preserve_saves_for_every_dirty_document() {
+        for byte_limit in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let mut session = Session::new(root.path().to_owned());
+            let epoch = session.epoch;
+            let mut models = Vec::new();
+            for _ in 0..2 {
+                let result = call(
+                    &mut session,
+                    "voxelite_document_create",
+                    json!({"name":"Unsaved","expected_epoch":epoch,"operation_id":Uuid::new_v4()}),
+                );
+                assert_eq!(result["ok"], true);
+                models.push(result["data"]["model_id"].clone());
+            }
+            if byte_limit {
+                // Inject a boundary state without allocating 8 MiB of receipts.
+                session.receipt_bytes = MAX_RECEIPT_BYTES - 2 * RECEIPT_RESERVATION;
+            } else {
+                let receipt = session.success(json!({}), vec![]);
+                while session.receipts.len() < MAX_RECEIPTS - 2 {
+                    session
+                        .receipts
+                        .insert(Uuid::new_v4(), (String::new(), receipt.clone()));
+                }
+            }
+            let mut args = json!({"model_id":models[0],"expected_epoch":epoch,"expected_revision":"0","operation_id":Uuid::new_v4(),"layer":"Base","voxels":[{"at":[0,0,0],"slot":1}]});
+            let result = call(&mut session, "voxelite_voxels_set", args.clone());
+            assert_eq!(result["error"]["code"], "limit_exceeded");
+            args.as_object_mut().unwrap().remove("layer");
+            args.as_object_mut().unwrap().remove("voxels");
+            args["path"] = json!("../invalid.voxl");
+            let count = session.receipts.len();
+            assert_eq!(
+                call(&mut session, "voxelite_document_save", args.clone())["ok"],
+                false
+            );
+            assert_eq!(session.receipts.len(), count);
+            args["path"] = json!("first.voxl");
+            let saved = call(&mut session, "voxelite_document_save", args.clone());
+            assert_eq!(saved["ok"], true, "{saved}");
+            let mut redundant = args.clone();
+            redundant["operation_id"] = json!(Uuid::new_v4());
+            assert_eq!(
+                call(&mut session, "voxelite_document_save", redundant)["error"]["code"],
+                "limit_exceeded"
+            );
+            let mut second = args.clone();
+            second["model_id"] = models[1].clone();
+            second["path"] = json!("second.voxl");
+            second["operation_id"] = json!(Uuid::new_v4());
+            assert_eq!(
+                call(&mut session, "voxelite_document_save", second)["ok"],
+                true
+            );
+            assert_eq!(call(&mut session, "voxelite_document_save", args), saved);
+            assert!(session.documents.values().all(|d| !d.dirty()));
+            assert!(session.receipts.len() <= MAX_RECEIPTS);
+            assert!(session.receipt_bytes <= MAX_RECEIPT_BYTES);
+            for path in ["first.voxl", "second.voxl"] {
+                let project =
+                    voxelite_format::from_bytes(&std::fs::read(root.path().join(path)).unwrap())
+                        .unwrap();
+                assert_eq!(project.document.content.name, "Unsaved");
+            }
+        }
+    }
 }
