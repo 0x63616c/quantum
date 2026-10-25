@@ -99,6 +99,7 @@ fn main() -> anyhow::Result<()> {
                     Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf")),
                 ])
                 .expect("bundled Geist fonts");
+            cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
             let theme = options
                 .theme

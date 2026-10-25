@@ -15,6 +15,8 @@ pub struct EditorView {
     theme: Theme,
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
+    painted_image: Option<Arc<RenderImage>>,
+    last_title: String,
     rendering: bool,
     render_pending: bool,
     render_size: [u32; 2],
@@ -112,13 +114,15 @@ impl EditorView {
             theme,
             focus,
             image: None,
+            painted_image: None,
+            last_title: String::new(),
             rendering: false,
             render_pending: false,
             render_size: [0, 0],
             viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
-            grid: true,
+            grid: false,
             menu: None,
             menu_index: 0,
             palette_open: false,
@@ -1602,6 +1606,12 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.image.as_ref().map(|i| i.id) != self.painted_image.as_ref().map(|i| i.id) {
+            if let Some(previous) = self.painted_image.take() {
+                let _ = window.drop_image(previous);
+            }
+            self.painted_image = self.image.clone();
+        }
         let size = window.viewport_size();
         let width = (f32::from(size.width) - 368.0).max(1.0);
         let height = (f32::from(size.height) - 126.0).max(1.0);
@@ -1614,7 +1624,7 @@ impl Render for EditorView {
             self.render_size = dimensions;
             self.request_render(cx);
         }
-        window.set_window_title(&format!(
+        let title = format!(
             "{}{} — Voxelite",
             self.editor.snapshot().name,
             if self.editor.engine.is_dirty() {
@@ -1622,7 +1632,11 @@ impl Render for EditorView {
             } else {
                 ""
             }
-        ));
+        );
+        if title != self.last_title {
+            window.set_window_title(&title);
+            self.last_title = title;
+        }
         cx.set_menus(
             MENUS
                 .iter()
