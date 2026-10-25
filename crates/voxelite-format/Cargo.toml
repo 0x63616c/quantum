@@ -10,3 +10,15 @@ voxelite-core.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies.serde]
+workspace = true
+[dependencies.serde_json]
+workspace = true
+[dependencies.sha2]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
