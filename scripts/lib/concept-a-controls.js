@@ -21,6 +21,7 @@
     modalFocus,
     follow = true,
     paused = false,
+    historyPreview = false,
     tool = "place",
     selectedLayer = "Canopy";
   const mirrors = new Set(),
@@ -322,11 +323,13 @@
     ["picker", "Picker", "I"],
   ];
   function chooseTool(id) {
+    if (historyPreview) return;
     tool = id;
     const name = tools.find((t) => t[0] === id)?.[1] || "Scatter moss";
     $("[data-current-tool]").textContent = name;
     $("[data-tool-icon]").innerHTML = icons[id] || icons.agent;
     $(".tool-picker").setAttribute("data-selected-tool", id);
+    $(".tool-settings").hidden = id !== "scatter";
 
   }
   function setFollow(value) {
@@ -371,6 +374,7 @@
     }
   }
   function toggleStep(id) {
+    if (historyPreview) return;
     if (!$(".history-panel").hidden) closeHistory();
     const undone = window.__toggleStep(id);
     const i = reverted.indexOf(id);
@@ -500,14 +504,7 @@
         ),
         item(
           `${lockedLayers.has(selectedLayer) ? "Unlock" : "Lock"} layer`,
-          () => {
-            lockedLayers.has(selectedLayer)
-              ? lockedLayers.delete(selectedLayer)
-              : lockedLayers.add(selectedLayer);
-            notify(
-              `${selectedLayer} ${lockedLayers.has(selectedLayer) ? "locked" : "unlocked"}`,
-            );
-          },
+          () => toggleLayerLock(selectedLayer),
           "",
           "lock",
         ),
@@ -609,6 +606,17 @@
       ],
     })[name] || [];
   };
+  function toggleLayerLock(name) {
+    if (historyPreview) return;
+    lockedLayers.has(name) ? lockedLayers.delete(name) : lockedLayers.add(name);
+    const button = $(`[data-layer-lock="${name}"]`);
+    button.setAttribute('aria-pressed', String(lockedLayers.has(name)));
+    button.innerHTML = icons[lockedLayers.has(name) ? 'lock' : 'unlock'];
+  }
+  function selectCapture(angle) {
+    $$('[data-capture-angle]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.captureAngle === angle)));
+    $$('[data-view-angle]').forEach(b => b.dataset.captureVisible = String(b.dataset.viewAngle === angle));
+  }
   function selectPalette(id) {
     activePalette = id;
     swatchIndex = 0;
@@ -806,35 +814,19 @@
   }
   const initials = author => author === "Artist 01" ? "A1" : author === "Designer 02" ? "D2" : "You";
   const messageHTML = (author, text, mcp = false) =>
-    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${author === "You" ? "Just now" : mcp ? "2 min ago" : "3 min ago"}</time></div><p>${esc(text)}</p>${mcp ? '<details class="message-provenance"><summary>Agent details</summary><div class="mcp-note">MCP · comments.reply</div></details>' : ""}</div>`;
+    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${author === "You" ? "Now" : mcp ? "2m" : "3m"}</time></div><p>${esc(text)}</p>${mcp ? '<div class="mcp-note">MCP · comments.reply</div>' : ""}</div>`;
   function renderComments() {
-    $("[data-comment-count]").textContent = comments.filter(
-      (c) => !c.resolved,
-    ).length;
+    $("[data-comment-count]").textContent = comments.filter(c => !c.resolved).length;
     $(".comment-pins").innerHTML = comments
-      .filter((c) => !c.resolved || $("[data-comment-filter]").value !== "open")
-      .map(
-        (c) =>
-          `<button class="comment-pin ${c.resolved ? "resolved" : ""}" data-pin="${c.id}" aria-label="Comment ${c.id}: ${esc(c.layer)}" aria-pressed="${c.id === activeThread}">${c.id}</button>`,
-      )
-      .join("");
-    const filter = $("[data-comment-filter]").value,
-      visible = comments.filter(
-        (c) => filter === "all" || c.resolved === (filter === "resolved"),
-      );
-    $(".comment-list").innerHTML =
-      visible
-        .map(
-          (c) =>
-            `<article class="comment-card ${c.id === activeThread ? "selected" : ""}"><button data-open-thread="${c.id}"><div class="thread-meta"><span class="avatar">${esc(initials(c.author))}</span><strong>${esc(c.author)}</strong><span>· ${esc(c.layer)}</span></div><p>${esc(c.text || "New comment")}</p><span class="comment-location">${c.replies.length ? `${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}` : "No replies"}${c.replies.some((r) => r.mcp) ? " · Agent replied" : ""}${c.resolved ? " · Resolved" : ""}</span></button></article>`,
-        )
-        .join("") || '<p class="muted">No threads here.</p>';
-    const c = comments.find((c) => c.id === activeThread);
+      .filter(c => !c.resolved || $("[data-comment-filter]").value !== "open")
+      .map(c => `<button class="comment-pin ${c.resolved ? "resolved" : ""}" data-pin="${c.id}" aria-label="Comment ${c.id}: ${esc(c.layer)}" aria-pressed="${c.id === activeThread}">${c.id}</button>`).join("");
+    const filter = $("[data-comment-filter]").value;
+    const visible = comments.filter(c => c.id !== activeThread && (filter === "all" || c.resolved === (filter === "resolved")));
+    $(".comment-list").innerHTML = visible.map(c => `<article class="comment-card"><button data-open-thread="${c.id}"><span class="comment-summary-heading"><span class="comment-number">${c.id}</span><strong>${esc(c.layer)}</strong><span>${esc(c.author)}</span></span><p>${esc(c.text || "New comment")}</p></button></article>`).join("") || (activeThread ? "" : '<p class="muted">No threads here.</p>');
+    const c = comments.find(c => c.id === activeThread);
     $(".pin-thread").hidden = !c;
-    if (c) {
-      $(".pin-thread").innerHTML =
-        `<div class="thread-heading"><strong>${esc(c.layer)}</strong><span class="muted">#${c.id}</span><button class="icon-button" data-action="close-thread" aria-label="Close thread">${icons.close}</button></div>${c.draft ? "" : messageHTML(c.author, c.text)}${c.replies.map((r) => messageHTML(r.author, r.text, r.mcp)).join("")}<div class="thread-actions"><span class="muted">${c.resolved ? "Resolved" : `Voxel ${c.anchor.join(", ")}`}</span><button data-resolve="${c.id}">${icons.check}${c.resolved ? "Reopen" : "Resolve"}</button></div><form class="reply-form"><textarea aria-label="Reply to comment" placeholder="${c.draft ? "Write a comment…" : "Reply or mention an agent…"}" required maxlength="500" rows="2"></textarea><button aria-label="Send reply" type="submit">Reply ↵</button></form>`;
-    }
+    $("#comments-panel").classList.toggle("thread-open", !!c);
+    if (c) $(".pin-thread").innerHTML = `<div class="thread-heading"><span class="comment-number selected">${c.id}</span><strong>${esc(c.layer)}</strong><button data-resolve="${c.id}">${icons.check}${c.resolved ? "Reopen" : "Resolve"}</button><button class="icon-button" data-action="close-thread" aria-label="Close thread">${icons.close}</button></div>${c.draft ? "" : messageHTML(c.author, c.text)}${c.replies.map(r => messageHTML(r.author, r.text, r.mcp)).join("")}<form class="reply-form"><textarea aria-label="Reply to comment" placeholder="${c.draft ? "Write a comment…" : "Reply or mention…"}" required maxlength="500" rows="2"></textarea><button aria-label="Send reply" type="submit">${c.draft ? "Comment" : "Reply"} ↵</button></form>`;
   }
   function openThread(id) {
     setTab("comments");
@@ -867,7 +859,6 @@
     $(".reply-form textarea").focus();
   }
   window.__projectComments = (project, cubes, hidden) => {
-    $(".comment-anchor").replaceChildren();
     for (const el of $$("[data-pin]")) {
       const c = comments.find((c) => c.id === Number(el.dataset.pin));
       const [x, y, depth] = project(c.anchor.map((v) => v + 0.5));
@@ -883,20 +874,8 @@
         y > $(".viewport").clientHeight - 20;
       el.style.left = x + "px";
       el.style.top = y + "px";
-      if (c.id === activeThread) {
-        const thread = $(".pin-thread");
-        thread.hidden = el.hidden;
-        const left = 24;
-        const top = 92;
-        thread.style.left = left + "px";
-        thread.style.top = top + "px";
-        if (!el.hidden) {
-          const corners = [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]].map(p => project(p.map((v,i) => v + c.anchor[i])));
-          const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-          const startX = left + thread.offsetWidth, startY = top + 36;
-          $('.comment-anchor').innerHTML = `<path class="anchor-leader" d="M ${startX} ${startY} C ${startX + 50} ${startY}, ${x - 60} ${y}, ${x} ${y}"/>` + edges.map(([a,b]) => `<path d="M ${corners[a][0]} ${corners[a][1]} L ${corners[b][0]} ${corners[b][1]}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="4"/>`;
-        }
-      }
+      // The thread is docked outside the canvas. Only the anchored pin is
+      // highlighted; no connector or voxel wireframe can cross the artwork.
     }
     $("[data-zoom-label]").textContent = $("[data-zoom-select]").value + "%";
   };
@@ -1327,6 +1306,8 @@
       window.__setViewAngle(el.dataset.viewAngle);
       return;
     }
+    if (el.dataset.captureAngle) { selectCapture(el.dataset.captureAngle); return; }
+    if (el.dataset.layerLock) { toggleLayerLock(el.dataset.layerLock); return; }
     if (el.dataset.selectLayer) {
       selectedLayer = el.dataset.selectLayer;
       $$("[data-select-layer]").forEach((b) => {
