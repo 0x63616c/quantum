@@ -88,16 +88,71 @@ impl Op {
             _ => None,
         }
     }
+    pub fn disabled_reason(self) -> &'static str {
+        match self {
+            Self::Undo => "Nothing to undo",
+            Self::Redo => "Nothing to redo",
+            _ => "File operation in progress",
+        }
+    }
     pub fn shortcut(self) -> &'static str {
         match self {
-            Self::New => "⌘/Ctrl N",
-            Self::Open => "⌘/Ctrl O",
-            Self::Save => "⌘/Ctrl S",
-            Self::SaveAs => "⇧ ⌘/Ctrl S",
-            Self::Quit => "⌘/Ctrl Q",
-            Self::Undo => "⌘/Ctrl Z",
-            Self::Redo => "⇧ ⌘/Ctrl Z",
-            Self::Commands => "⌘/Ctrl K",
+            Self::New => {
+                if cfg!(target_os = "macos") {
+                    "⌘ N"
+                } else {
+                    "Ctrl N"
+                }
+            }
+            Self::Open => {
+                if cfg!(target_os = "macos") {
+                    "⌘ O"
+                } else {
+                    "Ctrl O"
+                }
+            }
+            Self::Save => {
+                if cfg!(target_os = "macos") {
+                    "⌘ S"
+                } else {
+                    "Ctrl S"
+                }
+            }
+            Self::SaveAs => {
+                if cfg!(target_os = "macos") {
+                    "⇧ ⌘ S"
+                } else {
+                    "Ctrl Shift S"
+                }
+            }
+            Self::Quit => {
+                if cfg!(target_os = "macos") {
+                    "⌘ Q"
+                } else {
+                    "Ctrl Q"
+                }
+            }
+            Self::Undo => {
+                if cfg!(target_os = "macos") {
+                    "⌘ Z"
+                } else {
+                    "Ctrl Z"
+                }
+            }
+            Self::Redo => {
+                if cfg!(target_os = "macos") {
+                    "⇧ ⌘ Z"
+                } else {
+                    "Ctrl Shift Z"
+                }
+            }
+            Self::Commands => {
+                if cfg!(target_os = "macos") {
+                    "⌘ K"
+                } else {
+                    "Ctrl K"
+                }
+            }
             Self::Frame => "F",
             Self::Place => "B",
             Self::Erase => "E",

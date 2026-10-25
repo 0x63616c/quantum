@@ -10,6 +10,16 @@ use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos, Preset};
 use voxelite_render::{PresetView, RenderOptions, View};
 
+/// Image identity includes the editor incarnation, since reopening the same ID
+/// resets its revision. Camera and dimensions bind picking to displayed pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct FrameIdentity {
+    generation: u64,
+    revision: u64,
+    camera: OrbitCamera,
+    size: [u32; 2],
+}
+
 pub struct EditorView {
     editor: Editor,
     theme: Theme,
@@ -23,6 +33,7 @@ pub struct EditorView {
     display_camera: OrbitCamera,
     document_generation: u64,
     displayed: Option<FrameIdentity>,
+    display_size: [u32; 2],
     camera_view: Option<Op>,
     navigation_epoch: u64,
     interactive_render: bool,
@@ -122,12 +133,14 @@ impl EditorView {
                 this.hover = None;
                 cx.notify();
             }
-        }).detach();
+        })
+        .detach();
         Self {
             cursor: editor.snapshot().bounds.min,
             display_camera: editor.camera,
             document_generation: 0,
             displayed: None,
+            display_size: [0, 0],
             camera_view: Some(Op::Frame),
             navigation_epoch: 0,
             interactive_render: false,
@@ -225,6 +238,7 @@ impl EditorView {
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
+                            this.display_size = [frame.width, frame.height];
                             let buffer =
                                 image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
                                     .expect("renderer dimensions");
@@ -267,7 +281,12 @@ impl EditorView {
         .detach();
     }
     fn frame_identity(&self) -> FrameIdentity {
-        FrameIdentity { generation: self.document_generation, revision: self.editor.engine.revision(), camera: self.editor.camera, size: self.render_size }
+        FrameIdentity {
+            generation: self.document_generation,
+            revision: self.editor.engine.revision(),
+            camera: self.editor.camera,
+            size: self.render_size,
+        }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
         self.editor = editor;
@@ -296,8 +315,13 @@ impl EditorView {
             .iter()
             .flat_map(|(_, items)| items.iter().copied())
             .filter(|op| {
-                *op != Op::Commands && *op != Op::ToolPicker
-                    && (!self.tools_only || matches!(op, Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker))
+                *op != Op::Commands
+                    && *op != Op::ToolPicker
+                    && (!self.tools_only
+                        || matches!(
+                            op,
+                            Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker
+                        ))
                     && op
                         .label()
                         .to_lowercase()
@@ -306,7 +330,9 @@ impl EditorView {
             .collect()
     }
     fn enabled(&self, op: Op) -> bool {
-        if self.dialog_open { return false; }
+        if self.dialog_open {
+            return false;
+        }
         match op {
             Op::Undo => self.editor.engine.head().is_some(),
             Op::Redo => self.editor.engine.redo_head().is_some(),
@@ -330,7 +356,9 @@ impl EditorView {
         }
     }
     fn invoke(&mut self, op: Op, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.enabled(op) { return; }
+        if !self.enabled(op) {
+            return;
+        }
         self.menu = None;
         self.command_open = false;
         self.palette_open = false;
@@ -417,7 +445,7 @@ impl EditorView {
             Op::Palette => {
                 self.palette_open = true;
                 self.palette_cursor = self.palette_index;
-            },
+            }
             Op::Commands | Op::ToolPicker => {
                 self.tools_only = op == Op::ToolPicker;
                 self.command_open = true;
@@ -447,9 +475,12 @@ impl EditorView {
     }
     fn open_dialog(&mut self, cx: &mut Context<Self>) {
         self.dialog_open = true;
+        self.status = "Choose a project to open…".into();
         self.drag = None;
         let receiver = cx.prompt_for_paths(PathPromptOptions {
-            files: true, directories: false, multiple: false,
+            files: true,
+            directories: false,
+            multiple: false,
             prompt: Some("Open .voxl project".into()),
         });
         cx.spawn(async move |this, cx| {
@@ -498,23 +529,38 @@ impl EditorView {
                         this.editor.finish_save(saved);
                         this.status = "Saved".into();
                         this.error = false;
-                        if let Some(op) = next { this.run(op, cx); }
+                        if let Some(op) = next {
+                            this.run(op, cx);
+                        }
                     }
-                    Err(error) => { this.status = error.to_string(); this.error = true; }
+                    Err(error) => {
+                        this.status = error.to_string();
+                        this.error = true;
+                    }
                 }
                 cx.notify();
             });
-        }).detach();
+        })
+        .detach();
     }
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
             self.write_project(path, cx);
             return;
         }
-        let directory = self.editor.path.as_ref().and_then(|p| p.parent())
-            .map(PathBuf::from).unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-        let suggested = format!("{}.voxl", self.editor.snapshot().name.replace(['/', '\\'], "-"));
+        let directory = self
+            .editor
+            .path
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+        let suggested = format!(
+            "{}.voxl",
+            self.editor.snapshot().name.replace(['/', '\\'], "-")
+        );
         self.dialog_open = true;
+        self.status = "Choose where to save this project…".into();
         let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
@@ -537,17 +583,26 @@ impl EditorView {
         }).detach();
     }
     fn resolve_pending(&mut self, choice: usize, cx: &mut Context<Self>) {
-        let Some(op) = self.pending.take() else { return; };
+        let Some(op) = self.pending.take() else {
+            return;
+        };
         match choice {
             0 => self.run(op, cx),
-            2 => { self.after_save = Some(op); self.save(false, cx); }
-            _ => {},
+            2 => {
+                self.after_save = Some(op);
+                self.save(false, cx);
+            }
+            _ => {}
         }
         cx.notify();
     }
     fn ray(&self, p: Point<Pixels>) -> Option<voxelite_app::editor::Ray> {
         // Pointer edits must use the exact camera of the image the user can see.
-        if self.image.is_none() || self.displayed != Some(self.frame_identity()) {
+        if self.rendering
+            || self.interactive_render
+            || self.image.is_none()
+            || self.displayed != Some(self.frame_identity())
+        {
             return None;
         }
         let b = self.viewport.get();
@@ -562,7 +617,13 @@ impl EditorView {
         )
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
-        if self.command_open || self.info.is_some() || self.pending.is_some() || self.dialog_open {
+        if self.command_open
+            || self.menu.is_some()
+            || self.palette_open
+            || self.info.is_some()
+            || self.pending.is_some()
+            || self.dialog_open
+        {
             return;
         }
         if matches!(
@@ -616,9 +677,12 @@ impl EditorView {
         if self.pending.is_some() {
             match key {
                 "left" => self.pending_choice = (self.pending_choice + 2) % 3,
-                "right" | "tab" => self.pending_choice = (self.pending_choice + if e.keystroke.modifiers.shift { 2 } else { 1 }) % 3,
+                "right" | "tab" => {
+                    self.pending_choice =
+                        (self.pending_choice + if e.keystroke.modifiers.shift { 2 } else { 1 }) % 3
+                }
                 "enter" => self.resolve_pending(self.pending_choice, cx),
-                _ => {},
+                _ => {}
             }
             cx.stop_propagation();
             cx.notify();
@@ -627,9 +691,15 @@ impl EditorView {
         if self.palette_open {
             match key {
                 "down" => self.palette_cursor = (self.palette_cursor + 1) % PALETTES.len(),
-                "up" => self.palette_cursor = (self.palette_cursor + PALETTES.len() - 1) % PALETTES.len(),
-                "enter" => { self.palette_index = self.palette_cursor; self.palette_open = false; },
-                _ => {},
+                "up" => {
+                    self.palette_cursor =
+                        (self.palette_cursor + PALETTES.len() - 1) % PALETTES.len()
+                }
+                "enter" => {
+                    self.palette_index = self.palette_cursor;
+                    self.palette_open = false;
+                }
+                _ => {}
             }
             self.palette_scroll.scroll_to_item(self.palette_cursor);
             cx.stop_propagation();
@@ -653,7 +723,12 @@ impl EditorView {
                     }
                 }
                 _ => {
-                    if let Some(text) = &e.keystroke.key_char {
+                    if let Some(text) = &e.keystroke.key_char
+                        && self.query.len() + text.len() <= 128
+                        && !text.chars().any(char::is_control)
+                        && !e.keystroke.modifiers.control
+                        && !e.keystroke.modifiers.platform
+                    {
                         self.query.push_str(text);
                         self.command_index = 0;
                     }
@@ -748,7 +823,12 @@ impl EditorView {
             .id(id)
             .tooltip(move |_, cx| {
                 cx.new(|_| Hint {
-                    text: format!("{}  {}", op.label(), op.shortcut()).into(),
+                    text: if enabled {
+                        format!("{}  {}", op.label(), op.shortcut())
+                    } else {
+                        format!("{} · {}", op.label(), op.disabled_reason())
+                    }
+                    .into(),
                     theme,
                 })
                 .into()
@@ -758,15 +838,21 @@ impl EditorView {
             .gap(px(8.0))
             .rounded(px(6.0))
             .cursor_pointer()
-            .text_color(if enabled { theme.muted() } else { theme.line() })
+            .text_color(if enabled {
+                theme.muted()
+            } else {
+                theme.disabled()
+            })
             .when(self.selected(op), |d| {
                 d.bg(theme.selected()).text_color(theme.accent())
             })
-            .hover(move |d| d.bg(theme.hover()).text_color(theme.text()))
+            .when(enabled, |d| {
+                d.hover(move |d| d.bg(theme.hover()).text_color(theme.text()))
+            })
             .child(icon(name).text_color(if enabled {
                 theme.muted()
             } else {
-                theme.muted().opacity(0.4)
+                theme.disabled()
             }))
             .when(!label.is_empty(), |d| d.child(label))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
@@ -811,8 +897,16 @@ impl EditorView {
             .child(div().flex_1())
             .child(mono("NATIVE / v0.1").text_color(t.muted()))
     }
-    fn toolbar(&self, cx: &Context<Self>) -> Div {
+    fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
+        let tool_icon = match self.editor.tool {
+            Tool::Place => "place",
+            Tool::Erase => "erase",
+            Tool::Paint => "paint",
+            Tool::Fill => "fill",
+            Tool::Box => "box",
+            Tool::Picker => "picker",
+        };
         row()
             .h(px(62.0))
             .flex_shrink_0()
@@ -823,13 +917,21 @@ impl EditorView {
             .child(icon("cube").text_color(t.muted()).size(px(22.0)))
             .child(
                 div()
-                    .min_w(px(180.0))
+                    .w(px(if compact { 180.0 } else { 240.0 }))
+                    .min_w(px(0.0))
+                    .flex_shrink_0()
                     .child(
                         row()
                             .gap(px(5.0))
                             .font_weight(FontWeight::MEDIUM)
-                            .child(self.editor.snapshot().name.clone())
-                            .child(div().text_color(t.muted()).child(".voxl")),
+                            .child(
+                                div()
+                                    .min_w(px(0.0))
+                                    .overflow_hidden()
+                                    .text_ellipsis()
+                                    .child(self.editor.snapshot().name.clone()),
+                            )
+                            .child(div().flex_shrink_0().text_color(t.muted()).child(".voxl")),
                     )
                     .child(div().text_size(px(12.0)).text_color(t.muted()).child(
                         if self.editor.engine.is_dirty() {
@@ -837,27 +939,80 @@ impl EditorView {
                         } else if self.editor.path.is_some() {
                             "Saved locally"
                         } else {
-                            "Example project"
+                            "Unsaved project"
                         },
                     )),
             )
-            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()).mx(px(8.0)))
-            .child(self.button("undo", "undo", "", Op::Undo, cx))
-            .child(self.button("redo", "redo", "", Op::Redo, cx))
-            .child(self.button("frame", "fit", "Frame", Op::Frame, cx))
-            .child(div().flex_1())
+            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
             .child(
-                self.button("commands", "search", "Search commands", Op::Commands, cx)
+                self.button(
+                    "tool-picker",
+                    tool_icon,
+                    self.editor.tool.name(),
+                    Op::ToolPicker,
+                    cx,
+                )
+                .text_color(t.text())
+                .child(icon("chevron").size(px(14.0)).text_color(t.muted())),
+            )
+            .child(
+                row()
+                    .gap(px(2.0))
                     .child(
-                        mono(if cfg!(target_os = "macos") {
-                            "⌘ K"
-                        } else {
-                            "Ctrl K"
-                        })
-                        .ml(px(20.0)),
+                        div()
+                            .mr(px(5.0))
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child("Mirror"),
+                    )
+                    .children(
+                        [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
+                            .into_iter()
+                            .enumerate()
+                            .map(|(i, op)| {
+                                row()
+                                    .id(("mirror", i))
+                                    .w(px(32.0))
+                                    .h(px(32.0))
+                                    .justify_center()
+                                    .rounded(px(6.0))
+                                    .border_1()
+                                    .border_color(if self.editor.mirror[i] {
+                                        t.accent()
+                                    } else {
+                                        t.background()
+                                    })
+                                    .text_color(if self.editor.mirror[i] {
+                                        t.accent()
+                                    } else {
+                                        t.muted()
+                                    })
+                                    .when(self.editor.mirror[i], |d| d.bg(t.selected()))
+                                    .cursor_pointer()
+                                    .hover(move |d| d.bg(t.hover()))
+                                    .child(mono(["X", "Y", "Z"][i]))
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        this.invoke(op, window, cx)
+                                    }))
+                            }),
                     ),
             )
-            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()).mx(px(4.0)))
+            .child(div().flex_1())
+            .child(
+                self.button(
+                    "commands",
+                    "search",
+                    if compact { "" } else { "Search commands" },
+                    Op::Commands,
+                    cx,
+                )
+                .child(mono(if cfg!(target_os = "macos") {
+                    "⌘ K"
+                } else {
+                    "Ctrl K"
+                })),
+            )
+            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
             .child(self.button(
                 "theme",
                 if t == Theme::Dark { "sun" } else { "moon" },
@@ -872,114 +1027,12 @@ impl EditorView {
                     .text_color(t.text()),
             )
     }
-    fn tool_rail(&self, cx: &Context<Self>) -> Div {
-        let t = self.theme;
-        let ops = [
-            Op::Place,
-            Op::Erase,
-            Op::Paint,
-            Op::Fill,
-            Op::Box,
-            Op::Picker,
-        ];
-        let icons = ["place", "erase", "paint", "fill", "box", "picker"];
-        div()
-            .w(px(72.0))
-            .flex_shrink_0()
-            .h_full()
-            .flex()
-            .flex_col()
-            .items_center()
-            .py(px(16.0))
-            .gap(px(6.0))
-            .border_r_1()
-            .border_color(t.line())
-            .children(Tool::ALL.into_iter().enumerate().map(|(i, tool)| {
-                let op = ops[i];
-                div()
-                    .id(("tool", i))
-                    .tooltip(move |_, cx| {
-                        cx.new(|_| Hint {
-                            text: format!("{} · {}", tool.name(), tool.key()).into(),
-                            theme: t,
-                        })
-                        .into()
-                    })
-                    .flex()
-                    .flex_col()
-                    .items_center()
-                    .justify_center()
-                    .w(px(56.0))
-                    .h(px(58.0))
-                    .rounded(px(7.0))
-                    .gap(px(5.0))
-                    .cursor_pointer()
-                    .text_color(if self.editor.tool == tool {
-                        t.accent()
-                    } else {
-                        t.muted()
-                    })
-                    .when(self.editor.tool == tool, |d| {
-                        d.bg(t.selected())
-                            .border_1()
-                            .border_color(t.accent().opacity(0.35))
-                    })
-                    .hover(move |d| d.bg(t.hover()))
-                    .child(
-                        icon(icons[i])
-                            .size(px(20.0))
-                            .text_color(if self.editor.tool == tool {
-                                t.accent()
-                            } else {
-                                t.muted()
-                            }),
-                    )
-                    .child(div().text_size(px(12.0)).child(tool.name()))
-                    .on_click(cx.listener(move |this, _, window, cx| this.invoke(op, window, cx)))
-            }))
-            .child(div().h(px(1.0)).w(px(32.0)).my(px(9.0)).bg(t.line()))
-            .child(
-                div()
-                    .text_size(px(12.0))
-                    .text_color(t.muted())
-                    .child("Mirror"),
-            )
-            .children(
-                [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, op)| {
-                        row()
-                            .id(("mirror", i))
-                            .w(px(36.0))
-                            .h(px(32.0))
-                            .justify_center()
-                            .rounded(px(6.0))
-                            .cursor_pointer()
-                            .font_family("Geist Mono")
-                            .text_color(if self.editor.mirror[i] {
-                                t.accent()
-                            } else {
-                                t.muted()
-                            })
-                            .when(self.editor.mirror[i], |d| {
-                                d.bg(t.selected()).border_1().border_color(t.accent())
-                            })
-                            .hover(move |d| d.bg(t.hover()))
-                            .child(["X", "Y", "Z"][i])
-                            .on_click(
-                                cx.listener(move |this, _, window, cx| this.invoke(op, window, cx)),
-                            )
-                    }),
-            )
-            .child(div().flex_1())
-            .child(self.button("help", "spark", "", Op::Help, cx))
-    }
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
         let camera = self.display_camera;
+        let frame_size = self.displayed.map(|_| self.display_size);
         let hover = self.hover;
         let grid = self.grid;
         let doc_bounds = self.editor.snapshot().bounds;
@@ -989,8 +1042,11 @@ impl EditorView {
                 bounds_cell.set(bounds);
             },
             move |bounds, _, window, _| {
-                let aspect =
-                    f64::from(f32::from(bounds.size.width) / f32::from(bounds.size.height));
+                let aspect = frame_size
+                    .map(|s| f64::from(s[0]) / f64::from(s[1].max(1)))
+                    .unwrap_or_else(|| {
+                        f64::from(f32::from(bounds.size.width) / f32::from(bounds.size.height))
+                    });
                 let project = |p: DVec3| {
                     let uv = camera.project(p, aspect);
                     point(
@@ -1057,7 +1113,13 @@ impl EditorView {
                     row()
                         .gap(px(10.0))
                         .text_color(t.muted())
-                        .child("Orthographic")
+                        .child(match self.camera_view {
+                            Some(Op::Front) => "Front",
+                            Some(Op::Right) => "Right",
+                            Some(Op::Top) => "Top",
+                            Some(Op::Frame) => "Isometric",
+                            _ => "Orthographic",
+                        })
                         .child(div().w(px(3.0)).h(px(3.0)).rounded_full().bg(t.muted()))
                         .child("Studio lighting"),
                 ),
@@ -1072,11 +1134,11 @@ impl EditorView {
             .child(
                 div()
                     .absolute()
-                    .bottom(px(20.0))
+                    .bottom(px(66.0))
                     .left(px(24.0))
                     .text_color(t.muted())
                     .text_size(px(12.0))
-                    .child("Right-drag orbit   ·   Shift-drag pan   ·   Scroll zoom"),
+                    .child("Right-drag orbit · Shift-right-drag pan · Scroll zoom"),
             )
             .child(
                 div().absolute().bottom(px(14.0)).right(px(20.0)).child(
@@ -1087,6 +1149,7 @@ impl EditorView {
                         .border_1()
                         .border_color(t.line())
                         .rounded(px(7.0))
+                        .child(self.button("view-iso", "cube", "Iso", Op::Frame, cx))
                         .child(self.button("view-front", "cube", "Front", Op::Front, cx))
                         .child(self.button("view-right", "cube", "Right", Op::Right, cx))
                         .child(self.button("view-top", "cube", "Top", Op::Top, cx)),
@@ -1096,6 +1159,9 @@ impl EditorView {
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, e: &MouseDownEvent, _, cx| {
+                    if this.dialog_open {
+                        return;
+                    }
                     this.drag = Some(e.position);
                     cx.stop_propagation();
                 }),
@@ -1103,6 +1169,9 @@ impl EditorView {
             .on_mouse_down(
                 MouseButton::Middle,
                 cx.listener(|this, e: &MouseDownEvent, _, cx| {
+                    if this.dialog_open {
+                        return;
+                    }
                     this.drag = Some(e.position);
                     cx.stop_propagation();
                 }),
@@ -1137,7 +1206,32 @@ impl EditorView {
                     }
                 }),
             )
+            .on_mouse_up(
+                MouseButton::Right,
+                cx.listener(|this, _, _, _| this.drag = None),
+            )
+            .on_mouse_up(
+                MouseButton::Middle,
+                cx.listener(|this, _, _, _| this.drag = None),
+            )
+            .on_mouse_up_out(
+                MouseButton::Right,
+                cx.listener(|this, _, _, _| this.drag = None),
+            )
+            .on_mouse_up_out(
+                MouseButton::Middle,
+                cx.listener(|this, _, _, _| this.drag = None),
+            )
             .on_scroll_wheel(cx.listener(|this, e: &ScrollWheelEvent, _, cx| {
+                if this.dialog_open
+                    || this.command_open
+                    || this.palette_open
+                    || this.menu.is_some()
+                    || this.info.is_some()
+                    || this.pending.is_some()
+                {
+                    return;
+                }
                 let delta = match e.delta {
                     ScrollDelta::Pixels(p) => f64::from(f32::from(p.y)),
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
@@ -1156,67 +1250,69 @@ impl EditorView {
         div()
             .flex_shrink_0()
             .p(px(20.0))
-            .border_b_1()
+            .border_t_1()
             .border_color(t.line())
             .child(
                 row()
                     .justify_between()
-                    .mb(px(14.0))
-                    .child(div().font_weight(FontWeight::MEDIUM).child("Palette"))
+                    .mb(px(10.0))
+                    .child(
+                        row()
+                            .id("palette-switch")
+                            .h(px(32.0))
+                            .gap(px(8.0))
+                            .rounded(px(6.0))
+                            .cursor_pointer()
+                            .hover(move |d| d.bg(t.hover()))
+                            .child(PALETTES[self.palette_index].0)
+                            .child(icon("chevron").size(px(14.0)).text_color(t.muted()))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.palette_open = !this.palette_open;
+                                this.palette_cursor = this.palette_index;
+                                cx.notify();
+                            })),
+                    )
                     .child(mono(format!("{} colors", palette.order.len())).text_color(t.muted())),
             )
             .child(
-                row()
-                    .id("palette-switch")
-                    .h(px(36.0))
-                    .px(px(10.0))
-                    .mb(px(14.0))
-                    .border_1()
-                    .border_color(t.line())
-                    .rounded(px(6.0))
-                    .justify_between()
-                    .cursor_pointer()
-                    .hover(move |d| d.bg(t.hover()))
-                    .child(PALETTES[self.palette_index].0)
-                    .child(icon("chevron").text_color(t.muted()))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.palette_open = !this.palette_open;
-                        cx.notify();
-                    })),
-            )
-            .child(div().flex().flex_wrap().gap(px(6.0)).children(
-                palette.order.iter().enumerate().map(|(i, slot)| {
-                    let swatch = palette.get(*slot).expect("valid palette").clone();
-                    let c = swatch.rgba;
-                    let selected = c == color;
-                    div()
-                        .id(("swatch", i))
-                        .w(px(26.0))
-                        .h(px(26.0))
-                        .p(px(2.0))
-                        .rounded(px(6.0))
-                        .border_1()
-                        .border_color(if selected { t.accent() } else { t.line() })
-                        .cursor_pointer()
-                        .hover(move |d| d.border_color(t.text()))
-                        .child(
+                div()
+                    .id("swatch-scroll")
+                    .max_h(px(176.0))
+                    .overflow_y_scroll()
+                    .child(div().flex().flex_wrap().gap(px(4.0)).children(
+                        palette.order.iter().enumerate().map(|(i, slot)| {
+                            let swatch = palette.get(*slot).expect("valid palette").clone();
+                            let c = swatch.rgba;
+                            let selected = c == color;
                             div()
-                                .size_full()
-                                .rounded(px(3.0))
-                                .bg(rgb(u32::from(c[0]) << 16
-                                    | u32::from(c[1]) << 8
-                                    | u32::from(c[2]))),
-                        )
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            this.editor.color = swatch.clone();
-                            this.error = false;
-                            cx.notify();
-                        }))
-                }),
-            ))
+                                .id(("swatch", i))
+                                .w(px(32.0))
+                                .h(px(32.0))
+                                .p(px(2.0))
+                                .rounded(px(6.0))
+                                .border_1()
+                                .border_color(if selected { t.accent() } else { t.line() })
+                                .cursor_pointer()
+                                .hover(move |d| d.border_color(t.text()))
+                                .child(
+                                    div()
+                                        .size_full()
+                                        .rounded(px(3.0))
+                                        .bg(rgb(u32::from(c[0]) << 16
+                                            | u32::from(c[1]) << 8
+                                            | u32::from(c[2]))),
+                                )
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.editor.color = swatch.clone();
+                                    this.error = false;
+                                    cx.notify();
+                                }))
+                        }),
+                    )),
+            )
             .child(
                 row()
-                    .mt(px(14.0))
+                    .mt(px(12.0))
                     .gap(px(8.0))
                     .text_color(t.muted())
                     .child(
@@ -1253,7 +1349,7 @@ impl EditorView {
             .child(
                 div()
                     .id("layer-scroll")
-                    .max_h(px(240.0))
+                    .max_h(px(192.0))
                     .overflow_y_scroll()
                     .children(self.editor.snapshot().layers.iter().rev().enumerate().map(
                         |(i, layer)| {
@@ -1280,7 +1376,7 @@ impl EditorView {
                                 .child(
                                     row()
                                         .id(("eye", i))
-                                        .w(px(28.0))
+                                        .w(px(32.0))
                                         .h(px(32.0))
                                         .justify_center()
                                         .rounded(px(5.0))
@@ -1300,7 +1396,7 @@ impl EditorView {
                                 .child(
                                     row()
                                         .id(("lock", i))
-                                        .w(px(28.0))
+                                        .w(px(32.0))
                                         .h(px(32.0))
                                         .justify_center()
                                         .rounded(px(5.0))
@@ -1334,7 +1430,7 @@ impl EditorView {
         let t = self.theme;
         div()
             .flex_1()
-            .min_h(px(100.0))
+            .min_h(px(188.0))
             .flex()
             .flex_col()
             .p(px(20.0))
@@ -1369,7 +1465,11 @@ impl EditorView {
                                     .child(
                                         div().flex_1().child(entry.label.clone()).child(
                                             mono(format!(
-                                                "Human · +{} −{} · {} painted",
+                                                "{} · +{} −{} · {} painted",
+                                                match entry.actor.origin {
+                                                    voxelite_core::Origin::Human => "Human",
+                                                    voxelite_core::Origin::Agent => "Agent",
+                                                },
                                                 entry.changes.added,
                                                 entry.changes.removed,
                                                 entry.changes.recolored
@@ -1386,13 +1486,23 @@ impl EditorView {
                             .gap(px(10.0))
                             .child(icon("history").size(px(14.0)).text_color(t.muted()))
                             .child(
-                                div().child("Project opened").child(
-                                    div()
-                                        .text_size(px(12.0))
-                                        .mt(px(4.0))
-                                        .text_color(t.muted())
-                                        .child("Your edits will appear here"),
-                                ),
+                                div()
+                                    .child(if self.editor.path.is_some() {
+                                        "Project opened"
+                                    } else {
+                                        "Project ready"
+                                    })
+                                    .child(
+                                        div()
+                                            .text_size(px(12.0))
+                                            .mt(px(4.0))
+                                            .text_color(t.muted())
+                                            .child(if self.editor.engine.head().is_none() {
+                                                "Your edits will appear here"
+                                            } else {
+                                                "Local editing history"
+                                            }),
+                                    ),
                             ),
                     ),
             )
@@ -1409,30 +1519,29 @@ impl EditorView {
         div()
             .id("sidebar-scroll")
             .overflow_y_scroll()
-            .w(px(296.0))
+            .w(px(336.0))
             .flex_shrink_0()
             .h_full()
             .border_l_1()
             .border_color(t.line())
             .flex()
             .flex_col()
-            .child(self.palette_panel(cx))
-            .child(self.layers_panel(cx))
-            .child(self.history_panel(cx))
             .child(
                 row()
-                    .h(px(48.0))
+                    .h(px(52.0))
                     .flex_shrink_0()
                     .px(px(20.0))
                     .gap(px(9.0))
-                    .border_t_1()
+                    .border_b_1()
                     .border_color(t.line())
-                    .text_color(t.muted())
-                    .child(icon("spark"))
-                    .child("Local session")
+                    .child(icon("spark").text_color(t.muted()))
+                    .child(div().font_weight(FontWeight::MEDIUM).child("Local session"))
                     .child(div().flex_1())
-                    .child(mono("Human")),
+                    .child(mono("Human").text_color(t.muted())),
             )
+            .child(self.history_panel(cx))
+            .child(self.layers_panel(cx))
+            .child(self.palette_panel(cx))
     }
     fn statusbar(&self) -> Div {
         let t = self.theme;
@@ -1456,6 +1565,7 @@ impl EditorView {
             .child(
                 div()
                     .flex_1()
+                    .min_w(px(0.0))
                     .overflow_hidden()
                     .text_ellipsis()
                     .text_color(if self.error { t.danger() } else { t.muted() })
@@ -1485,20 +1595,23 @@ impl EditorView {
             .px(px(10.0))
             .gap(px(10.0))
             .rounded(px(5.0))
-            .cursor_pointer()
+            .when(enabled, |d| d.cursor_pointer())
             .when(selected, |d| d.bg(t.hover()))
-            .text_color(if enabled {
-                t.text()
-            } else {
-                t.muted().opacity(0.5)
-            })
+            .text_color(if enabled { t.text() } else { t.disabled() })
             .hover(move |d| d.bg(t.hover()))
             .child(div().w(px(14.0)).when(self.selected(op), |d| {
                 d.child(icon("check").size(px(14.0)).text_color(t.accent()))
             }))
             .child(op.label())
             .child(div().flex_1())
-            .child(mono(op.shortcut()).text_color(t.muted()))
+            .child(
+                mono(if enabled {
+                    op.shortcut()
+                } else {
+                    op.disabled_reason()
+                })
+                .text_color(t.muted()),
+            )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
                 if enabled {
@@ -1520,15 +1633,82 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
-        if let Some(op) = self.pending {
-            return Some(div().absolute().size_full().flex().justify_center().items_center().bg(rgba(0x00000070))
-                .child(self.floating().w(px(440.0)).p(px(24.0)).child(div().text_size(px(18.0)).font_weight(FontWeight::SEMIBOLD).child("Save your changes?"))
-                    .child(div().my(px(16.0)).text_color(t.muted()).child("This project has unsaved edits. Save them or explicitly discard them before continuing."))
-                    .child(row().justify_end().gap(px(8.0))
-                        .child(row().id("discard").h(px(36.0)).px(px(10.0)).rounded(px(6.0)).text_color(t.danger()).cursor_pointer().hover(move |d| d.bg(t.hover())).child("Discard").on_click(cx.listener(move |this, _, window, cx| { this.pending = None; this.run(op, window, cx); })))
-                        .child(row().id("cancel").h(px(36.0)).px(px(10.0)).rounded(px(6.0)).cursor_pointer().hover(move |d| d.bg(t.hover())).child("Cancel").on_click(cx.listener(|this, _, _, cx| { this.pending = None; cx.notify(); })))
-                        .child(row().id("save-keep").h(px(36.0)).px(px(12.0)).rounded(px(6.0)).border_1().border_color(t.line()).cursor_pointer().hover(move |d| d.bg(t.hover())).child("Save & keep editing").on_click(cx.listener(|this, _, _, cx| { this.pending = None; this.save(false, cx); })))
-                    )).into_any_element());
+        if self.dialog_open {
+            return Some(
+                div()
+                    .absolute()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(rgba(0x00000070))
+                    .child(self.floating().p(px(24.0)).child(self.status.clone()))
+                    .into_any_element(),
+            );
+        }
+        if self.pending.is_some() {
+            return Some(
+                div()
+                    .absolute()
+                    .size_full()
+                    .flex()
+                    .justify_center()
+                    .items_center()
+                    .bg(rgba(0x00000070))
+                    .child(
+                        self.floating()
+                            .w(px(480.0))
+                            .p(px(24.0))
+                            .child(
+                                div()
+                                    .text_size(px(18.0))
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child("Save your changes?"),
+                            )
+                            .child(div().my(px(16.0)).text_color(t.muted()).child(
+                                "Save this project before continuing. Discarding cannot be undone.",
+                            ))
+                            .child(
+                                row().justify_end().gap(px(8.0)).children(
+                                    ["Discard", "Cancel", "Save & continue"]
+                                        .into_iter()
+                                        .enumerate()
+                                        .map(|(i, label)| {
+                                            row()
+                                                .id(("pending-choice", i))
+                                                .h(px(36.0))
+                                                .px(px(12.0))
+                                                .rounded(px(6.0))
+                                                .border_1()
+                                                .border_color(if self.pending_choice == i {
+                                                    t.accent()
+                                                } else {
+                                                    t.line()
+                                                })
+                                                .text_color(if i == 0 {
+                                                    t.danger()
+                                                } else {
+                                                    t.text()
+                                                })
+                                                .cursor_pointer()
+                                                .hover(move |d| d.bg(t.hover()))
+                                                .child(label)
+                                                .on_click(cx.listener(move |this, _, _, cx| {
+                                                    this.resolve_pending(i, cx)
+                                                }))
+                                        }),
+                                ),
+                            )
+                            .child(
+                                div()
+                                    .mt(px(16.0))
+                                    .text_size(px(12.0))
+                                    .text_color(t.muted())
+                                    .child("Tab to choose · Enter to confirm · Esc to cancel"),
+                            ),
+                    )
+                    .into_any_element(),
+            );
         }
         if let Some((title, text)) = self.info {
             return Some(
@@ -1600,13 +1780,24 @@ impl EditorView {
                                     .border_b_1()
                                     .border_color(t.line())
                                     .child(icon("search").text_color(t.muted()))
-                                    .child(div().flex_1().text_size(px(16.0)).child(
-                                        if self.query.is_empty() {
-                                            "Type a command…".to_string()
-                                        } else {
-                                            format!("{}│", self.query)
-                                        },
-                                    ))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w(px(0.0))
+                                            .overflow_hidden()
+                                            .text_ellipsis()
+                                            .text_size(px(16.0))
+                                            .child(if self.query.is_empty() {
+                                                if self.tools_only {
+                                                    "Search tools…"
+                                                } else {
+                                                    "Type a command…"
+                                                }
+                                                .to_string()
+                                            } else {
+                                                format!("{}│", self.query)
+                                            }),
+                                    )
                                     .child(mono("ESC").text_color(t.muted())),
                             )
                             .child(
@@ -1659,45 +1850,69 @@ impl EditorView {
                                     .text_size(px(12.0))
                                     .child("CHOOSE PALETTE"),
                             )
-                            .children(PALETTES.iter().enumerate().map(|(i, (name, preset))| {
-                                let p = preset
-                                    .map(|p| p.palette())
-                                    .unwrap_or_else(|| self.editor.snapshot().palette.clone());
+                            .child(
                                 div()
-                                    .id(("preset", i))
-                                    .p(px(10.0))
-                                    .rounded(px(6.0))
-                                    .cursor_pointer()
-                                    .hover(move |d| d.bg(t.hover()))
-                                    .child(row().justify_between().mb(px(9.0)).child(*name).when(
-                                        i == self.palette_index,
-                                        |d| {
-                                            d.child(
-                                                icon("check").size(px(14.0)).text_color(t.accent()),
-                                            )
+                                    .id("palette-results")
+                                    .track_scroll(&self.palette_scroll)
+                                    .max_h(px(400.0))
+                                    .overflow_y_scroll()
+                                    .children(PALETTES.iter().enumerate().map(
+                                        |(i, (name, preset))| {
+                                            let p =
+                                                preset.map(|p| p.palette()).unwrap_or_else(|| {
+                                                    self.editor.snapshot().palette.clone()
+                                                });
+                                            div()
+                                                .id(("preset", i))
+                                                .p(px(10.0))
+                                                .rounded(px(6.0))
+                                                .cursor_pointer()
+                                                .when(i == self.palette_cursor, |d| {
+                                                    d.bg(t.hover())
+                                                        .border_l_2()
+                                                        .border_color(t.accent())
+                                                })
+                                                .hover(move |d| d.bg(t.hover()))
+                                                .child(
+                                                    row()
+                                                        .justify_between()
+                                                        .mb(px(9.0))
+                                                        .child(*name)
+                                                        .when(i == self.palette_index, |d| {
+                                                            d.child(
+                                                                icon("check")
+                                                                    .size(px(14.0))
+                                                                    .text_color(t.accent()),
+                                                            )
+                                                        }),
+                                                )
+                                                .child(
+                                                    row()
+                                                        .h(px(9.0))
+                                                        .rounded(px(3.0))
+                                                        .overflow_hidden()
+                                                        .children(p.order.iter().take(32).map(
+                                                            |slot| {
+                                                                let c = p
+                                                                    .get(*slot)
+                                                                    .expect("valid palette")
+                                                                    .rgba;
+                                                                div().flex_1().h_full().bg(rgb(
+                                                                    u32::from(c[0]) << 16
+                                                                        | u32::from(c[1]) << 8
+                                                                        | u32::from(c[2]),
+                                                                ))
+                                                            },
+                                                        )),
+                                                )
+                                                .on_click(cx.listener(move |this, _, _, cx| {
+                                                    this.palette_index = i;
+                                                    this.palette_open = false;
+                                                    cx.notify();
+                                                }))
                                         },
-                                    ))
-                                    .child(
-                                        row()
-                                            .h(px(9.0))
-                                            .rounded(px(3.0))
-                                            .overflow_hidden()
-                                            .children(p.order.iter().take(32).map(|slot| {
-                                                let c = p.get(*slot).expect("valid palette").rgba;
-                                                div()
-                                                    .flex_1()
-                                                    .h_full()
-                                                    .bg(rgb(u32::from(c[0]) << 16
-                                                        | u32::from(c[1]) << 8
-                                                        | u32::from(c[2])))
-                                            })),
-                                    )
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.palette_index = i;
-                                        this.palette_open = false;
-                                        cx.notify();
-                                    }))
-                            })),
+                                    )),
+                            ),
                     )
                     .into_any_element(),
             );
@@ -1735,7 +1950,7 @@ impl Render for EditorView {
             self.painted_image = self.image.clone();
         }
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - 368.0).max(1.0);
+        let width = (f32::from(size.width) - 336.0).max(1.0);
         let height = (f32::from(size.height) - 126.0).max(1.0);
         let scale = (1024.0 / width.max(height)).min(1.0);
         let dimensions = [
@@ -1743,6 +1958,13 @@ impl Render for EditorView {
             (height * scale).round() as u32,
         ];
         if self.render_size != dimensions {
+            if self.render_size == [0, 0] {
+                self.editor.camera = OrbitCamera::fit(
+                    self.editor.snapshot(),
+                    f64::from(dimensions[0]) / f64::from(dimensions[1].max(1)),
+                );
+                self.display_camera = self.editor.camera;
+            }
             self.render_size = dimensions;
             self.request_render(cx);
         }
@@ -1802,13 +2024,12 @@ impl Render for EditorView {
                 }
             }))
             .child(self.menubar(cx))
-            .child(self.toolbar(cx))
+            .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
             .child(
                 row()
                     .flex_1()
                     .min_h(px(0.0))
                     .items_stretch()
-                    .child(self.tool_rail(cx))
                     .child(self.viewport(cx))
                     .child(self.sidebar(cx)),
             )
@@ -1827,6 +2048,7 @@ impl Render for EditorView {
                             this.command_open = false;
                             this.info = None;
                             this.pending = None;
+                            this.drag = None;
                             cx.stop_propagation();
                             cx.notify();
                         }),
