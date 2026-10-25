@@ -550,3 +550,47 @@ kbd{color:var(--muted)}
 .edit-annotation.flipped .annotation-line::before { left: auto; right: -2px; }
 [hidden] { display: none !important; }
 .gizmo text { font-size: 12px; }
+
+/* Round 3: current activity first, captured evidence, precise camera controls. */
+.session-log > .running { margin-top: 0; min-height: 60px; }
+.session-log-heading { height: 36px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.step-inspect { height: 24px; padding: 0; gap: 4px; justify-content: flex-start; min-width: 0; text-align: left; font-size: 13px; }
+.step-inspect > span { overflow: hidden; text-overflow: ellipsis; }
+.step-inspect > .icon { width: 12px; height: 12px; color: var(--muted); }
+.session-step.is-undone .step-inspect { color: var(--muted); }
+.session-step.is-undone .step-inspect > span { text-decoration: line-through; }
+.diff { flex: none; }
+.change-evidence { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px 34px; height: 28px; font-size: 12px; }
+.change-evidence code { margin: 0; white-space: nowrap; }
+.a-inspector .session-validation > .text-button { display: none; }
+.b-session .session-log-heading > .text-button { display: none; }
+.b-session .step-meta > .muted { display: inline; }
+.b-session .session-step { min-height: 66px; }
+.b-session .session-step.running { min-height: 60px; }
+.b-session .change-evidence { padding-left: 34px; gap: 6px; }
+.session-composer button:disabled { color: var(--muted); opacity: .6; }
+.session-composer button:not(:disabled) { color: var(--text); }
+.render-heading { height: 28px; margin-bottom: 6px; gap: 8px; }
+.render-state { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; }
+[data-render-stale] { color: var(--accent); }
+.render-heading > .icon-button { width: 28px; height: 28px; padding: 6px; margin-right: -4px; }
+.render-heading > .icon-button > .icon { width: 14px; height: 14px; }
+.render-preview { border-color: var(--line-strong); border-radius: 3px; }
+.render-preview > span { font-size: 13px; line-height: 24px; }
+.render-preview[aria-pressed=true] { border-color: var(--accent); }
+.render-preview:focus-visible { outline-offset: 2px; }
+.transaction-log .step-title > .step-inspect { grid-column: 2; grid-row: 1; justify-self: start; }
+.transaction-log { --transaction-columns: 32px minmax(180px,1fr) 68px 122px 142px 88px; }
+.transaction-log .step-undo { justify-self: start; }
+.transaction-log .running-label { justify-self: start; }
+.transaction-log [data-step="18"] { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent); }
+.transaction-log [data-step="18"].is-undone { background: transparent; box-shadow: none; }
+.transaction-log .running { background: transparent; box-shadow: none; }
+.transaction-detail { height: 38px; }
+.viewport > canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.viewport-controls [data-toggle-grid] { position: relative; }
+.viewport-controls [data-toggle-grid][aria-pressed=true] { color: var(--text); }
+.viewport-controls [data-toggle-grid][aria-pressed=true]::after { content: ''; position: absolute; height: 2px; background: var(--text); bottom: 2px; left: 9px; right: 9px; }
+.viewport-controls select.zoom { border: 0; background: var(--panel); width: 74px; height: 32px; padding: 0 4px; }
+.view-heading { gap: 8px; }
+.gizmo .axis-rear { stroke-width: 1px; }

@@ -2,6 +2,12 @@ import { chromium } from 'playwright';
 import { mkdir, stat } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+
+async function captureHashes(page) {
+  const captures = await page.evaluate(() => [...document.querySelectorAll('[data-thumbnail]')].map(canvas => canvas.toDataURL()));
+  return captures.map(value => createHash('sha256').update(value).digest('hex'));
+}
 
 // Each HTML file is standalone; no HTTP server or network assets are needed.
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -71,7 +77,7 @@ try {
           const header = document.querySelector('.table-labels');
           if (!header) return true;
           const row = document.querySelector('.transaction-log [data-step="18"]');
-          const cells = ['.step-number','.step-title>span:first-child','.diff','.step-meta>code','.step-meta>.muted','.step-undo'];
+          const cells = ['.step-number','.step-inspect','.diff','.step-meta>code','.step-meta>.muted','.step-undo'];
           return cells.every((s,i) => Math.abs(row.querySelector(s).getBoundingClientRect().left - header.children[i].getBoundingClientRect().left) < 1);
         })(),
         distinctThumbs: new Set([...document.querySelectorAll('[data-thumbnail]')].map(el => el.toDataURL())).size,
@@ -111,9 +117,13 @@ try {
     await page.locator('[data-tool="erase"][aria-pressed="true"]').waitFor();
     await page.locator('[data-mirror="Y"]').click();
     assert.equal(await page.locator('[data-mirror="Y"]').getAttribute('aria-pressed'), 'true');
+    const initialCaptures = await captureHashes(page);
     await page.locator('[data-layer-eye="Canopy"]').click();
     assert.equal(await page.locator('[data-layer-eye="Canopy"]').getAttribute('aria-pressed'), 'false');
+    assert.deepEqual(await captureHashes(page), initialCaptures, 'Visibility must not overwrite captured evidence');
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), true);
     await page.locator('[data-layer-eye="Canopy"]').click();
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), false);
     const lock = page.locator('[data-layer="Canopy"] [data-layer-lock]');
     const unlockedIcon = await lock.locator('svg').innerHTML();
     await lock.click();
@@ -140,9 +150,14 @@ try {
     assert.deepEqual(inspected.added.map(p => p.join(',')).sort(),
       [[8,13,-1],[8,14,-2],[7,15,-2],[7,15,-3],[8,14,-3],[8,14,-1]].map(p => p.join(',')).sort());
     assert.equal(inspected.state, 'applied');
+    assert.equal(inspected.revision, 18);
     await page.locator('[data-history-revert]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 6);
-    assert.equal(JSON.parse(await page.locator('[data-history-diff]').textContent()).state, 'undone');
+    const reverted = JSON.parse(await page.locator('[data-history-diff]').textContent());
+    assert.equal(reverted.state, 'undone');
+    assert.equal(reverted.revision, 18, 'Original change revision must be immutable');
+    assert.equal(reverted.document_revision, 19);
+    assert.equal(await page.locator('[data-change-evidence]').isVisible(), false);
     if (concept === 'c') assert.equal(await page.locator('[data-session-total]').textContent(), '+24 −0');
     await page.locator('[data-history-revert]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
@@ -152,8 +167,19 @@ try {
     assert.equal(await page.evaluate(() => document.activeElement.hasAttribute('data-inspect-step')), true);
     await page.locator('.session-step [data-step-undo="18"]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 6);
+    assert.deepEqual(await captureHashes(page), initialCaptures, 'Undo must not overwrite captured evidence');
+    assert.equal(await page.locator('[data-render-revision]').textContent(), 'r018');
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), true);
+    await page.locator('[data-refresh-renders]').click();
+    const undoneCaptures = await captureHashes(page);
+    assert.notDeepEqual(undoneCaptures, initialCaptures, 'Refresh must capture the edited model');
+    assert.equal(await page.locator('[data-render-revision]').textContent(), 'r021');
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), false);
     await page.locator('.session-step [data-step-undo="18"]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
+    assert.deepEqual(await captureHashes(page), undoneCaptures, 'Redo must preserve the last explicit capture');
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), true);
+    assert.equal(await page.locator('[data-change-evidence]').isVisible(), true);
     await page.locator('.session-step [data-step-undo="17"]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 24);
     await page.locator('.session-step [data-step-undo="17"]').click();
@@ -164,6 +190,31 @@ try {
     await page.locator('[data-history-redo]').click();
     await page.locator('[data-history-redo]').click();
     assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
+    await page.locator('[data-refresh-renders]').click();
+    const refreshedCaptures = await captureHashes(page);
+    assert.equal(await page.locator('[data-render-stale]').isVisible(), false);
+    const initialAxis = await page.locator('[data-axis="x"] circle').getAttribute('cx');
+    await page.locator('.viewport > canvas').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.notEqual(await page.locator('[data-axis="x"] circle').getAttribute('cx'), initialAxis);
+    assert.equal(await page.locator('[data-follow]').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.locator('[data-view-label]').textContent(), 'Custom perspective');
+    assert.equal(await page.locator('[data-view-angle][aria-pressed="true"]').count(), 0);
+    assert.deepEqual(await captureHashes(page), refreshedCaptures, 'Camera motion must not change evidence');
+    await page.locator('[data-zoom-select]').selectOption('125');
+    assert.equal(await page.locator('[data-zoom-select]').inputValue(), '125');
+    await page.locator('.viewport > canvas').focus();
+    await page.keyboard.press('-');
+    assert.equal(await page.locator('[data-zoom-select]').inputValue(), '115');
+    await page.keyboard.press('Home');
+    assert.equal(await page.locator('[data-zoom-select]').inputValue(), '100');
+    assert.equal(await page.locator('[data-view-label]').textContent(), 'Front perspective');
+    await page.locator('[data-toggle-grid]').click();
+    assert.equal(await page.locator('[data-toggle-grid]').getAttribute('aria-pressed'), 'false');
+    await page.locator('[data-toggle-grid]').click();
+    assert.equal(await page.locator('[data-toggle-grid]').evaluate(el => getComputedStyle(el, '::after').height), '2px');
+    await page.locator('[data-follow]').click();
+    assert.equal(await page.locator('[data-follow]').getAttribute('aria-pressed'), 'true');
     await page.locator('[data-follow]').click();
     assert.equal(await page.locator('[data-follow]').getAttribute('aria-pressed'), 'false');
     await page.locator('[data-view-angle="back"]').click();
@@ -195,6 +246,17 @@ try {
     assert.equal(await page.locator('.command-dialog').evaluate(el => el.open), false);
     await page.locator('[data-pause]').click();
     assert.equal(await page.locator('[data-session-state]').textContent(), 'Live');
+    if (concept === 'b') {
+      assert.equal(await page.locator('[data-copy-instruction]').isDisabled(), true);
+      await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText: async text => {window.__copiedDraft = text;}}}));
+      await page.locator('#instruction').fill('Add a mossy stone beside the path.');
+      await page.locator('[data-copy-instruction]').click();
+      assert.equal(await page.evaluate(() => window.__copiedDraft), 'Add a mossy stone beside the path.');
+      assert.equal(await page.locator('.toast').textContent(), 'Instruction copied');
+      await page.evaluate(() => navigator.clipboard.writeText = async () => {throw new Error('Clipboard unavailable');});
+      await page.locator('[data-copy-instruction]').click();
+      assert.equal(await page.locator('#instruction').evaluate(el => el === document.activeElement && el.selectionEnd - el.selectionStart === el.value.length), true);
+    }
     await page.locator('[data-theme-toggle]').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     assert.deepEqual(errors, []);
