@@ -1792,3 +1792,50 @@ input, select, .reply-form textarea { background: var(--field); border-color: va
 .palette-section > .section-title { margin-bottom: 5px; }
 .thread-open .comment-card p { display: none; }
 .thread-open .comment-card > button { padding-block: 5px; }
+
+/* Palettes are a trailing sheet, with library and editing in one bounded column. */
+.palette-dialog {
+  position: fixed; inset: 96px 0 30px auto; margin: 0; width: 400px;
+  height: auto; max-height: none; border-radius: 0; border-width: 0 0 0 1px;
+  box-shadow: -8px 0 24px #0000000b; overflow: auto;
+}
+.palette-dialog[open] { display: flex; flex-direction: column; }
+.palette-dialog::backdrop { background: transparent; }
+.palette-dialog > .floating-heading { padding: 16px 20px 12px; border: 0; flex: none; }
+.palette-manager-body { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.palette-library { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 0 15px 18px; border: 0; border-bottom: 1px solid var(--line); max-height: 270px; flex: none; }
+.library-label { padding: 5px 7px 8px; }
+.palette-library button { padding-inline: 7px; height: 32px; }
+.palette-library button[aria-current="true"] { background: var(--selection); border: 1px solid var(--selection-line); }
+.palette-library .create-palette { margin-bottom: 0; }
+.palette-editor { padding: 20px; flex: 1; min-height: 330px; }
+.palette-editor-heading { margin-bottom: 16px; }
+.palette-editor-heading h3 { font-size: 16px; font-weight: 550; }
+.palette-editor-heading p { padding-left: 0; margin-top: 3px; }
+.palette-editor-heading input { padding-inline: 8px; }
+.duplicate-preset { margin: 0 0 20px; height: 32px; border-color: var(--floating-line); background: var(--field); }
+.manager-swatches { gap: 8px; padding: 2px; margin: -2px; max-height: 260px; }
+.manager-swatches .swatch { height: 32px; border-radius: 5px; }
+.swatch-editor { margin-top: 16px; }
+.swatch-editor > label { flex: 1; justify-content: space-between; }
+.swatch-editor > [data-action="add-swatch"] { margin-left: 0; }
+.is-preset .swatch-editor input:disabled { background: transparent; border: 0; color: var(--muted); opacity: 1; padding: 0; text-align: right; width: 90px; }
+.is-preset .swatch-editor > button { display: none; }
+.palette-use { margin-top: auto; padding-top: 24px; gap: 16px; }
+.palette-use > span { font-size: 12px; }
+.palette-use .primary { flex: none; }
+.share-popover { width: 360px; padding: 16px; }
+.share-scope { margin: 12px 0 8px; color: var(--text); }
+.share-scope strong { font-weight: 550; }
+.share-scope select { background: transparent; border-color: transparent; padding-right: 3px; }
+.permission-description { min-height: 0; margin: 8px 0 12px; font-size: 12px; line-height: 18px; }
+.link-field { margin-top: 0; padding: 4px; background: var(--field); }
+.link-field input { width: 0; }
+.copy-link { width: auto; margin: 0; height: 28px; font-size: 12px; gap: 6px; padding-inline: 8px; }
+.copy-link .icon { width: 13px; height: 13px; }
+.share-members { margin-top: 16px; padding: 12px 0 0; border-bottom: 0; }
+.share-members h3 { font-size: 12px; }
+.access-rule { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+.share-member { height: 34px; padding: 2px 0; gap: 8px; }
+.share-member .avatar { height: 24px; width: 24px; margin: 0; border: 1px solid var(--line); }
+.share-member select { font-size: 12px; }
