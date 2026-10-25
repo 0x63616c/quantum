@@ -67,8 +67,7 @@ pub fn glb(snapshot: &Snapshot) -> ExportResult<Vec<u8>> {
 pub fn write_glb(snapshot: &Snapshot, mut writer: impl Write) -> ExportResult<()> {
     let mesh = greedy_mesh(snapshot)?;
     if mesh.quads.is_empty() {
-        let root =
-            json!({"asset":{"version":"2.0","generator":"Voxelite"},"scene":0,"scenes":[{}]});
+        let root = json!({"asset":{"version":"2.0","generator":"Voxelite"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{}]});
         let mut json = serde_json::to_vec(&root)?;
         pad(&mut json, b' ');
         let total = 12 + 8 + json.len();
