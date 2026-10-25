@@ -3,7 +3,7 @@
 A Rust/GPUI desktop shell for the shared Voxelite engine. It opens the bundled
 Autumn Workshop diorama, or a `.voxl` path supplied on the command line. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
-toolbar with a tool picker, compact palette previews, layers and real
+toolbar, a persistent left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
@@ -50,7 +50,7 @@ is only a preview. Place targets the adjacent face or the bottom work plane.
 Paint, erase and fill require the visible hit to belong to the selected layer;
 select its layer first. Hidden and locked layers reject voxel edits. Mirror
 X/Y/Z reflects around the document's center planes in one undo transaction.
-Enable mirrors in Tools, command search or Shift-X/Y/Z. Active axes appear beside the toolbar tool picker. The viewport's projected X/Y/Z controls select Right/Top/
+Enable mirrors in the left rail, Tools, command search or Shift-X/Y/Z. Active axes stay highlighted in the rail. The viewport's projected X/Y/Z controls select Right/Top/
 Front; Iso and the separate Frame button return to the fitted isometric view.
 
 Selecting a preset does not change existing geometry or dirty the project.
@@ -149,8 +149,10 @@ certification remain outside this round. Portable data is retained on save.
 
 ## Polish round 2: local authoring and live agents
 
-The unified toolbar has a searchable Place/Erase/Paint/Fill/Box/Picker selector.
+The left rail exposes Place/Erase/Paint/Fill/Box/Picker with Lucide icons and
+highlights the active tool. Mirror X/Y/Z controls live below the tool group.
 Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
+Tools → Choose tool retains searchable selection without a toolbar dropdown.
 The toolbar has separate Save and Share actions. Plugin hosting remains an open v1 gate.
 
 **Palette → Manage palettes** opens a persistent custom library. Create, rename,
