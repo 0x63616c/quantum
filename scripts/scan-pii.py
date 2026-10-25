@@ -37,7 +37,7 @@ for name, email in identities:
     if len(local) >= 4:
         identity_terms.add(local)
 # Product/bot labels are not human identity leaks in prose.
-identity_terms = {term for term in identity_terms if term.lower() not in {'voxelite', 'voxelite contributors', 'voxelite agent', 'codex', 'openai', 'root', 'agent'}}
+identity_terms = {term for term in identity_terms if term.lower() not in {'voxelite', 'voxelite contributors', 'voxelite agent', 'codex', 'openai', 'root', 'agent', 'contributors'}}
 if identity_terms:
     patterns['Git identity name/username'] = re.compile(r'(?<![\w-])(?:' + '|'.join(re.escape(x) for x in sorted(identity_terms)) + r')(?![\w-])', re.I)
 
@@ -93,7 +93,11 @@ report = ['# Repository and Git history personal-info scan', '',
     '## Working tree findings', '', '| File:line | Category | Disposition |', '| --- | --- | --- |']
 for name, kind, lines in current:
     disposition = 'Inspect; do not reproduce matched value.'
-    if kind == 'email' and ('OFL' in name or 'LICENSE' in name):
+    if 'LICENSE' in name and kind == 'Git identity name/username':
+        disposition = 'Required upstream attribution; retain license notice.'
+    elif name == 'PLAN.md' and kind == 'Git identity name/username':
+        disposition = 'Personal display-name example in spec; retained because requested automatic fixes are limited to path leaks.'
+    elif kind == 'email' and ('OFL' in name or 'LICENSE' in name):
         disposition = 'Upstream license attribution; retain required notice.'
     elif name.endswith('.ttf') and kind == 'email':
         disposition = 'Embedded upstream font attribution/contact; retain original licensed font.'
