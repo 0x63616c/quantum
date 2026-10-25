@@ -141,9 +141,12 @@
         .join("");
     $("[data-editor-title]").textContent = p.name;
     $("[data-editor-subtitle]").textContent =
-      `${p.preset ? "Preset · read only" : "Custom palette"} · ${p.colors.length} colors`;
+      `${p.preset ? "Read-only preset" : "Custom palette"} · ${p.colors.length} colors`;
     $("[data-palette-rename]").value = p.name;
     $("[data-palette-rename]").disabled = !!p.preset;
+    $("[data-palette-rename]").hidden = !!p.preset;
+    $("[data-editor-title]").hidden = !p.preset;
+    $(".palette-dialog").classList.toggle("is-preset", !!p.preset);
     $(".manager-swatches").innerHTML = p.colors
       .map((c, i) => swatchButton(c, i, editorIndex, true))
       .join("");
@@ -163,11 +166,7 @@
         (action === "add-swatch" && p.colors.length >= 256) ||
         (action === "swatch-left" && editorIndex === 0) ||
         (action === "swatch-right" && editorIndex === p.colors.length - 1));
-    $(".palette-edit-note").textContent = p.preset
-      ? "Preset colors are locked. Duplicate to customize."
-      : "Edits save on Enter or blur. Existing voxels keep their colors.";
-    $("[data-editor-status]").textContent =
-      p.id === activePalette ? "Current brush palette" : "For new voxels only";
+    $("[data-editor-status]").textContent = "Applies to new voxels";
     const use = $('[data-action="use-palette"]');
     use.disabled = p.id === activePalette;
     use.textContent = use.disabled ? "In use" : "Use palette";
@@ -900,12 +899,13 @@
   function updateShare() {
     const restricted = accessScope === 'restricted';
     $$('[data-permission]').forEach(b => { b.disabled = restricted; b.setAttribute('aria-pressed', String(b.dataset.permission === permission)); });
-    $('.permission-description').textContent = restricted ? 'Only the people and agent listed below can open this link.' : ({view:'Browse the model and history without making changes.', comment:'Add comments without editing voxels.', remix:'Create an independent copy. This original stays unchanged.'})[permission];
+    $('.permission-description').textContent = restricted ? 'Only listed people and agents can open this link.' : ({view:'View the model and history. No comments or edits.', comment:'View and comment. No voxel edits.', remix:'View, comment and create an independent copy.'})[permission];
+    $('.access-rule').textContent = restricted ? 'Only their individual permission applies.' : 'Link or individual permission, whichever is higher.';
     $('.link-field input').value = `https://voxelite.example/s/woodland?${restricted ? 'scope=restricted' : `access=${permission}`}`;
     $('.copy-link span').textContent = 'Copy link';
   }
-  $('[data-access-scope]').addEventListener('change', e => {accessScope = e.target.value; updateShare(); $('.share-feedback').textContent = 'Link access updated';});
-  $$('[data-member-permission]').forEach(el => el.addEventListener('change', () => $('.share-feedback').textContent = 'Member access updated'));
+  $('[data-access-scope]').addEventListener('change', e => {accessScope = e.target.value; updateShare(); $('.share-feedback').textContent = '';});
+  $$('[data-member-permission]').forEach(el => el.addEventListener('change', () => $('.share-feedback').textContent = ''));
 
   function openShare() {
     closeFloating();
@@ -918,7 +918,7 @@
     try {
       await navigator.clipboard.writeText(input.value);
       $(".copy-link span").textContent = "Copied";
-      $(".share-feedback").textContent = "Link copied to clipboard";
+      $(".share-feedback").textContent = "";
     } catch {
       input.focus();
       input.select();
@@ -1334,7 +1334,7 @@
     if (el.dataset.permission) {
       permission = el.dataset.permission;
       updateShare();
-      $('.share-feedback').textContent = `Link permission updated · Can ${permission}`;
+      $('.share-feedback').textContent = '';
       return;
     }
     if (el.hasAttribute("data-history-tick")) {
