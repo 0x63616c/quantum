@@ -6,7 +6,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cargo build -p voxelite-app --bin voxelite
 export VOXELITE_REVIEW_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
-mkdir -p screenshots/review-1
+export VOXELITE_REVIEW_ARTIFACTS="${VOXELITE_REVIEW_ARTIFACTS:-$PWD/screenshots/review-1}"
+mkdir -p "$VOXELITE_REVIEW_ARTIFACTS"
 xvfb-run -a -s '-screen 0 2880x1800x24 -nolisten tcp' dbus-run-session -- bash <<'REVIEW'
 set -euo pipefail
 export XDG_RUNTIME_DIR
@@ -20,7 +21,7 @@ cleanup() {
   rm -rf "$XDG_RUNTIME_DIR"
 }
 trap cleanup EXIT
-artifact="$VOXELITE_REVIEW_ROOT/screenshots/review-1"
+artifact="$VOXELITE_REVIEW_ARTIFACTS"
 project="$XDG_RUNTIME_DIR/review.voxl"
 cp examples/autumn-workshop.voxl "$project"
 start_app() {

@@ -1692,7 +1692,7 @@ impl EditorView {
                                                 .px(px(0.0))
                                                 .text_color(t.text())
                                                 .child(
-                                                    icon("chevron")
+                                                    icon("arrow-right")
                                                         .size(px(12.0))
                                                         .text_color(t.muted()),
                                                 ),
