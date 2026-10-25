@@ -103,7 +103,7 @@ impl OrbitCamera {
             target: camera.target.into(),
             yaw: std::f64::consts::FRAC_PI_4,
             pitch: (1.0 / 3.0_f64.sqrt()).asin(),
-            span: height * 1.15,
+            span: height,
             distance: DVec3::from(camera.eye).distance(camera.target.into()),
         }
     }
@@ -795,6 +795,6 @@ mod tests {
             },
         )
         .unwrap();
-        assert!(image.rgba.chunks_exact(4).any(|p| p[3] > 0));
+        assert!(image.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
     }
 }
