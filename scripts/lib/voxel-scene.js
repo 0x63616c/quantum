@@ -103,6 +103,47 @@
     '18': [...cubes.values()].filter(c => c.agent),
     '17': [...cubes.values()].filter(c => c.layer === 'Canopy' && !c.agent && c.y >= 14).slice(0, 24),
   };
+  // Concept A adds local history reconstruction without changing the B/C studies.
+  const modern = document.body.classList.contains('concept-a');
+  const fullFixture = new Map(cubes);
+  const stageOf = cube => cube.agent ? 8 : historyGroups['17'].includes(cube) ? 7 :
+    cube.layer === 'Canopy' ? (cube.y <= 10 ? 5 : 6) :
+    cube.layer === 'Roof' ? 3 : cube.layer === 'Cottage' ? 2 : cube.y < 3 ? 1 : 4;
+  let comparison = null, pickFaces = [];
+  const snapshot = (items, step) => Object.assign([...items], {step});
+  if (modern) {
+    window.__currentHistoryStep = 8;
+    window.__historySnapshot = step => snapshot([...fullFixture.values()].filter(c => stageOf(c) <= step), step);
+    window.__sceneSnapshot = () => snapshot(cubes.values(), window.__currentHistoryStep);
+    window.__loadSnapshot = values => {
+      cubes.clear(); values.forEach(c => cubes.set(key(c.x,c.y,c.z),c));
+      window.__currentHistoryStep = values.step ?? 8;
+      for (const [id,group] of Object.entries(historyGroups)) {
+        if (group.every(c => cubes.has(key(c.x,c.y,c.z)))) undone.delete(id); else undone.add(id);
+      }
+      revision++; updateCaptureState(); window.__updateSelection(); draw();
+    };
+    window.__setHistory = step => window.__loadSnapshot(window.__historySnapshot(Number(step)));
+    window.__compareScene = values => {
+      comparison = values ? new Map(values.map(c => [key(c.x,c.y,c.z),c])) : null;
+      const added = comparison ? [...cubes.keys()].filter(k => !comparison.has(k)).length : 0;
+      const removed = comparison ? [...comparison.keys()].filter(k => !cubes.has(k)).length : 0;
+      draw(); return {added,removed};
+    };
+    window.__pickVoxel = point => {
+      if (!point) return null;
+      const [x,y] = point;
+      for (const {cube,points} of [...pickFaces].reverse()) {
+        let inside=false;
+        for (let i=0,j=points.length-1;i<points.length;j=i++) {
+          const [xi,yi]=points[i], [xj,yj]=points[j];
+          if ((yi>y)!==(yj>y) && x<(xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside;
+        }
+        if (inside) return cube;
+      }
+      return null;
+    };
+  }
   let thumbnailKey = '';
   let capturedCubes = new Map(cubes), capturedHidden = new Set(hidden);
   let capturedRevision = revision, captureGeneration = 0;
@@ -155,7 +196,7 @@
   function paint(thumbnail = false) {
     const sceneCubes = thumbnail ? capturedCubes : cubes;
     const sceneHidden = thumbnail ? capturedHidden : hidden;
-    width = canvas.clientWidth; height = canvas.clientHeight;
+    width = canvas.clientWidth || (thumbnail ? 90 : 1); height = canvas.clientHeight || (thumbnail ? 75 : 1);
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -207,6 +248,7 @@
       }
     }
     faces.sort((a,b) => b.depth - a.depth);
+    if (!thumbnail && modern) pickFaces = faces;
     for (const {cube, face, points} of faces) {
       let ao = 1;
       if (face.n[1] === 1) {
@@ -220,12 +262,25 @@
       ctx.strokeStyle = ctx.fillStyle;
       ctx.lineWidth = .45;
       ctx.fill(); ctx.stroke();
-      if (cube.agent && !thumbnail) {
+      if (comparison && !thumbnail && !comparison.has(key(cube.x,cube.y,cube.z))) {
+        ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.stroke();
+      }
+      if (cube.agent && !thumbnail && !modern) {
         ctx.globalAlpha = .13; ctx.fillStyle = accent; ctx.fill(); ctx.globalAlpha = 1;
         ctx.strokeStyle = accent; ctx.lineWidth = .85; ctx.stroke();
       }
     }
     if (thumbnail) return;
+    if (comparison) {
+      ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle=accent; ctx.globalAlpha=.6;
+      for (const [id,cube] of comparison) if (!cubes.has(id)) {
+        for (const face of faceDefinitions) {
+          path(face.vertices.map(v=>project([cube.x+v[0],cube.y+v[1],cube.z+v[2]])));
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
     // Camera-space projection keeps the orientation guide truthful during orbit.
     for (const [axis, vector] of Object.entries({x:[1,0,0], y:[0,1,0], z:[0,0,1]})) {
       const group = document.querySelector(`[data-axis="${axis}"]`);
@@ -259,6 +314,7 @@
     custom.hidden = preset;
     if (!preset) { custom.value = percent; custom.textContent = percent + '%'; }
     zoomSelect.value = percent;
+    if (modern) window.__projectComments?.(project, cubes, hidden);
     window.__voxelSceneReady = true;
     window.__voxelSceneStats = { cubes: cubes.size, faces: faces.length, width, height, dpr };
   }
@@ -303,6 +359,7 @@
       undone.add(id);
     }
     revision++;
+    if (modern) window.__currentHistoryStep = undone.has('17') ? 6 : undone.has('18') ? 7 : 8;
     const netAdded = Object.entries(historyGroups).filter(([step]) => !undone.has(step)).reduce((sum,[,items]) => sum + items.length, 0);
     document.querySelectorAll('[data-session-total]').forEach(el => el.innerHTML = `+${netAdded} <span>−0</span>`);
     document.querySelectorAll('[data-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
