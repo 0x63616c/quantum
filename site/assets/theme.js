@@ -7,6 +7,7 @@
     document.documentElement.dataset.theme = theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#ffffff' : '#000000');
     document.querySelectorAll('.theme-image').forEach(img => { img.src = img.dataset[theme]; });
+    document.querySelectorAll('.workspace-detail').forEach(link => { link.href = `/assets/editor-${theme}.png`; });
     document.querySelectorAll('.theme-toggle').forEach(button => {
       const label = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
       button.setAttribute('aria-label', label); button.title = label;

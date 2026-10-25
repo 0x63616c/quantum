@@ -1,0 +1,32 @@
+{
+  "browser": "156.0.8078.4",
+  "captures": [
+    {
+      "name": "desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": true
+    },
+    {
+      "name": "desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": true
+    },
+    {
+      "name": "mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": true
+    },
+    {
+      "name": "mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": true
+    }
+  ],
+  "checks": [
+    "No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation"
+  ]
+}

@@ -12,6 +12,9 @@ for asset in index.html voxelite_app.js voxelite_app_bg.wasm; do
   test -s "web/dist/$asset" || { printf 'Missing web/dist/%s; run scripts/build-web.sh first.\n' "$asset" >&2; exit 1; }
 done
 cargo run --locked -p voxelite-site -- site
+mkdir -p site/assets/skills
+cp -R skills/. site/assets/skills/
+python3 -m zipfile -c site/assets/voxelite-skills.zip skills/README.md skills/voxelite-*/
 mkdir -p site/app
 cp web/dist/* site/app/
 printf 'Site ready: python3 -m http.server 8090 --directory site --bind 127.0.0.1\n'

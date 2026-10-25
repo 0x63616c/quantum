@@ -19,6 +19,7 @@ are separate evidence, not retroactively higher review scores.
 
 | Round | Desktop /10 | Mobile /10 | Evidence | Fixes / recapture |
 | --- | --- | --- | --- | --- |
+| 1 | 6.5 | 5.5 | `docs/reviews/site-review-1.md` | Device disclosure, enlarged crop, native evidence, palette, links; `screenshots/site/round-2/` |
 
 ## Verified boundaries
 
