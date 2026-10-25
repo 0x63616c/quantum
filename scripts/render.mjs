@@ -37,6 +37,18 @@ try {
         mirror: document.querySelectorAll('[data-mirror]').length,
         layers: document.querySelectorAll('[data-layer]').length,
         connected: document.body.textContent.includes('Agent connected'),
+        session: !!document.querySelector('.agent-session, .c-console'),
+        panelsFit: [...document.querySelectorAll('.a-inspector, .b-inspector, .c-inspector')]
+          .every(el => el.scrollHeight <= el.clientHeight + 1),
+        viewportFits: document.querySelector('.viewport').getBoundingClientRect().bottom <=
+          document.querySelector('.statusbar').getBoundingClientRect().top + 1,
+        sessionFits: (() => {
+          const card = document.querySelector('.b-agent-card');
+          if (!card) return true;
+          const rect = card.getBoundingClientRect();
+          return rect.top >= document.querySelector('.b-inspector').getBoundingClientRect().bottom + 8 &&
+            rect.bottom <= document.querySelector('.statusbar').getBoundingClientRect().top;
+        })(),
         annotation: (() => {
           const a = document.querySelector('.edit-annotation').getBoundingClientRect();
           const v = document.querySelector('.viewport').getBoundingClientRect();
@@ -51,6 +63,8 @@ try {
       assert.equal(metrics.mirror, 3);
       assert.equal(metrics.layers, 4);
       assert.ok(metrics.connected && metrics.annotation);
+      assert.ok(metrics.session && metrics.panelsFit && metrics.viewportFits && metrics.sessionFits,
+        `Panel layout overflow: ${JSON.stringify(metrics)}`);
       assert.deepEqual(errors, [], 'Browser errors');
       const path = `${output}/concept-${concept}-${theme}.png`;
       await page.screenshot({ path, fullPage: false, animations: 'disabled' });
