@@ -1,7 +1,8 @@
 /* Embedded in every concept. A tiny, dependency-free, perspective voxel renderer. */
 (() => {
-  const canvas = document.querySelector('canvas');
-  const ctx = canvas.getContext('2d');
+  const mainCanvas = document.querySelector('.viewport > canvas');
+  let canvas = mainCanvas;
+  let ctx = canvas.getContext('2d');
   const viewport = canvas.parentElement;
   const cubes = new Map();
   const key = (x, y, z) => `${x},${y},${z}`;
@@ -95,6 +96,16 @@
   let width, height, camera, forward, right, up, focal, center;
   let azimuth = .68, elevation = .46, zoom = 1, pan = [0, 0];
   const hidden = new Set();
+  let grid = true;
+  let revision = 18;
+  let sessionAdded = 30, sessionRemoved = 0;
+  const undone = new Set();
+  const historyGroups = {
+    '18': [...cubes.values()].filter(c => c.agent),
+    '17': [...cubes.values()].filter(c => c.layer === 'Canopy' && !c.agent && c.y >= 14).slice(0, 24),
+  };
+  let thumbnailKey = '';
+  const views = { front: [.68, .46], right: [2.25, .42], back: [3.8, .46] };
   const project = p => {
     const offset = subtract(p, camera);
     const depth = dot(offset, forward);
@@ -112,7 +123,7 @@
     { n: [0,0,-1], vertices: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]], light: .74 },
     { n: [-1,0,0], vertices: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]], light: .94 }
   ];
-  function draw() {
+  function paint(thumbnail = false) {
     width = canvas.clientWidth; height = canvas.clientHeight;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
@@ -125,11 +136,11 @@
     camera = [Math.sin(azimuth) * Math.cos(elevation) * radius, 7 + Math.sin(elevation) * radius, Math.cos(azimuth) * Math.cos(elevation) * radius];
     forward = unit(subtract([0,7,0], camera));
     right = unit(cross(forward, [0,1,0])); up = cross(right, forward);
-    focal = Math.min(width * 1.15, height * 1.31) * zoom;
-    center = [width * .49 + pan[0], height * .48 + pan[1]];
+    focal = thumbnail ? Math.min(width * 2.15, height * 2) : Math.min(width * 1.3, height * (document.body.classList.contains('concept-c') ? 1.55 : 1.43)) * zoom;
+    center = thumbnail ? [width * .5, height * .51] : [width * .48 + pan[0], height * .49 + pan[1]];
     ctx.clearRect(0, 0, width, height);
     // Perspective grid, gently fading at the edges of the work plane.
-    for (let i = -50; i <= 50; i += 2) {
+    if (!thumbnail && grid) for (let i = -50; i <= 50; i += 2) {
       const alpha = Math.max(.015, 1 - Math.abs(i) / 55) * (light ? .12 : .11);
       ctx.lineWidth = i % 10 === 0 ? .85 : .6;
       ctx.strokeStyle = light ? `rgba(100,108,115,${alpha})` : `rgba(163,174,177,${alpha})`;
@@ -141,7 +152,9 @@
     // Soft ground shadow. Rendered in screen space under the voxel geometry.
     const ground = project([1, 0, 1]);
     ctx.save();
-    ctx.translate(ground[0] + 16, ground[1] + 10);
+    const shadowScale = thumbnail ? width / 800 : 1;
+    ctx.translate(ground[0] + 16 * shadowScale, ground[1] + 10 * shadowScale);
+    ctx.scale(shadowScale, shadowScale);
     ctx.scale(1, .38);
     const shadow = ctx.createRadialGradient(0,0,15,0,0,260 * zoom);
     shadow.addColorStop(0, light ? 'rgba(44,47,36,.28)' : 'rgba(0,0,0,.36)');
@@ -179,21 +192,62 @@
         ctx.strokeStyle = accent; ctx.lineWidth = .85; ctx.stroke();
       }
     }
+    if (thumbnail) return;
     const anchor = project([9,15,-1]);
     const annotation = document.querySelector('.edit-annotation');
     annotation.style.left = `${anchor[0] + 26}px`;
     annotation.style.top = `${anchor[1] - 28}px`;
-    annotation.hidden = hidden.has('Canopy');
+    annotation.hidden = hidden.has('Canopy') || undone.has('18');
     const count = document.querySelectorAll('[data-voxel-count]');
     count.forEach(el => el.textContent = cubes.size.toLocaleString('en-US'));
     document.querySelectorAll('[data-zoom]').forEach(el => el.textContent = `${Math.round(100 * zoom)}%`);
     window.__voxelSceneReady = true;
     window.__voxelSceneStats = { cubes: cubes.size, faces: faces.length, width, height, dpr };
   }
+  function draw() {
+    paint();
+    const nextKey = [document.documentElement.dataset.theme, [...hidden].join(), [...undone].join()].join('/');
+    if (nextKey !== thumbnailKey) {
+      const saved = [azimuth, elevation, zoom, pan];
+      document.querySelectorAll('[data-thumbnail]').forEach(thumbnail => {
+        canvas = thumbnail; ctx = canvas.getContext('2d');
+        [azimuth, elevation] = views[thumbnail.dataset.thumbnail];
+        zoom = 1; pan = [0, 0]; paint(true);
+      });
+      [azimuth, elevation, zoom, pan] = saved;
+      canvas = mainCanvas; ctx = canvas.getContext('2d');
+      thumbnailKey = nextKey;
+    }
+  }
+  window.__setViewAngle = name => {
+    [azimuth, elevation] = views[name] || views.front;
+    zoom = 1; pan = [0, 0]; draw();
+  };
+  window.__toggleStep = id => {
+    const group = historyGroups[id];
+    if (!group) return;
+    if (undone.has(id)) {
+      group.forEach(cube => cubes.set(key(cube.x, cube.y, cube.z), cube));
+      undone.delete(id); sessionAdded += group.length;
+    } else {
+      group.forEach(cube => cubes.delete(key(cube.x, cube.y, cube.z)));
+      undone.add(id); sessionRemoved += group.length;
+    }
+    revision++;
+    document.querySelectorAll('[data-session-total]').forEach(el => el.innerHTML = `+${sessionAdded} <span>−${sessionRemoved}</span>`);
+    document.querySelectorAll('[data-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
+    document.querySelectorAll('[data-render-revision]').forEach(el => el.textContent = 'rev ' + String(revision).padStart(3, '0'));
+    draw();
+    return undone.has(id);
+  };
+  document.querySelectorAll('[data-toggle-grid]').forEach(el => el.addEventListener('click', () => {
+    grid = !grid; el.setAttribute('aria-pressed', String(grid)); draw();
+  }));
   // A few real viewport interactions make the standalone concepts explorable.
   let drag;
   canvas.addEventListener('pointerdown', e => {
     if (e.button === 2) return;
+    document.dispatchEvent(new Event('manual-camera'));
     drag = { x:e.clientX, y:e.clientY, pan: e.shiftKey || e.button === 1 };
     canvas.setPointerCapture(e.pointerId); canvas.classList.add('dragging');
   });
@@ -206,7 +260,7 @@
   });
   const stop = () => { drag = null; canvas.classList.remove('dragging'); };
   canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
-  canvas.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(.55,Math.min(1.8,zoom - e.deltaY * .001)); draw(); }, { passive:false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); document.dispatchEvent(new Event('manual-camera')); zoom = Math.max(.55,Math.min(1.8,zoom - e.deltaY * .001)); draw(); }, { passive:false });
   document.querySelectorAll('[data-reset-view]').forEach(el => el.addEventListener('click', () => { azimuth=.68; elevation=.46; pan=[0,0]; zoom=1; draw(); }));
   document.querySelectorAll('[data-layer-eye]').forEach(el => el.addEventListener('click', () => {
     const name = el.dataset.layerEye;

@@ -1,12 +1,12 @@
 # Voxelite v1 plan
 
-Status: implementation specification; no application code is claimed complete. Facts checked 2026-10-24. Voxelite is an MIT-licensed, Aseprite-style 3D voxel art editor written in Rust, with a native macOS application and the same GPUI editor compiled for the browser.
+Status: implementation specification; no application code is claimed complete. Facts checked 2026-10-24. Voxelite is the voxel editor built for AI agents, with an excellent human editor and a live view of every agent edit. This is the primary product and marketing position. The MIT-licensed app is all-Rust GPUI with Zed-level native polish: a native macOS application and the same GPUI editor compiled for the browser. The HTML concepts are design artifacts, not the production application stack.
 
 ## 1. Product contract
 
 ### Goals
 
-- Make small voxel models quickly with a viewport-first, shortcut-driven workspace; finish, save, and export without an account.
+- Make agents effective at voxel creation through a rich, versioned MCP API: atomic batches, primitives, explicit coordinates, deterministic diffable files, multi-angle render feedback, structured validation, reversible history and headless/CLI use. Humans can watch builds live, inspect each step and take over with a complete keyboard-first editor. Finish, save and export without an account.
 - Ship native macOS and web versions with the same document model, tools, history, renderer, and GPUI views. Web target: `wasm32-unknown-unknown`, `gpui_web`, WebGPU preferred, WebGL2 fallback.
 - Let MCP clients create, inspect, edit, and render the document visible in the app. Human and agent edits share validation, revisions, and undo history.
 - Preserve editable work in `.voxl`; export `.glb` and PNG. Make bounded documents portable between native and web builds.
@@ -15,7 +15,9 @@ Status: implementation specification; no application code is claimed complete. F
 
 ### Non-goals
 
-Animation/timelines, rigging, sculpting, arbitrary meshes, texture painting, transparent voxel materials, physics, plugins, cloud accounts/storage, multi-user collaboration, mobile editing, and native Windows/Linux releases are outside v1. No MagicaVoxel `.vox` import or export. Aseprite informs workflow, not copied code, branding, icons, or artwork. No Electron, JavaScript editor implementation, or alternate web UI.
+Agent-host integration packages (Cursor plugin, Codex CLI setup, Claude Code/Desktop setup) and repository skills are in scope; the runtime-plugin exclusion below does not apply to them.
+
+Animation/timelines, rigging, sculpting, arbitrary meshes, texture painting, transparent voxel materials, physics, third-party editor runtime plugins, cloud accounts/storage, multi-user collaboration, mobile editing, and native Windows/Linux releases are outside v1. No MagicaVoxel `.vox` import or export. Aseprite informs workflow, not copied code, branding, icons, or artwork. No Electron, JavaScript editor implementation, or alternate web UI.
 
 Application logic, UI, MCP, build orchestration, and website generation are Rust. GPU shaders use WGSL; generated `wasm-bindgen` JavaScript, static HTML/CSS, platform bindings, and deployment configuration are necessary integration artifacts. Do not promise a browser build with literally zero JavaScript.
 
@@ -112,66 +114,50 @@ Use sRGB palette input, linear lighting, and one output color conversion. Antial
 
 ### Commands, transactions, and history
 
-Typed commands include `SetVoxels`, `EraseRegion`, `FloodFill`, `Box`, palette/layer operations, and document import. UI gestures and MCP call these same handlers. Validate IDs, bounds, locks, palette references, revisions, and budgets before committing. Each editing gesture or MCP edit creates exactly one undo item; create/import establish a revision-0 document with empty history, while undo/redo move existing entries between stacks. Repeated coordinates in a patch resolve to their final requested value before mirroring; conflicting mirrored values reject. Failure/cancellation leaves model, revision, and history unchanged. A no-op adds neither a revision nor history. Core rejects voxel edits on hidden or locked target layers regardless of caller; MCP always supplies its own target layer rather than using UI selection.
+Typed commands include `SetVoxels`, `EraseRegion`, `FloodFill`, `Box`, deterministic primitives, atomic batches, palette/layer operations, and document import. UI gestures and MCP call these same handlers. Validate IDs, bounds, locks, palette references, revisions, and budgets before committing. Each editing gesture or MCP transaction creates exactly one undo item (a batch is one transaction); create/import establish a revision-0 document with empty history, while undo/redo move existing entries between stacks. Repeated coordinates in a patch resolve to their final requested value before mirroring; conflicting mirrored values reject. Failure/cancellation leaves model, revision, and history unchanged. A no-op adds neither a revision nor history. Core rejects voxel edits on hidden or locked target layers regardless of caller; MCP always supplies its own target layer rather than using UI selection.
 
 Flood fill is six-connected within one layer: replace the seed's existing slot, including slot 0 for bounded empty-space fill, with a live nonzero slot. Require the seed inside a finite region contained in document bounds, defaulting to document bounds; cap visited cells at 1,048,576. Box has solid/hollow shape and place/paint/erase mode; paint affects occupied cells only. UI fill/box previews show affected bounds before applying large changes.
 
 Mirror toggles X/Y/Z independently. Mirror plane is encoded by integer `plane2 = 2*p`; reflecting a cell coordinate uses `x' = plane2 - x - 1`. Defaults are the midplanes of the document bounds. Generate all enabled combinations, deduplicate center-plane hits, and reject the entire command if any reflected cell is invalid or the expanded transaction exceeds its budget. Place writes reflected cells; paint skips reflected empty cells; erase clears them. Fill writes its replacement to the reflected changed-cell set, not additional unconstrained flood searches. MCP mirroring is explicit per call, never inherited from another client's UI state.
 
-History stores reversible before/after patches for voxel, layer, and palette changes, including visibility/locks/order. Undo/redo operate on the shared session timeline; undo may undo an agent's last edit and is labeled accordingly. Both increment revision and emit normal changes. New edits clear redo. Camera, focus, selection, current color/tool, and mirror toggles are client-local preferences, not document history. Bound history at 128 MiB; evict oldest complete entries, disclose the history boundary, and reject a single transaction that cannot fit rather than silently losing undo. Dirty state compares saved content identity, so undo back to saved content clears it.
+History stores agent/client origin, tool name, stable entry ID, changed bounds, added/removed/recolored counts, captured revision and reversible before/after patches for voxel, layer, and palette changes, including visibility/locks/order. Undo/redo operate on the shared session timeline; undo may undo an agent's last edit and is labeled accordingly. Both increment revision and emit normal changes. New edits clear redo. Camera, focus, selection, current color/tool, and mirror toggles are client-local preferences, not document history. Bound history at 128 MiB; evict oldest complete entries, disclose the history boundary, and reject a single transaction that cannot fit rather than silently losing undo. Dirty state compares saved content identity, so undo back to saved content clears it. `read_history` exposes retained entries and boundaries to agents. A per-step revert is a new compensating transaction: validate that every affected field still equals the selected entry’s after-state and that current locks allow reversal. Otherwise return `history_conflict` with field/coordinate details; never silently overwrite a later human or agent change. Standard undo/redo still operate on the shared top-of-stack timeline.
 
 ## 5. `.voxl` format 1.0
 
-Container: standard ZIP, extension `.voxl`, MIME `application/vnd.voxelite.project+zip`. Use stored or DEFLATE entries only; no executable content, encryption, symlinks, external URLs, or arbitrary paths. Prefer this inspectable container over serializing Rust memory layouts.
+Canonical `.voxl` is UTF-8 JSON, MIME `application/vnd.voxelite.project+json`, with explicit integer coordinates. Direct Git diffs and agent text inspection are required. This supersedes the earlier proposed ZIP/binary container before implementation; runtime chunks are an internal acceleration structure, never the canonical interchange format.
 
-| Entry | Required contents |
-| --- | --- |
-| `manifest.json` | `format: "voxelite"`, `version: {major:1,minor:0}`, `required_features: []`, document UUID/name, bounds, `chunk_size:16`, `palette_size:256`, ordered layer metadata, and chunk descriptors. |
-| `palette.json` | `{slots:[{index:1,rgba:[r,g,b,255],name?:string},…], order:[index,…]}`; unique live slots, order lists each exactly once; slot 0 omitted. |
-| `layers/<layer-id>/chunks/<cx>_<cy>_<cz>.bin` | One payload per nonempty layer-chunk. Coordinates are canonical signed decimal integers; descriptors carry layer ID, coordinate, path, byte length, occupied count, and SHA-256. |
-| `preview.png` | Optional ≤256×256 RGBA8 preview; derived and untrusted, never required to load. |
-| `view.json` | Optional default camera/projection and active layer hint; unknown/invalid view hints are discarded without affecting the model. No local paths or user preferences. |
+Required top-level fields: `format: "voxelite"`, `version: {major:1,minor:0}`, `required_features: []`, `document: {id,name,bounds}`, `palette: {slots,order}`, and `layers`. Each layer has `id`, `name`, `visible`, `locked`, and `voxels: [[x,y,z,slot], …]`. Slots are unique, live and opaque; coordinates are unique per layer and contained in document bounds. Layer array order remains bottom-to-top. Optional `view` is a portable camera/active-layer hint; invalid hints can be discarded independently. Images are separate PNG exports, not large base64 fields in project diffs.
 
-Minimal manifest shape (synthetic IDs; this empty document has no chunk entries):
+Example (synthetic IDs; complete one-voxel document):
 
 ```json
 {
-  "format": "voxelite",
-  "version": {"major": 1, "minor": 0},
-  "required_features": [],
   "document": {
+    "bounds": {"max": [32, 64, 32], "min": [-32, 0, -32]},
     "id": "00000000-0000-4000-8000-000000000001",
-    "name": "Untitled",
-    "bounds": {"min": [-32, 0, -32], "max": [32, 64, 32]}
+    "name": "Untitled"
   },
-  "chunk_size": 16,
-  "palette_size": 256,
+  "format": "voxelite",
   "layers": [{
     "id": "00000000-0000-4000-8000-000000000002",
-    "name": "Layer 1", "visible": true, "locked": false
+    "locked": false,
+    "name": "Layer 1",
+    "visible": true,
+    "voxels": [
+      [0, 0, 0, 1]
+    ]
   }],
-  "chunks": []
+  "palette": {"order": [1], "slots": [{"index": 1, "rgba": [128, 128, 128, 255]}]},
+  "required_features": [],
+  "version": {"major": 1, "minor": 0}
 }
 ```
 
-Each chunk descriptor is `{layer_id, coord:[cx,cy,cz], path, byte_length, occupied_count, sha256}`; hash is lowercase hex of uncompressed payload. Companion `palette.json` for this example is `{"slots":[{"index":1,"rgba":[128,128,128,255]}],"order":[1]}`. Publish JSON Schemas and one empty/one populated binary fixture in M1; the loader must not depend on JSON key order.
+M1 freezes `spec/voxl/v1/` JSON Schema, canonical-writer specification and golden bytes. Writer uses LF, final newline, two-space object indentation, stable lexicographic field order, ascending palette slot IDs, and lexicographic `(x,y,z)` voxel order. Each voxel tuple occupies its own line; no packing based on runtime chunk thresholds. Preserve explicit palette display order and layer order. Equivalent documents yield byte-identical output across native, wasm and CLI; identity, palette IDs and layer IDs survive save/reload. No wall-clock timestamps, author data, machine names or absolute paths. Camera changes are optional and excluded from content hashes when comparing geometry.
 
-All chunk integers are little-endian. Exact binary layout:
+Reader accepts arbitrary JSON field order/whitespace but rejects duplicate object keys, invalid UTF-8, duplicate coordinates/IDs, noninteger coordinates, invalid palette references, unsupported required features and unknown major versions. Bound input to 128 MiB, depth to 32 and allocations to the published core budgets before installing a document. Use streaming/bounded parsing; no arbitrary paths, executable payloads or external asset URLs. An invalid file leaves the current document intact. Negative tests include deeply nested JSON, giant arrays, integer overflow, malformed Unicode and truncated documents.
 
-| Offset | Type | Meaning |
-| --- | --- | --- |
-| 0 | 4 bytes | ASCII `VXCH` |
-| 4 | `u8` | Chunk codec version, `1` |
-| 5 | `u8` | Encoding: `0` sparse, `1` dense |
-| 6 | `u16` | Reserved, must be zero |
-| 8 | `u32` | Number of nonzero cells, `1..=4096` |
-| 12 | payload | Sparse: exactly count sorted unique `(u16 local_index, u16 slot)` pairs. Dense: exactly 4096 `u16` slots in local-index order, with matching nonzero count. No trailing bytes. |
-
-All nonzero slots must exist; local indices are 0–4095. Chunk world extents must intersect document bounds and every occupied cell must be inside them; unused cells of boundary chunks may extend outside. Descriptor/payload counts and hashes must match. Choose sparse when `count*4 < 8192`, dense otherwise. Sort ZIP entries by path and JSON keys deterministically; fix timestamps and compression settings. The same model, view, and supplied preview bytes yield identical archives on native/wasm. Independently rendered previews may differ by backend; canonical cross-platform byte tests omit the preview and compare its appearance separately. Omit author, workstation, absolute paths, and wall-clock timestamps.
-
-Reader limits: archive ≤64 MiB, expanded entries ≤128 MiB total, manifest ≤4 MiB, each chunk ≤16,396 bytes, and entry count ≤8,256. Validate central directory, unique canonical names, CRC/hash, sizes, and model limits before installing a document. Reject path traversal, duplicate entries/IDs/coordinates, zero-size bounds, invalid slots, unsupported codecs, overflow, and decompression bombs. Decompress into bounded buffers; never extract to the filesystem. An invalid archive leaves the current document intact.
-
-Major versions require an explicit migration; reject unknown majors with an actionable message and retain the original file. Within a major, accept newer minors only when `required_features` is supported; preserve unknown optional JSON fields when saving, and refuse lossy saves if unknown entries cannot be preserved. Migrations are pure functions tested against checked-in fixtures; always save migrated output as a new file unless explicitly replacing it. No historical schema is invented before it exists.
+Unknown optional fields are retained within documented size limits; refuse a lossy save if they cannot be preserved. Major-version migration is an explicit pure function with fixture coverage, preserving the original file. Newer minors require supported `required_features`. Publish schema, format rationale, coordinate/layer semantics, canonicalization rules, migration policy, readable fixtures and a CLI validation example in versioned docs. `voxelite format --check` verifies canonical bytes; `voxelite validate` returns structured errors and a nonzero exit on invalid input. A local binary cache may be rebuilt from the canonical document and must never be needed to exchange it.
 
 Native save writes a sibling temporary file, flushes, then atomically renames; failed saves preserve the prior file. Recovery snapshots go to app storage after a two-second idle debounce, with bounded retention. Browser recovery uses versioned IndexedDB transactions; explicit Save downloads `.voxl` bytes, with File System Access only as an optional supported enhancement. Display quota failures and keep the document dirty. Browser download initiation does not prove the user retained a file. Unsaved close/reload prompts and recovery are tested on both platforms.
 
@@ -181,7 +167,7 @@ Every row is required on native and web unless a platform difference is stated. 
 
 | ID / feature | Concrete acceptance criteria |
 | --- | --- |
-| F01 Workspace | Viewport dominates the default 1440×900 layout; compact left tool rail, right palette/layers, restrained top command strip, bottom coordinates/status. At 1024×640, panels collapse without obscuring tools. Open/create/save/export are keyboard reachable. |
+| F01 Workspace | Viewport dominates the default 1440×900 layout; compact human tools, a prominent agent session dock, palette/layers, restrained command strip and concise status. The chosen concept must show live tool calls, added/removed diff counts, per-step revert, multi-angle render thumbnails and a follow-agent camera toggle. Following is opt-in and stops on manual orbit; session state never obscures the artwork. At 1024×640, panels collapse without obscuring tools. Open/create/save/export are keyboard reachable. |
 | F02 Orbit/pan/zoom | RMB drag or Alt+LMB drag orbits; MMB or Space+LMB pans; wheel/pinch zooms toward cursor. Alt+LMB becomes orbit after a 4 CSS-pixel movement threshold; a stationary click is the picker. Trackpad-only workflow works. Clamp pitch/distance, prevent NaNs, maintain cursor capture during drags, and release it on cancel/focus loss. Home frames the visible model; empty model frames bounds. |
 | F03 Grid/axes | Antialiased floor at bounds minimum Y, major/minor grid lines, clear origin, and labeled X/Y/Z gizmo. Clicking an axis selects the corresponding orthographic view; return to perspective without changing geometry. Grid/gizmo toggles do not dirty the document or appear in default exports. |
 | F04 Place | Click adds one voxel adjacent to hit face or on work plane; drag interpolates a continuous grid stroke with no skipped cells. Preview shows target/mirror cells. Whole stroke is one undo; empty/out-of-bounds/locked cases obey core rules. |
@@ -205,17 +191,23 @@ Every row is required on native and web unless a platform difference is stated. 
 
 ## 7. MCP contract and live sync
 
+### Spec-first API and naming
+
+Freeze `spec/mcp/v1/` before handlers: tool input/output JSON Schemas, versioned capabilities, error catalog, fixtures, and at least one executable request/result example plus a failure example for **every tool**, including batched and headless workflows. Names use lower snake case with verbs (`fill_box`, `create_shape`, `render_views`, `read_history`); names are stable within API v1. MCP protocol negotiation and the Voxelite API version are separate. `get_capabilities` advertises API/schema versions and supported operations. Additive optional fields are minor changes; breaking names/semantics require a new major with migration notes and supported-version tests.
+
+Generate Rust types, reference tables and docs examples from the reviewed contract; CI checks schema/handler drift, example execution and every-tool coverage. Structured errors include stable `code`, concise `message`, `details` with field paths/coordinates, `retryable`, and current revision when applicable. Never require an agent to parse prose to recover. Capture headless and UI sessions using the same command implementation.
+
 ### Wire types and invariants
 
 Use `rmcp` tool input/output schemas, tool descriptions, and MCP resources. Negotiate supported protocol versions; test the chosen SDK's current protocol and `2025-11-25` compatibility. Standard MCP transports are stdio and Streamable HTTP; the app's WebSocket change stream is an internal protocol, not an invented MCP transport. See the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 
 - `Vec3i = [i32,i32,i32]`; `Region = {min:Vec3i,max:Vec3i}`; `Color = [u8,u8,u8,255]`; `Mirror = {axes:["x"|"y"|"z"],plane2:Vec3i}`. Omitted mirror means none. UUIDs and revision strings are validated, not coerced.
 - Existing-document calls require `model_id`. Mutations additionally require `expected_revision` and UUID `operation_id`; `create_model`/`import_project` instead allocate a model ID and require only `operation_id`. Session discovery/capabilities and artifact reads need no model ID. `label?` is a ≤80-byte history label. Optional parameters below use `?`; documented defaults are emitted in schemas.
-- Mutation result `Change = {model_id:UUID,revision:string,operation_id:UUID,changed_voxels:u32,changed_layers:UUID[],changed_palette_slots:u16[],undo_entry_id?:UUID,warnings:string[]}`. Create/import also return document metadata and generated layer IDs. No-op returns unchanged revision, zero changed voxels, empty change arrays, no history entry.
+- Mutation result `Change = {model_id:UUID,revision:string,operation_id:UUID,changed_voxels:u32,added:u32,removed:u32,recolored:u32,changed_layers:UUID[],changed_palette_slots:u16[],undo_entry_id?:UUID,warnings:string[]}`. Create/import also return document metadata and generated layer IDs. No-op returns unchanged revision, zero changed voxels, empty change arrays, no history entry.
 - Reads return the captured revision. Multi-page reads use an immutable snapshot token, retained for 60 seconds, so concurrent writes cannot mix revisions. `cursor` is opaque, tied to model/revision/query; expired tokens return `snapshot_expired`.
 - Runtime limits: 16 MiB encoded tool input, 65,536 explicit voxels per call, 1,048,576 visited/generated cells per fill/box, ≤8 MiB decoded palette/project upload, ≤10,000 returned voxels/page, and bounded queues. Resource limits are published by `get_capabilities`; clients split batches intentionally. Cancellation before commit aborts; cancellation after commit returns/retrieves the recorded result.
 - Use copy-on-write chunks for immutable snapshots; retain at most four read snapshots and 64 MiB of uniquely retained chunk data per session. Expire/reject snapshots under pressure with an explicit error. Cap generated artifacts at 16 items / 128 MiB total, stored in private temporary storage on native; release on expiry or session exit. Bound decoded PNG memory as well as compressed bytes.
-- Domain failures use MCP tool errors (`isError:true`) with `{code,message,details,current_revision?,retryable}`; invalid JSON-RPC/schema framing uses protocol errors. Codes include `revision_conflict`, `layer_locked`, `layer_hidden`, `out_of_bounds`, `invalid_palette`, `limit_exceeded`, `invalid_format`, `session_unavailable`, `snapshot_expired`, `renderer_unavailable`. Never return success for a queued/uncommitted command.
+- Domain failures use MCP tool errors (`isError:true`) with `{code,message,details,current_revision?,retryable}`; invalid JSON-RPC/schema framing uses protocol errors. Codes include `revision_conflict`, `layer_locked`, `layer_hidden`, `out_of_bounds`, `invalid_palette`, `limit_exceeded`, `invalid_format`, `session_unavailable`, `snapshot_expired`, `renderer_unavailable`, `history_conflict`. Never return success for a queued/uncommitted command.
 - Read-only tools declare read-only annotations; mutation/destructive/idempotence annotations reflect actual behavior. Annotations do not replace authorization or validation. Resources expose document metadata/palette/layer summaries and generated artifacts; change notifications invalidate subscribed summaries where supported.
 
 ### Complete v1 tool list
@@ -230,8 +222,13 @@ Common mutation/read fields above are part of every relevant schema even when om
 | `read_model` | `region?`, `layer_ids?:UUID[]`, `view?:"layers"\|"composite"="layers"`, `include_voxels?:bool=true`, `limit?:u32=1000`, `cursor?` | `{revision,metadata,palette,layers,voxels:[{layer_id,position,slot}],next_cursor?,snapshot_token}`. Explicit layer view includes hidden layers; composite reports visible winners. |
 | `set_voxels` | `layer_id`, `voxels:[{position,slot}]`, `mode?:"place"\|"paint"="place"`, `mirror?` | `Change`; nonzero valid slots only. Place overwrites target-layer values; paint skips empty cells. Last duplicate wins before mirroring; conflicting reflected values reject. |
 | `erase_region` | `layer_id`, `region`, `mirror?` | `Change`; erase occupied cells within half-open bounds, one atomic undo item. |
-| `fill` | `layer_id`, `seed`, `slot`, `region?`, `mirror?` | `Change` plus visited count; six-connected replacement of seed slot. Region defaults to model bounds, visited limit still applies. |
-| `box` | `layer_id`, `region`, `shape?:"solid"\|"hollow"="solid"`, `mode?:"place"\|"paint"\|"erase"="place"`, `slot?`, `mirror?` | `Change`; slot required for place/paint and forbidden for erase. |
+| `flood_fill` | `layer_id`, `seed`, `slot`, `region?`, `mirror?` | `Change` plus visited count; six-connected replacement of seed slot. Region defaults to model bounds, visited limit still applies. |
+| `fill_box` | `layer_id`, `region`, `shape?:"solid"\|"hollow"="solid"`, `mode?:"place"\|"paint"\|"erase"="place"`, `slot?`, `mirror?` | `Change`; slot required for place/paint and forbidden for erase. |
+| `apply_batch` | `operations:[{tool,args}]` | Atomic ordered whitelist of voxel/shape/palette/layer mutations, maximum 256 suboperations under shared aggregate limits. Validate against staged state; reject whole batch with failing operation index. One revision, operation ID and undo entry; no nested batches, history, imports or renders. |
+| `create_shape` | `layer_id`, `shape`, `region?`, `endpoints?`, `slot`, `mode?`, `mirror?` | Deterministic solid/hollow box, ellipsoid, cylinder and integer line. Publish exact center sampling, radius/axis/endpoints rules and fixtures; no implicit randomness or floating-point raster ambiguity. |
+| `validate_model` | `revision?`, `region?` | `{revision,valid,issues:[{code,path,position?,message}]}` for palette, bounds, layer and format constraints; read-only, no repair hidden in validation. |
+| `read_history` | `cursor?`, `limit?:u32=50` | Retained entry IDs, origin, tool, label, revision, bounds, added/removed/recolored counts, undo availability and history boundary. No personal identifiers. |
+| `render_views` | `revision?`, `views:[{name,camera}]`, `width?:u32=512`, `height?:u32=512`, `background?` | Up to six named views from one immutable revision, bounded total pixel/artifact budget. Return MCP image content plus per-view revision/hash metadata. Defaults/presets include front, back, sides, top and isometric; never change the human camera without follow opt-in. |
 | `get_palette` | none | `{revision,slots:[{index,rgba,name?}],order,presets:[{id,name}]}`. |
 | `add_palette_color` | `rgba:Color`, `name?`, `index?:u16` | `Change` plus allocated slot; default is lowest unused slot. |
 | `set_palette_color` | `index`, `rgba?:Color`, `name?` | `Change`; recolors every reference; at least one property required. |
@@ -244,11 +241,11 @@ Common mutation/read fields above are part of every relevant schema even when om
 | `reorder_layers` | `order:UUID[]` | `Change`; exact permutation, bottom-to-top, geometry unchanged. |
 | `duplicate_layer` | `layer_id`, `name?` | `Change` plus new layer ID; source may be locked, copy is unlocked above source; limits checked first. |
 | `delete_layer` | `layer_id` | `Change`; reject locked or last layer; undo restores ID, position, metadata, and voxels. |
-| `undo` | none | `Change` plus undone entry label; rejects revision conflict/empty history. |
+| `undo` | `entry_id?:UUID` | `Change` plus undone entry label; omitted ID undoes latest entry. Selected entry creates a compensating patch under §4 conflict/lock checks; rejects expired history or conflicting later changes. |
 | `redo` | none | `Change` plus redone entry label; rejects revision conflict/empty redo. |
 | `render_view` | `revision?`, `camera:{eye:[f32;3],target:[f32;3],up:[f32;3],projection:"perspective"\|"orthographic",fov_y_degrees?:f32,ortho_height?:f32}`, `width?:u32=512`, `height?:u32=512`, `background?:Color\|"transparent"="transparent"`, `grid?:bool=false` | MCP image content `{type:"image",mimeType:"image/png",data:base64}` plus structured `{revision,width,height,sha256}`. Max 1024 per axis / 1,048,576 pixels. Capture immutable snapshot; reject unavailable requested revision, invalid camera, missing GPU, or timeout. |
 | `export_glb` | `revision?` | `{revision,artifact_uri,mime_type:"model/gltf-binary",byte_length,sha256}`; visible composite, same implementation as UI. |
-| `export_project` | `revision?`, `include_preview?:bool=true` | `{revision,artifact_uri,mime_type,byte_length,sha256}` for `.voxl`; exporting does not mark the open document saved. |
+| `export_project` | `revision?` | `{revision,artifact_uri,mime_type,byte_length,sha256}` for `.voxl`; exporting does not mark the open document saved. |
 | `import_project` | `data_base64`, `activate?:bool=false` | `Change` plus metadata; validated `.voxl`, new document ID to avoid collision; reports source ID. Larger than 8 MiB imports use the app's file-open workflow. |
 | `read_artifact` | `artifact_uri`, `offset?:u64=0`, `length?:u32=1048576` | `{data_base64,offset,byte_length,total_length,eof,sha256}`; max 1 MiB/page, session-scoped artifacts expire after 10 minutes. Enables bounded download when a client cannot consume resource links. |
 
@@ -275,28 +272,26 @@ M0 tests hosted HTTPS-to-loopback behavior, including mixed-content and browser 
 
 ## 8. Visual system and theming
 
-Neutral grays and one violet accent; semantic danger and axis colors are restricted to their purpose. The viewport is the hero. Dense tools must still have deliberate grouping and calm panels. No dashboard cards, redundant explanatory copy, emoji controls, pixelated UI edges, or destructive primary buttons.
+Vercel / Stripe restraint with Zed-level native GPUI construction. Pure black `#000000` dark canvas, panels, titlebars, menus and inputs; pure white `#FFFFFF` equivalents in light mode. No gray wash or gradients on chrome. One restrained accent (gold, violet or teal in the concept studies; choose one for the product); semantic danger and axis colors are restricted to their purpose. The viewport is the hero. Dense tools must still have deliberate grouping and calm panels. No dashboard cards, redundant explanatory copy, emoji controls, pixelated UI edges, or destructive primary buttons.
 
 Initial semantic tokens (verify contrast before freezing):
 
 | Token | Light | Dark | Usage |
 | --- | --- | --- | --- |
-| `surface.canvas` | `#E8E9ED` | `#17181C` | Viewport background |
-| `surface.panel` | `#F7F7F9` | `#222329` | Panels/toolbars |
-| `surface.raised` | `#FFFFFF` | `#2C2E35` | Menus/dialogs |
-| `surface.hover` | `#EBECF1` | `#353740` | Hover fill |
-| `surface.selected` | `#E9E3FF` | `#3B3155` | Selected tool/row |
-| `text.primary` | `#202127` | `#F1F2F5` | Main text |
-| `text.secondary` | `#555963` | `#B7BBC5` | Labels/status |
-| `text.disabled` | `#767A84` | `#858A96` | Disabled only; never essential information |
-| `border.subtle` | `#D3D5DD` | `#41444E` | Panel separators |
-| `border.control` | `#818591` | `#858A98` | Essential control outlines |
-| `accent` / `focus.ring` | `#6840CE` | `#B59AFF` | Active action/focus |
-| `text.on_accent` | `#FFFFFF` | `#20152F` | Filled accent controls |
-| `danger` | `#B42336` | `#FF8696` | Error/destructive text only |
-| `axis.x/y/z` | `#B52E43/#287641/#285BBB` | `#F07887/#79C894/#88ACF4` | Labeled axes, not general accents |
+| `surface.canvas` / `surface.panel` / `surface.raised` | `#FFFFFF` | `#000000` | Canvas, docked panels, titlebar, inputs, menus |
+| `surface.hover` | `#F5F5F5` | `#141414` | Transient hover only |
+| `surface.selected` | Accent at 5% | Accent at 8% | Selection includes accent edge/check, never color alone |
+| `text.primary` | `#333333` | `#DEDEDE` | Main text |
+| `text.strong` | `#171717` | `#FAFAFA` | Headings/current item |
+| `text.secondary` | `#626262` | `#A1A1A1` | Readable labels/status |
+| `border.subtle` | `#E6E6E6` | `#242424` | Decorative 1 px separators; dark range #1F1F1F–#2E2E2E |
+| `border.control` | `#8B8B8B` | `#777777` | Essential input boundaries |
+| `accent` / `focus.ring` | `#7152B2` | `#B8A4F0` | Initial violet candidate; contrast-checked gold/teal alternatives in concepts |
+| `danger` | `#B42336` | `#FF8696` | Error/destructive text only; never primary delete |
 
-Metrics: 4/8 px spacing scale; 1 physical-pixel aligned hairlines; 28 px dense controls inside ≥32 px hit areas; 4 px control radius and 8 px menus; 2 px focus ring with spacing. Inter where bundled/licensed, otherwise system sans; 12–13 px UI, 11 px secondary labels, tabular numerals for coordinates. No hand-authored hex colors outside token definitions except artwork/palette data. Layout works at 1×, 1.5×, and 2× scaling.
+Metrics: 4/8 px spacing; pixel-aligned 1 px hairlines; 28–32 px dense controls with ≥32 px primary hit areas; 4 px control radius, 8 px menus; 2 px focus ring. Bundle licensed **Geist / Geist Mono** locally, with native system sans/mono fallbacks and no network font load. 13–14 px labels, 12 px minimum metadata/shortcuts, 14–17 px section/request emphasis; tabular numerals for coordinates/diffs. No opacity-reduced essential text or unlocked icons. Use real macOS traffic lights in GPUI; muted inactive dots in static concepts. Single-row compact titlebars, aligned split panes, deliberate focus routing and OS menus; avoid floating dashboard cards and explanatory navigation lessons. ⌘K is a visible, functional command palette affordance, with shortcut search and complete keyboard navigation.
+
+Create `design/tokens.json` as the production source for generated GPUI Rust constants and site/docs CSS variables; CI rejects divergence. The current concept CSS is the review prototype, not a claim that shared production token generation is implemented. Components, type ramp, icons, borders, spacing, focus, motion and selection states are shared across app, marketing, docs, README screenshots and onboarding. Layout is checked at 1×, 1.5× and 2×; test both themes as first-class designs.
 
 Require ≥4.5:1 normal text contrast and ≥3:1 essential control/focus boundaries in both modes. Test selected/hover/disabled/locked/error states, keyboard focus, and reduced-motion preference. Use concise labels and shortcut tooltips; explain only actionable errors. System theme changes affect chrome/background, not palette values or exported model colors. A finished original sample model uses one top-left key light, soft AO, intentional materials/colors, and a composition worthy of a creative tool.
 
@@ -323,10 +318,50 @@ Require ≥4.5:1 normal text contrast and ≥3:1 essential control/focus boundar
 ### Separate marketing website, built by Codex
 
 - Deliver `site/` as a separate project and Vercel deployment, not an app welcome screen. Codex implements Rust static generation via `cargo xtask build-site`, semantic HTML/CSS templates, optimized images, and links; no JS framework or app wasm required to read the site.
-- Content: concise product statement; polished real editor screenshot in each theme; original voxel art hero; “Open editor” and “Download for macOS”; tools/layers/palette overview; MCP demo with reproducible commands; format support; installation/shortcut links; MIT/source/contribution links; release notes and compatibility limitations. Do not advertise unimplemented features or `.vox`.
+- Content leads with “The voxel editor built for AI agents.” Lead action: “Connect your agent”; secondary actions: open the human editor / download for macOS. Show a real MCP build progressing in the live GPUI session, multi-angle feedback and undo, followed by the excellent human editing tools. Include polished real editor screenshot in each theme; original voxel art hero; “Open editor” and “Download for macOS”; tools/layers/palette overview; MCP demo with reproducible commands; format support; installation/shortcut links; MIT/source/contribution links; release notes and compatibility limitations. Do not advertise unimplemented features or `.vox`.
 - Shared visual tokens and restrained typography; product imagery carries the page. Responsive at 360, 768, and 1440 px; keyboard/focus and reduced-motion support; descriptive alt text, correct headings, social preview, metadata, sitemap, and canonical production URL. No fabricated testimonials, personal biographies, tracking, newsletter, or contact data.
+- Showcase: build a gallery viewer shell for accessible, lazy-loaded, interactive/rotating GLB previews using the shared Rust/WebGL renderer; static posters, named orbit controls and reduced-motion defaults work without auto-rotation. Publish creation provenance, reproducible prompt/tool trace, source `.voxl`, downloadable GLB and agent host/API version. Producing the finished gallery pieces is **M8 after v1 works**, not a pre-v1 fixture collection or a claim that concept art was made through MCP.
 - Use actual app captures and exports from a committed sample `.voxl`; remove usernames, paths, metadata, and unrelated desktop content. Track artwork/font licenses. Three critique rounds apply to the site independently of the app.
 - `cargo xtask package-vercel --project site` emits a separate Build Output API directory; use a distinct Vercel project ID and independent preview/production promotion. Link to the deployed app and GitHub release downloads via reviewed configuration; do not invent domain ownership. Static site must work with JavaScript disabled; target Lighthouse accessibility/SEO ≥95 and performance ≥90 in a documented mobile profile.
+
+### Documentation site and editorial quality
+
+Deliver a separate, versioned documentation site at Vercel/Stripe quality, built from reviewed content with the shared tokens/components. Navigation: **Getting started**, **Human editor**, **Agent integrations**, **MCP API v1 reference**, **CLI/headless**, **`.voxl` format**, **Examples**, **Contributing**, **Changelog**. Every page has a clear task, prerequisites, working examples, expected output, relevant errors, next steps and version applicability. Avoid placeholder pages and marketing filler in reference material.
+
+- Getting started offers “Connect an agent” and “Create by hand”; first useful result within five minutes on a clean machine. Human guide covers tools, layers, palettes, shortcuts, history, saving/export and recovery. MCP guide explains coordinates, batches, primitives, multi-view inspection, locks/revisions and error recovery before linking every tool to generated schema/reference/example pages. CLI covers create/edit/validate/render/export without a window, stdout JSON, stderr diagnostics and exit codes.
+- Host installation pages are separate for Cursor, Codex CLI, Claude Code and Claude Desktop. Each includes native vs browser-companion setup, platform prerequisites, exact supported configuration paths, local transport details, verification via capabilities/read/render, uninstall and troubleshooting. Check each host's current supported installation mechanisms at implementation; publish tested versions and fallback manual steps, never promise an unsupported one-click mechanism.
+- Documentation shell: left navigation with clear current page, stable heading anchors, right table of contents, local search with ⌘K, version picker retaining the closest equivalent page, copyable code blocks with honest status, dark/light mode and mobile navigation. Static content remains readable with scripts disabled. Keyboard focus, semantic headings, screen-reader labels, contrast, reduced motion and zoom to 200% are release gates.
+- Generate API reference from `spec/mcp/v1/`, but hand-edit introductions, real workflows and troubleshooting. CI executes code/tool examples, checks all reference pages against the tool inventory, validates schemas/links and flags generated drift. Every release publishes immutable versioned docs plus a tested latest alias; preserve old links and migration notes.
+- Three independent docs critique/fix rounds: information architecture and complete coverage; clean-machine novice/agent-host walkthrough plus keyboard/mobile use; editorial consistency, every-tool examples, accessibility, screenshots and search quality. Maintain a small content style guide: concise imperative headings, consistent terminology, realistic outputs, no personal paths or credentials. Documentation is a launch deliverable, not a README substitute.
+
+### Ready-made skills and agent-host integrations
+
+Ship `skills/` with installable `SKILL.md` packages and small tested prompts for Claude, Cursor, Codex and other compatible hosts. Required guides: core workflow; palette selection and limited color ramps; building from primitives/batches; inspecting front/back/side/top renders; and style guides for isometric props, characters and buildings. Each includes metadata, when to use it, bounded steps, example tool calls, finishing criteria, recovery/undo guidance and expected renders. Store original `.voxl` fixtures with palette/proportion/silhouette criteria. Teach agents to read capabilities, use explicit coordinates and revisions, validate before mutation, inspect multiple angles, correct errors and export the verified result. No hidden dependencies on a human viewport or paid hosted service.
+
+| Host deliverable | Bundle and acceptance |
+| --- | --- |
+| Cursor plugin | `integrations/cursor/`: supported plugin manifest, MCP configuration, bundled skills and project rules, installation link/button when supported. One-click install is a milestone requirement, verified in a clean supported Cursor release; manual config fallback documented. Capability discovery → primitive batch → three views → undo runs successfully. |
+| Codex CLI setup | `integrations/codex/`: versioned MCP config example, skill installation steps and project-scoped `AGENTS.md` guidance. Verify headless and attached native session paths; no real user home paths or tokens in templates. |
+| Claude Code | `integrations/claude-code/`: tested MCP registration/configuration, compatible skills and workflow prompts. Verify tool discovery, batch construction, error recovery, render inspection and history. |
+| Claude Desktop | `integrations/claude-desktop/`: tested local MCP configuration or supported installer, setup validation and troubleshooting. Explain any host-specific image/skill limitations with a tested alternative. |
+
+Generate the docs skills catalog/install pages from repository metadata; publish per-host copy/install instructions, versions, example prompts and expected outcomes. Validate relative links and package contents in CI. Host-specific packages configure the existing local server; they do not add unrelated execution privileges or overwrite unrelated user configuration. These are integration artifacts around the Rust app, not editor runtime plugins.
+
+### Onboarding and polish across surfaces
+
+The app's empty state offers **Connect agent**, **Open project**, **Start drawing**, with one original sample as an optional learning path. An agent connection flow shows host selection, local connection status, an executable verification step and a live session; it never claims connection before a handshake succeeds. Empty history, no render yet, invalid request, disconnected/reconnecting host, locked layer, rendering failure and unsaved recovery each get a concise actionable state. Keep manual tools reachable while the agent builds; follow-camera is explicit, pause is local-session control, and per-step revert reports conflicts without losing work. The command palette includes all primary actions with shortcuts, search synonyms and focus restoration. Respect IME/text input and full keyboard navigation.
+
+Polish ownership is explicit: one token source across app/site/docs; a component/state inventory with both themes; curated original artwork; consistent copy/keyboard vocabulary; visual diffs and human-scale screenshot inspection; accessibility checks and reference-machine performance evidence. App onboarding and keyboard-only workflows get three critiques before M5 exit. README starts with the agents-first promise, a real live-session screenshot, a short reproducible MCP/CLI example, host setup links, a clear native/web status matrix and human quick start. Do not label unimplemented features shipped. README links docs, skill installs, releases, changelog and contribution paths; examples execute in CI. Site, docs and README images must be updated against the release build, with sanitized metadata.
+
+### Agent demos and benchmarks
+
+Before M6, establish deterministic tasks with original fixtures: small prop from primitives, a character, a cottage, targeted edit/undo, and a bounded large model. Record agent host/model version, skill/API/app version, seed/prompt, tool trace, elapsed time, calls, serialized request size, validation failures/retries, final voxel count and multi-angle results. Separate host/model variance from editor performance. Publish reproducible benchmark scripts/results and concise captioned demo recordings for the site; show tool calls, live view, render checks and recovery. Do not fabricate “AI-made” provenance or speed claims. Final showcase artistry is M8; functional demo evidence is required before launch.
+
+### Release polish, updates and distribution
+
+Public v1 requires signed and notarised macOS builds; unavailable signing credentials block public distribution completion. M5 rehearses clean-machine quarantine launch, `.voxl` association, companion discovery and uninstall. Use a signed update feed and independently signed update artifacts with version/build/channel metadata, digest verification and rollback protection; verify signatures before installation, preserve documents, handle offline/cancel/interrupted updates, and test relaunch/recovery. Show release notes before restart and support a manual update path. Pin and audit the selected updater implementation during M0/M5; do not add a web runtime to the Rust app.
+
+Maintain `CHANGELOG.md` with user-visible changes, API/format compatibility, fixes and migration notes. Release tooling generates notes, versioned docs, checksums/provenance and signed/notarized ZIP/DMG artifacts from one version. Prepare a Homebrew cask with project-owned URLs, exact version/hash, correct architecture/minimum OS, update behavior and install/uninstall audit; validate the cask against the signed release and submit only when artifacts are public. M7 evidence includes Homebrew install/upgrade/uninstall, previous-version auto-update, fresh native install and native/wasm CI for the release commit. CI adds docs build/link/example tests, skill/package validation, token drift and agent benchmark smoke workflows alongside existing Rust/native/wasm jobs.
 
 ## 10. Verification and GitHub Actions
 
@@ -336,7 +371,7 @@ Require ≥4.5:1 normal text contrast and ≥3:1 essential control/focus boundar
 | --- | --- |
 | Unit | Negative-coordinate chunk math, palette references/remaps, layer composition/locks, DDA hit ties, mirror planes, fill adjacency, box bounds, history grouping, file reader limits, camera/color conversions, import parsers, GLB structure. |
 | Property (`proptest`) | Sparse/dense equivalence; serialization round-trip/canonical bytes; apply→undo→redo equality; mirroring twice restores positions; fill never crosses region; hidden-layer noninterference; random UI/MCP command sequences produce identical snapshots. Persist failing seeds. |
-| Format/security fuzz | `.voxl` ZIP/JSON/chunks, `.hex`/`.gpl`/PNG, MCP args and wire events. Bound allocations/time; truncated/malicious data must return errors, never panic or mutate state. Nightly time-bounded fuzzing and committed regression cases. |
+| Format/security fuzz | canonical `.voxl` JSON/UTF-8/coordinate arrays, `.hex`/`.gpl`/PNG, MCP args and wire events. Bound allocations/time; truncated/malicious data must return errors, never panic or mutate state. Nightly time-bounded fuzzing and committed regression cases. |
 | Render snapshots | Fixed cameras, pinned fonts, palette/lighting/seed, 512² images for art sample, axes, overlaps, chunk seams, both themes, and transparent exports. Compare geometry exactly; pixels use documented per-backend tolerances (initial SSIM ≥0.995 and ≤0.5% pixels beyond 8/255). Inspect diff images before any baseline update; never auto-bless. |
 | UI/platform | Keyboard-only new→draw→palette→layer→undo→save→export; text/IME, menus/focus, drag interruption, high DPI, small windows, theme changes, VoiceOver/browser accessibility, file/quota errors, context loss. GPUI harness plus real macOS/browser tests. |
 | MCP integration | Real `rmcp` client over stdio and Streamable HTTP; complete tool enumeration/schema checks; create/edit/render against an open session; UI/MCP contention, lock enforcement, revision conflicts, replay, reconnect, queue saturation, token expiry/Origin rejection, malformed requests, headless renderer unavailable. Decode returned PNG and compare captured revision. |
@@ -372,13 +407,13 @@ Use `pull_request`, not secret-bearing `pull_request_target` checkout of untrust
 
 ## 12. Delivery stages and review process
 
-Each stage M0–M7 requires **at least three critique → fix → review rounds**. A round is a recorded review of a concrete artifact followed by fixes and re-evaluation, not three prompts against the same untouched output. Store `design/reviews/Mx-round-{1,2,3}.md` with commit/artifact, screenshots where relevant, findings ranked blocker/major/minor, changes, evidence, and disposition. Codex self-critiques each round; maintainer review accepts the final artifact.
+Each stage M0–M8 requires **at least three critique → fix → review rounds**. A round is a recorded review of a concrete artifact followed by fixes and re-evaluation, not three prompts against the same untouched output. Store `design/reviews/Mx-round-{1,2,3}.md` with commit/artifact, screenshots where relevant, findings ranked blocker/major/minor, changes, evidence, and disposition. Codex self-critiques each round; maintainer review accepts the final artifact.
 
 1. **Round 1 — correctness and completeness:** inspect semantics, requirements, failure paths, source facts, platform boundaries, and tests. For visual work, also inspect layout/copy against the art checklist. Fix blockers and missing acceptance cases.
 2. **Round 2 — adversarial use and visual critique:** execute a realistic artist/agent workflow, boundary/large inputs, keyboard-only operation, both themes, DPRs, native and web fallback. Compare screenshots at full scale and close-up; critique spacing, hierarchy, jaggies, lighting, clutter, and destructive actions. Implement corrections.
 3. **Round 3 — regression and release quality:** rerun impacted checks after fixes, inspect final artifacts and diff images, verify documentation and actual behavior agree, and repeat the full stage exit workflow. No blocker/major issue may remain; minor deferrals need an issue and rationale. New material changes restart affected review evidence.
 
-For architecture-only stages, use executable spikes, diagrams, fixtures, and schema examples as review artifacts. Website rounds cover mobile/desktop, light/dark, copy, accessibility, real imagery, and deployed performance. The minimum is 24 recorded rounds across eight stages; repeat rounds until exit criteria hold.
+For architecture-only stages, use executable spikes, diagrams, fixtures, and schema examples as review artifacts. Website rounds cover mobile/desktop, light/dark, copy, accessibility, real imagery, and deployed performance. The minimum is 27 recorded rounds across nine stages, with M8 following v1; repeat rounds until exit criteria hold.
 
 | Stage | Depends on | Deliverables / exit gate |
 | --- | --- | --- |
@@ -386,10 +421,11 @@ For architecture-only stages, use executable spikes, diagrams, fixtures, and sch
 | M1 — Core and persistence | M0 | Workspace/core/session contracts; bounded sparse storage, layers/palette, commands/history, `.voxl` 1.0 reader/writer/malformed fixtures, recovery prototype, deterministic CPU meshing. Freeze measured limits; unit/property/format CI green. |
 | M2 — Renderer and workspace | M1 | Native and wasm viewport, camera/grid/gizmo/picking, lighting/AO/AA, themes/tokens, panel skeleton, original art sample. Benchmark and render baselines accepted; native/WebGPU/WebGL2 share appearance. |
 | M3 — Complete artist workflow | M2 | All editing tools, palette import/presets, layer controls, mirrors, shortcuts, undo/redo, native/web open/save/recovery, GLB/PNG export. F01–F19 end-to-end acceptance; no mocked actions. |
-| M4 — MCP and live sync | M1, M2; integrate after M3 | Complete tool/resource schemas, stdio/HTTP, native discovery, browser pairing/local served fallback, conflicts/retries/auth, headless rendering, session recovery. F20 and adversarial transport tests pass against actual UI. |
-| M5 — Platform hardening | M3, M4 | F21, accessibility/platform edge cases, memory/performance budgets, feature parity, wasm packaging, signed packaging rehearsal, deployment/rollback previews. CI matrices and security/dependency checks complete. |
-| M6 — Public website and OSS | M3 captures, M5 compatibility | Codex builds separate marketing site and Vercel preview; finish README/contribution/conduct/security/templates/licenses; original artwork and sanitized demo; site passes its three review rounds and linked workflows work. |
-| M7 — Release candidate and v1 | M0–M6 accepted | Fresh-machine native install, real-browser artist+MCP workflow, all three backends, file exchange, export validation, website checks, three final critique/fix rounds, signed/notarized artifacts if credentials exist, tagged source/checksums and Vercel production promotion. |
+| M4 — MCP and live sync | M1, M2; integrate after M3 | Reviewed versioned spec first; complete tool/resource schemas, examples for every tool, batch/primitives, inspectable history, multi-angle rendering, CLI/headless, stdio/HTTP, native discovery, browser pairing/local served fallback, conflicts/retries/auth, headless rendering, session recovery. F20 and adversarial transport tests pass against actual UI. |
+| M5 — Platform hardening | M3, M4 | F21, accessibility/platform edge cases, memory/performance budgets, feature parity, wasm packaging, signed/notarized packaging and auto-update rehearsal, Homebrew cask draft, deployment/rollback previews. CI matrices and security/dependency checks complete. |
+| M6 — Public website and OSS | M3 captures, M5 compatibility | Codex builds separate marketing site and Vercel preview; finish full versioned docs site, host install pages, repo skills/plugin bundles, README/contribution/conduct/security/templates/licenses; reproducible agent benchmarks and sanitized demo recordings; site passes its three review rounds and linked workflows work. |
+| M7 — Release candidate and v1 | M0–M6 accepted | Fresh-machine native install, real-browser artist+MCP workflow, all three backends, file exchange, export validation, website checks, three final critique/fix rounds, signed/notarized public artifacts (missing credentials keep release pending), tagged source/checksums and Vercel production promotion. |
+| M8 — Agent-made showcase | Released working v1 and M4 contracts | Produce 6–9 original creations through actual MCP workflows: isometric props, characters, buildings and a larger scene. Preserve source, prompts, host/API versions, tool traces, multi-angle renders and GLBs. Curate gallery compositions, capture replay/demo videos and benchmark reports; inspect desktop/mobile WebGL performance and reduced-motion/poster fallbacks. Three separate art/site critique rounds before publishing. |
 
 Ordering is dependency-driven; do not spend final UI/site polish before M0 proves the rendering/web path. Estimate dates only after the spike and representative benchmark; track each acceptance row as a milestone issue with test evidence.
 
@@ -404,7 +440,7 @@ Ordering is dependency-driven; do not spend final UI/site polish before M0 prove
 | MCP cannot run as a listening native service inside a browser | Local Rust companion owns MCP/authority; browser makes outbound connections. Prove hosted loopback policies; provide the same app bundle from companion origin when blocked. No cloud/session service hidden inside Vercel deployment. |
 | Concurrent user/agent edits lose data or duplicate after retry | Single authority, expected revisions, operation IDs, atomic patches/shared history, capped replay, snapshot resync, explicit fork-on-disconnect; integration tests with reordered/disconnected streams. |
 | GPU differences break snapshots or exports | Fixed scene/camera/light/color pipeline; backend-specific tolerances with geometry invariants; preserve diff artifacts and require visual inspection. Readback alignment and premultiplied alpha tested explicitly. |
-| Project/import corruption or decompression abuse | Bounded parsers, validated references, fuzz corpus, safe migrations, transactional open/save, native recovery and IndexedDB quota handling. No archive extraction or arbitrary paths. |
+| Project/import corruption or parser resource abuse | Bounded parsers, validated references, fuzz corpus, safe migrations, transactional open/save, native recovery and IndexedDB quota handling. No arbitrary file access or arbitrary paths. |
 | Signing, browser permissions, or Vercel features differ from assumptions | Verify current vendor docs/pins at M0 and release; rehearsal on fresh machines and deployed URLs; protected secrets; honest unsigned/unsupported labels and rollback. Keep static hosting independent of server features. |
 | Design drifts into generic dashboard or rough voxel demo | Art checklist as acceptance gate; original polished model; strict token/copy discipline; three critique/fix/review rounds per stage in both themes. Block jagged edges, misleading controls, and destructive primary styling. |
 | Open-source license/provenance or identity leakage | Audit crate/file licenses, preserve notices, original examples, project-owned contacts, sanitized screenshots/logs, and artifact metadata checks before publication. |
