@@ -2,3 +2,4 @@
 pub mod editor;
 pub mod palettes;
 mod persistence;
+pub mod share;

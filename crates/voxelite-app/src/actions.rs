@@ -8,6 +8,7 @@ pub enum Op {
     Open,
     Save,
     SaveAs,
+    Share,
     Quit,
     Undo,
     Redo,
@@ -42,6 +43,7 @@ impl Op {
             Self::Open => "Open project…",
             Self::Save => "Save",
             Self::SaveAs => "Save as…",
+            Self::Share => "Share project…",
             Self::Quit => "Quit Voxelite",
             Self::Undo => "Undo",
             Self::Redo => "Redo",
@@ -173,7 +175,10 @@ impl Op {
     }
 }
 pub const MENUS: &[(&str, &[Op])] = &[
-    ("File", &[Op::New, Op::Open, Op::Save, Op::SaveAs, Op::Quit]),
+    (
+        "File",
+        &[Op::New, Op::Open, Op::Save, Op::SaveAs, Op::Share, Op::Quit],
+    ),
     ("Edit", &[Op::Undo, Op::Redo, Op::Commands]),
     (
         "View",
