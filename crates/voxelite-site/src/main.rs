@@ -40,7 +40,31 @@ fn escape(text: &str) -> String {
         .replace('\'', "&#39;")
 }
 
+/// Index authored second-level headings, using the same anchors as the article.
+/// Content is trusted build-time HTML; no runtime parsing or script is needed.
+fn section_links(content: &str) -> String {
+    let mut links = String::new();
+    for heading in content.split("<h2 id=\"").skip(1) {
+        let Some((id, rest)) = heading.split_once("\">") else {
+            continue;
+        };
+        let Some((label, _)) = rest.split_once("</h2>") else {
+            continue;
+        };
+        write!(links, "<a href=\"#{}\">{label}</a>", escape(id)).expect("string write");
+    }
+    links
+}
+
 fn layout(slug: &str, title: &str, content: &str) -> String {
+    let sections = section_links(content);
+    let mobile_sections = if sections.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<details><summary>On this page</summary><nav aria-label=\"Page sections\">{sections}</nav></details>"
+        )
+    };
     let mut navigation = String::new();
     for (path, label, _) in PAGES {
         let href = if path.is_empty() {
@@ -59,9 +83,9 @@ fn layout(slug: &str, title: &str, content: &str) -> String {
         r##"<!doctype html><html lang="en" data-theme="dark"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title} — Voxelite</title><meta name="description" content="Voxelite documentation: {title}. Build, connect, create and inspect with the Rust voxel editor.">
-<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body>
+<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
 <a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
-<div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main></div><footer class="shell footer"><a class="brand" href="/">Voxelite</a><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
+<div class="shell docs-mobile-nav"><details><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main><aside class="docs-toc"><p class="eyebrow">ON THIS PAGE</p><nav aria-label="Page sections">{sections}</nav></aside></div><footer class="shell footer"><a class="brand" href="/">Voxelite</a><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
 "##
     )
 }
