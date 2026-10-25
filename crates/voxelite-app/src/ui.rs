@@ -972,16 +972,55 @@ impl EditorView {
             }))
             .child(div().flex_1())
     }
+    fn tool_rail(&self, cx: &Context<Self>) -> Div {
+        let t = self.theme;
+        div()
+            .w(px(56.0))
+            .flex_shrink_0()
+            .h_full()
+            .flex()
+            .flex_col()
+            .items_center()
+            .py(px(12.0))
+            .gap(px(6.0))
+            .border_r_1()
+            .border_color(t.line())
+            .children(
+                [
+                    ("rail-place", "place", Op::Place),
+                    ("rail-erase", "erase", Op::Erase),
+                    ("rail-paint", "paint", Op::Paint),
+                    ("rail-fill", "fill", Op::Fill),
+                    ("rail-box", "box", Op::Box),
+                    ("rail-picker", "picker", Op::Picker),
+                ]
+                .into_iter()
+                .map(|(id, name, op)| {
+                    self.button(id, name, "", op, cx)
+                        .size(px(36.0))
+                        .justify_center()
+                        .px(px(0.0))
+                }),
+            )
+            .child(div().w(px(24.0)).h(px(1.0)).my(px(6.0)).bg(t.line()))
+            .children(
+                [
+                    ("rail-mirror-x", "X", Op::MirrorX),
+                    ("rail-mirror-y", "Y", Op::MirrorY),
+                    ("rail-mirror-z", "Z", Op::MirrorZ),
+                ]
+                .into_iter()
+                .map(|(id, label, op)| {
+                    self.button(id, "", label, op, cx)
+                        .size(px(36.0))
+                        .justify_center()
+                        .px(px(0.0))
+                        .font_family("Geist Mono")
+                }),
+            )
+    }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
-        let tool_icon = match self.editor.tool {
-            Tool::Place => "place",
-            Tool::Erase => "erase",
-            Tool::Paint => "paint",
-            Tool::Fill => "fill",
-            Tool::Box => "box",
-            Tool::Picker => "picker",
-        };
         row()
             .h(px(TOOLBAR_HEIGHT))
             .flex_shrink_0()
@@ -1026,62 +1065,6 @@ impl EditorView {
                         },
                     )),
             )
-            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
-            .child(
-                self.button(
-                    "tool-picker",
-                    tool_icon,
-                    self.editor.tool.name(),
-                    Op::ToolPicker,
-                    cx,
-                )
-                .text_color(t.text())
-                .child(icon("chevron").size(px(14.0)).text_color(t.muted())),
-            )
-            .when(self.editor.mirror.iter().any(|enabled| *enabled), |d| {
-                d.child(
-                    row()
-                        .gap(px(2.0))
-                        .child(
-                            div()
-                                .mr(px(5.0))
-                                .text_size(px(12.0))
-                                .text_color(t.muted())
-                                .child("Mirror"),
-                        )
-                        .children(
-                            [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
-                                .into_iter()
-                                .enumerate()
-                                .map(|(i, op)| {
-                                    row()
-                                        .id(("mirror", i))
-                                        .w(px(32.0))
-                                        .h(px(32.0))
-                                        .justify_center()
-                                        .rounded(px(6.0))
-                                        .border_1()
-                                        .border_color(if self.editor.mirror[i] {
-                                            t.accent()
-                                        } else {
-                                            t.background()
-                                        })
-                                        .text_color(if self.editor.mirror[i] {
-                                            t.accent()
-                                        } else {
-                                            t.muted()
-                                        })
-                                        .when(self.editor.mirror[i], |d| d.bg(t.selected()))
-                                        .cursor_pointer()
-                                        .hover(move |d| d.bg(t.hover()))
-                                        .child(mono(["X", "Y", "Z"][i]))
-                                        .on_click(cx.listener(move |this, _, window, cx| {
-                                            this.invoke(op, window, cx)
-                                        }))
-                                }),
-                        ),
-                )
-            })
             .child(div().flex_1())
             .child(
                 self.button(
@@ -2239,7 +2222,7 @@ impl Render for EditorView {
             self.painted_image = self.image.clone();
         }
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - SIDEBAR_WIDTH).max(1.0);
+        let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
         let height =
             (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
         let scale = (1024.0 / width.max(height)).min(1.0);
@@ -2328,6 +2311,7 @@ impl Render for EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .items_stretch()
+                    .child(self.tool_rail(cx))
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
