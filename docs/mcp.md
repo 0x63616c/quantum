@@ -234,3 +234,8 @@ palette formats, comment/version persistence, filesystem conflicts, camera and
 render budgets, PNG decoding, exports, and raw JSON-RPC error framing. Process
 tests run the complete editing loop independently under both supported MCP
 profiles and verify a save/reopen/save produces identical canonical bytes.
+
+Verified on Linux with Rust 1.99.1 on 2026-10-25: workspace build, formatting,
+Clippy with warnings denied, and all 66 workspace tests passed (18 MCP tests).
+Host configuration files were parsed as JSON/TOML; host application launches
+remain untested on this headless machine.
