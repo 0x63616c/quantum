@@ -20,10 +20,12 @@ fn opt(name: &'static str, value: Value) -> Field {
 fn string(max: usize) -> Value {
     json!({"type":"string","minLength":1,"maxLength":max})
 }
-fn name(max: usize) -> Value {
+fn bounded_name(max: usize) -> Value {
     let mut schema = string(max);
     schema["pattern"] = json!("^[^\\u0000-\\u001f\\u007f-\\u009f]+$");
-    schema["description"] = json!(format!("Nonempty text, at most {max} UTF-8 bytes, without control characters. The byte limit is also checked at runtime."));
+    schema["description"] = json!(format!(
+        "Nonempty text, at most {max} UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    ));
     schema
 }
 fn rgba() -> Value {
@@ -66,7 +68,9 @@ fn region() -> Value {
         req("min", pos()),
         req("max", array(integer(-32767, 32768), 3, 3)),
     ]);
-    schema["description"] = json!("Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.");
+    schema["description"] = json!(
+        "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
+    );
     schema
 }
 fn anchor() -> Value {
@@ -76,7 +80,7 @@ fn slot(air: bool) -> Value {
     json!({"anyOf":[integer(if air {0} else {1},256),string(128)],"description":"Stable slot number or unique swatch name; zero is air for explicit writes only."})
 }
 fn layer() -> Value {
-    let mut s = name(128);
+    let mut s = bounded_name(128);
     s["description"] = json!("Layer UUID or unique exact name. Never inferred from UI selection.");
     s
 }
@@ -144,10 +148,10 @@ fn write_fields(new: bool) -> Vec<Field> {
             req("expected_revision", revision()),
         ]);
     }
-    f.push(opt("label", name(80)));
+    f.push(opt("label", bounded_name(80)));
     f
 }
-fn render_fields() -> Vec<Field> {
+fn camera_schema() -> Value {
     let number = json!({"type":"number","minimum":-1e9,"maximum":1e9});
     let mut camera = object(vec![
         req("eye", array(number.clone(), 3, 3)),
@@ -167,6 +171,9 @@ fn render_fields() -> Vec<Field> {
         {"properties":{"projection":{"const":"orthographic"}},"required":["ortho_height"],"not":{"required":["fov_y_degrees"]}},
         {"properties":{"projection":{"const":"perspective"}},"required":["fov_y_degrees"],"not":{"required":["ortho_height"]}}
     ]);
+    camera
+}
+fn render_fields() -> Vec<Field> {
     vec![
         opt(
             "views",
@@ -176,7 +183,7 @@ fn render_fields() -> Vec<Field> {
                 6,
             ),
         ),
-        opt("camera", camera),
+        opt("camera", camera_schema()),
         opt("width", integer(1, 1024)),
         opt("height", integer(1, 1024)),
         opt("perspective", boolean()),
@@ -205,9 +212,98 @@ fn output_schema(name: &str, scope: u8) -> Value {
     let data = data_schema(name, scope);
     json!({"type":"object","properties":{"api_version":{"const":"voxelite.v1"},"session_id":uuid(),"epoch":uuid(),"ok":{"type":"boolean"},"data":data,"error":error},"required":["api_version","session_id","epoch","ok"],"additionalProperties":false,"oneOf":[{"properties":{"ok":{"const":true}},"required":["data"],"not":{"required":["error"]}},{"properties":{"ok":{"const":false}},"required":["error"],"not":{"required":["data"]}}]})
 }
+fn count() -> Value {
+    integer(0, i64::MAX)
+}
+fn sha256() -> Value {
+    json!({"type":"string","pattern":"^[0-9a-f]{64}$"})
+}
+fn origin() -> Value {
+    choice(&["agent", "human"])
+}
+fn layer_schema() -> Value {
+    object(vec![
+        req("id", uuid()),
+        req("name", bounded_name(128)),
+        req("visible", boolean()),
+        req("locked", boolean()),
+        req("voxel_count", count()),
+    ])
+}
+fn document_fields() -> Vec<Field> {
+    vec![
+        req("model_id", uuid()),
+        req("revision", revision()),
+        req("name", bounded_name(128)),
+        req("bounds", region()),
+        req("layers", array(layer_schema(), 1, 64)),
+        req("dirty", boolean()),
+        req("voxel_count", count()),
+        req("palette_slots", integer(1, 256)),
+        req("comments", count()),
+        req("versions", integer(0, 64)),
+        req("head_id", nullable(uuid())),
+        req("redo_id", nullable(uuid())),
+    ]
+}
+fn image_schema(view: bool) -> Value {
+    let mut fields = vec![
+        req(
+            "view",
+            choice(&[
+                "iso",
+                "front",
+                "back",
+                "left",
+                "right",
+                "top",
+                "camera",
+                "contact_sheet",
+            ]),
+        ),
+        req("width", integer(1, 2048)),
+        req("height", integer(1, 2048)),
+        req("sha256", sha256()),
+        req("bytes", count()),
+    ];
+    if view {
+        fields.push(req("camera", camera_schema()));
+    }
+    object(fields)
+}
+fn render_output_fields() -> Vec<Field> {
+    vec![
+        req("backend", json!({"const":"cpu"})),
+        req("bounds", region()),
+        req("views", array(image_schema(true), 1, 6)),
+        req("images", array(image_schema(false), 1, 7)),
+        req(
+            "image_mode",
+            choice(&["contact_sheet", "individual", "both"]),
+        ),
+    ]
+}
+/// Output objects allow additive fields at every nesting level within this API
+/// major. Values of known fields remain fully typed and locally bounded.
+fn additive(schema: &mut Value) {
+    match schema {
+        Value::Object(map) => {
+            if map.get("additionalProperties") == Some(&Value::Bool(false)) {
+                map.insert("additionalProperties".into(), Value::Bool(true));
+            }
+            for value in map.values_mut() {
+                additive(value);
+            }
+        }
+        Value::Array(values) => {
+            for value in values {
+                additive(value);
+            }
+        }
+        _ => {}
+    }
+}
 fn data_schema(name: &str, scope: u8) -> Value {
-    let count = || integer(0, i64::MAX);
-    let list = || json!({"type":"array","items":{"type":"object"}});
     let mut fields = if scope == 0 {
         vec![]
     } else {
@@ -217,6 +313,7 @@ fn data_schema(name: &str, scope: u8) -> Value {
         fields.extend([
             req("operation_id", uuid()),
             req("undo_entry_id", nullable(uuid())),
+            req("head_id", nullable(uuid())),
             req("changed_voxels", count()),
             req("added", count()),
             req("removed", count()),
@@ -232,135 +329,138 @@ fn data_schema(name: &str, scope: u8) -> Value {
     match name {
         "capabilities_get" => fields.extend([
             req("api_version", json!({"const":"voxelite.v1"})),
-            req("protocol_versions", array(string(32), 1, 2)),
-            req("limits", json!({"type":"object"})),
-            req("documents", list()),
+            req("protocol_versions", array(choice(&["2025-11-25", "2026-07-28"]), 2, 2)),
+            req("limits", object(["open_documents", "request_bytes", "result_bytes", "batch_operations", "explicit_voxels", "read_voxels", "work_units", "operation_receipts", "receipt_bytes"].into_iter().map(|key| req(key, count())).collect())),
+            req("documents", array(object(document_fields()), 0, 8)),
             req("renderer", json!({"const":"cpu"})),
+            req("formats", array(string(16), 1, 5)), req("presets", array(string(32), 1, 7)),
+            req("durability", json!({"const":"memory"})),
         ]),
-        "document_create" | "document_open" | "document_info" => fields.extend([
-            req("name", string(128)),
-            req("bounds", region()),
-            req("layers", list()),
-            req("dirty", boolean()),
-            req("voxel_count", count()),
-            req("head_id", nullable(uuid())),
-            req("redo_id", nullable(uuid())),
-        ]),
-        "document_save" | "export_glb" | "export_png" => fields.extend([
-            req("path", string(1024)),
-            req("bytes", count()),
-            req(
-                "sha256",
-                json!({"type":"string","pattern":"^[0-9a-f]{64}$"}),
-            ),
-        ]),
-        "voxels_get" => fields.extend([req("layer_id", uuid()), req("voxels", list())]),
-        "query" => fields.extend([
-            req("bounds", region()),
-            req("region", region()),
-            req("occupied_bounds", nullable(region())),
-            req("voxel_count", count()),
-            req("view", choice(&["layers", "composite"])),
-        ]),
-        "layers_list" => fields.push(req("layers", list())),
-        "layers_add" => fields.push(req("layer_id", uuid())),
-        "palette_list" => fields.push(req("palette", json!({"type":"object"}))),
-        "palette_import" | "palette_apply_preset" => fields.push(req("slot_mapping", list())),
-        "palette_export" => fields.extend([
-            req("text", string(65536)),
-            req("format", choice(&["hex", "gpl"])),
-        ]),
-        "render" => fields.extend([
-            req("backend", json!({"const":"cpu"})),
-            req("bounds", region()),
-            req("views", list()),
-            req("images", list()),
-            req(
-                "image_mode",
-                choice(&["contact_sheet", "individual", "both"]),
-            ),
-        ]),
-        "comments_list" => fields.extend([
-            req("comments", list()),
-            req("total", count()),
-            req("next_offset", nullable(count())),
-        ]),
-        "comments_add" | "comments_reply" => {
-            fields.extend([req("thread_id", uuid()), req("message_id", uuid())])
+        "document_create" | "document_open" | "document_info" => fields = document_fields(),
+        "document_save" | "export_glb" | "export_png" => {
+            fields.extend([req("path", string(1024)), req("bytes", count()), req("sha256", sha256())]);
+            match name {
+                "document_save" => fields.push(req("dirty", json!({"const":false}))),
+                "export_glb" => fields.push(req("mime_type", json!({"const":"model/gltf-binary"}))),
+                _ => fields.extend(render_output_fields()),
+            }
         }
-        "history_read" => fields.extend([
-            req("entries", list()),
-            req("total", count()),
-            req("next_offset", nullable(count())),
-            req("head_id", nullable(uuid())),
-            req("redo_id", nullable(uuid())),
-            req("initial_retained", boolean()),
-            req("history_bytes", count()),
+        "voxels_get" => fields.extend([
+            req("layer_id", uuid()),
+            req("voxels", array(object(vec![req("at", pos()), req("slot", integer(0, 256))]), 1, 10000)),
         ]),
+        "query" => fields.extend([
+            req("bounds", region()), req("region", region()), req("occupied_bounds", nullable(region())),
+            req("voxel_count", count()), req("view", choice(&["layers", "composite"])),
+            opt("slots", json!({"type":"object","propertyNames":{"pattern":"^[0-9]{1,3}$"},"additionalProperties":count()})),
+            opt("next_offset", nullable(count())),
+            opt("voxels", array(object(vec![req("layer_id", nullable(uuid())), req("at", pos()), req("slot", integer(1, 256))]), 0, 10000)),
+        ]),
+        "layers_list" => fields.push(req("layers", array(layer_schema(), 1, 64))),
+        "layers_add" => fields.push(req("layer_id", uuid())),
+        "palette_list" => fields.extend([
+            req("palette", object(vec![
+                req("slots", array(object(vec![req("index", integer(1, 256)), req("rgba", rgba()), opt("name", bounded_name(128))]), 1, 256)),
+                req("order", array(integer(1, 256), 1, 256)),
+            ])),
+            req("presets", array(string(32), 1, 7)),
+        ]),
+        "palette_import" | "palette_apply_preset" => fields.push(req("slot_mapping", array(object(vec![req("source", integer(1, 256)), req("slot", integer(1, 256))]), 1, 256))),
+        "palette_export" => fields.extend([req("text", string(65536)), req("format", choice(&["hex", "gpl"]))]),
+        "render" => fields.extend(render_output_fields()),
+        "comments_list" => fields.extend([
+            req("comments", array(object(vec![
+                req("thread", object(vec![
+                    req("id", uuid()), req("anchor", anchor()), req("layer", nullable(uuid())), req("resolved", boolean()),
+                    req("messages", array(object(vec![req("id", uuid()), req("origin", origin()), req("text", string(8192)), req("tool", nullable(bounded_name(128)))]), 0, 200)),
+                ])),
+                req("message_count", count()), req("next_message_offset", nullable(count())),
+                req("anchor_state", choice(&["visible", "hidden", "orphaned"])),
+            ]), 0, 200)),
+            req("total", count()), req("next_offset", nullable(count())),
+        ]),
+        "comments_add" | "comments_reply" => fields.extend([req("thread_id", uuid()), req("message_id", uuid())]),
+        "history_read" => fields.extend([
+            req("entries", array(object(vec![
+                req("entry_id", uuid()), req("origin", origin()), req("tool", bounded_name(128)), req("label", bounded_name(128)),
+                req("base_revision", revision()), req("result_revision", revision()),
+                req("added", count()), req("removed", count()), req("recolored", count()), req("changed_bounds", nullable(region())),
+            ]), 0, 200)),
+            req("total", count()), req("next_offset", nullable(count())),
+            req("head_id", nullable(uuid())), req("redo_id", nullable(uuid())),
+            req("initial_retained", boolean()), req("history_bytes", count()),
+        ]),
+        "history_undo" | "history_redo" => fields.push(req("redo_id", nullable(uuid()))),
         "versions_save" => fields.push(req("version_id", uuid())),
-        "versions_list" => fields.push(req("versions", list())),
+        "versions_list" => fields.push(req("versions", array(object(vec![
+            req("id", uuid()), req("name", bounded_name(128)), req("parent_id", nullable(uuid())), req("origin", origin()), req("content_hash", sha256()),
+        ]), 0, 64))),
         _ => {}
     }
     let mut schema = object(fields);
-    // Clients must tolerate additive result fields within this API major.
-    schema["additionalProperties"] = json!(true);
+    additive(&mut schema);
     schema
 }
 fn build() -> Vec<Spec> {
     let mut specs = Vec::new();
-    let mut add =
-        |name: &'static str, description: &'static str, mut fields: Vec<Field>, scope: u8| {
-            let mutation = scope == 2 || scope == 3;
-            let mut common = match scope {
-                1 => read_fields(),
-                2 => write_fields(false),
-                3 => write_fields(true),
-                _ => vec![],
-            };
-            common.append(&mut fields);
-            let mut schema = object(common);
-            match name {
-                "voxels_box" => box_constraints(&mut schema),
-                "render" | "export_png" => {
-                    schema["not"] = json!({"required":["camera"],"anyOf":[{"required":["views"]},{"required":["perspective"]}]});
-                    if name == "export_png" {
-                        schema["properties"]["image_mode"] = choice(&["contact_sheet", "individual"]);
-                        schema["if"] = json!({"properties":{"image_mode":{"const":"individual"}},"required":["image_mode"]});
-                        // Without an explicit camera, individual export needs
-                        // exactly one named view instead of the four-view default.
-                        schema["then"] = json!({"anyOf":[{"required":["camera"]},{"required":["views"],"properties":{"views":{"maxItems":1}}}]});
-                    }
-                }
-                "query" => schema["not"] = json!({"required":["view","layer"],"properties":{"view":{"const":"composite"}}}),
-                _ => {}
-            }
-            schema["$schema"] = json!("https://json-schema.org/draft/2020-12/schema");
-            let validator = jsonschema::validator_for(&schema).expect("built-in input schema");
-            let mut tool = Tool::new(
-                format!("voxelite_{name}"),
-                description,
-                schema.as_object().unwrap().clone(),
-            );
-            tool.output_schema = Some(Arc::new(
-                output_schema(name, scope).as_object().unwrap().clone(),
-            ));
-            tool.annotations = Some(
-                ToolAnnotations::default()
-                    .read_only(
-                        !mutation && !matches!(name, "document_save" | "export_glb" | "export_png"),
-                    )
-                    .destructive(
-                        mutation || matches!(name, "document_save" | "export_glb" | "export_png"),
-                    )
-                    .idempotent(true)
-                    .open_world(false),
-            );
-            specs.push(Spec {
-                tool,
-                validator,
-                mutation,
-            });
+    let mut add = |name: &'static str,
+                   description: &'static str,
+                   mut fields: Vec<Field>,
+                   scope: u8| {
+        let mutation = scope == 2 || scope == 3;
+        let mut common = match scope {
+            1 => read_fields(),
+            2 => write_fields(false),
+            3 => write_fields(true),
+            _ => vec![],
         };
+        common.append(&mut fields);
+        let mut schema = object(common);
+        match name {
+            "voxels_box" => box_constraints(&mut schema),
+            "render" | "export_png" => {
+                schema["not"] = json!({"required":["camera"],"anyOf":[{"required":["views"]},{"required":["perspective"]}]});
+                if name == "export_png" {
+                    schema["properties"]["image_mode"] = choice(&["contact_sheet", "individual"]);
+                    schema["if"] = json!({"properties":{"image_mode":{"const":"individual"}},"required":["image_mode"]});
+                    // Without an explicit camera, individual export needs
+                    // exactly one named view instead of the four-view default.
+                    schema["then"] = json!({"anyOf":[{"required":["camera"]},{"required":["views"],"properties":{"views":{"maxItems":1}}}]});
+                }
+            }
+            "query" => {
+                schema["not"] =
+                    json!({"required":["view","layer"],"properties":{"view":{"const":"composite"}}})
+            }
+            _ => {}
+        }
+        schema["$schema"] = json!("https://json-schema.org/draft/2020-12/schema");
+        let validator = jsonschema::validator_for(&schema).expect("built-in input schema");
+        let mut tool = Tool::new(
+            format!("voxelite_{name}"),
+            description,
+            schema.as_object().unwrap().clone(),
+        );
+        tool.output_schema = Some(Arc::new(
+            output_schema(name, scope).as_object().unwrap().clone(),
+        ));
+        tool.annotations = Some(
+            ToolAnnotations::default()
+                .read_only(
+                    !mutation && !matches!(name, "document_save" | "export_glb" | "export_png"),
+                )
+                .destructive(
+                    mutation || matches!(name, "document_save" | "export_glb" | "export_png"),
+                )
+                .idempotent(true)
+                .open_world(false),
+        );
+        specs.push(Spec {
+            tool,
+            validator,
+            mutation,
+        });
+    };
     add(
         "capabilities_get",
         "Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.",
@@ -371,7 +471,7 @@ fn build() -> Vec<Spec> {
         "document_create",
         "Create a revision-zero document and visible unlocked Base layer. Default bounds [0,0,0]..[32,32,32]. Returns model/layer IDs. Up to eight documents per session; never replaces an open model.",
         vec![
-            req("name", string(128)),
+            req("name", bounded_name(128)),
             opt("bounds", region()),
             opt("model_id", uuid()),
             opt("layer_id", uuid()),
@@ -474,7 +574,7 @@ fn build() -> Vec<Spec> {
         "layers_add",
         "Insert an empty layer at bottom-to-top index (default append). Optional layer_id supports deterministic references. Maximum 64 layers.",
         vec![
-            req("name", string(128)),
+            req("name", bounded_name(128)),
             opt("layer_id", uuid()),
             opt("index", integer(0, 64)),
         ],
@@ -489,7 +589,7 @@ fn build() -> Vec<Spec> {
     add(
         "layers_rename",
         "Rename a layer without changing its stable ID. Duplicate names are allowed, but future name-based access must be unambiguous.",
-        vec![req("layer", layer()), req("name", string(128))],
+        vec![req("layer", layer()), req("name", bounded_name(128))],
         2,
     );
     add(
@@ -522,7 +622,7 @@ fn build() -> Vec<Spec> {
         vec![
             req("slot", integer(1, 256)),
             req("rgba", rgba()),
-            opt("name", string(128)),
+            opt("name", bounded_name(128)),
         ],
         2,
     );
@@ -649,7 +749,7 @@ fn build() -> Vec<Spec> {
         "versions_save",
         "Persist current content as a named immutable snapshot with agent attribution and content hash. Up to 64 versions, no recursive libraries. One undoable library edit; save document to retain across process restarts.",
         vec![
-            req("name", string(128)),
+            req("name", bounded_name(128)),
             opt("version_id", uuid()),
             opt("parent_id", uuid()),
         ],

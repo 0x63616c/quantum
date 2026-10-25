@@ -90,6 +90,223 @@ fn catalog_is_frozen_sorted_and_strict() {
         assert!(t.description.unwrap().len() > 60);
     }
 }
+
+#[test]
+fn discovery_schemas_express_conditional_inputs() {
+    let f = Fixture::new();
+    for (tool, args) in [
+        (
+            "voxels_box",
+            json!({"layer":"Base","region":{"min":[0,0,0],"max":[1,1,1]}}),
+        ),
+        (
+            "voxels_box",
+            json!({"layer":"Base","region":{"min":[0,0,0],"max":[1,1,1]},"mode":"erase","slot":1}),
+        ),
+        (
+            "voxels_batch",
+            json!({"operations":[{"kind":"box","layer":"Base","region":{"min":[0,0,0],"max":[1,1,1]}}]}),
+        ),
+        ("palette_set_slot", json!({"slot":2,"rgba":[10,20,30,0]})),
+    ] {
+        let args = f.args(args);
+        let schema = VoxeliteServer::tools()
+            .into_iter()
+            .find(|t| t.name == format!("voxelite_{tool}"))
+            .unwrap()
+            .input_schema;
+        assert!(!jsonschema::is_valid(
+            &Value::Object((*schema).clone()),
+            &args
+        ));
+        assert_eq!(f.call(tool, args)["error"]["code"], "invalid_argument");
+    }
+    let camera = json!({"eye":[5,5,5],"target":[1,1,1],"up":[0,1,0],"projection":"orthographic","ortho_height":5});
+    let mut missing = camera.clone();
+    missing.as_object_mut().unwrap().remove("ortho_height");
+    let mut wrong = camera.clone();
+    wrong["fov_y_degrees"] = json!(45);
+    for (tool, mut args) in [
+        ("render", json!({"camera":camera,"views":["iso"]})),
+        ("render", json!({"camera":camera,"perspective":false})),
+        ("render", json!({"camera":missing})),
+        ("render", json!({"camera":wrong})),
+        ("export_png", json!({"path":"bad.png","image_mode":"both"})),
+        (
+            "export_png",
+            json!({"path":"bad.png","image_mode":"individual"}),
+        ),
+        (
+            "export_png",
+            json!({"path":"bad.png","image_mode":"individual","views":["front","back"]}),
+        ),
+        (
+            "query",
+            json!({"kind":"counts","view":"composite","layer":"Base"}),
+        ),
+    ] {
+        args["model_id"] = f.model.clone();
+        let schema = VoxeliteServer::tools()
+            .into_iter()
+            .find(|t| t.name == format!("voxelite_{tool}"))
+            .unwrap()
+            .input_schema;
+        assert!(!jsonschema::is_valid(
+            &Value::Object((*schema).clone()),
+            &args
+        ));
+        assert_eq!(f.call(tool, args)["error"]["code"], "invalid_argument");
+    }
+    assert_eq!(f.read("document_info", json!({}))["revision"], "0");
+    assert!(!f.root.path().join("bad.png").exists());
+}
+
+#[test]
+fn output_schemas_reject_corrupt_nested_results_and_allow_additions() {
+    let f = Fixture::new();
+    f.edit(
+        "voxels_set",
+        json!({"layer":"Base","voxels":[{"at":[0,0,0],"slot":1}]}),
+    );
+    f.edit(
+        "comments_add",
+        json!({"anchor":{"kind":"voxel","at":[0,0,0]},"text":"Checked"}),
+    );
+    f.edit("versions_save", json!({"name":"First"}));
+    for (tool, args, path, invalid) in [
+        (
+            "document_info",
+            json!({}),
+            "/layers/0/visible",
+            json!("yes"),
+        ),
+        ("layers_list", json!({}), "/layers/0/id", json!(17)),
+        (
+            "palette_list",
+            json!({}),
+            "/palette/slots/0/rgba/3",
+            json!(0),
+        ),
+        (
+            "voxels_get",
+            json!({"layer":"Base","positions":[[0,0,0]]}),
+            "/voxels/0/slot",
+            json!("clay"),
+        ),
+        (
+            "query",
+            json!({"kind":"voxels"}),
+            "/voxels/0/at/0",
+            json!(0.5),
+        ),
+        (
+            "comments_list",
+            json!({}),
+            "/comments/0/thread/messages/0/origin",
+            json!("system"),
+        ),
+        (
+            "history_read",
+            json!({}),
+            "/entries/0/result_revision",
+            json!(1),
+        ),
+        (
+            "versions_list",
+            json!({}),
+            "/versions/0/content_hash",
+            json!("bad"),
+        ),
+        (
+            "render",
+            json!({"views":["iso"],"width":32,"height":32}),
+            "/views/0/camera/ortho_height",
+            json!("NaN"),
+        ),
+        (
+            "render",
+            json!({"views":["iso"],"width":32,"height":32}),
+            "/images/0/sha256",
+            json!("bad"),
+        ),
+    ] {
+        let mut data = f.read(tool, args);
+        let schema = VoxeliteServer::tools()
+            .into_iter()
+            .find(|t| t.name == format!("voxelite_{tool}"))
+            .unwrap()
+            .output_schema
+            .unwrap();
+        let validator = jsonschema::validator_for(&schema["properties"]["data"]).unwrap();
+        assert!(validator.is_valid(&data));
+        *data.pointer_mut(path).unwrap() = invalid;
+        assert!(!validator.is_valid(&data), "{tool} accepted invalid {path}");
+    }
+    let mut info = f.read("document_info", json!({}));
+    info["layers"][0]["future_field"] = json!(true);
+    let schema = VoxeliteServer::tools()
+        .into_iter()
+        .find(|t| t.name == "voxelite_document_info")
+        .unwrap()
+        .output_schema
+        .unwrap();
+    assert!(jsonschema::is_valid(&schema["properties"]["data"], &info));
+    let capabilities = f.call("capabilities_get", json!({}));
+    assert_eq!(
+        capabilities["data"]["documents"].as_array().unwrap().len(),
+        1
+    );
+}
+
+#[test]
+fn maximum_layer_summary_fits_reserved_receipt_and_replays() {
+    let root = tempfile::tempdir().unwrap();
+    let mut document = voxelite_core::Document::new(Uuid::new_v4(), Uuid::new_v4());
+    document.content.layers = (0..64)
+        .map(|_| voxelite_core::Layer::new(Uuid::new_v4(), "\"".repeat(128)))
+        .collect();
+    let project = voxelite_format::Project::new(document).unwrap();
+    std::fs::write(
+        root.path().join("maximum.voxl"),
+        project.to_bytes().unwrap(),
+    )
+    .unwrap();
+    let server = VoxeliteServer::new(root.path()).unwrap();
+    let epoch = server
+        .call("voxelite_capabilities_get", json!({}))
+        .unwrap()
+        .structured_content
+        .unwrap()["epoch"]
+        .clone();
+    let args = json!({"path":"maximum.voxl","expected_epoch":epoch,"operation_id":Uuid::new_v4()});
+    let result = server.call("voxelite_document_open", args.clone()).unwrap();
+    assert_eq!(result.is_error, Some(false));
+    assert!(serde_json::to_vec(&result).unwrap().len() <= 65536);
+    assert_eq!(server.call("voxelite_document_open", args).unwrap(), result);
+}
+
+#[test]
+fn simultaneous_exact_retries_commit_once_and_replay_after_later_edits() {
+    let f = Fixture::new();
+    let args = f.args(json!({"layer":"Base","voxels":[{"at":[1,1,1],"slot":1}]}));
+    let results: Vec<_> = std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..8)
+            .map(|_| scope.spawn(|| f.server.call("voxelite_voxels_set", args.clone()).unwrap()))
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    assert!(results.iter().all(|r| r == &results[0]));
+    assert_eq!(f.read("history_read", json!({}))["total"], 1);
+    f.edit(
+        "voxels_erase_region",
+        json!({"layer":"Base","region":{"min":[0,0,0],"max":[2,2,2]}}),
+    );
+    assert_eq!(
+        f.server.call("voxelite_voxels_set", args).unwrap(),
+        results[0]
+    );
+    assert_eq!(f.read("document_info", json!({}))["voxel_count"], 0);
+}
 #[test]
 fn atomic_batches_mirror_noop_and_operation_receipts() {
     let f = Fixture::new();
