@@ -219,6 +219,11 @@ impl EditorView {
             open: false,
             clients: 0,
             expanded: None,
+            capture: None,
+            capture_generation: 0,
+            capturing: false,
+            follow: false,
+            retired: vec![],
         });
         cx.spawn(async move |this, cx| {
             loop {
@@ -406,6 +411,14 @@ impl EditorView {
             self.error = true;
         }
         self.agent.events.clear();
+        self.agent.follow = false;
+        self.agent.capture_generation = self.agent.capture_generation.wrapping_add(1);
+        self.agent.capturing = false;
+        if let Some(old) = self.agent.capture.take() {
+            self.agent
+                .retired
+                .extend(old.views.into_iter().map(|v| v.2));
+        }
         self.discussion.selected = None;
         self.discussion.draft = None;
         self.discussion.placing = false;
@@ -532,6 +545,7 @@ impl EditorView {
             Op::Theme => self.theme.toggle(),
             Op::Grid => self.grid = !self.grid,
             Op::Frame | Op::Front | Op::Right | Op::Top => {
+                self.agent.follow = false;
                 let b = self.viewport.get();
                 let aspect = (f32::from(b.size.width) / f32::from(b.size.height).max(1.0)) as f64;
                 let view = match op {
@@ -776,6 +790,7 @@ impl EditorView {
                 } else {
                     self.editor.camera.orbit(dx, dy);
                 }
+                self.agent.follow = false;
                 self.camera_view = None;
                 self.camera_fitted = false;
                 self.request_navigation(cx);
@@ -800,8 +815,6 @@ impl EditorView {
                     self.palettes.name.focus_handle(cx),
                     self.palettes.hex.focus_handle(cx),
                 ]
-            } else if self.sharing.open {
-                vec![self.sharing.person.focus_handle(cx)]
             } else if self.discussion.selected.is_some() || self.discussion.draft.is_some() {
                 vec![self.discussion.text.focus_handle(cx)]
             } else if self.panel == Panel::History {
@@ -830,7 +843,6 @@ impl EditorView {
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
-                || self.sharing.person.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window))
         {
@@ -840,6 +852,10 @@ impl EditorView {
             self.discussion.placing = false;
             self.discussion.draft = None;
             self.discussion.selected = None;
+            if self.editor.preview.is_some() {
+                self.editor.return_live();
+                self.refresh_preview(cx);
+            }
             self.agent.open = false;
             self.sharing.open = false;
             self.palettes.open = false;
@@ -966,7 +982,11 @@ impl EditorView {
                         p.source == voxelite_app::history::PreviewSource::History(*id)
                     })
                 })
-                .unwrap_or(ids.len().saturating_sub(1));
+                .unwrap_or_else(|| {
+                    ids.iter()
+                        .position(|id| *id == self.editor.engine.head())
+                        .unwrap_or(0)
+                });
             self.scrub(
                 if key == "left" {
                     index.saturating_sub(1)
@@ -1136,61 +1156,6 @@ impl EditorView {
             }))
             .child(div().flex_1())
     }
-    fn tool_rail(&self, cx: &Context<Self>) -> Div {
-        let t = self.theme;
-        div()
-            .w(px(56.0))
-            .flex_shrink_0()
-            .h_full()
-            .flex()
-            .flex_col()
-            .items_center()
-            .py(px(12.0))
-            .gap(px(6.0))
-            .border_r_1()
-            .border_color(t.line())
-            .children(
-                [
-                    ("rail-place", "place", Op::Place),
-                    ("rail-erase", "erase", Op::Erase),
-                    ("rail-paint", "paint", Op::Paint),
-                    ("rail-fill", "fill", Op::Fill),
-                    ("rail-box", "box", Op::Box),
-                    ("rail-picker", "picker", Op::Picker),
-                ]
-                .into_iter()
-                .map(|(id, name, op)| {
-                    self.button(id, name, "", op, cx)
-                        .size(px(36.0))
-                        .justify_center()
-                        .px(px(0.0))
-                }),
-            )
-            .child(div().w(px(24.0)).h(px(1.0)).my(px(6.0)).bg(t.line()))
-            .children(
-                [
-                    ("rail-mirror-x", "X", Op::MirrorX),
-                    ("rail-mirror-y", "Y", Op::MirrorY),
-                    ("rail-mirror-z", "Z", Op::MirrorZ),
-                ]
-                .into_iter()
-                .map(|(id, label, op)| {
-                    self.button(id, op.icon(), label, op, cx)
-                        .size(px(36.0))
-                        .justify_center()
-                        .px(px(0.0))
-                        .gap(px(2.0))
-                        .font_family("Geist Mono")
-                }),
-            )
-            .child(div().flex_1())
-            .child(
-                self.button("rail-comment", "comment", "", Op::Comment, cx)
-                    .size(px(36.0))
-                    .justify_center()
-                    .px(px(0.0)),
-            )
-    }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         row()
@@ -1237,6 +1202,43 @@ impl EditorView {
                         },
                     )),
             )
+            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
+            .child(
+                self.button(
+                    "tool-picker",
+                    match self.editor.tool {
+                        Tool::Place => "place",
+                        Tool::Erase => "erase",
+                        Tool::Paint => "paint",
+                        Tool::Fill => "fill",
+                        Tool::Box => "box",
+                        Tool::Picker => "picker",
+                    },
+                    self.editor.tool.name(),
+                    Op::ToolPicker,
+                    cx,
+                )
+                .child(icon("chevron").size(px(14.0)).text_color(t.muted())),
+            )
+            .when(self.editor.mirror.iter().any(|on| *on), |d| {
+                d.child(
+                    row()
+                        .id("mirror-status")
+                        .gap(px(4.0))
+                        .text_color(t.accent())
+                        .tooltip(hint("Mirror axes · Shift X / Y / Z to toggle", t))
+                        .child(icon("flip-horizontal-2").text_color(t.accent()))
+                        .child(mono(
+                            self.editor
+                                .mirror
+                                .iter()
+                                .zip(["X", "Y", "Z"])
+                                .filter_map(|(on, axis)| on.then_some(axis))
+                                .collect::<Vec<_>>()
+                                .join(""),
+                        )),
+                )
+            })
             .child(div().flex_1())
             .child(
                 self.button(
@@ -1467,10 +1469,10 @@ impl EditorView {
                 ),
             )
             .children(self.comment_pins(cx))
-            .children(self.thread_popover(cx))
             .when(self.editor.preview.is_some(), |d| {
                 d.child(
-                    div()
+                    row()
+                        .id("preview-banner")
                         .absolute()
                         .top(px(52.0))
                         .left(px(24.0))
@@ -1479,7 +1481,14 @@ impl EditorView {
                         .rounded(px(6.0))
                         .bg(t.selected())
                         .text_color(t.accent())
-                        .child("History preview · read-only"),
+                        .gap(px(8.0))
+                        .child(icon("lock").text_color(t.accent()))
+                        .child("Read-only preview")
+                        .child(self.control("preview-exit", "play", "Return to live", cx, |this, window, cx| {
+                            this.editor.return_live();
+                            this.refresh_preview(cx);
+                            window.focus(&this.focus, cx);
+                        }).border_0()),
                 )
             })
             .child(self.orientation(cx))
@@ -1623,6 +1632,7 @@ impl EditorView {
                     ScrollDelta::Pixels(p) => f64::from(f32::from(p.y)),
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
                 };
+                this.agent.follow=false;
                 this.editor.camera.zoom(delta);
                 this.camera_fitted = false;
                 this.request_navigation(cx);
@@ -1675,7 +1685,7 @@ impl EditorView {
             .child(
                 div()
                     .id("swatch-scroll")
-                    .max_h(px(if compact { 76.0 } else { 190.0 }))
+                    .max_h(px(if compact { 76.0 } else { 152.0 }))
                     .overflow_y_scroll()
                     .child(div().flex().flex_wrap().gap(px(6.0)).p(px(2.0)).children(
                         palette.order.iter().enumerate().map(|(i, slot)| {
@@ -2502,6 +2512,9 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        for image in self.agent.retired.drain(..) {
+            let _ = window.drop_image(image);
+        }
         if self.image.as_ref().map(|i| i.id) != self.painted_image.as_ref().map(|i| i.id) {
             if let Some(previous) = self.painted_image.take() {
                 let _ = window.drop_image(previous);
@@ -2514,9 +2527,6 @@ impl Render for EditorView {
         self.palettes
             .hex
             .update(cx, |f, cx| f.appearance(self.theme, cx));
-        self.sharing
-            .person
-            .update(cx, |f, cx| f.appearance(self.theme, cx));
         self.discussion
             .text
             .update(cx, |f, cx| f.appearance(self.theme, cx));
@@ -2524,7 +2534,7 @@ impl Render for EditorView {
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - SIDEBAR_WIDTH - 56.0).max(1.0);
+        let width = (f32::from(size.width) - SIDEBAR_WIDTH).max(1.0);
         let height =
             (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
         let scale = (1024.0 / width.max(height)).min(1.0);
@@ -2582,7 +2592,6 @@ impl Render for EditorView {
             .key_context(
                 if self.palettes.name.read(cx).focused(window)
                     || self.palettes.hex.read(cx).focused(window)
-                    || self.sharing.person.read(cx).focused(window)
                     || self.discussion.text.read(cx).focused(window)
                     || self.timeline.name.read(cx).focused(window)
                 {
@@ -2625,7 +2634,6 @@ impl Render for EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .items_stretch()
-                    .child(self.tool_rail(cx))
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )

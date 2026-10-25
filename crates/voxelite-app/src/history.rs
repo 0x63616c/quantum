@@ -24,7 +24,34 @@ pub struct Preview {
     /// Live history head captured on entry.
     pub head: Option<Uuid>,
 }
+/// User-facing labels for old MCP entries; custom labels are preserved verbatim.
+pub fn display_label(label: &str) -> &str {
+    match label {
+        "comments add" => "Add comment",
+        "comments reply" => "Reply to comment",
+        "comments resolve" => "Resolve comment",
+        "versions save" => "Save named version",
+        "versions restore" => "Restore named version",
+        "history undo" => "Undo edit",
+        "history redo" => "Redo edit",
+        _ => label,
+    }
+}
 impl Editor {
+    /// Timeline cursor follows the preview or the actual applied head, never a redo entry.
+    pub fn timeline_index(&self) -> usize {
+        let source = self
+            .preview
+            .as_ref()
+            .map(|p| p.source)
+            .unwrap_or(PreviewSource::History(self.engine.head()));
+        std::iter::once(None)
+            .filter(|_| self.engine.initial_retained())
+            .chain(self.engine.timeline().map(|e| Some(e.id)))
+            .position(|id| source == PreviewSource::History(id))
+            .unwrap_or(0)
+    }
+
     /// Content shown by the viewport and inspector; saving always uses live content.
     pub fn display_snapshot(&self) -> &Snapshot {
         self.preview
@@ -187,8 +214,10 @@ mod tests {
         let id = e.engine.head();
         e.undo().unwrap();
         assert_eq!(e.engine.timeline().count(), 1);
+        assert_eq!(e.timeline_index(), 0);
         e.preview_history(id).unwrap();
         assert_eq!(e.display_snapshot().layers[0].voxels.len(), 1);
+        assert_eq!(e.timeline_index(), 1);
         assert_eq!(e.snapshot().layers[0].voxels.len(), 0);
     }
 }

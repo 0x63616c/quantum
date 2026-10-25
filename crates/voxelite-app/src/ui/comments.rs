@@ -108,7 +108,8 @@ impl EditorView {
                         ["spark", "comment", "history"][i],
                         label,
                         cx,
-                        move |this, _, cx| {
+                        move |this, window, cx| {
+                            window.focus(&this.focus, cx);
                             this.panel = panel;
                             cx.notify();
                         },
@@ -125,6 +126,19 @@ impl EditorView {
     pub(super) fn comments_panel(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let comments = &self.editor.display_snapshot().comments;
+        if let Some(thread) = self.thread_panel(cx) {
+            return div()
+                .flex_1()
+                .min_h(px(0.0))
+                .flex()
+                .flex_col()
+                .child(thread);
+        }
+        let matching = |c: &&voxelite_core::Comment| match self.discussion.filter {
+            0 => !c.resolved,
+            1 => c.resolved,
+            _ => true,
+        };
         div()
             .flex_1()
             .min_h(px(120.0))
@@ -187,23 +201,20 @@ impl EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .overflow_y_scroll()
-                    .when(comments.is_empty(), |d| {
-                        d.child(
-                            div()
-                                .py(px(16.0))
-                                .text_color(t.muted())
-                                .child("Pin a discussion to your model."),
-                        )
+                    .when(!comments.iter().any(|c| matching(&c)), |d| {
+                        d.child(div().py(px(16.0)).text_color(t.muted()).child(
+                            if comments.is_empty() {
+                                "Pin a discussion to your model."
+                            } else {
+                                "No threads in this filter."
+                            },
+                        ))
                     })
                     .children(
                         comments
                             .iter()
-                            .filter(|c| match self.discussion.filter {
-                                0 => !c.resolved,
-                                1 => c.resolved,
-                                _ => true,
-                            })
                             .enumerate()
+                            .filter(|(_, c)| matching(c))
                             .map(|(i, c)| {
                                 let id = c.id;
                                 let first = &c.messages[0];
@@ -212,7 +223,7 @@ impl EditorView {
                                     .p(px(12.0))
                                     .mb(px(8.0))
                                     .rounded(px(8.0))
-                                    .border_1()
+                                    .border_b_1()
                                     .border_color(if self.discussion.selected == Some(id) {
                                         t.accent()
                                     } else {
@@ -223,6 +234,7 @@ impl EditorView {
                                     .child(
                                         row()
                                             .gap(px(8.0))
+                                            .child(mono((i + 1).to_string()).text_color(t.accent()))
                                             .child(
                                                 icon(if c.resolved { "check" } else { "comment" })
                                                     .text_color(t.muted()),
@@ -268,11 +280,15 @@ impl EditorView {
         let b = self.viewport.get();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
         self.editor
-            .snapshot()
+            .display_snapshot()
             .comments
             .iter()
             .enumerate()
-            .filter(|(_, c)| !c.resolved || self.discussion.filter != 0)
+            .filter(|(_, c)| match self.discussion.filter {
+                0 => !c.resolved,
+                1 => c.resolved,
+                _ => true,
+            })
             .filter_map(|(i, c)| {
                 let (uv, occluded) = voxelite_app::comments::project_pin(
                     self.editor.display_snapshot(),
@@ -289,9 +305,9 @@ impl EditorView {
                         .absolute()
                         .left(relative(uv[0] as f32))
                         .top(relative(uv[1] as f32))
-                        .ml(px(-14.0))
-                        .mt(px(-28.0))
-                        .size(px(28.0))
+                        .ml(px(-16.0))
+                        .mt(px(-32.0))
+                        .size(px(32.0))
                         .justify_center()
                         .rounded(px(8.0))
                         .border_1()
@@ -313,14 +329,14 @@ impl EditorView {
                             ),
                             t,
                         ))
-                        .child(if c.resolved {
-                            "✓".to_string()
-                        } else {
-                            (i + 1).to_string()
+                        .when(c.resolved, |d| {
+                            d.child(icon("check").text_color(t.accent()))
                         })
+                        .when(!c.resolved, |d| d.child((i + 1).to_string()))
                         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                         .on_mouse_move(|_, _, cx| cx.stop_propagation())
-                        .on_click(cx.listener(move |this, _, _, cx| {
+                        .on_click(cx.listener(move |this, _, window, cx| {
+                            window.focus(&this.focus, cx);
                             this.panel = Panel::Comments;
                             this.discussion.selected = Some(id);
                             this.discussion.draft = None;
@@ -332,121 +348,152 @@ impl EditorView {
             })
             .collect()
     }
-    pub(super) fn thread_popover(&self, cx: &Context<Self>) -> Option<AnyElement> {
+    /// Keep discussions in the sidebar so the artwork and its anchors remain visible.
+    fn thread_panel(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
         let thread = self.discussion.selected.and_then(|id| {
             self.editor
                 .display_snapshot()
                 .comments
                 .iter()
-                .find(|c| c.id == id)
+                .enumerate()
+                .find(|(_, c)| c.id == id)
         });
         if thread.is_none() && self.discussion.draft.is_none() {
             return None;
         }
+        let preview = self.editor.preview.is_some();
         Some(
             div()
-                .absolute()
-                .right(px(16.0))
-                .top(px(120.0))
+                .flex_1()
+                .min_h(px(0.0))
+                .p(px(20.0))
+                .flex()
+                .flex_col()
+                .gap(px(16.0))
                 .child(
-                    self.floating()
-                        .w(px(300.0))
-                        .p(px(16.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(12.0))
-                        .child(
-                            row()
-                                .justify_between()
-                                .child(section_title(if thread.is_some() {
-                                    "Discussion"
-                                } else {
-                                    "New comment"
-                                }))
-                                .child(self.control(
-                                    "close-thread",
-                                    "close",
-                                    "",
-                                    cx,
-                                    |this, window, cx| {
-                                        this.discussion.selected = None;
-                                        this.discussion.draft = None;
-                                        window.focus(&this.focus, cx);
-                                        cx.notify();
-                                    },
-                                )),
-                        )
-                        .when_some(thread, |d, c| {
-                            let id = c.id;
-                            let resolved = c.resolved;
-                            d.child(
-                                mono(format!(
-                                    "{:?}",
-                                    c.anchor.region().map(|r| r.min).unwrap_or_default()
-                                ))
-                                .text_color(t.muted()),
-                            )
-                            .child(
-                                div()
-                                    .id("thread-messages")
-                                    .max_h(px(200.0))
-                                    .overflow_y_scroll()
-                                    .children(c.messages.iter().map(|m| {
-                                        div()
-                                            .mb(px(12.0))
-                                            .child(
-                                                div()
-                                                    .font_weight(FontWeight::MEDIUM)
-                                                    .text_color(t.muted())
-                                                    .child(if m.origin == Origin::Human {
-                                                        "Human"
-                                                    } else {
-                                                        "Agent"
-                                                    }),
-                                            )
-                                            .child(div().mt(px(4.0)).child(m.text.clone()))
-                                    })),
-                            )
-                            .child(self.control(
-                                "resolve-comment",
-                                if resolved { "rotate-ccw" } else { "check" },
-                                if resolved {
-                                    "Reopen thread"
-                                } else {
-                                    "Resolve thread"
-                                },
-                                cx,
-                                move |this, _, cx| {
-                                    let r = this.editor.resolve_comment(id, !resolved);
-                                    this.report(r, "Thread updated", cx);
-                                },
-                            ))
-                        })
-                        .child(self.discussion.text.clone())
+                    row()
+                        .justify_between()
                         .child(
                             self.control(
-                                "post-comment",
-                                "send",
-                                if thread.is_some() {
-                                    "Reply"
-                                } else {
-                                    "Post comment"
-                                },
+                                "close-thread",
+                                "arrow-left",
+                                "All comments",
                                 cx,
                                 |this, window, cx| {
-                                    this.post_comment(cx);
+                                    this.discussion.selected = None;
+                                    this.discussion.draft = None;
                                     window.focus(&this.focus, cx);
+                                    cx.notify();
                                 },
                             )
-                            .justify_center()
-                            .bg(t.text())
-                            .text_color(t.background()),
+                            .border_0(),
+                        )
+                        .child(
+                            mono(thread.map_or("New".into(), |(i, _)| format!("#{}", i + 1)))
+                                .text_color(t.muted()),
                         ),
                 )
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .on_mouse_move(|_, _, cx| cx.stop_propagation())
-                .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                .when_some(thread, |d, (_, c)| {
+                    let id = c.id;
+                    let resolved = c.resolved;
+                    let anchor = c.anchor.region().ok();
+                    d.child(
+                        row()
+                            .gap(px(8.0))
+                            .child(icon("comment").text_color(t.muted()))
+                            .child(section_title("Discussion")),
+                    )
+                    .child(
+                        mono(anchor.map_or_else(
+                            || "Detached anchor".into(),
+                            |r| format!("X {}   Y {}   Z {}", r.min[0], r.min[1], r.min[2]),
+                        ))
+                        .text_color(t.muted()),
+                    )
+                    .child(
+                        div()
+                            .id("thread-messages")
+                            .flex_1()
+                            .min_h(px(60.0))
+                            .overflow_y_scroll()
+                            .children(c.messages.iter().map(|m| {
+                                div()
+                                    .mb(px(24.0))
+                                    .child(
+                                        row()
+                                            .gap(px(8.0))
+                                            .child(
+                                                icon(if m.origin == Origin::Human {
+                                                    "user"
+                                                } else {
+                                                    "spark"
+                                                })
+                                                .text_color(t.muted()),
+                                            )
+                                            .child(div().font_weight(FontWeight::MEDIUM).child(
+                                                if m.origin == Origin::Human {
+                                                    "Human"
+                                                } else {
+                                                    "Agent"
+                                                },
+                                            )),
+                                    )
+                                    .child(
+                                        div()
+                                            .mt(px(8.0))
+                                            .line_height(px(21.0))
+                                            .child(m.text.clone()),
+                                    )
+                            })),
+                    )
+                    .when(!preview, |d| {
+                        d.child(self.control(
+                            "resolve-comment",
+                            if resolved { "rotate-ccw" } else { "check" },
+                            if resolved {
+                                "Reopen thread"
+                            } else {
+                                "Resolve thread"
+                            },
+                            cx,
+                            move |this, _, cx| {
+                                let r = this.editor.resolve_comment(id, !resolved);
+                                this.report(r, "Thread updated", cx);
+                            },
+                        ))
+                    })
+                })
+                .when(!preview, |d| {
+                    d.child(self.discussion.text.clone()).child(
+                        self.control(
+                            "post-comment",
+                            "send",
+                            if thread.is_some() {
+                                "Reply"
+                            } else {
+                                "Post comment"
+                            },
+                            cx,
+                            |this, window, cx| {
+                                this.post_comment(cx);
+                                window.focus(&this.focus, cx);
+                            },
+                        )
+                        .justify_center()
+                        .bg(t.text())
+                        .text_color(t.background()),
+                    )
+                })
+                .when(preview, |d| {
+                    d.child(
+                        row()
+                            .gap(px(8.0))
+                            .text_color(t.muted())
+                            .child(icon("lock").text_color(t.muted()))
+                            .child("Read-only history preview"),
+                    )
+                })
                 .into_any_element(),
         )
     }

@@ -19,6 +19,44 @@ const RECEIPT_RESERVATION: usize = 65536;
 const MAX_RESULT_BYTES: usize = 12 * 1024 * 1024;
 const MAX_EXPLICIT_VOXELS: usize = 65536;
 
+/// Immutable render work captured on the authority thread and executed off-thread.
+pub(crate) struct RenderTask {
+    id: Uuid,
+    epoch: Uuid,
+    model: Uuid,
+    revision: u64,
+    pub snapshot: std::sync::Arc<Snapshot>,
+    args: Value,
+}
+impl RenderTask {
+    pub fn run(self) -> CallToolResult {
+        let result = (|| -> Result<CallToolResult> {
+            let images = images::render(&self.snapshot, &Args(&self.args))?;
+            let mut data = images.metadata;
+            data["model_id"] = json!(self.model);
+            data["revision"] = json!(self.revision.to_string());
+            let envelope = json!({"api_version":API_VERSION,"session_id":self.id,"epoch":self.epoch,"ok":true,"data":data});
+            let mut content = vec![ContentBlock::text(envelope.to_string())];
+            content.extend(
+                images
+                    .pngs
+                    .iter()
+                    .map(|png| ContentBlock::image(STANDARD.encode(png), "image/png")),
+            );
+            let mut result = CallToolResult::success(content);
+            result.structured_content = Some(envelope);
+            if serde_json::to_vec(&result).expect("tool result").len() > MAX_RESULT_BYTES {
+                return Err(Failure::new(
+                    "limit_exceeded",
+                    "encoded tool result exceeds 12 MiB; reduce render dimensions",
+                ));
+            }
+            Ok(result)
+        })();
+        result.unwrap_or_else(|e| Session::error_for(self.id, self.epoch, e))
+    }
+}
+
 pub(crate) struct OpenDocument {
     pub(crate) engine: Engine,
     project: Project,
@@ -63,6 +101,47 @@ impl Session {
             },
         );
         Ok(())
+    }
+    /// Validate and pin only read-only rendering; no history or authority is cloned.
+    pub(crate) fn prepare_render(&self, args: Value) -> Result<RenderTask> {
+        let spec = crate::catalog::CATALOG
+            .iter()
+            .find(|s| s.tool.name == "voxelite_render")
+            .expect("render catalog");
+        if let Err(e) = spec.validator.validate(&args) {
+            return Err(Failure::invalid(format!(
+                "arguments do not match schema: {:?}",
+                e.kind()
+            )));
+        }
+        let a = Args(&args);
+        let model = a.get("model_id")?;
+        let doc = self
+            .documents
+            .get(&model)
+            .ok_or_else(|| Failure::new("model_not_found", "model is not open in this session"))?;
+        let revision = doc.engine.revision();
+        if let Some(expected) = a.optional::<String>("revision")? {
+            let expected = expected
+                .parse::<u64>()
+                .map_err(|_| Failure::invalid("revision exceeds u64"))?;
+            if expected != revision {
+                let mut e = Failure::new(
+                    "revision_conflict",
+                    format!("expected revision {expected}, current {revision}"),
+                );
+                e.current_revision = Some(revision.to_string());
+                return Err(e);
+            }
+        }
+        Ok(RenderTask {
+            id: self.id,
+            epoch: self.epoch,
+            model,
+            revision,
+            snapshot: std::sync::Arc::new(doc.engine.document().content.clone()),
+            args,
+        })
     }
     pub fn error(&self, e: Failure) -> CallToolResult {
         Self::error_for(self.id, self.epoch, e)
@@ -745,5 +824,45 @@ mod tests {
                 assert_eq!(project.document.content.name, "Unsaved");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod render_worker_tests {
+    use super::*;
+    #[test]
+    fn render_task_pins_revision_and_does_not_borrow_live_authority() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut session = Session::new(dir.path().into());
+        let doc = Document::new(Uuid::new_v4(), Uuid::new_v4());
+        let model = doc.id;
+        session.attach(Project::new(doc).unwrap()).unwrap();
+        let task = session
+            .prepare_render(
+                json!({"model_id":model,"revision":"0","views":["front"],"width":32,"height":32}),
+            )
+            .unwrap();
+        let engine = &mut session.documents.get_mut(&model).unwrap().engine;
+        engine
+            .execute(Transaction {
+                expected_revision: 0,
+                id: Uuid::new_v4(),
+                actor: Actor::new(Origin::Human),
+                label: "While rendering".into(),
+                command: Command::EditDocument {
+                    name: Some("Still responsive".into()),
+                    bounds: None,
+                },
+            })
+            .unwrap();
+        let result = std::thread::spawn(move || task.run()).join().unwrap();
+        assert_eq!(result.is_error, Some(false));
+        assert_eq!(result.structured_content.unwrap()["data"]["revision"], "0");
+        assert_eq!(session.documents[&model].engine.revision(), 1);
+        assert!(
+            session
+                .prepare_render(json!({"model_id":model,"revision":"0"}))
+                .is_err()
+        );
     }
 }

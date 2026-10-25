@@ -142,6 +142,30 @@ fn live_socket_shares_history_conflicts_pause_and_receipts() {
         response["result"]["structuredContent"]["error"]["code"],
         "revision_conflict"
     );
+    let head = owner.head().unwrap();
+    let (undone, undo_events) = rpc(
+        "tools/call",
+        json!({"name":"voxelite_history_undo","arguments":{
+            "model_id":model,"expected_epoch":epoch,"expected_revision":owner.revision().to_string(),"operation_id":Uuid::new_v4(),"entry_id":head
+        }}),
+        &mut session,
+        &mut owner,
+    );
+    assert_eq!(undone["result"]["isError"], false, "{undone}");
+    assert!(
+        undo_events[0].entry.is_none(),
+        "Undo must not offer to revert the remaining head"
+    );
+    let (redone, redo_events) = rpc(
+        "tools/call",
+        json!({"name":"voxelite_history_redo","arguments":{
+            "model_id":model,"expected_epoch":epoch,"expected_revision":owner.revision().to_string(),"operation_id":Uuid::new_v4(),"entry_id":head
+        }}),
+        &mut session,
+        &mut owner,
+    );
+    assert_eq!(redone["result"]["isError"], false, "{redone}");
+    assert!(redo_events[0].entry.is_none());
     session.paused = true;
     let mut paused = args;
     paused["operation_id"] = json!(Uuid::new_v4());
@@ -174,6 +198,33 @@ fn live_socket_shares_history_conflicts_pause_and_receipts() {
         "epoch_conflict"
     );
     assert_eq!(owner.document().content.layers[0].voxels.get([2, 2, 3]), 0);
+    let rendered_revision = owner.revision();
+    let (rendered, mut render_events) = rpc(
+        "tools/call",
+        json!({"name":"voxelite_render","arguments":{
+            "model_id":model,"revision":rendered_revision.to_string(),"views":["front","right","back"],"width":64,"height":64
+        }}),
+        &mut session,
+        &mut owner,
+    );
+    render_events.extend(session.poll(&mut owner));
+    assert_eq!(rendered["result"]["isError"], false, "{rendered}");
+    assert_eq!(
+        rendered["result"]["structuredContent"]["data"]["revision"],
+        rendered_revision.to_string()
+    );
+    let capture = render_events
+        .iter()
+        .find(|e| e.inspection.is_some())
+        .expect("actual render event");
+    assert_eq!(capture.views, ["front", "right", "back"]);
+    assert_eq!(
+        capture.inspection.as_ref().unwrap().layers[0]
+            .voxels
+            .get([1, 2, 3]),
+        1
+    );
+    assert_eq!(owner.revision(), rendered_revision);
     drop(rpc);
     drop(stdin);
     let deadline = Instant::now() + Duration::from_secs(10);
