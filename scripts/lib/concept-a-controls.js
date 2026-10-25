@@ -140,7 +140,7 @@
         .join("");
     $("[data-editor-title]").textContent = p.name;
     $("[data-editor-subtitle]").textContent =
-      `${p.colors.length} colors · ${p.preset ? "Preset" : "Custom palette"}`;
+      `${p.preset ? "Preset · read only" : "Custom palette"} · ${p.colors.length} colors`;
     $("[data-palette-rename]").value = p.name;
     $("[data-palette-rename]").disabled = !!p.preset;
     $(".manager-swatches").innerHTML = p.colors
@@ -156,17 +156,23 @@
       "add-swatch",
       "delete-palette",
     ])
-      $(`[data-action="${action}"]`).disabled =
+      $(`[data-action="${action}"]`) && ($(`[data-action="${action}"]`).disabled =
         !!p.preset ||
         (action === "remove-swatch" && p.colors.length === 1) ||
         (action === "add-swatch" && p.colors.length >= 256) ||
         (action === "swatch-left" && editorIndex === 0) ||
-        (action === "swatch-right" && editorIndex === p.colors.length - 1);
+        (action === "swatch-right" && editorIndex === p.colors.length - 1));
     $(".palette-edit-note").textContent = p.preset
-      ? "Duplicate this preset to make it your own."
-      : "Select a swatch to edit. Use the arrows to reorder.";
+      ? "Preset colors are locked. Duplicate to customize."
+      : "Edits save on Enter or blur. Existing voxels keep their colors.";
     $("[data-editor-status]").textContent =
-      p.id === activePalette ? "Active palette" : "";
+      p.id === activePalette ? "Current brush palette" : "For new voxels only";
+    const use = $('[data-action="use-palette"]');
+    use.disabled = p.id === activePalette;
+    use.textContent = use.disabled ? "In use" : "Use palette";
+    $('.duplicate-preset').hidden = !p.preset;
+    $('[data-swatch-position]').textContent = `Color ${editorIndex + 1}`;
+    $('[data-menu="SwatchEdit"]').disabled = !!p.preset;
   }
   function openManager() {
     closeFloating();
@@ -321,17 +327,16 @@
     $("[data-current-tool]").textContent = name;
     $("[data-tool-icon]").innerHTML = icons[id] || icons.agent;
     $(".tool-picker").setAttribute("data-selected-tool", id);
-    if (id === "scatter")
-      notify("Scatter moss selected · agent-made tool preview");
+
   }
   function setFollow(value) {
     follow = value;
     $("[data-follow]").setAttribute("aria-pressed", String(value));
+    $("[data-follow-state]").textContent = value ? "On" : "Off";
     if (value) window.__setViewAngle("front");
   }
   document.addEventListener("manual-camera", () => {
-    follow = false;
-    $("[data-follow]").setAttribute("aria-pressed", "false");
+    setFollow(false);
   });
   function pause() {
     paused = !paused;
@@ -348,8 +353,8 @@
       ? "Ready to resume"
       : "render_views · 3 angles";
     $("[data-pause]").innerHTML = paused
-      ? '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m8 4 12 8-12 8Z"/></svg>'
-      : '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14M16 5v14"/></svg>';
+      ? '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m8 4 12 8-12 8Z"/></svg><span>Resume</span>'
+      : '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14M16 5v14"/></svg><span>Pause</span>';
   }
   const reverted = [];
   function syncSteps() {
@@ -357,6 +362,7 @@
       const c = window.__getChange(id),
         el = $(`[data-step="${id}"]`);
       el.classList.toggle("is-undone", c.state === "undone");
+      el.querySelector(".step-status").innerHTML = c.state === "undone" ? icons.undo : icons.check;
       el.querySelector("[data-step-undo] span").textContent =
         c.state === "undone" ? "Redo step" : "Undo step";
       $(`[data-step-coordinates="${id}"]`).textContent = c.added
@@ -394,8 +400,16 @@
   });
   const sub = (label, menu) => ({ label, menu });
   const preview = (label) => () => notify(label + " · concept preview");
-  const menuItems = (name) =>
-    ({
+  const checked = (entry, value, radio = false) => ({...entry, checked: value, radio});
+  const toolConfig = {density: 24, seed: 42};
+  const menuItems = (name) => {
+    if (name.startsWith('Version:')) {
+      const id = name.slice(8);
+      return [item('Restore version', () => versionAction('restore', id), '', 'undo'),
+        item('Compare with current', () => versionAction('compare', id)),
+        null, item('Branch from version', () => versionAction('branch', id), '', 'branch')];
+    }
+    return ({
       File: [
         item("New project", preview("New project"), "⌘N"),
         item("Open…", preview("Open .voxl"), "⌘O"),
@@ -416,20 +430,20 @@
       ],
       Edit: [
         item("Undo", undo, "⌘Z", "undo"),
-        item("Redo", redo, "⇧⌘Z", "redo"),
+        {...item("Redo", redo, "⇧⌘Z", "redo"), disabled: !reverted.length},
         null,
         item("Search commands", "commands", "⌘K", "search"),
       ],
       View: [
         item("Frame model", "frame", "Home", "focus"),
         sub("Zoom", "Zoom"),
-        item("Show grid", "grid", "", "grid"),
+        checked(item("Show grid", "grid", "", "grid"), $("[data-toggle-grid]").getAttribute("aria-pressed") === "true"),
         null,
         item("Comments", "comments", "", "comment"),
-        item(`${pinsVisible ? "✓  " : ""}Comment pins`, () => {
+        checked(item("Comment pins", () => {
           pinsVisible = !pinsVisible;
           window.__drawVoxelScene();
-        }),
+        }), pinsVisible),
         item("History", "history", "", "clock"),
         null,
         item("Toggle light / dark", "theme", "", "sun"),
@@ -443,35 +457,35 @@
       ),
       Tools: [
         ...tools.map(([id, label, key]) =>
-          item(label, () => chooseTool(id), key, id),
+          checked(item(label, () => chooseTool(id), key, id), tool === id, true),
         ),
         null,
         sub("Mirror", "Mirror"),
         null,
         { label: "Custom", heading: true },
         {
-          ...item("Scatter moss", () => chooseTool("scatter"), "", "agent"),
+          ...checked(item("Scatter moss", () => chooseTool("scatter"), "", "agent"), tool === "scatter", true),
           badge: "Agent",
         },
       ],
       ToolPicker: [
         ...tools.map(([id, label, key]) =>
-          item(label, () => chooseTool(id), key, id),
+          checked(item(label, () => chooseTool(id), key, id), tool === id, true),
         ),
         null,
         { label: "Custom", heading: true },
         {
-          ...item("Scatter moss", () => chooseTool("scatter"), "", "agent"),
+          ...checked(item("Scatter moss", () => chooseTool("scatter"), "", "agent"), tool === "scatter", true),
           badge: "Agent",
         },
       ],
       Mirror: ["X", "Y", "Z"].map((axis) =>
-        item(`${mirrors.has(axis) ? "✓  " : ""}Mirror ${axis}`, () => {
+        checked(item(`Mirror ${axis}`, () => {
           mirrors.has(axis) ? mirrors.delete(axis) : mirrors.add(axis);
           notify(
             `Mirror ${axis} ${mirrors.has(axis) ? "on" : "off"} · preview`,
           );
-        }),
+        }), mirrors.has(axis)),
       ),
       Layers: [
         item("New layer", preview("New layer")),
@@ -511,6 +525,17 @@
         item("Import .hex / .gpl…", "import-palette", "", "import"),
         sub("Export palette", "PaletteExport"),
       ],
+      PaletteManage: [
+        item("Duplicate palette", "duplicate-palette", "", "copy"),
+        null, item("Import .hex / .gpl…", "import-palette", "", "import"),
+        sub("Export palette", "PaletteExport"),
+        null, {...item("Delete palette", "delete-palette", "", "trash"), disabled: !!editing().preset},
+      ],
+      SwatchEdit: [
+        {...item("Move left", "swatch-left"), disabled: editorIndex === 0},
+        {...item("Move right", "swatch-right"), disabled: editorIndex === editing().colors.length - 1},
+        null, {...item("Remove color", "remove-swatch", "", "trash"), disabled: editing().colors.length === 1},
+      ],
       PaletteExport: [
         item("Hex colors (.hex)", "export-hex"),
         item("GIMP palette (.gpl)", "export-gpl"),
@@ -518,13 +543,13 @@
       PaletteSwitcher: [
         { label: "Your palettes", heading: true },
         ...custom.map((p) => ({
-          ...item(p.name, () => selectPalette(p.id)),
+          ...checked(item(p.name, () => selectPalette(p.id)), p.id === activePalette, true),
           ramp: p.colors,
         })),
         null,
         { label: "Preset library", heading: true },
         ...presets.map((p) => ({
-          ...item(p.name, () => selectPalette(p.id)),
+          ...checked(item(p.name, () => selectPalette(p.id)), p.id === activePalette, true),
           ramp: p.colors,
         })),
         null,
@@ -532,7 +557,7 @@
       ],
       Agent: [
         item(paused ? "Resume session" : "Pause session", "pause"),
-        item(`${follow ? "✓  " : ""}Follow agent`, "follow", "⇧F", "camera"),
+        checked(item("Follow agent", "follow", "⇧F", "camera"), follow),
         null,
         item("Refresh captured views", "refresh", "", "refresh"),
         item("Inspect latest step", () => {
@@ -552,7 +577,7 @@
       ],
       Extensions: [
         { label: "Installed", heading: true },
-        item("Scatter moss", () => chooseTool("scatter"), "", "agent"),
+        {...checked(item("Scatter moss", () => chooseTool("scatter"), "", "agent"), tool === "scatter", true), badge: "Agent"},
         null,
         item("Manage extensions…", preview("Extensions · local tool plugins")),
         item(
@@ -579,16 +604,17 @@
         sub("Camera", "Captures"),
         sub("Zoom", "Zoom"),
         null,
-        item("Show grid", "grid"),
+        checked(item("Show grid", "grid"), $("[data-toggle-grid]").getAttribute("aria-pressed") === "true"),
         item("History", "history"),
       ],
     })[name] || [];
+  };
   function selectPalette(id) {
     activePalette = id;
     swatchIndex = 0;
     persist();
     renderPalette();
-    notify(`Using ${active().name}`);
+    notify(`Using ${active().name} for new voxels`);
   }
   function closeMenus(restore = false) {
     $(".menu-root").replaceChildren();
@@ -618,7 +644,7 @@
           ? '<div role="separator" class="separator"></div>'
           : it.heading
             ? `<div class="menu-label">${esc(it.label)}</div>`
-            : `<button role="menuitem" tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
+            : `<button role="${it.checked === undefined ? "menuitem" : it.radio ? "menuitemradio" : "menuitemcheckbox"}" ${it.checked === undefined ? "" : `aria-checked="${it.checked}"`} ${it.disabled ? 'disabled aria-disabled="true"' : ""} tabindex="-1" data-menu-index="${i}" ${it.menu ? 'aria-haspopup="menu" aria-expanded="false"' : ""}>${it.checked !== undefined ? `<span class="menu-check">${it.checked ? icons.check : ""}</span>` : it.icon ? icons[it.icon] : ""}<span>${esc(it.label)}</span>${it.shortcut ? `<kbd>${it.shortcut}</kbd>` : ""}${it.badge ? `<span class="menu-agent-badge">${it.badge}</span>` : ""}${
                 it.ramp
                   ? `<span class="mini-ramp">${it.ramp
                       .slice(0, 8)
@@ -628,7 +654,12 @@
               }${it.menu ? `<span class="menu-tail">${icons.chevron}</span>` : ""}</button>`,
       )
       .join("");
-    $(".menu-root").append(element);
+    const host = $('dialog[open]') || $('.app');
+    if ($('.menu-root').parentElement !== host) host.append($('.menu-root'));
+    $('.menu-root').append(element);
+    if (['Tools', 'ToolPicker', 'Extensions'].includes(name) && tool === 'scatter') {
+      element.insertAdjacentHTML('beforeend', `<div class="tool-configuration" role="group" aria-label="Scatter moss configuration"><div>Scatter moss <span>Agent tool</span></div><label>Density <input type="range" min="1" max="100" value="${toolConfig.density}" data-tool-density aria-label="Scatter density"><output>${toolConfig.density}%</output></label><label>Seed <input type="number" value="${toolConfig.seed}" min="0" max="9999" data-tool-seed aria-label="Scatter seed"></label><p>Canopy · surface only</p></div>`);
+    }
     const r = trigger?.getBoundingClientRect();
     let x = point?.x ?? (level ? r.right + 4 : r.left),
       y = point?.y ?? (level ? r.top : r.bottom + 5);
@@ -641,7 +672,7 @@
     menuChain.push({ name, element, trigger });
     element.addEventListener("click", (e) => {
       const el = e.target.closest("[data-menu-index]");
-      if (!el) return;
+      if (!el || el.disabled) return;
       const it = entries[el.dataset.menuIndex];
       if (it.menu) {
         el.setAttribute("aria-expanded", "true");
@@ -653,7 +684,7 @@
     });
     element.addEventListener("pointerover", (e) => {
       const el = e.target.closest("[data-menu-index]");
-      if (!el) return;
+      if (!el || el.disabled) return;
       const it = entries[el.dataset.menuIndex];
       if (it.menu) {
         if (menuChain[level + 1]?.name !== it.menu) {
@@ -665,7 +696,7 @@
       }
     });
     element.addEventListener("keydown", (e) => {
-      const buttons = [...element.querySelectorAll("button")],
+      const buttons = [...element.querySelectorAll("button:not(:disabled)")],
         index = buttons.indexOf(document.activeElement);
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
         e.preventDefault();
@@ -694,6 +725,7 @@
           trigger.setAttribute("aria-expanded", "false");
         } else cycleMenubar(-1);
       }
+      if (/INPUT|SELECT/.test(e.target.tagName)) return;
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -718,12 +750,12 @@
         id: 1,
         anchor: [8, 14, -1],
         layer: "Canopy",
-        author: "AL",
+        author: "Artist 01",
         text: "Could the canopy feel a little less symmetrical?",
         resolved: false,
         replies: [
           {
-            author: "Agent",
+            author: "Canopy agent",
             text: "I softened the outer branches and added six lighter leaves. Check the right-side capture.",
             mcp: true,
           },
@@ -733,7 +765,7 @@
         id: 2,
         anchor: [-3, 16, 3],
         layer: "Roof",
-        author: "JD",
+        author: "Designer 02",
         text: "Keep this warm roof color. It balances the greens nicely.",
         resolved: false,
         replies: [],
@@ -742,7 +774,7 @@
         id: 3,
         anchor: [-2, 3, 8],
         layer: "Garden",
-        author: "AL",
+        author: "Artist 01",
         text: "A few mossy stones along this path?",
         resolved: false,
         replies: [],
@@ -771,8 +803,9 @@
     renderComments();
     window.__drawVoxelScene();
   }
+  const initials = author => author === "Artist 01" ? "A1" : author === "Designer 02" ? "D2" : "You";
   const messageHTML = (author, text, mcp = false) =>
-    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(author)}</span><strong>${esc(author)}</strong>${mcp ? "" : "<span>Just now</span>"}</div><p>${esc(text)}</p>${mcp ? '<div class="mcp-note">MCP · comments.reply</div>' : ""}</div>`;
+    `<div class="thread-message"><div class="thread-meta"><span class="avatar ${mcp ? "agent-avatar" : ""}">${mcp ? icons.agent : esc(initials(author))}</span><strong>${esc(author)}</strong><time>${mcp ? "2 min ago" : "3 min ago"}</time></div><p>${esc(text)}</p>${mcp ? '<details class="message-provenance"><summary>Agent details</summary><div class="mcp-note">MCP · comments.reply</div></details>' : ""}</div>`;
   function renderComments() {
     $("[data-comment-count]").textContent = comments.filter(
       (c) => !c.resolved,
@@ -792,14 +825,14 @@
       visible
         .map(
           (c) =>
-            `<article class="comment-card ${c.id === activeThread ? "selected" : ""}"><button data-open-thread="${c.id}"><div class="thread-meta"><span class="avatar">${esc(c.author)}</span><strong>${esc(c.author)}</strong><span>· ${esc(c.layer)}</span></div><p>${esc(c.text || "New comment")}</p><span class="comment-location">${c.replies.length ? `${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}` : "No replies"}${c.replies.some((r) => r.mcp) ? " · Agent replied" : ""}${c.resolved ? " · Resolved" : ""}</span></button></article>`,
+            `<article class="comment-card ${c.id === activeThread ? "selected" : ""}"><button data-open-thread="${c.id}"><div class="thread-meta"><span class="avatar">${esc(initials(c.author))}</span><strong>${esc(c.author)}</strong><span>· ${esc(c.layer)}</span></div><p>${esc(c.text || "New comment")}</p><span class="comment-location">${c.replies.length ? `${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}` : "No replies"}${c.replies.some((r) => r.mcp) ? " · Agent replied" : ""}${c.resolved ? " · Resolved" : ""}</span></button></article>`,
         )
         .join("") || '<p class="muted">No threads here.</p>';
     const c = comments.find((c) => c.id === activeThread);
     $(".pin-thread").hidden = !c;
     if (c) {
       $(".pin-thread").innerHTML =
-        `<div class="thread-heading"><strong>${esc(c.layer)}</strong><span class="muted">#${c.id}</span><button class="icon-button" data-action="close-thread" aria-label="Close thread">${icons.close}</button></div>${c.draft ? "" : messageHTML(c.author, c.text)}${c.replies.map((r) => messageHTML(r.author, r.text, r.mcp)).join("")}<div class="thread-actions"><span class="muted">${c.resolved ? "Resolved" : "Open thread"}</span><button data-resolve="${c.id}">${icons.check}${c.resolved ? "Reopen" : "Resolve"}</button></div><form class="reply-form"><input aria-label="Reply to comment" placeholder="${c.draft ? "Write a comment…" : "Reply…"}" required maxlength="500"><button aria-label="Send reply" type="submit">↵</button></form>`;
+        `<div class="thread-heading"><strong>${esc(c.layer)}</strong><span class="muted">#${c.id}</span><button class="icon-button" data-action="close-thread" aria-label="Close thread">${icons.close}</button></div>${c.draft ? "" : messageHTML(c.author, c.text)}${c.replies.map((r) => messageHTML(r.author, r.text, r.mcp)).join("")}<div class="thread-actions"><span class="muted">${c.resolved ? "Resolved" : `Voxel ${c.anchor.join(", ")}`}</span><button data-resolve="${c.id}">${icons.check}${c.resolved ? "Reopen" : "Resolve"}</button></div><form class="reply-form"><textarea aria-label="Reply to comment" placeholder="${c.draft ? "Write a comment…" : "Reply or mention an agent…"}" required maxlength="500" rows="2"></textarea><button aria-label="Send reply" type="submit">Reply ↵</button></form>`;
     }
   }
   function openThread(id) {
@@ -830,9 +863,10 @@
       replies: [],
     });
     openThread(comments.at(-1).id);
-    $(".reply-form input").focus();
+    $(".reply-form textarea").focus();
   }
   window.__projectComments = (project, cubes, hidden) => {
+    $(".comment-anchor").replaceChildren();
     for (const el of $$("[data-pin]")) {
       const c = comments.find((c) => c.id === Number(el.dataset.pin));
       const [x, y, depth] = project(c.anchor.map((v) => v + 0.5));
@@ -851,16 +885,16 @@
       if (c.id === activeThread) {
         const thread = $(".pin-thread");
         thread.hidden = el.hidden;
-        const left = Math.min(
-          $(".viewport").clientWidth - 312,
-          Math.max(16, x + 25),
-        );
-        const top = Math.min(
-          $(".viewport").clientHeight - thread.offsetHeight - 16,
-          Math.max(18, y - 65),
-        );
+        const left = 24;
+        const top = 92;
         thread.style.left = left + "px";
         thread.style.top = top + "px";
+        if (!el.hidden) {
+          const corners = [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]].map(p => project(p.map((v,i) => v + c.anchor[i])));
+          const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+          const startX = left + thread.offsetWidth, startY = top + 36;
+          $('.comment-anchor').innerHTML = `<path class="anchor-leader" d="M ${startX} ${startY} C ${startX + 50} ${startY}, ${x - 60} ${y}, ${x} ${y}"/>` + edges.map(([a,b]) => `<path d="M ${corners[a][0]} ${corners[a][1]} L ${corners[b][0]} ${corners[b][1]}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="4"/>`;
+        }
       }
     }
     $("[data-zoom-label]").textContent = $("[data-zoom-select]").value + "%";
@@ -868,7 +902,7 @@
   document.addEventListener("submit", (e) => {
     if (e.target.matches(".reply-form")) {
       e.preventDefault();
-      const input = e.target.querySelector("input"),
+      const input = e.target.querySelector("textarea"),
         text = input.value.trim();
       if (!text) return;
       const thread = comments.find((c) => c.id === activeThread);
@@ -878,11 +912,21 @@
       } else thread.replies.push({ author: "You", text });
       renderComments();
       window.__drawVoxelScene();
-      $(".reply-form input").focus();
+      $(".reply-form textarea").focus();
     }
   });
 
-  let permission = "comment";
+  let permission = "comment", accessScope = 'link';
+  function updateShare() {
+    const restricted = accessScope === 'restricted';
+    $$('[data-permission]').forEach(b => { b.disabled = restricted; b.setAttribute('aria-pressed', String(b.dataset.permission === permission)); });
+    $('.permission-description').textContent = restricted ? 'Only the people and agent listed below can open this link.' : ({view:'Browse the model and history without making changes.', comment:'Add comments without editing voxels.', remix:'Create an independent copy. This original stays unchanged.'})[permission];
+    $('.link-field input').value = `https://voxelite.example/s/woodland?${restricted ? 'scope=restricted' : `access=${permission}`}`;
+    $('.copy-link span').textContent = 'Copy link';
+  }
+  $('[data-access-scope]').addEventListener('change', e => {accessScope = e.target.value; updateShare(); $('.share-feedback').textContent = 'Link access updated';});
+  $$('[data-member-permission]').forEach(el => el.addEventListener('change', () => $('.share-feedback').textContent = 'Member access updated'));
+
   function openShare() {
     closeFloating();
     $(".share-popover").hidden = false;
@@ -893,11 +937,12 @@
     const input = $(".link-field input");
     try {
       await navigator.clipboard.writeText(input.value);
-      notify("Preview link copied");
+      $(".copy-link span").textContent = "Copied";
+      $(".share-feedback").textContent = "Link copied to clipboard";
     } catch {
       input.focus();
       input.select();
-      notify("Press ⌘C or Ctrl+C to copy the preview link.");
+      $(".share-feedback").textContent = "Press ⌘C or Ctrl+C to copy the selected link.";
     }
   }
 
@@ -942,32 +987,28 @@
     },
   ];
   function renderHistory() {
-    $("[data-history-position]").textContent = `${timelineStep} of 8`;
-    $("[data-history-step-title]").textContent = historyNames[timelineStep];
-    $("[data-timeline]").value = timelineStep;
-    $("[data-branch-name]").textContent = branch;
-    const start = Math.max(1, Math.min(timelineStep - 1, 5));
-    $(".history-event-list").innerHTML = Array.from(
-      { length: 4 },
-      (_, i) => start + i,
-    )
-      .map(
-        (step) =>
-          `<button class="history-event ${step === timelineStep ? "active" : ""}" data-history-tick="${step}"><span class="event-origin">${step <= 4 ? '<i class="human-marker"></i>' : icons.agent}</span><div><span>${historyNames[step]}</span><small>${step <= 4 ? "Human" : "Agent"} · Step ${step}</small></div></button>`,
-      )
-      .join("");
-    $(".version-list").innerHTML = versions
-      .map(
-        (v) =>
-          `<article class="version-item"><h3>${esc(v.name)}</h3><p class="version-meta">${v.snapshot.length.toLocaleString()} voxels · Step ${v.step}</p><div class="version-actions"><button data-version-action="restore" data-version-id="${v.id}">Restore</button><button data-version-action="compare" data-version-id="${v.id}">Compare</button><button data-version-action="branch" data-version-id="${v.id}">Branch from here</button></div></article>`,
-      )
-      .join("");
+    $('[data-history-position]').textContent = timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`;
+    $('[data-history-step-title]').textContent = historyNames[timelineStep];
+    $('[data-timeline]').value = timelineStep;
+    $('[data-timeline]').setAttribute('aria-valuetext', `${timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} of 8`}: ${historyNames[timelineStep]}`);
+    $('[data-branch-name]').textContent = branch;
+    $('[data-action="history-prev"]').disabled = timelineStep === 0;
+    $('[data-action="history-next"]').disabled = timelineStep === 8;
+    $$('.timeline-ticks button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.historyTick) === timelineStep)));
+    $('.history-event-list').innerHTML = historyNames.map((name, step) => `<button class="history-event ${step === timelineStep ? 'active' : ''}" data-history-tick="${step}" aria-current="${step === timelineStep}"><span class="event-origin"><i class="${step === 0 ? 'initial-marker' : step <= 4 ? 'human-marker' : 'agent-marker'}"></i></span><div><span>${name}</span><small>${step === 0 ? 'Initial state' : `${step <= 4 ? 'Human' : 'Agent'} · Step ${step}`}</small></div></button>`).join('');
+    $('.history-event.active')?.scrollIntoView({block:'nearest'});
+    $('.version-list').innerHTML = versions.map(v => `<article class="version-item"><div><h3>${esc(v.name)}</h3><p class="version-meta">${v.snapshot.length.toLocaleString()} voxels · Step ${v.step}</p></div><button class="icon-button" data-menu="Version:${v.id}" aria-haspopup="menu" aria-expanded="false" aria-label="Actions for ${esc(v.name)}">${icons.more}</button></article>`).join('');
+    const isPreview = window.__sceneSnapshot().map(c => `${c.x},${c.y},${c.z}`).join('|') !== liveSnapshot?.map(c => `${c.x},${c.y},${c.z}`).join('|');
+    $('.history-preview-banner').hidden = !isPreview;
+    $('.history-preview-banner span').textContent = `History preview · ${timelineStep === 0 ? 'Initial state' : `Step ${timelineStep} / 8`} · ${historyNames[timelineStep]}`;
+    $('.viewport').classList.toggle('historical-preview', isPreview);
   }
   function openHistory() {
     closeFloating();
     liveSnapshot = window.__sceneSnapshot();
     timelineStep = window.__currentHistoryStep ?? 8;
     $(".history-panel").hidden = false;
+    $(".workspace").classList.add("history-open");
     $('[data-action="history"]').setAttribute("aria-expanded", "true");
     renderHistory();
     $("[data-timeline]").focus();
@@ -984,6 +1025,9 @@
       syncSteps();
     }
     $(".history-panel").hidden = true;
+    $(".workspace").classList.remove("history-open");
+    $(".history-preview-banner").hidden = true;
+    $(".viewport").classList.remove("historical-preview");
     $('[data-action="history"]').setAttribute("aria-expanded", "false");
     window.__compareScene(null);
     $(".compare-badge").hidden = true;
@@ -1004,7 +1048,7 @@
     input.value = "";
     e.target.hidden = true;
     renderHistory();
-    notify("Named version saved in this preview.");
+    notify("Named version saved");
   });
   function versionAction(action, id) {
     const v = versions.find((v) => v.id === id);
@@ -1037,8 +1081,8 @@
     syncSteps();
     notify(
       action === "branch"
-        ? "Created local preview branch"
-        : "Version restored in this preview",
+        ? "Created branch from version"
+        : "Version restored",
     );
   }
   function closeFloating() {
@@ -1055,8 +1099,10 @@
     closeMenus();
     dialog.showModal();
   }
-  for (const dialog of $$("dialog"))
-    dialog.addEventListener("close", () => modalFocus?.focus());
+  for (const dialog of $$("dialog")) {
+    dialog.addEventListener("close", () => {closeMenus(); $('.app').append($('.menu-root')); modalFocus?.focus();});
+    dialog.addEventListener('cancel', e => {if (menuChain.length) {e.preventDefault(); closeMenus(true);}});
+  }
 
   const actions = {
     commands: openCommands,
@@ -1121,6 +1167,8 @@
       renderComments();
       window.__drawVoxelScene();
     },
+    "history-prev": () => scrub(Math.max(0, timelineStep - 1)),
+    "history-next": () => scrub(Math.min(8, timelineStep + 1)),
     "history-live": () => {
       window.__loadSnapshot(liveSnapshot);
       timelineStep = window.__currentHistoryStep ?? 8;
@@ -1154,7 +1202,7 @@
 
   const commands = [
     ...tools.map(([id, label, key]) =>
-      item(label, () => chooseTool(id), key, id),
+      checked(item(label, () => chooseTool(id), key, id), tool === id, true),
     ),
     item("Manage palettes", "palettes", "", "swatches"),
     item("Version history", "history", "", "clock"),
@@ -1303,11 +1351,8 @@
     }
     if (el.dataset.permission) {
       permission = el.dataset.permission;
-      $$("[data-permission]").forEach((b) =>
-        b.setAttribute("aria-pressed", String(b === el)),
-      );
-      $(".link-field input").value =
-        `https://voxelite.example/s/woodland?access=${permission}`;
+      updateShare();
+      $('.share-feedback').textContent = `Link permission updated · Can ${permission}`;
       return;
     }
     if (el.hasAttribute("data-history-tick")) {
@@ -1417,6 +1462,7 @@
       return;
     }
     if (e.key === "Escape") {
+      if (menuChain.length) { e.preventDefault(); closeMenus(true); return; }
       closeMenus(true);
       closeFloating();
       activeThread = null;
@@ -1472,6 +1518,20 @@
       actions.frame();
     }
   });
+  $('.workspace').append($('.history-panel'));
+  // The sidebar scrolls on short windows and supports pointer/keyboard resizing.
+  const resizer = $('.sidebar-resizer');
+  let resizing = false;
+  const resize = width => {width = Math.max(320, Math.min(440, width)); $('.workspace').style.setProperty('--sidebar-width', width + 'px'); resizer.setAttribute('aria-valuenow', width);};
+  resizer.addEventListener('pointerdown', e => {resizing = true; resizer.setPointerCapture(e.pointerId);});
+  resizer.addEventListener('pointermove', e => {if (resizing) resize(innerWidth - e.clientX);});
+  resizer.addEventListener('pointerup', () => resizing = false);
+  resizer.addEventListener('keydown', e => {if (['ArrowLeft','ArrowRight'].includes(e.key)) {e.preventDefault(); resize(Number(resizer.getAttribute('aria-valuenow')) + (e.key === 'ArrowLeft' ? 16 : -16));}});
+  for (const el of $$('[data-palette-rename],[data-hex-edit]')) el.addEventListener('keydown', e => {if (e.key === 'Enter') {e.preventDefault(); el.blur();}});
+  document.addEventListener('input', e => {
+    if (e.target.matches('[data-tool-density]')) {toolConfig.density = Number(e.target.value); e.target.nextElementSibling.textContent = toolConfig.density + '%';}
+    if (e.target.matches('[data-tool-seed]')) toolConfig.seed = Number(e.target.value);
+  });
   renderPalette();
   renderComments();
   syncSteps();
@@ -1491,6 +1551,7 @@
     get branches() {
       return [...branches.values()];
     },
+    get toolConfig() { return {...toolConfig}; },
     get tool() {
       return tool;
     },
