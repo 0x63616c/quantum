@@ -5932,6 +5932,9 @@ name = "voxelite-site"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "tempfile",
+ "uuid",
+ "voxelite-format",
  "voxelite-mcp",
 ]
 

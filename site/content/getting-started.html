@@ -43,12 +43,17 @@ args = ["--root", "/absolute/path/to/project"]</code></pre><p>Preserve existing 
   "model_id": "&lt;returned model_id&gt;",
   "views": ["iso", "front", "right", "back"],
   "width": 512, "height": 512,
-  "image_mode": "contact_sheet"
+  "image_mode": "contact_sheet",
+  "revision": "&lt;current revision&gt;"
 }</code></pre><h3>4. Save the result</h3><p>Call <code>voxelite_document_save</code> with the latest captured revision:</p><pre><code class="language-json">{
   "model_id": "&lt;returned model_id&gt;",
   "expected_epoch": "&lt;returned epoch&gt;",
   "expected_revision": "&lt;current revision&gt;",
   "operation_id": "&lt;fresh UUID&gt;",
   "path": "first-tower.voxl"
-}</code></pre><p>Then use <a href="/docs/mcp/#voxelite_export_glb">voxelite_export_glb</a> for <code>first-tower.glb</code>. Save before disconnecting: edits and undo history live in memory. Existing export paths reject; choose a fresh output name.</p>
+}</code></pre><p>Then call <a href="/docs/mcp/#voxelite_export_glb">voxelite_export_glb</a>. Exports use <code>revision</code>, without mutation guards or operation IDs:</p><pre><code class="language-json">{
+  "model_id": "&lt;returned model_id&gt;",
+  "revision": "&lt;current revision&gt;",
+  "path": "first-tower.glb"
+}</code></pre><p>Save before disconnecting: edits and undo history live in memory. Existing export paths reject; choose a fresh output name.</p>
 <h2 id="recover">When a call fails</h2><p>Check <code>isError</code> and the structured envelope's <code>ok</code> flag. On a revision conflict, read current state and rebase. On a lost response, retry only the identical request with the same operation ID in the same session. Never guess whether an edit committed. <a href="/docs/mcp/#errors">Read the error guide</a> before retrying.</p>

@@ -9,5 +9,10 @@ license.workspace = true
 serde_json.workspace = true
 voxelite-mcp = { path = "../voxelite-mcp" }
 
+[dev-dependencies]
+voxelite-format.workspace = true
+uuid.workspace = true
+tempfile = "3"
+
 [lints]
 workspace = true
