@@ -36,19 +36,18 @@ try {
         tools: [...document.querySelectorAll('[data-tool]')].map(el => el.dataset.tool),
         mirror: document.querySelectorAll('[data-mirror]').length,
         layers: document.querySelectorAll('[data-layer]').length,
-        connected: document.body.textContent.includes('Agent connected'),
+        connected: !!document.querySelector('.agent-status'),
         session: !!document.querySelector('.agent-session, .c-console'),
         panelsFit: [...document.querySelectorAll('.a-inspector, .b-inspector, .c-inspector')]
           .every(el => el.scrollHeight <= el.clientHeight + 1),
         viewportFits: document.querySelector('.viewport').getBoundingClientRect().bottom <=
           document.querySelector('.statusbar').getBoundingClientRect().top + 1,
-        sessionFits: (() => {
-          const card = document.querySelector('.b-agent-card');
-          if (!card) return true;
-          const rect = card.getBoundingClientRect();
-          return rect.top >= document.querySelector('.b-inspector').getBoundingClientRect().bottom + 8 &&
-            rect.bottom <= document.querySelector('.statusbar').getBoundingClientRect().top;
-        })(),
+        sessionFits: [...document.querySelectorAll('.agent-session,.b-session,.b-material-dock')].every(el => el.scrollHeight <= el.clientHeight + 1),
+        black: getComputedStyle(document.body).backgroundColor,
+        panel: getComputedStyle(document.querySelector('.agent-session')).backgroundColor,
+        fonts: document.fonts.check('13px Geist') && document.fonts.check('12px "Geist Mono"'),
+        distinctThumbs: new Set([...document.querySelectorAll('[data-thumbnail]')].map(el => el.toDataURL())).size,
+        hintCopy: !!document.querySelector('.navigation-hints'),
         annotation: (() => {
           const a = document.querySelector('.edit-annotation').getBoundingClientRect();
           const v = document.querySelector('.viewport').getBoundingClientRect();
@@ -65,6 +64,10 @@ try {
       assert.ok(metrics.connected && metrics.annotation);
       assert.ok(metrics.session && metrics.panelsFit && metrics.viewportFits && metrics.sessionFits,
         `Panel layout overflow: ${JSON.stringify(metrics)}`);
+      assert.equal(metrics.black, theme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)');
+      assert.equal(metrics.panel, metrics.black);
+      assert.ok(metrics.fonts && !metrics.hintCopy);
+      assert.equal(metrics.distinctThumbs, 3, 'Agent render angles must differ');
       assert.deepEqual(errors, [], 'Browser errors');
       const path = `${output}/concept-${concept}-${theme}.png`;
       await page.screenshot({ path, fullPage: false, animations: 'disabled' });
@@ -79,6 +82,33 @@ try {
     assert.equal(await page.locator('[data-mirror="Y"]').getAttribute('aria-pressed'), 'true');
     await page.locator('[data-layer-eye="Canopy"]').click();
     assert.equal(await page.locator('[data-layer-eye="Canopy"]').getAttribute('aria-pressed'), 'false');
+    await page.locator('[data-layer-eye="Canopy"]').click();
+    const before = await page.evaluate(() => window.__voxelSceneStats.cubes);
+    await page.locator('.session-step [data-step-undo="18"]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 6);
+    await page.locator('.session-step [data-step-undo="18"]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
+    await page.locator('.session-step [data-step-undo="17"]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 24);
+    await page.locator('.session-step [data-step-undo="17"]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
+    await page.locator('[data-history-undo]').click();
+    await page.locator('[data-history-undo]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before - 30);
+    await page.locator('[data-history-redo]').click();
+    await page.locator('[data-history-redo]').click();
+    assert.equal(await page.evaluate(() => window.__voxelSceneStats.cubes), before);
+    await page.locator('[data-follow]').click();
+    assert.equal(await page.locator('[data-follow]').getAttribute('aria-pressed'), 'false');
+    await page.locator('[data-view-angle="back"]').click();
+    await page.locator('[data-pause]').click();
+    assert.equal(await page.locator('[data-running-label]').textContent(), 'Paused');
+    await page.keyboard.press('Meta+k');
+    await page.locator('.command-dialog[open]').waitFor();
+    await page.locator('.command-search input').fill('Paint');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('[data-tool="paint"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('.command-dialog').evaluate(el => el.open), false);
     await page.locator('[data-theme-toggle]').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     assert.deepEqual(errors, []);

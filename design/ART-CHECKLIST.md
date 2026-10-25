@@ -6,7 +6,7 @@ Pro creative tool. References: Aseprite (dense, tool-first, shortcut-driven), Fi
 ## Rules
 - Viewport is the hero; chrome recedes. Neutral greys, one accent colour.
 - System light + dark mode, both first-class (not inverted afterthoughts).
-- Crisp vector UI, 1px hairlines, consistent 4/8px spacing, Inter/system type, tabular numerals.
+- Crisp vector UI, 1px hairlines, consistent 4/8px spacing, locally bundled Geist / Geist Mono with system fallbacks, tabular numerals; 12 px minimum metadata and 13–14 px labels.
 - Sample voxel model must read as real art, lit with a single key light from top-left plus soft AO.
 
 ## Never-again list
@@ -21,4 +21,4 @@ Pro creative tool. References: Aseprite (dense, tool-first, shortcut-driven), Fi
 Vercel / Stripe aesthetic. Dark mode = pure black #000 backgrounds, crisp 1px hairline borders (#1f1f1f–#2e2e2e), Geist / Geist Mono typography, restrained single accent, very clean. Light mode = pure white with matching hairlines. Applies to all concepts, the GPUI app theme and the marketing site. App is all-Rust GPUI (Zed-level native polish), not Tauri.
 
 ## Positioning (2026-10-24)
-Voxelite is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a visible agent activity/session panel (live edits humans can watch).
+Voxelite is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a prominent agent session panel: live tool calls, added/removed diff counts, per-step undo, multi-angle render thumbnails, and a follow-agent camera toggle. Humans watch agents build and retain a complete keyboard-first editor. ⌘K must be visible and operable. Use native split panes, muted macOS traffic lights, readable secondary text and genuinely distinct concept layouts. Marketing leads with the agent workflow; docs and integrations make it reproducible.
