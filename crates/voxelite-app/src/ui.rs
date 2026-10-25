@@ -10,6 +10,13 @@ use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos, Preset};
 use voxelite_render::{PresetView, RenderOptions, View};
 
+// Keep render sizing and native layout on the same logical-pixel metrics.
+const SIDEBAR_WIDTH: f32 = 352.0;
+const MENUBAR_HEIGHT: f32 = 32.0;
+const TOOLBAR_HEIGHT: f32 = 64.0;
+const STATUSBAR_HEIGHT: f32 = 32.0;
+const PANEL_GUTTER: f32 = 24.0;
+
 /// Image identity includes the editor incarnation, since reopening the same ID
 /// resets its revision. Camera and dimensions bind picking to displayed pixels.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -96,6 +103,47 @@ fn mono(text: impl Into<SharedString>) -> Div {
         .font_family("Geist Mono")
         .text_size(px(12.0))
         .child(text.into())
+}
+fn hint(text: impl Into<SharedString>, theme: Theme) -> impl Fn(&mut Window, &mut App) -> AnyView {
+    let text = text.into();
+    move |_, cx| {
+        cx.new(|_| Hint {
+            text: text.clone(),
+            theme,
+        })
+        .into()
+    }
+}
+
+fn section_title(text: &'static str) -> Div {
+    div()
+        .text_size(px(14.0))
+        .font_weight(FontWeight::SEMIBOLD)
+        .child(text)
+}
+
+fn color_fill(color: [u8; 4]) -> Hsla {
+    rgb(u32::from(color[0]) << 16 | u32::from(color[1]) << 8 | u32::from(color[2])).into()
+}
+
+/// Choose a legible checkmark on the actual sRGB swatch, in either theme.
+fn swatch_ink(color: [u8; 4]) -> Hsla {
+    let linear = |v: u8| {
+        let v = f32::from(v) / 255.0;
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let luminance =
+        0.2126 * linear(color[0]) + 0.7152 * linear(color[1]) + 0.0722 * linear(color[2]);
+    rgb(if luminance > 0.179 {
+        0x000000
+    } else {
+        0xffffff
+    })
+    .into()
 }
 const PALETTES: [(&str, Option<Preset>); 8] = [
     ("Project colors", None),
@@ -828,6 +876,8 @@ impl EditorView {
     ) -> Stateful<Div> {
         let theme = self.theme;
         let enabled = self.enabled(op);
+        // Frame is an action; the camera selector owns the persistent view state.
+        let selected = self.selected(op) && op != Op::Frame;
         row()
             .id(id)
             .tooltip(move |_, cx| {
@@ -843,26 +893,29 @@ impl EditorView {
                 .into()
             })
             .h(px(32.0))
+            .min_w(px(32.0))
             .px(px(9.0))
             .gap(px(8.0))
             .rounded(px(6.0))
-            .cursor_pointer()
+            .when(enabled, |d| d.cursor_pointer())
             .text_color(if enabled {
                 theme.muted()
             } else {
                 theme.disabled()
             })
-            .when(self.selected(op), |d| {
+            .when(selected, |d| {
                 d.bg(theme.selected()).text_color(theme.accent())
             })
             .when(enabled, |d| {
-                d.hover(move |d| d.bg(theme.hover()).text_color(theme.text()))
+                d.hover(move |d| {
+                    if selected {
+                        d.bg(theme.selected())
+                    } else {
+                        d.bg(theme.hover()).text_color(theme.text())
+                    }
+                })
             })
-            .child(icon(name).text_color(if enabled {
-                theme.muted()
-            } else {
-                theme.disabled()
-            }))
+            .when(!name.is_empty(), |d| d.child(icon(name)))
             .when(!label.is_empty(), |d| d.child(label))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -874,24 +927,26 @@ impl EditorView {
     fn menubar(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         row()
-            .h(px(34.0))
+            .h(px(MENUBAR_HEIGHT))
             .flex_shrink_0()
-            .px(px(18.0))
+            .px(px(24.0))
             .border_b_1()
             .border_color(t.line())
             .gap(px(3.0))
             .child(
                 div()
                     .font_weight(FontWeight::SEMIBOLD)
+                    .text_size(px(14.0))
                     .mr(px(18.0))
                     .child("Voxelite"),
             )
             .children(MENUS.iter().enumerate().map(|(i, (name, _))| {
                 row()
                     .id(("menu", i))
-                    .h(px(28.0))
+                    .h(px(32.0))
                     .px(px(10.0))
-                    .rounded(px(5.0))
+                    .rounded(px(6.0))
+                    .text_color(t.muted())
                     .cursor_pointer()
                     .child(*name)
                     .when(self.menu == Some(i), |d| d.bg(t.hover()))
@@ -904,7 +959,6 @@ impl EditorView {
                     }))
             }))
             .child(div().flex_1())
-            .child(mono("NATIVE / v0.1").text_color(t.muted()))
     }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
@@ -917,22 +971,23 @@ impl EditorView {
             Tool::Picker => "picker",
         };
         row()
-            .h(px(62.0))
+            .h(px(TOOLBAR_HEIGHT))
             .flex_shrink_0()
-            .px(px(20.0))
-            .gap(px(12.0))
+            .px(px(24.0))
+            .gap(px(16.0))
             .border_b_1()
             .border_color(t.line())
             .child(icon("cube").text_color(t.muted()).size(px(22.0)))
             .child(
                 div()
-                    .w(px(if compact { 180.0 } else { 240.0 }))
+                    .w(px(if compact { 184.0 } else { 232.0 }))
                     .min_w(px(0.0))
                     .flex_shrink_0()
                     .child(
                         row()
                             .gap(px(5.0))
-                            .font_weight(FontWeight::MEDIUM)
+                            .text_size(px(15.0))
+                            .font_weight(FontWeight::SEMIBOLD)
                             .child(
                                 div()
                                     .min_w(px(0.0))
@@ -940,7 +995,14 @@ impl EditorView {
                                     .text_ellipsis()
                                     .child(self.editor.snapshot().name.clone()),
                             )
-                            .child(div().flex_shrink_0().text_color(t.muted()).child(".voxl")),
+                            .child(
+                                div()
+                                    .flex_shrink_0()
+                                    .text_size(px(13.0))
+                                    .font_weight(FontWeight::NORMAL)
+                                    .text_color(t.muted())
+                                    .child(".voxl"),
+                            ),
                     )
                     .child(div().text_size(px(12.0)).text_color(t.muted()).child(
                         if self.editor.engine.is_dirty() {
@@ -948,7 +1010,7 @@ impl EditorView {
                         } else if self.editor.path.is_some() {
                             "Saved locally"
                         } else {
-                            "Unsaved project"
+                            "Not saved yet"
                         },
                     )),
             )
@@ -964,48 +1026,50 @@ impl EditorView {
                 .text_color(t.text())
                 .child(icon("chevron").size(px(14.0)).text_color(t.muted())),
             )
-            .child(
-                row()
-                    .gap(px(2.0))
-                    .child(
-                        div()
-                            .mr(px(5.0))
-                            .text_size(px(12.0))
-                            .text_color(t.muted())
-                            .child("Mirror"),
-                    )
-                    .children(
-                        [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
-                            .into_iter()
-                            .enumerate()
-                            .map(|(i, op)| {
-                                row()
-                                    .id(("mirror", i))
-                                    .w(px(32.0))
-                                    .h(px(32.0))
-                                    .justify_center()
-                                    .rounded(px(6.0))
-                                    .border_1()
-                                    .border_color(if self.editor.mirror[i] {
-                                        t.accent()
-                                    } else {
-                                        t.background()
-                                    })
-                                    .text_color(if self.editor.mirror[i] {
-                                        t.accent()
-                                    } else {
-                                        t.muted()
-                                    })
-                                    .when(self.editor.mirror[i], |d| d.bg(t.selected()))
-                                    .cursor_pointer()
-                                    .hover(move |d| d.bg(t.hover()))
-                                    .child(mono(["X", "Y", "Z"][i]))
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.invoke(op, window, cx)
-                                    }))
-                            }),
-                    ),
-            )
+            .when(self.editor.mirror.iter().any(|enabled| *enabled), |d| {
+                d.child(
+                    row()
+                        .gap(px(2.0))
+                        .child(
+                            div()
+                                .mr(px(5.0))
+                                .text_size(px(12.0))
+                                .text_color(t.muted())
+                                .child("Mirror"),
+                        )
+                        .children(
+                            [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
+                                .into_iter()
+                                .enumerate()
+                                .map(|(i, op)| {
+                                    row()
+                                        .id(("mirror", i))
+                                        .w(px(32.0))
+                                        .h(px(32.0))
+                                        .justify_center()
+                                        .rounded(px(6.0))
+                                        .border_1()
+                                        .border_color(if self.editor.mirror[i] {
+                                            t.accent()
+                                        } else {
+                                            t.background()
+                                        })
+                                        .text_color(if self.editor.mirror[i] {
+                                            t.accent()
+                                        } else {
+                                            t.muted()
+                                        })
+                                        .when(self.editor.mirror[i], |d| d.bg(t.selected()))
+                                        .cursor_pointer()
+                                        .hover(move |d| d.bg(t.hover()))
+                                        .child(mono(["X", "Y", "Z"][i]))
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.invoke(op, window, cx)
+                                        }))
+                                }),
+                        ),
+                )
+            })
             .child(div().flex_1())
             .child(
                 self.button(
@@ -1015,11 +1079,20 @@ impl EditorView {
                     Op::Commands,
                     cx,
                 )
-                .child(mono(if cfg!(target_os = "macos") {
-                    "⌘ K"
-                } else {
-                    "Ctrl K"
-                })),
+                .h(px(36.0))
+                .gap(px(12.0))
+                .child(
+                    mono(if cfg!(target_os = "macos") {
+                        "⌘ K"
+                    } else {
+                        "Ctrl K"
+                    })
+                    .px(px(5.0))
+                    .py(px(2.0))
+                    .rounded(px(4.0))
+                    .border_1()
+                    .border_color(t.line()),
+                ),
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
             .child(self.button(
@@ -1030,10 +1103,13 @@ impl EditorView {
                 cx,
             ))
             .child(
-                self.button("save", "save", "Save", Op::Save, cx)
-                    .border_1()
-                    .border_color(t.line())
-                    .text_color(t.text()),
+                self.button("save", "", "Save", Op::Save, cx)
+                    .h(px(36.0))
+                    .px(px(20.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .bg(t.text())
+                    .text_color(t.background())
+                    .hover(move |d| d.bg(t.text().opacity(0.88)).text_color(t.background())),
             )
     }
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
@@ -1259,13 +1335,13 @@ impl EditorView {
         let hex = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
         div()
             .flex_shrink_0()
-            .p(px(if compact { 12.0 } else { 20.0 }))
-            .border_t_1()
-            .border_color(t.line())
+            .px(px(PANEL_GUTTER))
+            .pt(px(if compact { 8.0 } else { 16.0 }))
+            .pb(px(if compact { 12.0 } else { 20.0 }))
             .child(
                 row()
                     .justify_between()
-                    .mb(px(8.0))
+                    .mb(px(10.0))
                     .child(
                         row()
                             .id("palette-switch")
@@ -1273,8 +1349,9 @@ impl EditorView {
                             .gap(px(8.0))
                             .rounded(px(6.0))
                             .cursor_pointer()
+                            .tooltip(hint("Choose a project or preset palette", t))
                             .hover(move |d| d.bg(t.hover()))
-                            .child(PALETTES[self.palette_index].0)
+                            .child(section_title(PALETTES[self.palette_index].0))
                             .child(icon("chevron").size(px(14.0)).text_color(t.muted()))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.palette_open = !this.palette_open;
@@ -1282,36 +1359,44 @@ impl EditorView {
                                 cx.notify();
                             })),
                     )
-                    .child(mono(format!("{} colors", palette.order.len())).text_color(t.muted())),
+                    .child(
+                        div()
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child(format!("{} colors", palette.order.len())),
+                    ),
             )
             .child(
                 div()
                     .id("swatch-scroll")
-                    .max_h(px(if compact { 68.0 } else { 176.0 }))
+                    .max_h(px(if compact { 76.0 } else { 190.0 }))
                     .overflow_y_scroll()
-                    .child(div().flex().flex_wrap().gap(px(4.0)).children(
+                    .child(div().flex().flex_wrap().gap(px(6.0)).p(px(2.0)).children(
                         palette.order.iter().enumerate().map(|(i, slot)| {
                             let swatch = palette.get(*slot).expect("valid palette").clone();
                             let c = swatch.rgba;
                             let selected = c == color;
-                            div()
+                            let hex = format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]);
+                            let label = swatch
+                                .name
+                                .as_ref()
+                                .map(|name| format!("{name} · {hex}"))
+                                .unwrap_or(hex);
+                            row()
                                 .id(("swatch", i))
-                                .w(px(32.0))
-                                .h(px(32.0))
-                                .p(px(2.0))
+                                .size(px(32.0))
+                                .justify_center()
                                 .rounded(px(6.0))
                                 .border_1()
-                                .border_color(if selected { t.accent() } else { t.line() })
+                                .border_color(t.swatch_edge())
+                                .bg(color_fill(c))
+                                .when(selected, |d| d.border_2().border_color(t.text()))
                                 .cursor_pointer()
+                                .tooltip(hint(label, t))
                                 .hover(move |d| d.border_color(t.text()))
-                                .child(
-                                    div()
-                                        .size_full()
-                                        .rounded(px(3.0))
-                                        .bg(rgb(u32::from(c[0]) << 16
-                                            | u32::from(c[1]) << 8
-                                            | u32::from(c[2]))),
-                                )
+                                .when(selected, |d| {
+                                    d.child(icon("check").size(px(16.0)).text_color(swatch_ink(c)))
+                                })
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.editor.color = swatch.clone();
                                     this.error = false;
@@ -1322,22 +1407,13 @@ impl EditorView {
             )
             .child(
                 row()
-                    .mt(px(8.0))
+                    .mt(px(12.0))
                     .gap(px(8.0))
+                    .text_size(px(12.0))
                     .text_color(t.muted())
-                    .child(
-                        div()
-                            .size(px(12.0))
-                            .rounded(px(3.0))
-                            .border_1()
-                            .border_color(t.line())
-                            .bg(rgb(u32::from(color[0]) << 16
-                                | u32::from(color[1]) << 8
-                                | u32::from(color[2]))),
-                    )
                     .child(mono(hex))
                     .child(div().flex_1())
-                    .child(mono("[  ]")),
+                    .child("Brush color"),
             )
     }
     fn layers_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
@@ -1346,14 +1422,14 @@ impl EditorView {
             .flex_shrink_0()
             .px(px(16.0))
             .py(px(if compact { 8.0 } else { 16.0 }))
-            .border_b_1()
+            .border_t_1()
             .border_color(t.line())
             .child(
                 row()
-                    .px(px(4.0))
+                    .pl(px(8.0))
                     .mb(px(8.0))
                     .justify_between()
-                    .child(div().font_weight(FontWeight::MEDIUM).child("Layers"))
+                    .child(section_title("Layers"))
                     .child(self.button("add-layer", "plus", "", Op::AddLayer, cx)),
             )
             .child(
@@ -1368,17 +1444,27 @@ impl EditorView {
                             let locked = layer.locked;
                             row()
                                 .id(("layer", i))
-                                .h(px(if compact { 32.0 } else { 38.0 }))
+                                .h(px(36.0))
                                 .px(px(8.0))
-                                .gap(px(9.0))
+                                .gap(px(8.0))
                                 .rounded(px(6.0))
                                 .cursor_pointer()
-                                .when(id == self.editor.layer, |d| d.bg(t.hover()))
+                                .border_l_2()
+                                .border_color(if id == self.editor.layer {
+                                    t.accent()
+                                } else {
+                                    t.background()
+                                })
+                                .when(id == self.editor.layer, |d| {
+                                    d.bg(t.hover()).font_weight(FontWeight::MEDIUM)
+                                })
+                                .hover(move |d| d.bg(t.hover()))
                                 .text_color(if visible { t.text() } else { t.muted() })
                                 .child(icon("layer").size(px(16.0)).text_color(t.muted()))
                                 .child(
                                     div()
                                         .flex_1()
+                                        .min_w(px(0.0))
                                         .overflow_hidden()
                                         .text_ellipsis()
                                         .child(layer.name.clone()),
@@ -1389,7 +1475,11 @@ impl EditorView {
                                         .w(px(32.0))
                                         .h(px(32.0))
                                         .justify_center()
-                                        .rounded(px(5.0))
+                                        .rounded(px(6.0))
+                                        .tooltip(hint(
+                                            if visible { "Hide layer" } else { "Show layer" },
+                                            t,
+                                        ))
                                         .hover(move |d| d.bg(t.selected()))
                                         .child(
                                             icon(if visible { "eye" } else { "eye-off" })
@@ -1409,11 +1499,16 @@ impl EditorView {
                                         .w(px(32.0))
                                         .h(px(32.0))
                                         .justify_center()
-                                        .rounded(px(5.0))
+                                        .rounded(px(6.0))
+                                        .tooltip(hint(
+                                            if locked { "Unlock layer" } else { "Lock layer" },
+                                            t,
+                                        ))
+                                        .when(locked, |d| d.bg(t.selected()))
                                         .hover(move |d| d.bg(t.selected()))
                                         .child(
                                             icon(if locked { "lock" } else { "unlock" })
-                                                .size(px(14.0))
+                                                .size(px(15.0))
                                                 .text_color(if locked {
                                                     t.accent()
                                                 } else {
@@ -1438,20 +1533,24 @@ impl EditorView {
     }
     fn history_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
+        let empty = self.editor.engine.head().is_none();
         div()
             .flex_1()
-            .min_h(px(if compact { 124.0 } else { 188.0 }))
+            .min_h(px(if compact { 132.0 } else { 204.0 }))
             .flex()
             .flex_col()
-            .p(px(if compact { 12.0 } else { 20.0 }))
-            .gap(px(if compact { 8.0 } else { 14.0 }))
+            .px(px(PANEL_GUTTER))
+            .py(px(if compact { 8.0 } else { 16.0 }))
+            .gap(px(16.0))
             .child(
                 row()
                     .justify_between()
-                    .child(div().font_weight(FontWeight::MEDIUM).child("History"))
+                    .child(section_title("Recent changes"))
                     .child(
-                        mono(format!("r{:03}", self.editor.engine.revision()))
-                            .text_color(t.muted()),
+                        row()
+                            .gap(px(2.0))
+                            .child(self.button("history-undo", "undo", "", Op::Undo, cx))
+                            .child(self.button("history-redo", "redo", "", Op::Redo, cx)),
                     ),
             )
             .child(
@@ -1460,6 +1559,59 @@ impl EditorView {
                     .min_h(px(0.0))
                     .flex_1()
                     .overflow_y_scroll()
+                    .when(empty, |d| {
+                        d.child(
+                            row()
+                                .items_start()
+                                .gap(px(12.0))
+                                .py(px(4.0))
+                                .child(
+                                    row()
+                                        .size(px(32.0))
+                                        .flex_shrink_0()
+                                        .justify_center()
+                                        .rounded(px(8.0))
+                                        .bg(t.hover())
+                                        .child(icon("history").text_color(t.muted())),
+                                )
+                                .child(
+                                    div()
+                                        .flex_1()
+                                        .child(
+                                            div()
+                                                .font_weight(FontWeight::MEDIUM)
+                                                .child("No edits yet"),
+                                        )
+                                        .child(
+                                            div()
+                                                .mt(px(4.0))
+                                                .text_size(px(12.0))
+                                                .line_height(px(18.0))
+                                                .text_color(t.muted())
+                                                .child("Your changes will appear here."),
+                                        )
+                                        .when(!compact, |d| {
+                                            d.child(
+                                                self.button(
+                                                    "history-guide",
+                                                    "",
+                                                    "Keyboard guide",
+                                                    Op::Help,
+                                                    cx,
+                                                )
+                                                .mt(px(8.0))
+                                                .px(px(0.0))
+                                                .text_color(t.text())
+                                                .child(
+                                                    icon("chevron")
+                                                        .size(px(12.0))
+                                                        .text_color(t.muted()),
+                                                ),
+                                            )
+                                        }),
+                                ),
+                        )
+                    })
                     .children(
                         self.editor
                             .engine
@@ -1470,61 +1622,43 @@ impl EditorView {
                             .map(|(i, entry)| {
                                 row()
                                     .id(("history", i))
-                                    .py(px(8.0))
-                                    .gap(px(10.0))
-                                    .child(icon("check").size(px(14.0)).text_color(t.muted()))
+                                    .py(px(10.0))
+                                    .gap(px(12.0))
+                                    .items_start()
                                     .child(
-                                        div().flex_1().child(entry.label.clone()).child(
-                                            mono(format!(
-                                                "{} · +{} −{} · {} painted",
-                                                match entry.actor.origin {
-                                                    voxelite_core::Origin::Human => "Human",
-                                                    voxelite_core::Origin::Agent => "Agent",
-                                                },
-                                                entry.changes.added,
-                                                entry.changes.removed,
-                                                entry.changes.recolored
-                                            ))
-                                            .text_color(t.muted())
-                                            .mt(px(4.0)),
-                                        ),
+                                        icon("check")
+                                            .mt(px(2.0))
+                                            .size(px(16.0))
+                                            .text_color(t.muted()),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w(px(0.0))
+                                            .child(
+                                                div()
+                                                    .text_ellipsis()
+                                                    .overflow_hidden()
+                                                    .font_weight(FontWeight::MEDIUM)
+                                                    .child(entry.label.clone()),
+                                            )
+                                            .child(
+                                                mono(format!(
+                                                    "{} · +{} −{} · {} painted",
+                                                    match entry.actor.origin {
+                                                        voxelite_core::Origin::Human => "Human",
+                                                        voxelite_core::Origin::Agent => "Agent",
+                                                    },
+                                                    entry.changes.added,
+                                                    entry.changes.removed,
+                                                    entry.changes.recolored
+                                                ))
+                                                .text_color(t.muted())
+                                                .mt(px(4.0)),
+                                            ),
                                     )
                             }),
-                    )
-                    .child(
-                        row()
-                            .py(px(8.0))
-                            .gap(px(10.0))
-                            .child(icon("history").size(px(14.0)).text_color(t.muted()))
-                            .child(
-                                div()
-                                    .child(if self.editor.path.is_some() {
-                                        "Project opened"
-                                    } else {
-                                        "Project ready"
-                                    })
-                                    .when(!compact, |d| {
-                                        d.child(
-                                            div()
-                                                .text_size(px(12.0))
-                                                .mt(px(4.0))
-                                                .text_color(t.muted())
-                                                .child(if self.editor.engine.head().is_none() {
-                                                    "Your edits will appear here"
-                                                } else {
-                                                    "Local editing history"
-                                                }),
-                                        )
-                                    }),
-                            ),
                     ),
-            )
-            .child(
-                self.button("history-undo", "undo", "Undo last edit", Op::Undo, cx)
-                    .w_full()
-                    .justify_center()
-                    .border_1()
-                    .border_color(t.line()),
             )
     }
     fn sidebar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
@@ -1532,7 +1666,7 @@ impl EditorView {
         div()
             .id("sidebar-scroll")
             .overflow_y_scroll()
-            .w(px(336.0))
+            .w(px(SIDEBAR_WIDTH))
             .flex_shrink_0()
             .h_full()
             .border_l_1()
@@ -1541,16 +1675,38 @@ impl EditorView {
             .flex_col()
             .child(
                 row()
-                    .h(px(if compact { 40.0 } else { 52.0 }))
+                    .h(px(if compact { 56.0 } else { 72.0 }))
                     .flex_shrink_0()
-                    .px(px(20.0))
-                    .gap(px(9.0))
+                    .px(px(PANEL_GUTTER))
+                    .gap(px(12.0))
                     .border_b_1()
                     .border_color(t.line())
-                    .child(icon("spark").text_color(t.muted()))
-                    .child(div().font_weight(FontWeight::MEDIUM).child("Local session"))
-                    .child(div().flex_1())
-                    .child(mono("Human").text_color(t.muted())),
+                    .child(
+                        row()
+                            .size(px(32.0))
+                            .justify_center()
+                            .rounded(px(8.0))
+                            .bg(t.hover())
+                            .child(icon("spark").text_color(t.muted())),
+                    )
+                    .child(
+                        div().flex_1().child(section_title("Local session")).child(
+                            div()
+                                .mt(px(2.0))
+                                .text_size(px(12.0))
+                                .text_color(t.muted())
+                                .child("Editing on this device"),
+                        ),
+                    )
+                    .child(
+                        div()
+                            .id("revision")
+                            .tooltip(hint("Current document revision", t))
+                            .child(
+                                mono(format!("r{:03}", self.editor.engine.revision()))
+                                    .text_color(t.muted()),
+                            ),
+                    ),
             )
             .child(self.history_panel(compact, cx))
             .child(self.layers_panel(compact, cx))
@@ -1561,11 +1717,11 @@ impl EditorView {
         let s = self.editor.snapshot();
         let size: [i32; 3] = std::array::from_fn(|a| s.bounds.max[a] - s.bounds.min[a]);
         row()
-            .h(px(30.0))
+            .h(px(STATUSBAR_HEIGHT))
             .flex_shrink_0()
             .border_t_1()
             .border_color(t.line())
-            .px(px(18.0))
+            .px(px(24.0))
             .gap(px(16.0))
             .text_size(px(12.0))
             .text_color(t.muted())
@@ -1587,11 +1743,7 @@ impl EditorView {
             .when_some(self.hover, |d, p| {
                 d.child(mono(format!("X {}   Y {}   Z {}", p[0], p[1], p[2])))
             })
-            .child(mono(if self.rendering {
-                "Rendering…"
-            } else {
-                "CPU · 2× AA"
-            }))
+            .when(self.rendering, |d| d.child("Rendering…"))
     }
     fn action_row(
         &self,
@@ -1963,8 +2115,9 @@ impl Render for EditorView {
             self.painted_image = self.image.clone();
         }
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - 336.0).max(1.0);
-        let height = (f32::from(size.height) - 126.0).max(1.0);
+        let width = (f32::from(size.width) - SIDEBAR_WIDTH).max(1.0);
+        let height =
+            (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
         let scale = (1024.0 / width.max(height)).min(1.0);
         let dimensions = [
             (width * scale).round() as u32,

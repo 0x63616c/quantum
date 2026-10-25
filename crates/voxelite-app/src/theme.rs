@@ -41,11 +41,15 @@ impl Theme {
     }
     pub fn hover(self) -> Hsla {
         rgb(if self == Self::Dark {
-            0x171717
+            0x141414
         } else {
             0xf5f5f5
         })
         .into()
+    }
+    /// A quiet inset edge keeps black and white swatches visible on the canvas.
+    pub fn swatch_edge(self) -> Hsla {
+        self.text().opacity(0.18)
     }
     pub fn accent(self) -> Hsla {
         rgb(if self == Self::Dark {
