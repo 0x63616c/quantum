@@ -46,6 +46,7 @@ wait_title() {
     [[ "$(xdotool getwindowname "$window")" == "$1" ]] && return
     sleep 0.1
   done
+  import -window root /tmp/voxelite-review-failure.png
   printf 'Expected title: %s; got: %s\n' "$1" "$(xdotool getwindowname "$window")" >&2
   exit 1
 }
@@ -111,8 +112,14 @@ xdotool key ctrl+o
 sleep 0.6
 file_dialog="$(xdotool search --onlyvisible --name '^Open' | head -1)"
 xdotool windowfocus "$file_dialog" key ctrl+l
+sleep 0.3
 xdotool type --clearmodifiers --delay 5 "$project"
-xdotool key Return
+sleep 0.5
+# GTK's portal can keep Location entry focus after Return under bare Xvfb.
+# Activate the actual Open button to complete the chooser consistently.
+dialog_width="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/WIDTH=//p')"
+dialog_height="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/HEIGHT=//p')"
+xdotool mousemove --window "$file_dialog" "$((dialog_width - 80))" "$((dialog_height - 24))" click 1
 wait_title 'Autumn Workshop — Voxelite'
 xdotool windowfocus "$window" key Right Return
 wait_title 'Autumn Workshop • — Voxelite'
@@ -121,6 +128,25 @@ wait_title 'Autumn Workshop • — Voxelite'
 xdotool key ctrl+n Left Left Return
 wait_title 'Untitled — Voxelite'
 stop_app
+# Boundary layout: 128-byte names, 64 layers and all 256 palette slots.
+python3 - "$XDG_RUNTIME_DIR/boundary.voxl" <<'PYBOUNDARY'
+import json,sys,uuid
+project=json.load(open('examples/autumn-workshop.voxl'))
+project['document']['name']='Autumn Workshop ' + 'extended-name-' * 8
+for index in range(37,257):
+    project['palette']['slots'].append({'index':index,'rgba':[index-1,256-index,(index-1)^7,255]})
+    project['palette']['order'].append(index)
+for index in range(4,64):
+    project['layers'].append({'id':str(uuid.UUID(int=1000+index)), 'name':f'Layer {index+1}: '+ 'long layer name ' * 6, 'locked':False, 'visible':True, 'voxels':[]})
+json.dump(project,open(sys.argv[1],'w'))
+PYBOUNDARY
+for theme in dark light; do
+  start_app 1 "$theme" "$XDG_RUNTIME_DIR/boundary.voxl"
+  xdotool windowsize "$window" 1024 640
+  sleep 6
+  capture "boundary-$theme"
+  stop_app
+done
 # Large logical windows at fractional and high pixel density, both themes.
 for scale in 1.5 2; do
   for theme in dark light; do

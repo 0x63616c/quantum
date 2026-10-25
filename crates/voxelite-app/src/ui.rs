@@ -120,6 +120,7 @@ impl EditorView {
                 }
                 if this.editor.engine.is_dirty() {
                     this.pending = Some(Op::Quit);
+                    this.pending_choice = 2;
                     cx.notify();
                     false
                 } else {
@@ -190,7 +191,11 @@ impl EditorView {
                 self.error = true;
             }
         }
-        self.request_render(cx);
+        // Sampling, empty clicks and rejected edits do not invalidate the image.
+        // Avoid another CPU render (and its input wait) for unchanged content.
+        if self.displayed != Some(self.frame_identity()) {
+            self.request_render(cx);
+        }
         cx.notify();
     }
     fn request_render(&mut self, cx: &mut Context<Self>) {
@@ -458,13 +463,13 @@ impl EditorView {
             Op::Agent => {
                 self.info = Some((
                     "Agent connection",
-                    "This native stage edits a local document. The separate voxelite-mcp server is available for headless agent workflows. Live session attachment is not connected in this shell yet.",
+                    "Live agent connections are not available in this build. Use the voxelite-mcp server for agent workflows, then open the saved .voxl project here.",
                 ))
             }
             Op::Extensions => {
                 self.info = Some((
                     "Extensions",
-                    "The native shell currently includes six built-in tools. Runtime extension loading belongs to the plugin stage.",
+                    "Place, Erase, Paint, Fill, Box and Picker are included. Custom extensions are not available in this build.",
                 ))
             }
             Op::Help => {

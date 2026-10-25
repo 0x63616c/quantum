@@ -3,7 +3,9 @@
 A Rust/GPUI desktop shell for the shared Voxelite engine. It opens the bundled
 Autumn Workshop diorama, or a `.voxl` path supplied on the command line. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
-toolbar, a compact tool rail, palette previews, layers and real command history.
+toolbar with a searchable tool picker, compact palette previews, layers and real
+command history. The sidebar adapts at the 1024×640 minimum window size; large
+palettes and layer lists scroll within bounded panels.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -34,6 +36,8 @@ cargo test -p voxelite-app --no-default-features
 | New / open / save / save as | Ctrl/Cmd N / O / S / Shift S |
 | Search commands | Ctrl/Cmd K; type, arrows, Enter, Escape |
 | Cancel box or dismiss menus | Escape |
+| Choose a preset palette | Palette menu, then Up/Down and Enter |
+| Unsaved-changes prompt | Tab or Left/Right, Enter to confirm, Escape to cancel |
 
 Box uses two clicked corners and commits one solid integer box. The first click
 is only a preview. Place targets the adjacent face or the bottom work plane.
@@ -59,13 +63,27 @@ The CLI path is also supported. Saved files preserve optional forward metadata,
 portable view data, comments, versions and IDs. A same-directory temporary file
 is synced and atomically renamed before clearing dirty state. New, open and
 quit protect unsaved changes; the built-in example has no write destination
-until Save As. Failed saves retain the document and dirty state.
+until Save As. Failed saves retain the document and dirty state. Open and Save
+perform file work on a background executor while editor input is blocked.
+“Save & continue” completes the pending New/Open/Quit only after a successful
+save; cancellation or failure keeps the project open.
+
+Ordinary Save checks the destination against the bytes last opened/saved and
+rejects external edits or deletion. Save As can replace an explicitly selected
+regular file. Saving preserves existing permissions and syncs the parent
+directory on Unix. Opening a symlink resolves its target; Save As rejects symlink
+destinations. Conflict detection is optimistic: it does not lock out an unrelated
+process racing the final rename.
 
 Rendering uses `voxelite-render` on a background executor, with one task in
 flight and coalesced requests. Navigation uses smaller previews, then a 2×
 supersampled image after a short idle interval. The display camera travels with
 the image. Pointer edits wait for the current frame, preventing edits through a
-stale camera. Render jobs from an older edit or replaced document are discarded.
+stale camera, including after a render error. Render jobs from an older edit,
+replaced document (even the same project ID) or viewport size are discarded.
+Fitted views adapt to resizing until the user navigates. Top is an exact Y-axis
+view; every named view fits its own projected bounds. Unchanged clicks and color
+sampling do not trigger a new CPU render.
 Development profiles optimize the CPU renderer and core to keep iteration usable.
 
 The app takes the system appearance at startup; the toolbar toggles it for the
@@ -97,6 +115,10 @@ bash scripts/capture-native.sh
 
 The capture script uses real GPUI windows under Xvfb, not HTML or a composited
 mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
+It also captures both themes at 1024×640. `bash scripts/review-native.sh` exercises
+real command search, tool/palette selection, save-and-continue, cancel/discard,
+native Open, dialog input isolation, boundary layouts, and 1.5×/2× captures.
+See [review round 1](../../docs/reviews/app-review-1.md) for findings and evidence.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
 a minimal server without them can still open paths through the CLI and render
 PNGs. Dialog errors appear in the status bar and preserve the current project.
