@@ -106,13 +106,13 @@ impl Session {
                     "session epoch changed; inspect capabilities and document state before retrying",
                 ));
             }
-            if let Some(label) = a.optional::<String>("label")? {
-                if label.len() > 80 || validate_name(&label).is_err() {
-                    return Err(Failure::invalid(
-                        "label must be 1..80 UTF-8 bytes without control characters",
-                    )
-                    .at("/label"));
-                }
+            if let Some(label) = a.optional::<String>("label")?
+                && (label.len() > 80 || validate_name(&label).is_err())
+            {
+                return Err(Failure::invalid(
+                    "label must be 1..80 UTF-8 bytes without control characters",
+                )
+                .at("/label"));
             }
             self.reserve_receipt(name, &a)?;
             identity = Some((id, signature));

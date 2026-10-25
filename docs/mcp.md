@@ -40,6 +40,11 @@ including inside batches, mirrors and cameras. Error text identifies a recovery
 step; inspect the structured error rather than treating `tools/call` transport
 success as edit success.
 
+The 65,536 explicit-voxel limit applies to the entire request, summed across batch
+members. Box mode/slot rules, camera projection fields and opaque palette colors
+are expressed in discovery schemas. Names and labels have UTF-8 byte limits in
+addition to JSON Schema character limits.
+
 ## Wire examples
 
 For MCP `2025-11-25`, initialize and then notify:
@@ -151,7 +156,7 @@ and an envelope such as:
     "message":"expected revision 0, current 1",
     "current_revision":"1",
     "retryable":false,
-    "recovery":"Inspect document_info and tool schema, correct the request, then use a new operation_id."
+    "recovery":"Read current document and history state, rebase the intended change, then use a fresh operation_id."
   }
 }
 ```
@@ -160,6 +165,11 @@ If a reply is lost, retry the **identical** tool name, arguments and operation I
 in the same process. Successful receipts replay exactly, including no-op results.
 Different arguments with a used operation ID reject. Once an edit starts, it may
 complete despite cancellation; cancellation never silently undoes a commit.
+
+Receipt storage is bounded, but ordinary writes reserve enough capacity to save
+each dirty document. If an edit hits the receipt limit, save dirty documents and
+restart the process. Failed saves retain their reservation; redundant saves of a
+clean document cannot consume another dirty document's reserved capacity.
 
 ## Tool catalog
 
@@ -208,7 +218,7 @@ returned `slot_mapping` instead of assuming append positions.
 | `path_outside_root`, `storage_unavailable` | Correct the path or directory permissions. Parents must exist. |
 | `invalid_format` | Correct unsupported/invalid `.voxl` input; the live document is unchanged. |
 | `render_failed`, `export_failed` | Check camera/geometry validity and output budgets. |
-| `model_busy`, `cancelled` | Inspect current state; retry when appropriate with the original operation ID. |
+| `model_busy`, `cancelled` | Request was not started; retry when appropriate with the original operation ID and identical arguments. |
 | `outcome_unknown` | Rename succeeded but directory sync failed; inspect the destination before retrying. |
 
 File tools operate inside `--root`. Save uses a sibling temporary file, fsync and
@@ -234,8 +244,11 @@ palette formats, comment/version persistence, filesystem conflicts, camera and
 render budgets, PNG decoding, exports, and raw JSON-RPC error framing. Process
 tests run the complete editing loop independently under both supported MCP
 profiles and verify a save/reopen/save produces identical canonical bytes.
+Review regressions cover malformed protocol parameters and silent notifications,
+null error IDs, saving at both receipt limits, concurrent exact retries, aggregate
+batch input limits, conditional discovery schemas and typed nested output rows.
 
 Verified on Linux with Rust 1.99.1 on 2026-10-25: workspace build, formatting,
-Clippy with warnings denied, and all 66 workspace tests passed (18 MCP tests).
+Clippy with warnings denied, and all 74 workspace tests passed (26 MCP tests).
 Host configuration files were parsed as JSON/TOML; host application launches
 remain untested on this headless machine.
