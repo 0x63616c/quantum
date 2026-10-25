@@ -1982,7 +1982,9 @@ impl Render for EditorView {
                         _ => PresetView::Iso,
                     },
                 );
-                self.display_camera = self.editor.camera;
+                if self.image.is_none() {
+                    self.display_camera = self.editor.camera;
+                }
             }
             self.render_size = dimensions;
             self.request_render(cx);
