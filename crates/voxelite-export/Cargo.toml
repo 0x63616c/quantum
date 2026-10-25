@@ -10,3 +10,16 @@ voxelite-core.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies.voxelite-render]
+workspace = true
+[dependencies.serde_json]
+workspace = true
+[dependencies.png]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
+proptest.workspace = true
