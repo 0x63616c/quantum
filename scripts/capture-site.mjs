@@ -32,7 +32,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await page.goto(base);
   assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'The voxel editorbuilt for AI agents.');
-  assert.equal(await page.getByRole('link', { name: 'Try it in your browser', exact: true }).count(), 2);
+  assert.equal(await page.getByRole('link', { name: 'Open the desktop web editor', exact: false }).count(), 2);
   report.checks.push('No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation');
   await page.close();
 } finally {

@@ -14,7 +14,21 @@ done
 cargo run --locked -p voxelite-site -- site
 mkdir -p site/assets/skills
 cp -R skills/. site/assets/skills/
-python3 -m zipfile -c site/assets/voxelite-skills.zip skills/README.md skills/voxelite-*/
+mkdir -p site/assets/integrations
+cp -R integrations/. site/assets/integrations/
+# Stable paths, metadata and ordering make downloads reproducible and self-contained.
+python3 - <<'PYZIP'
+from pathlib import Path
+from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
+with ZipFile('site/assets/voxelite-skills.zip', 'w', compression=ZIP_DEFLATED) as archive:
+    for root in ('skills', 'integrations'):
+        for path in sorted(Path(root).rglob('*')):
+            if path.is_file():
+                info = ZipInfo(path.as_posix())
+                info.compress_type = ZIP_DEFLATED
+                info.external_attr = 0o100644 << 16
+                archive.writestr(info, path.read_bytes())
+PYZIP
 mkdir -p site/app
 cp web/dist/* site/app/
 printf 'Site ready: python3 -m http.server 8090 --directory site --bind 127.0.0.1\n'

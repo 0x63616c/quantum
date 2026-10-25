@@ -30,3 +30,12 @@ The typography, pure black/white surfaces, alignment, and real cottage render es
 The two-line agent-first headline is direct and memorable. Geist works well at both widths. Both themes preserve the artwork's warm colors and a coherent neutral hierarchy. The primary hero CTA has a generous target, the mobile headline does not break awkwardly, and the session crop is substantially more legible than a full application screenshot would be at phone width. The real product captures are valuable evidence; improve their order and framing instead of replacing them with invented interface mockups.
 
 The next revision should improve proof, composition, and the mobile journey before adding any more content. The biggest gain is making the agent capability visible immediately while removing the accidental mobile screenshot crop.
+
+## Implemented response
+
+The hero now uses the authentic native session capture, with revision and native
+context in its caption. Mobile crops only the canvas and keeps the full workspace
+link. The recorded edit appears before the API outline and is described as a
+record, without claiming a visible before/after. Mobile browser links explicitly
+say desktop editor. Hero and secondary spacing is tighter; theme controls now
+show the destination theme's sun/moon icon. Recapture: `screenshots/site/round-3/`.

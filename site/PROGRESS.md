@@ -21,6 +21,8 @@ are separate evidence, not retroactively higher review scores.
 | --- | --- | --- | --- | --- |
 | 1 | 6.5 | 5.5 | `docs/reviews/site-review-1.md` | Device disclosure, enlarged crop, native evidence, palette, links; `screenshots/site/round-2/` |
 
+| 2 | 7.2 | 6.5 | `docs/reviews/site-review-2.md` | Native hero, clean canvas crop, proof order, device-specific labels; `screenshots/site/round-3/` |
+
 ## Verified boundaries
 
 The existing web bundle uses the shared Rust GPUI editor. Browser MCP pairing
@@ -28,3 +30,11 @@ is not implemented. Native attached MCP and standalone headless MCP are
 available. macOS release packages and signed downloads are not available here.
 No unverified download, hosting, benchmark or collaboration claims belong on
 the site. Existing Rust toolchain: 1.99.1; default native Linux build works.
+
+## Resumed verification
+
+- Linux `cargo build --locked --workspace` and headless workspace tests pass.
+- Actual tutorial JSON executes through create → batch → four-view render → save → GLB export; saved project reopens canonically.
+- Valid one-voxel download added and format-reader tested.
+- `scripts/check-site.py` checks local links/fragments, all 38 schemas, skills download parity and app bundle parity.
+- Skills ZIP includes integration examples and preserves portable directory structure.
