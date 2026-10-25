@@ -231,3 +231,18 @@ Recommend **B** as the starting point for the next GPUI implementation review be
 The render workflow additionally verifies immutable capture hashes across visibility/undo/redo/camera input, changed capture hashes on refresh, original/current revision separation, hidden undone evidence, projected orientation, keyboard camera and real zoom, grid state, and draft-copy success/fallback using a local clipboard mock. Existing checks for per-step/global history, layer selection/visibility/locks, mirrors, palette navigation, Follow/Pause, command search and focus return remain green. The initial C alignment check needed its selector updated from the former text span to the new Inspect button; the full suite passed after that correction. v4 matches the final PNGs byte-for-byte; v1/v2/v3 match their pre-round Git blobs. All final PNGs have no text/EXIF metadata. No personal information was added.
 
 **Plan and completion:** updated PLAN.md's theming/interaction section and the concept README with the final capture, history, camera and draft contracts. The plan retains all requested product, marketing, docs, skills/integration, performance and release-polish milestones, including the separate post-v1 interactive GLB showcase and original agent-made pieces. All three concept revision rounds are complete. Real GPUI/MCP implementation, host installers/skills, responsive/native accessibility checks, large-model measurements, production docs/site and signed releases remain the explicit implementation milestones; these static-size HTML studies do not establish their completion.
+
+## Concepts — final review
+
+Visual review of all six PNGs against ART-CHECKLIST.md: black/white surfaces, restrained accents, crisp UI, lit cottage artwork and visible agent controls meet the direction. Scores assess the images; keyboard operation cannot be verified from PNGs.
+
+| Concept | Score | Remaining weaknesses |
+| --- | --- | --- |
+| A dark | 8.8/10 | Icon-only tool rail slows discovery; single-row palette is crowded; floor grid is difficult to see against black. |
+| A light | 8.8/10 | Icon-only tool rail slows discovery; single-row palette is crowded; pale floor grid gives weak depth cues. |
+| B dark | 8.9/10 | Large unused gap above the draft; compact captures limit inspection detail; icon-only toolstrip slows discovery. |
+| B light | 8.9/10 | Large unused gap above the draft; compact captures limit inspection detail; icon-only toolstrip slows discovery. |
+| C dark | 8.8/10 | Bottom dock reduces viewport height; running call follows completed changes; left tool shelf has substantial unused space. |
+| C light | 8.8/10 | Bottom dock reduces viewport height; running call follows completed changes; left tool shelf has substantial unused space. |
+
+**Recommend B:** its agent-first reading order makes live work and evidence prominent while preserving a generous viewport and accessible human editing controls.
