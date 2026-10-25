@@ -42,7 +42,11 @@ impl Session {
         }
     }
     pub fn error(&self, e: Failure) -> CallToolResult {
-        let envelope = json!({"api_version":API_VERSION,"session_id":self.id,"epoch":self.epoch,"ok":false,"error":e});
+        Self::error_for(self.id, self.epoch, e)
+    }
+    pub fn error_for(id: Uuid, epoch: Uuid, e: Failure) -> CallToolResult {
+        let envelope =
+            json!({"api_version":API_VERSION,"session_id":id,"epoch":epoch,"ok":false,"error":e});
         let mut r = CallToolResult::error(vec![ContentBlock::text(envelope.to_string())]);
         r.structured_content = Some(envelope);
         r
@@ -113,7 +117,7 @@ impl Session {
         }
         let (data, images) = match name {
             "capabilities_get" => (
-                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":["voxl","png","glb","hex","gpl"],"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(|d|info(&d.engine)).collect::<Vec<_>>()}),
+                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":["voxl","png","glb","hex","gpl"],"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(|d|info(&d.engine, !d.files.is_empty())).collect::<Vec<_>>()}),
                 vec![],
             ),
             "document_create" | "document_open" => (self.open(name, &a)?, vec![]),
@@ -201,7 +205,7 @@ impl Session {
                 ..Default::default()
             },
         )?;
-        let data = info(&engine);
+        let data = info(&engine, !tracked.is_empty());
         self.documents.insert(
             id,
             OpenDocument {
@@ -216,9 +220,9 @@ impl Session {
 fn layers(engine: &Engine) -> Vec<Value> {
     engine.document().content.layers.iter().map(|l|json!({"id":l.id,"name":l.name,"visible":l.visible,"locked":l.locked,"voxel_count":l.voxels.len()})).collect()
 }
-fn info(engine: &Engine) -> Value {
+fn info(engine: &Engine, has_saved_path: bool) -> Value {
     let d = engine.document();
-    json!({"model_id":d.id,"revision":engine.revision().to_string(),"name":d.content.name,"bounds":d.content.bounds,"dirty":engine.is_dirty(),"layers":layers(engine),"voxel_count":d.content.layers.iter().map(|l|l.voxels.len()).sum::<usize>(),"palette_slots":d.content.palette.slots.len(),"comments":d.content.comments.len(),"versions":d.versions.len(),"head_id":engine.head(),"redo_id":engine.redo_head()})
+    json!({"model_id":d.id,"revision":engine.revision().to_string(),"name":d.content.name,"bounds":d.content.bounds,"dirty":engine.is_dirty() || !has_saved_path,"layers":layers(engine),"voxel_count":d.content.layers.iter().map(|l|l.voxels.len()).sum::<usize>(),"palette_slots":d.content.palette.slots.len(),"comments":d.content.comments.len(),"versions":d.versions.len(),"head_id":engine.head(),"redo_id":engine.redo_head()})
 }
 fn change(receipt: &Receipt) -> Value {
     json!({"revision":receipt.revision.to_string(),"undo_entry_id":receipt.entry,"changed_voxels":receipt.changes.voxel_count(),"added":receipt.changes.added,"removed":receipt.changes.removed,"recolored":receipt.changes.recolored,"changed_bounds":receipt.changes.bounds,"changed_layers":receipt.changes.layers,"palette_changed":receipt.changes.palette_changed,"metadata_changed":receipt.changes.metadata_changed,"work_units":receipt.work_units,"durability":"memory"})
@@ -232,9 +236,12 @@ fn dispatch(
 ) -> Result<(Value, Vec<ContentBlock>)> {
     let engine = &mut doc.engine;
     let s = &engine.document().content;
+    if matches!(name, "comments_add" | "comments_reply") && a.get::<String>("text")?.len() > 4096 {
+        return Err(Failure::invalid("comment text exceeds 4096 UTF-8 bytes").at("/text"));
+    }
     let mut extras = json!({});
     let command = match name {
-        "document_info" => return Ok((info(engine), vec![])),
+        "document_info" => return Ok((info(engine, !doc.files.is_empty()), vec![])),
         "document_save" => {
             let path = files::path(root, &a.get::<String>("path")?)?;
             let mut project = doc.project.clone();

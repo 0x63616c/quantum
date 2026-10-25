@@ -336,3 +336,149 @@ fn file_conflicts_invalid_open_and_root_scope() {
         );
     }
 }
+
+#[test]
+fn render_cameras_limits_and_exports_are_read_only() {
+    let f = Fixture::new();
+    f.edit(
+        "voxels_box",
+        json!({"layer":"Base","region":{"min":[0,0,0],"max":[2,2,2]},"slot":1}),
+    );
+    let before = f.read("document_info", json!({}));
+    let rendered=f.read("render",json!({"camera":{"eye":[5,5,5],"target":[1,1,1],"up":[0,1,0],"projection":"perspective","fov_y_degrees":45},"width":32,"height":32,"image_mode":"individual"}));
+    assert_eq!(
+        rendered["views"][0]["camera"]["eye"],
+        json!([5.0, 5.0, 5.0])
+    );
+    for args in [
+        json!({"views":["iso"],"camera":{"eye":[5,5,5],"target":[1,1,1],"up":[0,1,0],"projection":"orthographic","ortho_height":5}}),
+        json!({"camera":{"eye":[0,0,0],"target":[0,0,0],"up":[0,1,0],"projection":"orthographic","ortho_height":5}}),
+        json!({"views":["iso","front","right","back","top","left"],"width":1024,"height":1024}),
+    ] {
+        let mut args = args;
+        args["model_id"] = f.model.clone();
+        assert_eq!(f.call("render", args)["ok"], false);
+    }
+    let png = f.read(
+        "export_png",
+        json!({"path":"one.png","views":["iso"],"width":32,"height":32}),
+    );
+    assert_eq!(
+        png["bytes"],
+        std::fs::metadata(f.root.path().join("one.png"))
+            .unwrap()
+            .len()
+    );
+    assert_eq!(
+        f.call(
+            "export_png",
+            json!({"model_id":f.model,"path":"one.png","views":["iso"],"width":32,"height":32})
+        )["error"]["code"],
+        "file_exists"
+    );
+    let a = f.read("export_glb", json!({"path":"one.glb"}));
+    let b = f.read("export_glb", json!({"path":"two.glb"}));
+    assert_eq!(a["sha256"], b["sha256"]);
+    assert_eq!(f.read("document_info", json!({})), before);
+}
+#[test]
+fn concurrent_mutations_use_one_revision_and_paging_rejects_changed_heads() {
+    let f = Fixture::new();
+    let mut handles = Vec::new();
+    for x in 0..8 {
+        let server = f.server.clone();
+        let args = f.args(json!({"layer":"Base","voxels":[{"at":[x,0,0],"slot":1}]}));
+        handles.push((server, args));
+    }
+    let results: Vec<_> = std::thread::scope(|scope| {
+        let tasks: Vec<_> = handles
+            .into_iter()
+            .map(|(server, args)| {
+                scope.spawn(move || {
+                    server
+                        .call("voxelite_voxels_set", args)
+                        .unwrap()
+                        .structured_content
+                        .unwrap()
+                })
+            })
+            .collect();
+        tasks.into_iter().map(|t| t.join().unwrap()).collect()
+    });
+    assert_eq!(results.iter().filter(|r| r["ok"] == true).count(), 1);
+    assert_eq!(
+        results
+            .iter()
+            .filter(|r| r["error"]["code"] == "revision_conflict")
+            .count(),
+        7
+    );
+    assert_eq!(f.read("history_read", json!({}))["total"], 1);
+    let r = f.call(
+        "query",
+        json!({"model_id":f.model,"revision":"0","kind":"voxels"}),
+    );
+    assert_eq!(r["error"]["code"], "revision_conflict");
+}
+#[test]
+fn unicode_comments_restore_guards_and_palette_capacity_are_atomic() {
+    let f = Fixture::new();
+    assert_eq!(f.read("document_info", json!({}))["dirty"], true);
+    f.fail(
+        "comments_add",
+        json!({"anchor":{"kind":"voxel","at":[0,0,0]},"text":"🦀".repeat(1025)}),
+        "invalid_argument",
+    );
+    let version = f.edit("versions_save", json!({"name":"Empty"}))["version_id"].clone();
+    f.edit(
+        "voxels_set",
+        json!({"layer":"Base","voxels":[{"at":[0,0,0],"slot":1}]}),
+    );
+    f.fail(
+        "versions_restore",
+        json!({"version_id":version,"expected_head_id":null}),
+        "history_conflict",
+    );
+    f.edit("layers_lock", json!({"layer":"Base","locked":true}));
+    let head = f.read("history_read", json!({}))["head_id"].clone();
+    f.fail(
+        "versions_restore",
+        json!({"version_id":version,"expected_head_id":head}),
+        "layer_blocked",
+    );
+    let before = f.read("palette_list", json!({}));
+    f.fail(
+        "palette_import",
+        json!({"format":"hex","text":"ffffff\n".repeat(256)}),
+        "limit_exceeded",
+    );
+    assert_eq!(f.read("palette_list", json!({})), before);
+    f.fail(
+        "palette_import",
+        json!({"format":"gpl","text":"not a palette"}),
+        "invalid_argument",
+    );
+}
+#[test]
+fn composite_reads_respect_visibility_and_duplicate_model_open_rejects() {
+    let f = Fixture::new();
+    f.edit("palette_set_slot", json!({"slot":2,"rgba":[1,2,3,255]}));
+    let upper = f.edit("layers_add", json!({"name":"Upper"}))["layer_id"].clone();
+    f.edit("voxels_batch",json!({"operations":[{"kind":"set","layer":"Base","voxels":[{"at":[0,0,0],"slot":1}]},{"kind":"set","layer":upper,"voxels":[{"at":[0,0,0],"slot":2}]}]}));
+    assert_eq!(
+        f.read("query", json!({"kind":"voxels","view":"composite"}))["voxels"][0]["slot"],
+        2
+    );
+    assert_eq!(f.read("query", json!({"kind":"counts"}))["voxel_count"], 2);
+    f.edit("layers_visibility", json!({"layer":upper,"visible":false}));
+    assert_eq!(
+        f.read("query", json!({"kind":"voxels","view":"composite"}))["voxels"][0]["slot"],
+        1
+    );
+    f.edit("document_save", json!({"path":"duplicate.voxl"}));
+    let r = f.call(
+        "document_open",
+        json!({"path":"duplicate.voxl","expected_epoch":f.epoch,"operation_id":Uuid::new_v4()}),
+    );
+    assert_eq!(r["error"]["code"], "model_already_open");
+}
