@@ -23,7 +23,21 @@ const menu = async (page, name) => {
   await page.locator(`.menubar [data-menu="${name}"]`).click();
 };
 const menuItem = (page, name) =>
-  page.getByRole("menuitem", { name, exact: true });
+  page.getByRole("menuitem", { name, exact: true })
+    .or(page.getByRole("menuitemcheckbox", {name, exact:true}))
+    .or(page.getByRole("menuitemradio", {name, exact:true}));
+const paletteAction = async (page, label) => {
+  await page.locator('[data-menu="PaletteManage"]').click();
+  await menuItem(page, label).click();
+};
+const swatchAction = async (page, label) => {
+  await page.locator('[data-menu="SwatchEdit"]').click();
+  await menuItem(page, label).click();
+};
+const versionAction = async (page, label, id = null) => {
+  await (id ? page.locator(`[data-menu="Version:${id}"]`) : page.locator('.version-item [data-menu]').first()).click();
+  await menuItem(page, label).click();
+};
 
 export async function renderConceptA(browser, root, output) {
   const files = [];
@@ -147,18 +161,25 @@ export async function renderConceptA(browser, root, output) {
         .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
       "Default sidebar overflow",
     );
-    assert.equal(await page.locator("details[open]").count(), 0);
+    assert.equal(await page.locator("details[open]").count(), 1);
+    assert.equal(await page.locator("[data-follow-state]").textContent(), "On");
     await capture("");
     await menu(page, "File");
     assert.equal(
       await page.getByRole("menu", { name: "File", exact: true }).isVisible(),
       true,
     );
+    await menuItem(page, 'Export').focus();
+    await page.keyboard.press('ArrowRight');
     await capture("menu");
     await page.keyboard.press("Escape");
     await menu(page, "Palette");
     await menuItem(page, "Manage palettes…").click();
     assert.ok(await page.locator(".palette-dialog").evaluate((el) => el.open));
+    assert.ok(await page.locator('[data-action="use-palette"]').isDisabled());
+    await page.locator('[data-edit-palette="pico8"]').click();
+    assert.ok(await page.locator('[data-hex-edit]').isDisabled());
+    assert.ok(await page.locator('.duplicate-preset').isVisible());
     await capture("palettes");
     await page.keyboard.press("Escape");
     await page.locator('[data-pin="1"]').click();
@@ -176,6 +197,14 @@ export async function renderConceptA(browser, root, output) {
     await capture("comments");
     await page.locator('[data-tab="session"]').click();
     await page.locator('[data-action="share"]').click();
+    await page.locator('[data-access-scope]').selectOption('restricted');
+    assert.ok(await page.locator('[data-permission="view"]').isDisabled());
+    assert.ok((await page.locator('.link-field input').inputValue()).includes('scope=restricted'));
+    await page.locator('[data-access-scope]').selectOption('link');
+    await page.locator('[data-permission="remix"]').click();
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async text => window.__copiedLink = text}}));
+    await page.locator('[data-action="copy-link"]').click();
+    assert.equal(await page.locator('.copy-link span').textContent(), 'Copied');
     await capture("share");
     await page.locator('[data-close="share"]').click();
     await page.locator('[data-action="history"]').click();
@@ -184,6 +213,14 @@ export async function renderConceptA(browser, root, output) {
     await capture("history");
     await page.locator('[data-close="history"]').click();
     assert.equal(await count(page), 2079, "History close restores live scene");
+
+    await page.locator('.tool-picker').click();
+    await menuItem(page, 'Scatter moss Agent').click();
+    await page.locator('.tool-picker').click();
+    await menuItem(page, 'Scatter moss Agent').focus();
+    await capture('tools');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('b');
 
     // Native-style menu traversal, submenus, dismissal and context menus.
     await page.locator('.menubar [data-menu="File"]').focus();
@@ -246,7 +283,26 @@ export async function renderConceptA(browser, root, output) {
       "Y",
     ]);
 
+    await menu(page, 'Edit');
+    assert.ok(await menuItem(page, 'Redo').isDisabled());
+    await page.keyboard.press('Escape');
+    await menu(page, 'Tools');
+    assert.equal(await menuItem(page, 'Paint').getAttribute('aria-checked'), 'true');
+    await page.keyboard.press('Escape');
+    await menu(page, 'Extensions');
+    await menuItem(page, 'Scatter moss Agent').click();
+    await menu(page, 'Extensions');
+    assert.equal(await menuItem(page, 'Scatter moss Agent').getAttribute('aria-checked'), 'true');
+    await page.locator('[data-tool-density]').fill('36');
+    await page.locator('[data-tool-seed]').fill('7');
+    assert.deepEqual(await page.evaluate(() => window.__aPreview.toolConfig), {density:36,seed:7});
+    await page.keyboard.press('Escape');
+    await page.locator('.tool-picker').click();
+    assert.equal(await page.locator('[data-tool-density]').inputValue(), '36');
+    await page.keyboard.press('Escape');
+
     // Palette switching, keyboard selection, accurate export bytes and round trips.
+    const beforePaletteGeometry = await page.evaluate(() => JSON.stringify(window.__sceneSnapshot()));
     await page.locator(".palette-switch").click();
     await menuItem(page, "PICO-8").click();
     assert.equal(
@@ -275,12 +331,15 @@ export async function renderConceptA(browser, root, output) {
       await page.locator('[data-swatch="31"]').getAttribute("data-color"),
       "#c28569",
     );
+    assert.equal(await page.evaluate(() => JSON.stringify(window.__sceneSnapshot())), beforePaletteGeometry, 'Palette switch must not recolor geometry');
     await menu(page, "Palette");
     await menuItem(page, "Manage palettes…").click();
     assert.ok(await page.locator("[data-hex-edit]").isDisabled());
     for (const format of ["hex", "gpl"]) {
       const dl = page.waitForEvent("download");
-      await page.locator(`[data-action="export-${format}"]`).click();
+      await page.locator('[data-menu="PaletteManage"]').click();
+      await menuItem(page, 'Export palette').click();
+      await menuItem(page, format === 'hex' ? 'Hex colors (.hex)' : 'GIMP palette (.gpl)').click();
       const download = await dl;
       const text = await readFile(await download.path(), "utf8");
       assert.equal(
@@ -317,14 +376,14 @@ export async function renderConceptA(browser, root, output) {
     await page.locator("[data-palette-rename]").press("Tab");
     await page.locator("[data-hex-edit]").fill("#123456");
     await page.locator("[data-hex-edit]").press("Tab");
-    await page.locator('[data-action="swatch-right"]').click();
+    await swatchAction(page, 'Move right');
     assert.equal(
       await page.locator('[data-edit-swatch="1"]').getAttribute("data-color"),
       "#123456",
     );
     await page.locator('[data-action="add-swatch"]').click();
     assert.equal(await page.locator("[data-edit-swatch]").count(), 33);
-    await page.locator('[data-action="remove-swatch"]').click();
+    await swatchAction(page, 'Remove color');
     assert.equal(await page.locator("[data-edit-swatch]").count(), 32);
     await page.locator('[data-action="use-palette"]').click();
     assert.equal(
@@ -333,14 +392,14 @@ export async function renderConceptA(browser, root, output) {
     );
     await menu(page, "Palette");
     await menuItem(page, "Manage palettes…").click();
-    await page.locator('[data-action="delete-palette"]').click();
+    await paletteAction(page, 'Delete palette');
     assert.equal(
       await page.locator("[data-palette-name]").textContent(),
       "Woodland",
     );
     await page.locator('[data-action="create-palette"]').click();
     assert.equal(await page.locator("[data-edit-swatch]").count(), 1);
-    await page.locator('[data-action="delete-palette"]').click();
+    await paletteAction(page, 'Delete palette');
     await page.locator("[data-palette-file]").setInputFiles({
       name: "sample.gpl",
       mimeType: "text/plain",
@@ -357,7 +416,7 @@ export async function renderConceptA(browser, root, output) {
       await page.locator('[data-edit-swatch="0"]').getAttribute("data-color"),
       "#010203",
     );
-    await page.locator('[data-action="delete-palette"]').click();
+    await paletteAction(page, 'Delete palette');
     await page.locator("[data-palette-file]").setInputFiles({
       name: "three.hex",
       mimeType: "text/plain",
@@ -375,7 +434,7 @@ export async function renderConceptA(browser, root, output) {
         .getAttribute("data-edit-swatch"),
       "1",
     );
-    await page.locator('[data-action="delete-palette"]').click();
+    await paletteAction(page, 'Delete palette');
     const palettesBefore = await page.evaluate(
       () => window.__aPreview.palettes.length,
     );
@@ -395,7 +454,7 @@ export async function renderConceptA(browser, root, output) {
 
     // Progressive disclosure and immutable captures across edits/camera changes.
     const initialCaptures = await hashes(page);
-    await page.locator('[data-step="18"] summary').click();
+    await page.locator('[data-step="18"]').evaluate(el => el.open = true);
     assert.equal(
       (await page.locator('[data-step-coordinates="18"]').textContent()).split(
         "\n",
@@ -414,7 +473,7 @@ export async function renderConceptA(browser, root, output) {
     await page.keyboard.press("Meta+Shift+z");
     await page.keyboard.press("Meta+Shift+z");
     assert.equal(await count(page), 2079);
-    await page.locator('[data-step="18"] summary').click();
+    await page.locator('[data-step="18"] > summary').click();
     await page.locator('[data-layer="Canopy"]').hover();
     await page.locator('[data-layer-eye="Canopy"]').click();
     assert.deepEqual(await hashes(page), initialCaptures);
@@ -452,7 +511,7 @@ export async function renderConceptA(browser, root, output) {
     // Comment reply, resolve/reopen, filters and share permission/clipboard fallback.
     await page.locator('[data-pin="1"]').click();
     await page
-      .locator(".reply-form input")
+      .locator(".reply-form textarea")
       .fill("The softer silhouette works.");
     await page.locator(".reply-form button").click();
     assert.ok(
@@ -476,7 +535,7 @@ export async function renderConceptA(browser, root, output) {
       .click({ button: "right", position: anchor });
     await menuItem(page, "Add comment here").click();
     await page
-      .locator(".reply-form input")
+      .locator(".reply-form textarea")
       .fill("Keep the chimney silhouette.");
     await page.locator(".reply-form button").click();
     assert.equal(
@@ -485,6 +544,10 @@ export async function renderConceptA(browser, root, output) {
     );
     await page.locator('[data-tab="session"]').click();
     await page.locator('[data-action="share"]').click();
+    await page.locator('[data-access-scope]').selectOption('restricted');
+    assert.ok(await page.locator('[data-permission="view"]').isDisabled());
+    assert.ok((await page.locator('.link-field input').inputValue()).includes('scope=restricted'));
+    await page.locator('[data-access-scope]').selectOption('link');
     await page.locator('[data-permission="remix"]').click();
     assert.ok(
       (await page.locator(".link-field input").inputValue()).endsWith(
@@ -528,6 +591,13 @@ export async function renderConceptA(browser, root, output) {
     const latest = await count(page);
     await page.locator("[data-timeline]").fill("4");
     const midway = await count(page);
+    assert.ok(await page.locator('.history-preview-banner').isVisible());
+    assert.equal(await page.locator('.history-event-list button').count(), 9);
+    await page.locator('[data-timeline]').fill('0');
+    assert.equal(await count(page), 0);
+    assert.equal(await page.locator('[data-history-position]').textContent(), 'Initial state');
+    assert.ok(await page.locator('[data-action="history-prev"]').isDisabled());
+    await page.locator('[data-timeline]').fill('4');
     assert.ok(midway < latest && midway > 1000);
     await page.locator('[data-action="save-version"]').click();
     await page.locator(".version-form input").fill("Garden checkpoint");
@@ -538,22 +608,14 @@ export async function renderConceptA(browser, root, output) {
     );
     await page.locator('[data-action="history-live"]').click();
     assert.equal(await count(page), latest);
-    await page
-      .locator(".version-item")
-      .first()
-      .locator('[data-version-action="compare"]')
-      .click();
+    await versionAction(page, 'Compare with current');
     assert.ok(
       (await page.locator(".compare-badge").textContent()).includes(
         `+${latest - midway} / −0`,
       ),
     );
     await page.locator('[data-action="clear-compare"]').click();
-    await page
-      .locator(".version-item")
-      .first()
-      .locator('[data-version-action="restore"]')
-      .click();
+    await versionAction(page, 'Restore version');
     assert.equal(await count(page), midway);
     await page.locator('[data-close="history"]').click();
     assert.equal(
@@ -562,9 +624,7 @@ export async function renderConceptA(browser, root, output) {
       "Restore must persist after closing history",
     );
     await page.locator('[data-action="history"]').click();
-    await page
-      .locator('[data-version-id="v2"][data-version-action="branch"]')
-      .click();
+    await versionAction(page, 'Branch from version', 'v2');
     assert.equal(await count(page), latest);
     assert.equal(
       await page.locator("[data-branch-name]").textContent(),
@@ -603,7 +663,7 @@ export async function renderConceptA(browser, root, output) {
     // Deleting the final custom palette falls back to a preset and survives reload.
     await menu(page, "Palette");
     await menuItem(page, "Manage palettes…").click();
-    await page.locator('[data-action="delete-palette"]').click();
+    await paletteAction(page, 'Delete palette');
     assert.equal(
       await page.locator("[data-palette-name]").textContent(),
       "PICO-8",
@@ -621,6 +681,25 @@ export async function renderConceptA(browser, root, output) {
       ),
       0,
     );
+    // A smaller window keeps controls reachable through a bounded, resizable sidebar.
+    await page.setViewportSize({width:1100,height:760});
+    await settle(page);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 1100);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollHeight), 760);
+    await page.locator('.sidebar-resizer').focus();
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(await page.locator('.sidebar-resizer').getAttribute('aria-valuenow'), '376');
+    await page.locator('.palette-switch').scrollIntoViewIfNeeded();
+    assert.ok(await page.locator('.palette-switch').isVisible());
+    await page.locator('[data-action="history"]').click();
+    await page.locator('[data-timeline]').fill('4');
+    assert.ok(await page.locator('.history-preview-banner').isVisible());
+    assert.ok(await page.locator('.history-panel').evaluate(el => el.clientHeight < el.scrollHeight));
+    await page.locator('[data-close="history"]').click();
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('Scatter');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('[data-current-tool]').textContent(), 'Scatter moss');
     assert.deepEqual(errors, [], "Concept A browser errors");
     console.log(
       `Verified A ${theme}: menus, palettes/files, comments/share, history geometry, captures and keyboard controls.`,
