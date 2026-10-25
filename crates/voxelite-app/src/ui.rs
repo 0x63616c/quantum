@@ -476,10 +476,36 @@ impl EditorView {
         if self.dialog_open {
             return false;
         }
+        if self.editor.preview.is_some()
+            && matches!(
+                op,
+                Op::Place
+                    | Op::Erase
+                    | Op::Paint
+                    | Op::Fill
+                    | Op::Box
+                    | Op::Picker
+                    | Op::MirrorX
+                    | Op::MirrorY
+                    | Op::MirrorZ
+                    | Op::AddLayer
+                    | Op::Comment
+                    | Op::ToolPicker
+            )
+        {
+            return false;
+        }
         match op {
             Op::Undo => self.editor.preview.is_none() && self.editor.engine.head().is_some(),
             Op::Redo => self.editor.preview.is_none() && self.editor.engine.redo_head().is_some(),
             _ => true,
+        }
+    }
+    fn disabled_reason(&self, op: Op) -> &'static str {
+        if self.editor.preview.is_some() {
+            "Return to live to edit"
+        } else {
+            op.disabled_reason()
         }
     }
     fn selected(&self, op: Op) -> bool {
@@ -1062,6 +1088,7 @@ impl EditorView {
         // Frame is an action; the camera selector owns the persistent view state.
         let selected = self.selected(op) && id != "view-fit";
         let primary = id == "save";
+        let disabled_reason = self.disabled_reason(op);
         row()
             .id(id)
             .tooltip(move |_, cx| {
@@ -1069,7 +1096,7 @@ impl EditorView {
                     text: if enabled {
                         format!("{}  {}", op.label(), op.shortcut())
                     } else {
-                        format!("{} · {}", op.label(), op.disabled_reason())
+                        format!("{} · {}", op.label(), disabled_reason)
                     }
                     .into(),
                     theme,
@@ -1207,15 +1234,23 @@ impl EditorView {
             .child(
                 self.button(
                     "tool-picker",
-                    match self.editor.tool {
-                        Tool::Place => "place",
-                        Tool::Erase => "erase",
-                        Tool::Paint => "paint",
-                        Tool::Fill => "fill",
-                        Tool::Box => "box",
-                        Tool::Picker => "picker",
+                    if self.editor.preview.is_some() {
+                        "lock"
+                    } else {
+                        match self.editor.tool {
+                            Tool::Place => "place",
+                            Tool::Erase => "erase",
+                            Tool::Paint => "paint",
+                            Tool::Fill => "fill",
+                            Tool::Box => "box",
+                            Tool::Picker => "picker",
+                        }
                     },
-                    self.editor.tool.name(),
+                    if self.editor.preview.is_some() {
+                        "Read only"
+                    } else {
+                        self.editor.tool.name()
+                    },
                     Op::ToolPicker,
                     cx,
                 )
@@ -2120,7 +2155,7 @@ impl EditorView {
                 mono(if enabled {
                     op.shortcut()
                 } else {
-                    op.disabled_reason()
+                    self.disabled_reason(op)
                 })
                 .text_color(t.muted()),
             )

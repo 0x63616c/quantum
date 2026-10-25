@@ -1,4 +1,4 @@
-//! Model-space pins, thread popovers and discussion panel.
+//! Model-space pins and docked, revision-aware discussion threads.
 use super::*;
 use voxelite_core::{Anchor, AnchorState, Origin, Uuid};
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -15,6 +15,7 @@ pub(super) struct Discussion {
     pub first: Option<Pos>,
     pub draft: Option<Anchor>,
     pub filter: usize,
+    pub scroll: ScrollHandle,
     pub text: Entity<crate::text_field::TextField>,
 }
 impl Discussion {
@@ -27,12 +28,18 @@ impl Discussion {
             first: None,
             draft: None,
             filter: 0,
+            scroll: ScrollHandle::new(),
             text: crate::text_field::TextField::new("Write a comment…", cx),
         }
     }
 }
 impl EditorView {
     pub(super) fn begin_comment(&mut self, cx: &mut Context<Self>) {
+        if self.editor.preview.is_some() {
+            self.status = "Return to live to add a comment".into();
+            cx.notify();
+            return;
+        }
         self.panel = Panel::Comments;
         self.discussion.placing = true;
         self.discussion.first = None;
@@ -82,6 +89,7 @@ impl EditorView {
             return;
         };
         if result.is_ok() {
+            self.discussion.scroll.scroll_to_bottom();
             self.discussion
                 .text
                 .update(cx, |f, cx| f.set(String::new(), cx));
@@ -441,6 +449,7 @@ impl EditorView {
                     .child(
                         div()
                             .id("thread-messages")
+                            .track_scroll(&self.discussion.scroll)
                             .flex_1()
                             .min_h(px(60.0))
                             .overflow_y_scroll()
