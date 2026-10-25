@@ -1,5 +1,13 @@
 # App polish round 2 — independent review
 
+> Product-owner correction (2026-10-25): P02's rail removal and P10's removal of
+> local share links were incorrect and are superseded. The required UI has a
+> persistent Lucide tool rail and a backend-connected local Share preview with
+> access choices and a per-person list. Hosted sharing remains future work.
+> The historical findings below describe the earlier review, not authority to
+> remove these controls. Current restoration and verification are recorded at
+> the end of this report.
+
 Baseline: `12cfee0`, branch `build-v1`, 2026-10-25. Reviewed the supplied
 screenshots, Concept A, PLAN.md §§1/7–9/17 and design/ART-CHECKLIST.md, then the
 native app and attached MCP implementation. This reviewer did not implement the

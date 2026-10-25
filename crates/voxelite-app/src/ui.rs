@@ -846,11 +846,12 @@ impl EditorView {
             && self.pending.is_none()
             && !self.command_open
             && self.menu.is_none()
-            && !self.sharing.open
             && !self.agent.open
             && self.info.is_none()
         {
-            let fields = if self.palettes.open {
+            let fields = if self.sharing.open {
+                vec![self.sharing.person.focus_handle(cx)]
+            } else if self.palettes.open {
                 vec![
                     self.palettes.name.focus_handle(cx),
                     self.palettes.hex.focus_handle(cx),
@@ -883,11 +884,17 @@ impl EditorView {
             }
         }
 
+        if self.sharing.open && self.sharing.person.read(cx).focused(window) && key == "enter" {
+            self.add_share_person(cx);
+            cx.stop_propagation();
+            return;
+        }
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
-                || self.timeline.name.read(cx).focused(window))
+                || self.timeline.name.read(cx).focused(window)
+                || self.sharing.person.read(cx).focused(window))
         {
             return;
         }
@@ -2609,6 +2616,9 @@ impl Render for EditorView {
         self.timeline
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.sharing
+            .person
+            .update(cx, |field, cx| field.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
@@ -2670,6 +2680,7 @@ impl Render for EditorView {
                     || self.palettes.hex.read(cx).focused(window)
                     || self.discussion.text.read(cx).focused(window)
                     || self.timeline.name.read(cx).focused(window)
+                    || self.sharing.person.read(cx).focused(window)
                 {
                     "TextField"
                 } else if self.command_open {
@@ -2723,7 +2734,8 @@ impl Render for EditorView {
                     .occlude()
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(|this, _, _, cx| {
+                        cx.listener(|this, _, window, cx| {
+                            window.focus(&this.focus, cx);
                             this.agent.open = false;
                             this.sharing.open = false;
                             this.palettes.open = false;

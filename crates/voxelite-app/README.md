@@ -10,7 +10,7 @@ palettes and layer lists scroll within bounded panels.
 The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
 current visual assessment, verification and both-theme captures. The sidebar
 switches between Session, Comments and History; the toolbar keeps Save and the
-local file sharing within reach. Static medium and semibold Geist faces
+local Share preview within reach. Static medium and semibold Geist faces
 preserve the intended weight hierarchy on Linux.
 
 ```sh
@@ -162,10 +162,16 @@ Presets and project colors are read-only in the manager; Duplicate creates an
 editable brush palette. These operations never silently recolor document slots.
 Libraries are validated and atomically replaced in the app's local data directory.
 
-**Share** offers **Save a copy…** through the native `.voxl` file dialog and,
-after saving, **Copy file path**. Hosted links and online permissions are future
-scope. The old local prototype backend remains a library API, but its inert
-links and permission controls are no longer exposed as a product workflow.
+**Share** opens the Concept A popover with a stable `voxelite://share/<id>` link,
+Copy feedback, View / Comment / Remix access, and a local People & agents list.
+Add participant labels, choose their access explicitly, or remove them; Tab
+focuses the name field and Enter adds it. Settings persist atomically through
+`ShareBackend` and `LocalShareBackend`, without changing the model or dirty state.
+The popover is labeled **Local preview — hosted sharing coming soon**: these
+links are local identifiers, not published URLs or enforced online permissions;
+no invitations are sent. **Save a copy…** remains a secondary native `.voxl`
+action and preserves the working path and dirty state. The popover scrolls at
+the minimum window size, and Escape/outside click restores editor focus.
 
 **Comments** lists Open/Resolved/All threads. Click a projected numbered pin to
 open its docked sidebar thread, or Add/C then click a voxel. Switch Anchor to Region and click

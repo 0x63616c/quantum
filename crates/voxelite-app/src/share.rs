@@ -55,7 +55,7 @@ pub struct Share {
 impl Share {
     /// A clearly non-network local stub link; no remote service is implied.
     pub fn link(&self) -> String {
-        format!("voxelite-local://share/{}", self.id)
+        format!("voxelite://share/{}", self.id)
     }
     /// Validate before persistence.
     pub fn validate(&self) -> EditorResult<()> {
@@ -166,7 +166,7 @@ mod tests {
         let doc = Uuid::new_v4();
         let mut s = backend.get_or_create(doc).unwrap();
         let link = s.link();
-        assert!(link.starts_with("voxelite-local://"));
+        assert_eq!(link, format!("voxelite://share/{}", s.id));
         s.access = Access::Remix;
         s.people.push(Person {
             id: Uuid::new_v4(),
@@ -176,6 +176,7 @@ mod tests {
         backend.save(s.clone()).unwrap();
         let read = backend.get_or_create(doc).unwrap();
         assert_eq!(read.link(), link);
+        assert_eq!(read.access, Access::Remix);
         assert_eq!(read.people[0].access, Access::Comment);
         s.people[0].name.clear();
         assert!(backend.save(s).is_err());
@@ -183,6 +184,17 @@ mod tests {
             backend.get_or_create(doc).unwrap().people[0].name,
             "Reviewer"
         );
+        let mut updated = backend.get_or_create(doc).unwrap();
+        updated.people[0].access = Access::Remix;
+        backend.save(updated).unwrap();
+        assert_eq!(
+            backend.get_or_create(doc).unwrap().people[0].access,
+            Access::Remix
+        );
+        let mut removed = backend.get_or_create(doc).unwrap();
+        removed.people.clear();
+        backend.save(removed).unwrap();
+        assert!(backend.get_or_create(doc).unwrap().people.is_empty());
         assert_ne!(backend.get_or_create(Uuid::new_v4()).unwrap().link(), link);
     }
     #[test]
