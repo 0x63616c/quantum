@@ -44,4 +44,85 @@ under `design/`; implementation changes are confined to `crates/voxelite-app`.
 
 ## After review
 
-Pending implementation, native recapture, visual inspection and workspace checks.
+Implementation commits: `be5d5ef` (framing) and `a2c8898` (the remaining four
+findings). Actual GPUI windows were captured on Linux/Xvfb with Mesa software
+Vulkan at 1440×900 and 1024×640, using the build/launch/resize/import portion of
+`scripts/capture-native.sh`. No mockups, image generation or screenshot retouching.
+Both themes and both window sizes were inspected, including the supplementary
+interaction captures below. The reference images remain unchanged.
+
+| Supplied image / updated capture | Before | After /10 | Assessment |
+| --- | ---: | ---: | --- |
+| 1 · [app-dark](../../screenshots/app-dark.png) | 8.0 | 8.8 | Balanced silhouette framing, purposeful connection invitation, all 36 colors visible, aligned sidebar content and readable gesture groups. |
+| 2 · [app-light](../../screenshots/app-light.png) | 8.2 | 8.9 | Matching improvements; especially clear section alignment and selected swatches on white. |
+| 3 · [app-dark-small](../../screenshots/app-dark-small.png) | 7.4 | 8.5 | Artwork clears the camera bar; complete swatch rows, visible color value and explicit scrolling controls fit the minimum window. |
+| 4 · concept-a-dark | 8.6 | 8.6 | Reference only; no implementation score uplift. |
+| 5 · concept-a-light | 8.8 | 8.8 | Reference only; unchanged. |
+
+The additional [small light capture](../../screenshots/app-light-small.png)
+scores **8.6/10**. These are improvements toward the 9/10 target, not a claim
+that every editor state has reached it.
+
+### Resolution and verification
+
+1. **Framing:** project visible voxel extents onto the camera basis, center
+   the occupied silhouette, and retain the conservative fit with 4% extra
+   breathing room. Empty documents retain the document-bounds fallback.
+   A regression test checks the actual asymmetric sample in four views and
+   four aspect ratios, verifies centering/margins, and checks isometric
+   clearance for the minimum-window camera controls. Existing projection,
+   picking and exact top-view tests also pass.
+2. **Palette:** desktop allows five complete rows; compact mode allows two.
+   Overflow adds explicit previous/next scroll controls beside the persistent
+   color value. Native clicks were checked against the sample's actual RGB
+   values: the final two rows become visible and previous returns to row one.
+   See [dark](../../screenshots/polish-3/palette-small-dark.png) and
+   [light](../../screenshots/polish-3/palette-small-light.png).
+3. **Idle session:** one invitation replaces the repeated empty-history copy
+   and disabled history controls. An already connected agent gets a waiting
+   state. Real human edits retain their history, including compact mode:
+   [dark](../../screenshots/polish-3/human-history-small-dark.png),
+   [light](../../screenshots/polish-3/human-history-small-light.png).
+4. **Gesture hint:** retained Lucide mouse/key/action glyphs, added quiet
+   separators and individual tooltips, and aligned the hint with the view
+   controls. Orbit/Pan/Zoom labels appear when there is room.
+5. **Sidebar rhythm:** connection and actual agent content use the shared
+   24px gutter. Layer selection surfaces extend 8px outside that alignment;
+   the border is accounted for in the icon inset. Layers absorb spare vertical
+   room while palette rows remain whole. Actual MCP edits and three captured
+   views were exercised and inspected in
+   [dark](../../screenshots/polish-3/agent-dark.png) and
+   [light](../../screenshots/polish-3/agent-light.png).
+
+Hard-requirement smoke checks retained the tool rail, Save icon + label, Geist,
+gesture glyphs and both explicit themes. Pixel checks verified pure black and
+white base surfaces at both sizes. Native Share copied its persisted URI through
+the clipboard into a text field; the test compared that text with the stored
+link, removed the temporary entry, and verified persisted Remix access.
+[Dark Share](../../screenshots/polish-3/share-dark.png) and
+[light Share](../../screenshots/polish-3/share-light.png) retain link/Copy feedback,
+View/Comment/Remix choices, the local-preview notice and secondary Save a copy.
+
+Checks completed successfully:
+
+- `cargo fmt --all -- --check`
+- `cargo build --workspace`, including the native Linux GPUI binary
+- `cargo test --workspace` — **110 tests passed**, no failures
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- Native captures and the palette/Share/MCP interaction checks described above
+- `git diff --check`; no edits under `design/`; `/target/` remains ignored
+
+### Remaining
+
+- Compact glyph hints still need hover for exact mouse-button semantics. The
+  larger layout now names each action, but minimum-width discoverability is
+  still below the 9/10 target.
+- At 1024×640, real human history pushes the palette below the initial fold;
+  the sidebar must scroll. Active agent sessions also show few events at once,
+  and the three capture thumbnails remain small. A resizable sidebar and
+  further progressive disclosure would need a separate layout pass.
+- Palette scroll buttons remain enabled at either end; they safely clamp but
+  do not yet communicate that boundary with a disabled state.
+- This pass did not repeat high-density, macOS, screen-reader or full keyboard
+  accessibility acceptance. Those require separate evidence before describing
+  the app as production-certified. No new platform claims are made here.
