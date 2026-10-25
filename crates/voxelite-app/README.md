@@ -7,6 +7,12 @@ toolbar with a searchable tool picker, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
+The [polish round 1 review](../../docs/reviews/app-polish-1.md) records the
+current visual assessment and both-theme captures. The toolbar uses a primary
+Save action, with secondary commands in menus; the sidebar pairs recent changes
+with compact Undo/Redo, layers and full-size color tiles. Static medium and
+semibold Geist faces preserve the intended weight hierarchy on Linux.
+
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo run -p voxelite-app --bin voxelite -- --theme dark
@@ -44,6 +50,9 @@ is only a preview. Place targets the adjacent face or the bottom work plane.
 Paint, erase and fill require the visible hit to belong to the selected layer;
 select its layer first. Hidden and locked layers reject voxel edits. Mirror
 X/Y/Z reflects around the document's center planes in one undo transaction.
+Enable mirrors in Tools or command search; the toolbar shows their toggles while
+any mirror is active. The viewport's projected X/Y/Z controls select Right/Top/
+Front; Iso and the separate Frame button return to the fitted isometric view.
 
 Selecting a preset does not change existing geometry or dirty the project.
 Selecting a swatch changes the brush. Its color is reused or appended to the
@@ -119,6 +128,9 @@ It also captures both themes at 1024×640. `bash scripts/review-native.sh` exerc
 real command search, tool/palette selection, save-and-continue, cancel/discard,
 native Open, dialog input isolation, boundary layouts, and 1.5×/2× captures.
 See [review round 1](../../docs/reviews/app-review-1.md) for findings and evidence.
+Set `VOXELITE_REVIEW_ARTIFACTS` to an absolute directory to retain a separate
+capture set. The script also checks camera-axis input isolation, mirror controls,
+both preset choosers and the local-history keyboard guide.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
 a minimal server without them can still open paths through the CLI and render
 PNGs. Dialog errors appear in the status bar and preserve the current project.
