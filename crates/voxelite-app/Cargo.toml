@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 default = ["native"]
-native = ["dep:gpui", "dep:gpui_platform", "dep:image"]
+native = ["dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger"]
 
 [[bin]]
 name = "voxelite"
@@ -31,3 +31,7 @@ image = { version = "0.25", default-features = false, optional = true }
 
 [lints]
 workspace = true
+
+[dependencies.env_logger]
+version = "0.11"
+optional = true

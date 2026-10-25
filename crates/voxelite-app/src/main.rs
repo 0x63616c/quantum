@@ -65,6 +65,7 @@ fn options() -> anyhow::Result<Options> {
     Ok(options)
 }
 fn main() -> anyhow::Result<()> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let options = options()?;
     let editor = match options.path {
         Some(path) => Editor::open(&path)?,
