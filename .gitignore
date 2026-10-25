@@ -3,3 +3,5 @@ node_modules/
 /target/
 
 /web/dist/
+/site/app/
+/site/assets/voxelite-source.tar.gz
