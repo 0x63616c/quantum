@@ -21,7 +21,6 @@ are separate evidence, not retroactively higher review scores.
 | --- | --- | --- | --- | --- |
 | 1 | 6.5 | 5.5 | `docs/reviews/site-review-1.md` | Device disclosure, enlarged crop, native evidence, palette, links; `screenshots/site/round-2/` |
 | 2 | 7.2 | 6.5 | `docs/reviews/site-review-2.md` | Native hero, clean canvas crop, proof order, device-specific labels; `screenshots/site/round-3/` |
-
 | 3 | 7.7 | 7.1 | `docs/reviews/site-review-3.md` | Actual before/after MCP recording, immediate mobile session proof, shorter narrative, setup CTA, caption wrapping; `screenshots/site/final/` |
 
 ## Verified boundaries
