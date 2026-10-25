@@ -101,7 +101,7 @@ impl OrbitCamera {
         let Projection::Orthographic { height } = camera.projection else {
             unreachable!()
         };
-        Self {
+        let mut fitted = Self {
             target: camera.target.into(),
             yaw: match view {
                 PresetView::Iso => std::f64::consts::FRAC_PI_4,
@@ -115,9 +115,31 @@ impl OrbitCamera {
                 PresetView::Top => std::f64::consts::FRAC_PI_2,
                 _ => 0.0,
             },
-            span: height,
+            span: height * 1.04,
             distance: DVec3::from(camera.eye).distance(camera.target.into()),
+        };
+        // The center of a world-space bounding box is not necessarily the
+        // center of its visible silhouette (for example, a tree beside a house).
+        // Project occupied cell extents, retaining the conservative fit scale
+        // so sparse scenes do not jump to an unexpectedly tight zoom.
+        let (right, up, _) = fitted.basis();
+        let half_cell = [right.abs().element_sum(), up.abs().element_sum()].map(|v| v * 0.5);
+        let mut lo = [f64::INFINITY; 2];
+        let mut hi = [f64::NEG_INFINITY; 2];
+        for layer in snapshot.layers.iter().filter(|layer| layer.visible) {
+            for (position, _) in layer.voxels.iter() {
+                let offset =
+                    DVec3::from(position.map(f64::from)) + DVec3::splat(0.5) - fitted.target;
+                for (axis, value) in [offset.dot(right), offset.dot(up)].into_iter().enumerate() {
+                    lo[axis] = lo[axis].min(value - half_cell[axis]);
+                    hi[axis] = hi[axis].max(value + half_cell[axis]);
+                }
+            }
         }
+        if lo[0].is_finite() {
+            fitted.target += right * ((lo[0] + hi[0]) * 0.5) + up * ((lo[1] + hi[1]) * 0.5);
+        }
+        fitted
     }
     /// Basis used by both the CPU renderer and screen rays.
     pub fn basis(self) -> (DVec3, DVec3, DVec3) {
@@ -949,6 +971,45 @@ mod tests {
             if view == PresetView::Top {
                 let ray = camera.ray([0.5, 0.5], 0.8).unwrap();
                 assert!((ray.direction - DVec3::NEG_Y).length() < 1e-12);
+            }
+        }
+    }
+    #[test]
+    fn asymmetric_scene_is_centered_and_clear_of_viewport_controls() {
+        let e = Editor::example().unwrap();
+        for aspect in [616.0 / 512.0, 1032.0 / 772.0, 0.8, 2.0] {
+            for view in [
+                PresetView::Iso,
+                PresetView::Front,
+                PresetView::Right,
+                PresetView::Top,
+            ] {
+                let camera = OrbitCamera::fit_view(e.snapshot(), aspect, view);
+                let mut lo = [f64::INFINITY; 2];
+                let mut hi = [f64::NEG_INFINITY; 2];
+                for layer in e.snapshot().layers.iter().filter(|layer| layer.visible) {
+                    for (position, _) in layer.voxels.iter() {
+                        for bits in 0..8 {
+                            let corner = DVec3::from(std::array::from_fn(|axis| {
+                                f64::from(position[axis] + ((bits >> axis) & 1))
+                            }));
+                            for (axis, value) in
+                                camera.project(corner, aspect).into_iter().enumerate()
+                            {
+                                lo[axis] = lo[axis].min(value);
+                                hi[axis] = hi[axis].max(value);
+                            }
+                        }
+                    }
+                }
+                for axis in 0..2 {
+                    assert!((lo[axis] + hi[axis] - 1.0).abs() < 1e-10);
+                    assert!(lo[axis] > 0.05 && hi[axis] < 0.95);
+                }
+                // The minimum window reserves the bottom 58px for navigation.
+                if view == PresetView::Iso {
+                    assert!(hi[1] < 1.0 - 58.0 / 512.0);
+                }
             }
         }
     }
