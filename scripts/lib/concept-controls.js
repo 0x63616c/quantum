@@ -92,7 +92,22 @@
   $$('[data-history-undo]').forEach(el => el.addEventListener('click', undo));
   $$('[data-history-redo]').forEach(el => el.addEventListener('click', redo));
   const form = $('.session-composer');
-  if (form) form.addEventListener('submit', e => {e.preventDefault();notify('Instruction preview · connect an MCP host in the app');});
+  if (form) {
+    const instruction = form.querySelector('input'), copy = form.querySelector('[data-copy-instruction]');
+    instruction.addEventListener('input', () => copy.disabled = !instruction.value.trim());
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!instruction.value.trim()) return;
+      try {
+        await navigator.clipboard.writeText(instruction.value.trim());
+        notify('Instruction copied');
+      } catch {
+        instruction.focus(); instruction.select();
+        notify('Press ⌘C or Ctrl+C to copy the selected draft');
+      }
+    });
+  }
+  $('[data-refresh-renders]').addEventListener('click', () => notify('Captured 3 views · ' + $('[data-render-revision]').textContent));
   const historyDialog = $('.history-dialog');
   let historyFocus, inspectedStep = '18';
   function showHistoryChange(id) {
@@ -101,7 +116,7 @@
     $$('[data-inspect-step]').forEach(el => {
       if (el.closest('.history-tabs')) el.setAttribute('aria-pressed', String(el.dataset.inspectStep === id));
     });
-    $('[data-history-description]').textContent = `Step ${id} · ${change.tool} · ${change.layer} · ${change.state} · r${String(change.revision).padStart(3, '0')}`;
+    $('[data-history-description]').textContent = `Step ${id} · ${change.tool} · ${change.layer} · ${change.state}. Change r${String(change.revision).padStart(3, '0')} · document r${String(change.document_revision).padStart(3, '0')}.`;
     $('[data-history-diff]').textContent = JSON.stringify(change, null, 2)
       .replace(/\[\n\s+(-?\d+),\n\s+(-?\d+),\n\s+(-?\d+)\n\s+\]/g, '[$1, $2, $3]');
     $('[data-history-revert] span').textContent = change.state === 'undone' ? 'Redo change' : 'Undo change';

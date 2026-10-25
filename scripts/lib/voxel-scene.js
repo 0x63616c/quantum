@@ -104,17 +104,27 @@
     '17': [...cubes.values()].filter(c => c.layer === 'Canopy' && !c.agent && c.y >= 14).slice(0, 24),
   };
   let thumbnailKey = '';
+  let capturedCubes = new Map(cubes), capturedHidden = new Set(hidden);
+  let capturedRevision = revision, captureGeneration = 0;
+  const visibilityKey = values => [...values].sort().join(',');
+  function updateCaptureState() {
+    document.querySelectorAll('[data-render-revision]').forEach(el => el.textContent = 'r' + String(capturedRevision).padStart(3, '0'));
+    document.querySelectorAll('[data-render-stale]').forEach(el => el.hidden =
+      revision === capturedRevision && visibilityKey(hidden) === visibilityKey(capturedHidden));
+  }
   const views = { front: [.68, .46], right: [2.25, .42], back: [3.8, .46] };
   function selectCamera(name) {
     document.querySelectorAll('[data-view-angle]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.viewAngle === name)));
+    const label = name ? name[0].toUpperCase() + name.slice(1) : 'Custom';
+    document.querySelector('[data-view-label]').textContent = label + ' perspective';
   }
-  const bounds = items => [0,1,2].map((axis) => {
+  const bounds = items => items.length ? [0,1,2].map((axis) => {
     const values = items.map(c => [c.x,c.y,c.z][axis]);
     return `${'xyz'[axis]} ${Math.min(...values)}…${Math.max(...values)}`;
-  }).join(' · ').replaceAll('-', '−');
+  }).join(' · ').replaceAll('-', '−') : 'No occupied cells';
   window.__getChange = id => ({
     step: Number(id), tool: id === '18' ? 'set_voxels' : 'fill_box', layer: 'Canopy',
-    revision, state: undone.has(id) ? 'undone' : 'applied',
+    revision: Number(id), document_revision: revision, state: undone.has(id) ? 'undone' : 'applied',
     added: historyGroups[id].map(c => [c.x,c.y,c.z]), removed: [],
   });
   window.__updateSelection = () => {
@@ -143,6 +153,8 @@
     { n: [-1,0,0], vertices: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]], light: .94 }
   ];
   function paint(thumbnail = false) {
+    const sceneCubes = thumbnail ? capturedCubes : cubes;
+    const sceneHidden = thumbnail ? capturedHidden : hidden;
     width = canvas.clientWidth; height = canvas.clientHeight;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
@@ -183,11 +195,11 @@
     shadow.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle = shadow; ctx.fillRect(-350 * zoom,-350 * zoom,700 * zoom,700 * zoom); ctx.restore();
     const faces = [];
-    for (const cube of cubes.values()) {
-      if (hidden.has(cube.layer)) continue;
+    for (const cube of sceneCubes.values()) {
+      if (sceneHidden.has(cube.layer)) continue;
       for (const face of faceDefinitions) {
-        const neighbor = cubes.get(key(cube.x + face.n[0],cube.y + face.n[1],cube.z + face.n[2]));
-        if (neighbor && !hidden.has(neighbor.layer)) continue;
+        const neighbor = sceneCubes.get(key(cube.x + face.n[0],cube.y + face.n[1],cube.z + face.n[2]));
+        if (neighbor && !sceneHidden.has(neighbor.layer)) continue;
         const faceCenter = [cube.x + .5 + face.n[0] * .5, cube.y + .5 + face.n[1] * .5, cube.z + .5 + face.n[2] * .5];
         if (dot(face.n, subtract(camera, faceCenter)) <= 0) continue;
         const points = face.vertices.map(v => project([cube.x + v[0],cube.y + v[1],cube.z + v[2]]));
@@ -199,8 +211,8 @@
       let ao = 1;
       if (face.n[1] === 1) {
         for (const [dx,dz] of [[-1,0],[1,0],[0,1],[0,-1]]) {
-          const next = cubes.get(key(cube.x + dx, cube.y + 1, cube.z + dz));
-          if (next && !hidden.has(next.layer)) ao -= .055;
+          const next = sceneCubes.get(key(cube.x + dx, cube.y + 1, cube.z + dz));
+          if (next && !sceneHidden.has(next.layer)) ao -= .055;
         }
       } else if (cube.y === 3 || cube.y === 4) ao = .96;
       path(points);
@@ -208,12 +220,25 @@
       ctx.strokeStyle = ctx.fillStyle;
       ctx.lineWidth = .45;
       ctx.fill(); ctx.stroke();
-      if (cube.agent) {
+      if (cube.agent && !thumbnail) {
         ctx.globalAlpha = .13; ctx.fillStyle = accent; ctx.fill(); ctx.globalAlpha = 1;
         ctx.strokeStyle = accent; ctx.lineWidth = .85; ctx.stroke();
       }
     }
     if (thumbnail) return;
+    // Camera-space projection keeps the orientation guide truthful during orbit.
+    for (const [axis, vector] of Object.entries({x:[1,0,0], y:[0,1,0], z:[0,0,1]})) {
+      const group = document.querySelector(`[data-axis="${axis}"]`);
+      const dx = dot(vector, right) * 34, dy = -dot(vector, up) * 34;
+      for (const [selector, direction] of [['.axis-front',1],['.axis-rear',-1]]) {
+        const line = group.querySelector(selector);
+        line.setAttribute('x1',45); line.setAttribute('y1',46);
+        line.setAttribute('x2',45 + direction * dx); line.setAttribute('y2',46 + direction * dy);
+      }
+      const circle = group.querySelector('circle'), label = group.querySelector('text');
+      circle.setAttribute('cx',45 + dx); circle.setAttribute('cy',46 + dy);
+      label.setAttribute('x',45 + dx); label.setAttribute('y',50 + dy);
+    }
     const anchor = historyGroups['18'].map(c => project([c.x + .5, c.y + .5, c.z + .5]))
       .reduce((a,b) => a[0] > b[0] ? a : b);
     const annotation = document.querySelector('.edit-annotation');
@@ -228,13 +253,18 @@
       tagLeft + tagWidth > width - 12 || anchor[1] < 42 || anchor[1] > height - 42;
     const count = document.querySelectorAll('[data-voxel-count]');
     count.forEach(el => el.textContent = cubes.size.toLocaleString('en-US'));
-    document.querySelectorAll('[data-zoom]').forEach(el => el.textContent = `${Math.round(100 * zoom)}%`);
+    const zoomSelect = document.querySelector('[data-zoom-select]');
+    const percent = Math.round(zoom * 100), custom = zoomSelect.querySelector('[data-custom-zoom]');
+    const preset = [75,100,125,150,175].includes(percent);
+    custom.hidden = preset;
+    if (!preset) { custom.value = percent; custom.textContent = percent + '%'; }
+    zoomSelect.value = percent;
     window.__voxelSceneReady = true;
     window.__voxelSceneStats = { cubes: cubes.size, faces: faces.length, width, height, dpr };
   }
   function draw() {
     paint();
-    const nextKey = [document.documentElement.dataset.theme, [...hidden].join(), [...undone].join()].join('/');
+    const nextKey = [document.documentElement.dataset.theme, captureGeneration].join('/');
     if (nextKey !== thumbnailKey) {
       const saved = [azimuth, elevation, zoom, pan];
       document.querySelectorAll('[data-thumbnail]').forEach(thumbnail => {
@@ -247,6 +277,17 @@
       thumbnailKey = nextKey;
     }
   }
+  window.__captureViews = () => {
+    capturedCubes = new Map(cubes); capturedHidden = new Set(hidden);
+    capturedRevision = revision; captureGeneration++;
+    updateCaptureState(); draw();
+  };
+  document.querySelector('[data-refresh-renders]').addEventListener('click', window.__captureViews);
+  const setZoom = value => {
+    document.dispatchEvent(new Event('manual-camera')); selectCamera(null);
+    zoom = Math.max(.55, Math.min(1.8, value)); draw();
+  };
+  document.querySelector('[data-zoom-select]').addEventListener('change', e => setZoom(Number(e.target.value) / 100));
   window.__setViewAngle = name => {
     [azimuth, elevation] = views[name] || views.front;
     zoom = 1; pan = [0, 0]; selectCamera(name); draw();
@@ -265,7 +306,8 @@
     const netAdded = Object.entries(historyGroups).filter(([step]) => !undone.has(step)).reduce((sum,[,items]) => sum + items.length, 0);
     document.querySelectorAll('[data-session-total]').forEach(el => el.innerHTML = `+${netAdded} <span>−0</span>`);
     document.querySelectorAll('[data-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
-    document.querySelectorAll('[data-render-revision]').forEach(el => el.textContent = 'r' + String(revision).padStart(3, '0'));
+    document.querySelectorAll('[data-change-evidence]').forEach(el => el.hidden = undone.has('18'));
+    updateCaptureState();
     window.__updateSelection();
     draw();
     return undone.has(id);
@@ -291,7 +333,20 @@
   });
   const stop = () => { drag = null; canvas.classList.remove('dragging'); };
   canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
-  canvas.addEventListener('wheel', e => { e.preventDefault(); document.dispatchEvent(new Event('manual-camera')); zoom = Math.max(.55,Math.min(1.8,zoom - e.deltaY * .001)); draw(); }, { passive:false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); setZoom(zoom - e.deltaY * .001); }, { passive:false });
+  canvas.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const directions = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]};
+    if (e.key === '+' || e.key === '=' || e.key === '-') {
+      e.preventDefault(); setZoom(zoom + (e.key === '-' ? -.1 : .1)); return;
+    }
+    if (!(e.key in directions)) return;
+    e.preventDefault(); document.dispatchEvent(new Event('manual-camera')); selectCamera(null);
+    const [dx,dy] = directions[e.key];
+    if (e.shiftKey) { pan[0] += dx * 24; pan[1] += dy * 24; }
+    else { azimuth += dx * .12; elevation = Math.max(.16,Math.min(1.2,elevation + dy * .08)); }
+    draw();
+  });
   document.querySelectorAll('[data-reset-view]').forEach(el => el.addEventListener('click', () => {
     document.dispatchEvent(new Event('manual-camera'));
     window.__setViewAngle('front');
@@ -302,7 +357,7 @@
     el.setAttribute('aria-pressed', String(!hidden.has(name)));
     el.querySelector('svg').innerHTML = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/>' +
       (hidden.has(name) ? '<path d="m3 3 18 18"/>' : '');
-    el.closest('.layer-row').classList.toggle('layer-hidden',hidden.has(name)); draw();
+    el.closest('.layer-row').classList.toggle('layer-hidden',hidden.has(name)); updateCaptureState(); draw();
   }));
   new ResizeObserver(draw).observe(viewport);
   new MutationObserver(draw).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
