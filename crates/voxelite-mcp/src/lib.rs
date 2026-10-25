@@ -9,6 +9,7 @@ mod error;
 mod files;
 mod images;
 mod session;
+mod transport;
 
 use rmcp::{ErrorData, RoleServer, ServerHandler, model::*, service::RequestContext};
 use serde_json::Value;
@@ -48,6 +49,19 @@ impl VoxeliteServer {
             admission: Arc::new(Semaphore::new(16)),
         })
     }
+    /// Serve bounded newline-delimited stdio using rmcp lifecycle negotiation.
+    /// Malformed JSON receives a parse error; oversized lines receive an invalid
+    /// request error. EOF shuts down cleanly after the client closes stdin.
+    pub async fn serve_stdio(self) -> Result<(), Box<dyn std::error::Error>> {
+        use rmcp::ServiceExt;
+        let (read, write) = rmcp::transport::stdio_pipes();
+        self.serve(transport::JsonLines::new(read, write))
+            .await?
+            .waiting()
+            .await?;
+        Ok(())
+    }
+
     /// Execute a tool directly with the same validation and receipts as MCP.
     ///
     /// Unknown tool names are protocol errors. Domain/argument failures are

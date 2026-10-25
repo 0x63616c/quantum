@@ -104,10 +104,10 @@ impl Session {
                     "session epoch changed; inspect capabilities and document state before retrying",
                 ));
             }
-            if let Some(label) = a.optional::<String>("label")? {
-                if label.len() > 80 {
-                    return Err(Failure::invalid("label exceeds 80 UTF-8 bytes"));
-                }
+            if let Some(label) = a.optional::<String>("label")?
+                && label.len() > 80
+            {
+                return Err(Failure::invalid("label exceeds 80 UTF-8 bytes"));
             }
             identity = Some((id, signature));
         }
