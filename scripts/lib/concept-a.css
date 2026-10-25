@@ -1895,3 +1895,6 @@ input, select, .reply-form textarea { background: var(--field); border-color: va
 .sidebar { padding-bottom: 12px; }
 .palette-sheet-open .workspace { grid-template-columns: minmax(0,1fr) 400px; }
 .palette-sheet-open .sidebar-resizer { display: none; }
+.palette-use { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.history-event .event-title { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+.history-event small { flex: none; }
