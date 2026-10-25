@@ -187,7 +187,7 @@ impl EntityInputHandler for TextField {
     ) {
         let start = r
             .clone()
-            .map(|r| self.byte(r.start))
+            .map(|r| self.range_from_utf16(r).start)
             .or_else(|| self.marked.as_ref().map(|r| r.start))
             .unwrap_or(self.selection.start);
         if !self.replace(r, text, cx) {
@@ -197,7 +197,9 @@ impl EntityInputHandler for TextField {
         self.marked = Some(start..end);
         if let Some(r) = selected {
             let base = self.to_utf16(start..start).start;
-            self.selection = self.range_from_utf16(base + r.start..base + r.end);
+            let selection =
+                self.range_from_utf16(base.saturating_add(r.start)..base.saturating_add(r.end));
+            self.selection = selection.start.clamp(start, end)..selection.end.clamp(start, end);
         }
     }
     fn bounds_for_range(

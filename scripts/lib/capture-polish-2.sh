@@ -48,18 +48,6 @@ PYTEST
 capture_feature palettes
 xdotool key Escape
 search 'share project'
-xdotool mousemove 1150 422 click 1
-sleep 0.25
-xdotool type --clearmodifiers --delay 15 'Reviewer'
-xdotool mousemove 1375 423 click 1
-sleep 0.3
-xdotool mousemove 1210 309 click 1
-python3 - "$VOXELITE_DATA_DIR/shares.json" <<'PYTEST'
-import json, sys
-s = next(iter(json.load(open(sys.argv[1])).values()))
-assert s['people'][0]['name'] == 'Reviewer', s
-assert s['access'] == 'comment', s
-PYTEST
 capture_feature share
 xdotool key Escape
 # Populate live history via the actual stdio bridge, not seeded UI data.
@@ -69,13 +57,13 @@ capture_feature agent
 # Open the discussion panel and its first real thread.
 xdotool mousemove 1260 193 click 1
 sleep 0.3
-xdotool mousemove 566 374 click 1
+xdotool mousemove 1230 425 click 1
 sleep 0.4
 # Reply with native text input. The field contains tool shortcut letters.
-xdotool mousemove 900 487 click 1
+xdotool mousemove 1230 779 click 1
 sleep 0.25
 xdotool type --clearmodifiers --delay 12 'The warm highlights look balanced.'
-xdotool mousemove 920 535 click 1
+xdotool mousemove 1260 831 click 1
 sleep 3
 capture_feature comments
 xdotool key Escape

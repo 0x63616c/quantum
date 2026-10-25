@@ -2051,8 +2051,8 @@ impl EditorView {
                 Panel::Session => self.agent_feed(compact, cx),
             })
             .when(self.panel == Panel::Session, |d| {
-                d.child(self.layers_panel(compact, cx))
-                    .child(self.palette_panel(compact, cx))
+                d.child(self.layers_panel(compact || self.agent.capture.is_some(), cx))
+                    .child(self.palette_panel(compact || self.agent.capture.is_some(), cx))
             })
     }
     fn statusbar(&self) -> Div {

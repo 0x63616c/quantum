@@ -52,6 +52,7 @@ if len(sys.argv) < 3 or sys.argv[2] == 'seed':
     cells = detail['voxels'][:6]
     edit('voxels_set', layer=detail['id'], voxels=[{'at': v[:3], 'slot': 17 if v[3] != 17 else 18} for v in cells], label='Warm the window details')
     edit('voxels_box', layer=detail['id'], region={'min': [11, 4, 17], 'max': [14, 5, 18]}, slot=17, label='Add an amber garden detail')
+    tool('render', {'model_id': model, 'revision': revision, 'views': ['front', 'right', 'back'], 'width': 160, 'height': 160})
     assert int(revision) >= 6
     assert any(r['recolored'] > 0 for r in receipts)
     assert any(r['added'] > 0 for r in receipts)

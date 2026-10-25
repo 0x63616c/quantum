@@ -154,11 +154,11 @@ impl EditorView {
         }
         div()
             .flex_1()
-            .min_h(px(if compact { 220.0 } else { 350.0 }))
+            .min_h(px(330.0))
             .flex()
             .flex_col()
-            .p(px(20.0))
-            .gap(px(12.0))
+            .p(px(12.0))
+            .gap(px(8.0))
             .child(
                 row()
                     .justify_between()
@@ -175,16 +175,6 @@ impl EditorView {
                             cx.notify();
                         },
                     )),
-            )
-            .child(
-                div()
-                    .text_size(px(12.0))
-                    .text_color(t.muted())
-                    .child(if paused {
-                        "Agent edits paused · reads available"
-                    } else {
-                        if self.agent.clients > 0 { "Connected · edits appear live" } else { "Agent disconnected · changes retained" }
-                    }),
             )
             .child(self.control("follow-agent", "camera", if self.agent.follow { "Follow agent camera · On" } else { "Follow agent camera · Off" }, cx, |this,_,cx| {
                 this.agent.follow = !this.agent.follow;
@@ -292,7 +282,7 @@ impl EditorView {
                     .when(i == capture.selected,|d|d.bg(t.selected()))
                 })))
                 .when_some(capture.views.get(capture.selected),|d,(_,_,image)|d.child(
-                    div().h(px(116.0)).flex_shrink_0().rounded(px(8.0)).border_1().border_color(t.line()).overflow_hidden()
+                    div().h(px(84.0)).flex_shrink_0().rounded(px(8.0)).border_1().border_color(t.line()).overflow_hidden()
                         .child(img(image.clone()).size_full().object_fit(ObjectFit::Contain))
                 ))
             })
