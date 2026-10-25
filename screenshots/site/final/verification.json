@@ -26,5 +26,9 @@
       "fullPage": true
     }
   ],
-  "checks": []
+  "checks": [
+    "All five docs routes fit 1440, 390 and 320px in both themes; keyboard skip link; reduced motion; no third-party homepage requests",
+    "Documentation Copy code writes the complete example to clipboard",
+    "No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation"
+  ]
 }
