@@ -1488,6 +1488,7 @@
       return;
     }
     if (e.key === "Escape") {
+      if ($("dialog[open]") && !menuChain.length) return;
       if (menuChain.length) { e.preventDefault(); closeMenus(true); return; }
       closeMenus(true);
       closeFloating();
