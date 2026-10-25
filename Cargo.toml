@@ -31,3 +31,10 @@ all = "warn"
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# Keep CPU viewport interaction responsive in the native development build.
+[profile.dev.package.voxelite-render]
+opt-level = 3
+
+[profile.dev.package.voxelite-core]
+opt-level = 2
