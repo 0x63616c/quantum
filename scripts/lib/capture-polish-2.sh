@@ -8,7 +8,8 @@ search() {
   sleep 0.4
 }
 capture_feature() {
-  xdotool mousemove 1439 899
+  # Stay inside either window size so the previous control receives mouse-out.
+  xdotool mousemove 24 200
   sleep 0.5
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$artifact/$1-$theme.png"

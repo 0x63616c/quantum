@@ -17,6 +17,11 @@ unset WAYLAND_DISPLAY
 app_pid=''
 cleanup() {
   result=$?
+  if [[ "$result" != 0 ]]; then
+    for log in "$XDG_RUNTIME_DIR"/*.log; do
+      [[ ! -f "$log" ]] || tail -80 "$log" >&2
+    done
+  fi
   if [[ "$result" != 0 && -n "${window:-}" ]]; then
     timeout 10s import -window "$window" /tmp/voxelite-polish-2-capture-failure.png || true
   fi
