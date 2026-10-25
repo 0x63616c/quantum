@@ -18,6 +18,9 @@ pub struct EditorView {
     rendering: bool,
     render_pending: bool,
     render_size: [u32; 2],
+    display_camera: OrbitCamera,
+    navigation_epoch: u64,
+    interactive_render: bool,
     viewport: Rc<Cell<Bounds<Pixels>>>,
     hover: Option<Pos>,
     cursor: Pos,
@@ -42,6 +45,26 @@ fn icon(name: &'static str) -> Svg {
         .path(format!("icons/{name}.svg"))
         .size(px(17.0))
         .flex_shrink_0()
+}
+struct Hint {
+    text: SharedString,
+    theme: Theme,
+}
+impl Render for Hint {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(10.0))
+            .py(px(7.0))
+            .rounded(px(6.0))
+            .border_1()
+            .border_color(self.theme.line())
+            .bg(self.theme.background())
+            .text_color(self.theme.text())
+            .font_family("Geist")
+            .text_size(px(12.0))
+            .shadow_lg()
+            .child(self.text.clone())
+    }
 }
 fn row() -> Div {
     div().flex().items_center()
@@ -82,6 +105,9 @@ impl EditorView {
         });
         Self {
             cursor: editor.snapshot().bounds.min,
+            display_camera: editor.camera,
+            navigation_epoch: 0,
+            interactive_render: false,
             editor,
             theme,
             focus,
@@ -133,10 +159,20 @@ impl EditorView {
         self.rendering = true;
         self.render_pending = false;
         let snapshot = self.editor.engine.snapshot();
+        let camera = self.editor.camera;
+        let interactive = self.interactive_render;
         let options = RenderOptions {
-            width: self.render_size[0],
-            height: self.render_size[1],
-            supersampling: 2,
+            width: if interactive {
+                self.render_size[0].div_ceil(2)
+            } else {
+                self.render_size[0]
+            },
+            height: if interactive {
+                self.render_size[1].div_ceil(2)
+            } else {
+                self.render_size[1]
+            },
+            supersampling: if interactive { 1 } else { 2 },
             view: View::Camera(self.editor.camera.camera()),
             background: [0; 4],
             ..Default::default()
@@ -148,8 +184,8 @@ impl EditorView {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
-                // Coalesce rapid camera gestures; never display an obsolete frame as the latest state.
-                if !this.render_pending {
+                // Show each completed navigation frame, then coalesce to the newest camera.
+                {
                     match result {
                         Ok(mut frame) => {
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
@@ -158,6 +194,7 @@ impl EditorView {
                             let buffer =
                                 image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
                                     .expect("renderer dimensions");
+                            this.display_camera = camera;
                             this.image =
                                 Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
                         }
@@ -171,6 +208,25 @@ impl EditorView {
                     this.request_render(cx);
                 }
                 cx.notify();
+            });
+        })
+        .detach();
+    }
+    fn request_navigation(&mut self, cx: &mut Context<Self>) {
+        self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
+        let epoch = self.navigation_epoch;
+        self.interactive_render = true;
+        self.request_render(cx);
+        let timer = cx
+            .background_executor()
+            .timer(std::time::Duration::from_millis(180));
+        cx.spawn(async move |this, cx| {
+            timer.await;
+            let _ = this.update(cx, |this, cx| {
+                if this.navigation_epoch == epoch {
+                    this.interactive_render = false;
+                    this.request_render(cx);
+                }
             });
         })
         .detach();
@@ -390,6 +446,10 @@ impl EditorView {
         }).detach();
     }
     fn ray(&self, p: Point<Pixels>) -> Option<voxelite_app::editor::Ray> {
+        // Pointer edits must use the exact camera of the image the user can see.
+        if self.rendering {
+            return None;
+        }
         let b = self.viewport.get();
         let w = f64::from(f32::from(b.size.width));
         let h = f64::from(f32::from(b.size.height));
@@ -421,7 +481,7 @@ impl EditorView {
                 } else {
                     self.editor.camera.orbit(dx, dy);
                 }
-                self.request_render(cx);
+                self.request_navigation(cx);
             }
             self.drag = Some(e.position);
             self.hover = None;
@@ -556,6 +616,13 @@ impl EditorView {
         let enabled = self.enabled(op);
         row()
             .id(id)
+            .tooltip(move |_, cx| {
+                cx.new(|_| Hint {
+                    text: format!("{}  {}", op.label(), op.shortcut()).into(),
+                    theme,
+                })
+                .into()
+            })
             .h(px(32.0))
             .px(px(9.0))
             .gap(px(8.0))
@@ -701,6 +768,13 @@ impl EditorView {
                 let op = ops[i];
                 div()
                     .id(("tool", i))
+                    .tooltip(move |_, cx| {
+                        cx.new(|_| Hint {
+                            text: format!("{} · {}", tool.name(), tool.key()).into(),
+                            theme: t,
+                        })
+                        .into()
+                    })
                     .flex()
                     .flex_col()
                     .items_center()
@@ -775,7 +849,7 @@ impl EditorView {
         let t = self.theme;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
-        let camera = self.editor.camera;
+        let camera = self.display_camera;
         let hover = self.hover;
         let grid = self.grid;
         let doc_bounds = self.editor.snapshot().bounds;
@@ -939,7 +1013,7 @@ impl EditorView {
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
                 };
                 this.editor.camera.zoom(delta);
-                this.request_render(cx);
+                this.request_navigation(cx);
                 cx.notify();
                 cx.stop_propagation();
             }))
@@ -950,6 +1024,7 @@ impl EditorView {
         let color = self.editor.color.rgba;
         let hex = format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]);
         div()
+            .flex_shrink_0()
             .p(px(20.0))
             .border_b_1()
             .border_color(t.line())
@@ -1032,6 +1107,7 @@ impl EditorView {
     fn layers_panel(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         div()
+            .flex_shrink_0()
             .px(px(16.0))
             .py(px(16.0))
             .border_b_1()
@@ -1198,9 +1274,11 @@ impl EditorView {
                     .border_color(t.line()),
             )
     }
-    fn sidebar(&self, cx: &Context<Self>) -> Div {
+    fn sidebar(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         div()
+            .id("sidebar-scroll")
+            .overflow_y_scroll()
             .w(px(296.0))
             .flex_shrink_0()
             .h_full()
