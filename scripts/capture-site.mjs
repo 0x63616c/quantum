@@ -31,6 +31,8 @@ try {
       await page.screenshot({ path: `${directory}/${name}-viewport.png` });
       report.captures.push({ name: `${name}-viewport`, width, height: 900, fullPage: false });
       if (width === 390) {
+        const session = await page.locator('.mobile-session').boundingBox();
+        assert.ok(session.y + session.height <= 900, 'Artwork and complete native session fit the first phone viewport');
         const before = page.getByRole('radio', { name: 'Before', exact: true });
         const after = page.getByRole('radio', { name: 'After +3 voxels', exact: true });
         assert.equal(await after.isChecked(), true);
@@ -63,6 +65,8 @@ try {
   for (const width of [1440, 1024, 768, 390, 320]) {
     for (const theme of ['dark', 'light']) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: 'reduce' });
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
       for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/']) {
         const response = await page.goto(base + route);
         assert.equal(response.status(), 200);
@@ -108,6 +112,7 @@ try {
       await page.keyboard.press('Tab');
       assert.equal(await page.locator(':focus').textContent(), 'Skip to content');
       assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior), 'auto');
+      assert.deepEqual(errors, [], 'No documentation or homepage runtime errors');
       await page.close();
     }
   }

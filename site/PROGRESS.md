@@ -9,14 +9,15 @@ Started 2026-10-25 from `9eb0d95`. Local work only; never deploy or push.
 - [x] Rust-generated docs and live MCP tool catalog; format/build guides.
 - [x] Four portable agent skills and host installation notes.
 - [x] Playwright desktop 1440×900 and mobile 390px full-page captures, both themes.
-- [x] Four screenshot critique/fix/recapture rounds, with pre/post scoring in round 4.
+- [x] Five screenshot critique/fix/recapture rounds, with independent pre/post scoring in rounds 4–5.
 - [x] Repository and reachable Git history personal-info scan.
 
 ## Review scores
 
-Rounds 1–3 retain their original pre-fix scores. Round 4 independently scores
+Rounds 1–3 retain their original pre-fix scores. Rounds 4–5 independently score
 both the existing final captures and the newly recaptured result; earlier scores
-are not changed retroactively.
+are not changed retroactively. The final screenshot directory contains round 5;
+round 4 is preserved at commit `6695364`.
 
 | Round | Desktop /10 (pre → post) | Mobile /10 (pre → post) | Evidence | Fixes / recapture |
 | --- | --- | --- | --- | --- |
@@ -24,6 +25,7 @@ are not changed retroactively.
 | 2 | 7.2 | 6.5 | `docs/reviews/site-review-2.md` | Native hero, clean canvas crop, proof order, device-specific labels; `screenshots/site/round-3/` |
 | 3 | 7.7 | 7.1 | `docs/reviews/site-review-3.md` | Actual before/after MCP recording, immediate mobile session proof, shorter narrative, setup CTA, caption wrapping; `screenshots/site/final/` |
 | 4 | 7.8 → **8.6** | 7.0 → **8.2** | `docs/reviews/site-review-4.md` | Complete workspace in first desktop viewport, mobile comparison controls, clean session crop, setup shortcuts and code bars; 16 inspected captures in `screenshots/site/final/` |
+| 5 | 8.3 → **8.8** | 7.8 → **8.7** | `docs/reviews/site-review-5.md` | Shorter mobile narrative, artwork + recorded session in the first viewport, compact phone docs menus, generated section index, readable build command; 20 inspected captures in `screenshots/site/final/` |
 
 ## Verified boundaries
 
@@ -79,3 +81,23 @@ creation was performed; no file under `design/` was modified.
 Reproduce local build, captures and checks using `site/README.md`. Round 4's
 post-fix scores are judgments of the new images, not a claim that all broader
 product, gallery or documentation release requirements are complete.
+
+
+## Round 5 follow-up — 2026-10-25
+
+- Independent baseline critique and ranked fixes are in
+  `docs/reviews/site-review-5.md`. Homepage scores: desktop **8.3 → 8.8**,
+  mobile **7.8 → 8.7**; still below 9, with remaining evidence/design gaps named.
+- Mobile homepage is about 20% shorter. The artwork and complete recorded
+  session fit the first 390×900 viewport. One closing invitation replaces two.
+- Rust generates real article section indexes. Desktop docs have a narrower
+  reading column; phone/tablet navigation uses accessible native disclosures.
+  The first complete build command fits the phone viewport.
+- All **20** final screenshots were recaptured and visually inspected, including
+  both mobile docs menu states. The suite checks five widths, both themes,
+  keyboard/focus behavior, clipboard, no-JavaScript navigation, generated anchor
+  parity, runtime errors and the two first-viewport layout requirements.
+- Linux workspace build, 112 tests, Clippy with warnings denied, formatting,
+  static-site checks and bundled software-WebGL2 startup pass. Site tests and
+  Clippy passed again after the last generator/content changes.
+- `design/` stayed unchanged. All work remained local.
