@@ -1,10 +1,7 @@
 //! Persistent local palette libraries. Choosing a palette never recolors a project.
 use crate::editor::{EditorError, EditorResult};
 use serde::{Deserialize, Serialize};
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use voxelite_core::{Palette, Swatch, Uuid, validate_name};
 
 /// A user-owned palette, independent of the document's stable slots.
@@ -37,7 +34,9 @@ pub fn data_dir() -> PathBuf {
         })
 }
 /// Replace a local settings file atomically.
+#[cfg(not(target_family = "wasm"))]
 pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
+    use std::io::Write;
     let parent = path
         .parent()
         .ok_or_else(|| EditorError::Gesture("Invalid settings path".into()))?;
@@ -51,14 +50,11 @@ pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
 impl PaletteLibrary {
     /// Read and validate a bounded library; a missing file starts empty.
     pub fn load(path: &Path) -> EditorResult<Self> {
-        if !path.exists() {
+        let Some(bytes) = read_local(path)? else {
             return Ok(Self::default());
-        }
-        if std::fs::metadata(path)?.len() > 4 * 1024 * 1024 {
-            return Err(EditorError::Gesture("Palette library too large".into()));
-        }
-        let library: Self = serde_json::from_slice(&std::fs::read(path)?)
-            .map_err(|e| EditorError::Gesture(e.to_string()))?;
+        };
+        let library: Self =
+            serde_json::from_slice(&bytes).map_err(|e| EditorError::Gesture(e.to_string()))?;
         library.validate()?;
         Ok(library)
     }
@@ -194,4 +190,30 @@ mod tests {
         assert_eq!(Palette::from_hex(&p.to_hex()).unwrap(), p);
         assert_eq!(Palette::from_gpl(&p.to_gpl("Studio").unwrap()).unwrap(), p);
     }
+}
+
+/// Persist browser settings in origin-local storage.
+#[cfg(all(feature = "web", target_family = "wasm"))]
+pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
+    crate::web::store(&path.to_string_lossy(), bytes)
+}
+
+/// Read bounded settings bytes, or `None` if no settings have been saved.
+pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
+    #[cfg(not(target_family = "wasm"))]
+    let bytes = {
+        if !path.exists() {
+            return Ok(None);
+        }
+        if std::fs::metadata(path)?.len() > 4 * 1024 * 1024 {
+            return Err(EditorError::Gesture("Settings file too large".into()));
+        }
+        Some(std::fs::read(path)?)
+    };
+    #[cfg(target_family = "wasm")]
+    let bytes = crate::web::load(&path.to_string_lossy())?;
+    if bytes.as_ref().is_some_and(|b| b.len() > 4 * 1024 * 1024) {
+        return Err(EditorError::Gesture("Settings file too large".into()));
+    }
+    Ok(bytes)
 }

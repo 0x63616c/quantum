@@ -1,8 +1,12 @@
 //! Human tool gestures translated into atomic shared-core commands.
+#[cfg(not(target_family = "wasm"))]
 use crate::persistence::{self, Fingerprint};
+#[cfg(not(target_family = "wasm"))]
 pub use crate::persistence::{SaveTask, SavedProject};
 use glam::DVec3;
-use std::path::{Path, PathBuf};
+#[cfg(not(target_family = "wasm"))]
+use std::path::Path;
+use std::path::PathBuf;
 use voxelite_core::*;
 use voxelite_format::Project;
 use voxelite_render::{Camera, PresetView, Projection};
@@ -335,11 +339,13 @@ pub struct Editor {
     /// Current successful open/save path; examples start untitled.
     pub path: Option<PathBuf>,
     project: Project,
+    #[cfg(not(target_family = "wasm"))]
     saved_file: Option<(PathBuf, Fingerprint)>,
 }
 impl Editor {
     /// Open a validated portable project, preserving unknown optional metadata.
     pub fn new(project: Project, path: Option<PathBuf>) -> EditorResult<Self> {
+        #[cfg(not(target_family = "wasm"))]
         let saved_file = path
             .as_deref()
             .map(|path| {
@@ -374,6 +380,7 @@ impl Editor {
             box_start: None,
             path,
             project,
+            #[cfg(not(target_family = "wasm"))]
             saved_file,
         })
     }
@@ -394,6 +401,7 @@ impl Editor {
         )
     }
     /// Read a file without touching the current editor on failure.
+    #[cfg(not(target_family = "wasm"))]
     pub fn open(path: &Path) -> EditorResult<Self> {
         let path = path.canonicalize()?;
         let bytes = persistence::read(&path)?;
@@ -419,12 +427,14 @@ impl Editor {
     }
     /// Save through a synced temporary file in the destination directory, then atomically rename.
     /// Dirty state is cleared only after successful persistence.
+    #[cfg(not(target_family = "wasm"))]
     pub fn save(&mut self, path: &Path) -> EditorResult<()> {
         let saved = self.prepare_save(path).write()?;
         self.finish_save(saved);
         Ok(())
     }
     /// Capture the current document without performing filesystem I/O.
+    #[cfg(not(target_family = "wasm"))]
     pub fn prepare_save(&self, path: &Path) -> SaveTask {
         let mut project = self.project.clone();
         project.document = self.engine.document().clone();
@@ -436,6 +446,7 @@ impl Editor {
         }
     }
     /// Adopt a successful save; edits made after its snapshot remain dirty.
+    #[cfg(not(target_family = "wasm"))]
     pub fn finish_save(&mut self, saved: SavedProject) {
         if saved.project.document.id != self.engine.document().id {
             return;

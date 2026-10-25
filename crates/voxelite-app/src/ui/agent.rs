@@ -7,6 +7,7 @@ pub(super) struct CapturedViews {
     pub views: Vec<(String, PresetView, Arc<RenderImage>)>,
     pub selected: usize,
 }
+#[derive(Default)]
 pub(super) struct Agent {
     pub session: Option<AttachedSession>,
     pub events: VecDeque<SessionEvent>,
