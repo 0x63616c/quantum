@@ -1,23 +1,142 @@
 //! Voxelite's versioned, headless MCP adapter.
 //!
-//! The server owns a local editing session. All content edits use the shared
-//! core engine; no display, GPU, plugin host, or application runtime is needed.
-use rmcp::{
-    ServerHandler,
-    model::{Implementation, ServerCapabilities, ServerConfig},
-};
+//! The server owns a bounded local editing session. Content edits go through the
+//! shared core engine with agent attribution. No display, GPU, plugin host, or
+//! application runtime is needed. See `docs/mcp.md` for the wire contract.
+mod catalog;
+mod edit;
+mod error;
+mod files;
+mod images;
+mod session;
 
-/// Version of the application tool contract, independent of MCP and `.voxl`.
+use rmcp::{ErrorData, RoleServer, ServerHandler, model::*, service::RequestContext};
+use serde_json::Value;
+use std::{
+    borrow::Cow,
+    path::Path,
+    sync::{Arc, Mutex},
+};
+use tokio::sync::Semaphore;
+
+/// Application tool contract version, independent of MCP and `.voxl` versions.
 pub const API_VERSION: &str = "voxelite.v1";
 
-/// Headless stdio MCP service.
-#[derive(Clone, Default)]
-pub struct VoxeliteServer;
-
+/// One serialized document authority shared by all requests on this service.
+///
+/// Expensive work runs off the async executor. A bounded admission semaphore
+/// prevents unbounded blocking jobs; each admitted edit executes atomically.
+#[derive(Clone)]
+pub struct VoxeliteServer {
+    state: Arc<Mutex<session::Session>>,
+    admission: Arc<Semaphore>,
+}
+impl VoxeliteServer {
+    /// Create an empty session scoped to an existing project directory.
+    pub fn new(root: impl AsRef<Path>) -> std::io::Result<Self> {
+        let root = root.as_ref().canonicalize()?;
+        if !root.is_dir() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "project root must be a directory",
+            ));
+        }
+        // Validate/compile the complete catalog before accepting protocol input.
+        let _ = catalog::CATALOG.len();
+        Ok(Self {
+            state: Arc::new(Mutex::new(session::Session::new(root))),
+            admission: Arc::new(Semaphore::new(16)),
+        })
+    }
+    /// Execute a tool directly with the same validation and receipts as MCP.
+    ///
+    /// Unknown tool names are protocol errors. Domain/argument failures are
+    /// `CallToolResult` values with `isError=true` and a structured error envelope.
+    pub fn call(&self, name: &str, arguments: Value) -> Result<CallToolResult, ErrorData> {
+        let spec = catalog::CATALOG
+            .iter()
+            .find(|s| s.tool.name == name)
+            .ok_or_else(|| {
+                ErrorData::invalid_params("Unknown tool", Some(serde_json::json!({"name":name})))
+            })?;
+        let mut state = self.state.lock().map_err(|_| {
+            ErrorData::internal_error("session lock poisoned; restart the server", None)
+        })?;
+        Ok(state.call(spec, arguments))
+    }
+    /// Return the complete, stable, name-sorted catalog with JSON Schema inputs.
+    pub fn tools() -> Vec<Tool> {
+        catalog::CATALOG.iter().map(|s| s.tool.clone()).collect()
+    }
+}
 impl ServerHandler for VoxeliteServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("voxelite-mcp", env!("CARGO_PKG_VERSION")))
-            .with_instructions("Voxelite API voxelite.v1. Coordinates are integer, Y up; region maxima are exclusive. Call voxelite_capabilities_get first.")
+            .with_server_info(Implementation::new("voxelite-mcp",env!("CARGO_PKG_VERSION")))
+            .with_instructions("Voxelite API voxelite.v1. Start with voxelite_capabilities_get. Use explicit model/layer IDs and returned epoch/revision on edits; keep operation_id unchanged on exact retries. Coordinates are integers, Y up; region maxima are exclusive. Edits are in memory until document_save. Render CPU PNG feedback to inspect your work.")
+    }
+    fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
+        Cow::Owned(vec![
+            ProtocolVersion::V_2025_11_25,
+            ProtocolVersion::V_2026_07_28,
+        ])
+    }
+    async fn list_tools(
+        &self,
+        request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListToolsResult, ErrorData> {
+        if request.is_some_and(|r| r.cursor.is_some()) {
+            return Err(ErrorData::invalid_params(
+                "tools/list has one page; omit cursor",
+                None,
+            ));
+        }
+        Ok(ListToolsResult {
+            tools: Self::tools(),
+            ..Default::default()
+        })
+    }
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, ErrorData> {
+        let permit = match self.admission.clone().try_acquire_owned() {
+            Ok(p) => p,
+            Err(_) => {
+                let state = self
+                    .state
+                    .lock()
+                    .map_err(|_| ErrorData::internal_error("session unavailable", None))?;
+                return Ok(state
+                    .error(error::Failure::new(
+                        "model_busy",
+                        "request queue is full; retry after pending requests finish",
+                    ))
+                    .into());
+            }
+        };
+        let server = self.clone();
+        tokio::task::spawn_blocking(move || {
+            let _permit = permit;
+            if context.ct.is_cancelled() {
+                let state = server
+                    .state
+                    .lock()
+                    .map_err(|_| ErrorData::internal_error("session unavailable", None))?;
+                return Ok(state.error(error::Failure::new(
+                    "cancelled",
+                    "request cancelled before execution",
+                )));
+            }
+            server.call(
+                &request.name,
+                Value::Object(request.arguments.unwrap_or_default()),
+            )
+        })
+        .await
+        .map_err(|_| ErrorData::internal_error("tool worker failed", None))?
+        .map(Into::into)
     }
 }
