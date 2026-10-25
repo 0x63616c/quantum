@@ -167,7 +167,7 @@
   .feature-symbol { grid-column: 1; grid-row: 1 / 3; font-size: 22px; margin: 2px 0 0; }
   .palette-proof { grid-column: 2; height: 22px; margin-bottom: 14px; }
   .palette-proof i { width: 22px; height: 22px; }
-  .file-strip { margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .file-strip { margin-top: 8px; padding-top: 24px; }
   .file-strip > div { display: block; }
   .file-strip h3 { font-size: 26px; margin-bottom: 16px; }
   .file-strip .text-link { margin-top: 12px; }
@@ -197,5 +197,8 @@
 
 @media (max-width: 700px) {
   .hero { padding-top: 24px; }
-  .hero .editor-shot { margin-top: 16px; }
+  .hero .editor-shot { margin-top: 12px; }
+  .hero .hero-browser { min-height: 44px; }
 }
+
+.nav nav a { display: inline-flex; align-items: center; min-height: 44px; }

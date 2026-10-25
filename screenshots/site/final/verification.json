@@ -11,7 +11,8 @@
       "name": "desktop-dark",
       "width": 1440,
       "height": 900,
-      "fullPage": true
+      "fullPage": true,
+      "pageHeight": 3586
     },
     {
       "name": "desktop-light-viewport",
@@ -23,7 +24,8 @@
       "name": "desktop-light",
       "width": 1440,
       "height": 900,
-      "fullPage": true
+      "fullPage": true,
+      "pageHeight": 3586
     },
     {
       "name": "mobile-dark-viewport",
@@ -47,7 +49,8 @@
       "name": "mobile-dark",
       "width": 390,
       "height": 900,
-      "fullPage": true
+      "fullPage": true,
+      "pageHeight": 4109
     },
     {
       "name": "mobile-light-viewport",
@@ -71,7 +74,8 @@
       "name": "mobile-light",
       "width": 390,
       "height": 900,
-      "fullPage": true
+      "fullPage": true,
+      "pageHeight": 4109
     },
     {
       "name": "docs-desktop-dark",
@@ -92,7 +96,31 @@
       "fullPage": false
     },
     {
+      "name": "docs-mobile-dark-navigation",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-dark-sections",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
       "name": "docs-mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-light-navigation",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-light-sections",
       "width": 390,
       "height": 900,
       "fullPage": false
@@ -100,6 +128,7 @@
   ],
   "checks": [
     "Homepage and all five docs routes fit 1440, 1024, 768, 390 and 320px in both themes; keyboard skip link; reduced motion; no third-party homepage requests",
+    "Generated section indexes match article headings; mobile docs menus support mutual exclusion, keyboard, Escape with focus restoration, outside dismissal and anchor focus; first mobile build example fits without scrolling",
     "Documentation Copy code writes the complete example to clipboard",
     "Mobile comparison switches with keyboard, pointer and JavaScript disabled; no-JavaScript setup navigation",
     "No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation"
