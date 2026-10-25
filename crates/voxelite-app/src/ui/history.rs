@@ -28,12 +28,10 @@ impl EditorView {
             .chain(self.editor.engine.timeline().map(|e| Some(e.id)))
             .collect();
         if let Some(id) = ids.get(index) {
-            if self
-                .editor
-                .preview
-                .as_ref()
-                .is_some_and(|p| p.source == PreviewSource::History(*id))
-            {
+            if self.editor.preview.as_ref().is_some_and(|p| {
+                p.source == PreviewSource::History(*id)
+                    && p.revision == self.editor.engine.revision()
+            }) {
                 return;
             }
             let r = self.editor.preview_history(*id);

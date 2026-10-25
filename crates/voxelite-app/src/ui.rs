@@ -408,6 +408,8 @@ impl EditorView {
         self.agent.events.clear();
         self.discussion.selected = None;
         self.discussion.draft = None;
+        self.discussion.placing = false;
+        self.discussion.first = None;
         self.sharing.open = false;
         self.editor = editor;
         self.document_generation = self.document_generation.wrapping_add(1);
@@ -792,6 +794,39 @@ impl EditorView {
             return;
         }
         let key = e.keystroke.key.as_str();
+        if key == "tab" && self.pending.is_none() && !self.command_open && self.menu.is_none() {
+            let fields = if self.palettes.open {
+                vec![
+                    self.palettes.name.focus_handle(cx),
+                    self.palettes.hex.focus_handle(cx),
+                ]
+            } else if self.sharing.open {
+                vec![self.sharing.person.focus_handle(cx)]
+            } else if self.discussion.selected.is_some() || self.discussion.draft.is_some() {
+                vec![self.discussion.text.focus_handle(cx)]
+            } else if self.panel == Panel::History {
+                vec![self.timeline.name.focus_handle(cx)]
+            } else {
+                vec![]
+            };
+            if !fields.is_empty() {
+                let i = fields
+                    .iter()
+                    .position(|f| f.is_focused(window))
+                    .map_or(0, |i| {
+                        (i + if e.keystroke.modifiers.shift {
+                            fields.len() - 1
+                        } else {
+                            1
+                        }) % fields.len()
+                    });
+                window.focus(&fields[i], cx);
+                cx.stop_propagation();
+                cx.notify();
+                return;
+            }
+        }
+
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)

@@ -16,6 +16,10 @@ export XDG_CURRENT_DESKTOP=GNOME
 unset WAYLAND_DISPLAY
 app_pid=''
 cleanup() {
+  result=$?
+  if [[ "$result" != 0 && -n "${window:-}" ]]; then
+    timeout 10s import -window "$window" /tmp/voxelite-polish-2-capture-failure.png || true
+  fi
   if [[ -n "$app_pid" ]]; then kill "$app_pid" 2>/dev/null || true; fi
   rm -rf "$XDG_RUNTIME_DIR"
 }

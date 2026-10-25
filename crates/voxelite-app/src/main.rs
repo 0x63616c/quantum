@@ -61,7 +61,7 @@ fn options() -> anyhow::Result<Options> {
             }
             "--help" | "-h" => {
                 println!(
-                    "Voxelite native voxel editor\n\nvoxelite [project.voxl] [--theme dark|light] [--exit-after SECONDS]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the bundled autumn-workshop diorama.\n--viewport-png renders without initializing GPUI or a display.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
+                    "Voxelite native voxel editor\n\nvoxelite [project.voxl] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the bundled autumn-workshop diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
                 );
                 std::process::exit(0);
             }

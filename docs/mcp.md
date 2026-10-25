@@ -252,3 +252,34 @@ Verified on Linux with Rust 1.99.1 on 2026-10-25: workspace build, formatting,
 Clippy with warnings denied, and all 74 workspace tests passed (26 MCP tests).
 Host configuration files were parsed as JSON/TOML; host application launches
 remain untested on this headless machine.
+
+## Attach to a native editor window
+
+The native app exposes its current document through a private Unix socket. Open
+Agent → Agent connection to copy a stdio MCP configuration, or choose the socket
+path explicitly:
+
+```sh
+voxelite --session-socket /tmp/voxelite-session.sock
+voxelite-mcp --connect /tmp/voxelite-session.sock
+```
+
+`--connect` forwards the existing MCP protocol to the app; it does not open a
+second document authority. Discover the app's model/epoch/revision with
+`voxelite_capabilities_get`. Human and agent edits use the same engine and undo
+history, and completed calls appear in the Session feed with actual differences.
+Exact mutation retries retain their original receipts. New/Open in the app
+rotates the epoch. Pause rejects new agent mutations while leaving reads enabled.
+
+The attached catalog excludes document create/open/save: the app owns file
+lifecycle and its external-file conflict checks. Other existing tools retain
+the standalone validation and transaction behavior. Changes are in memory until
+saved in the app, with no implied durable journal. Socket permissions are 0600;
+existing paths are never replaced. The bridge is local to Unix platforms and
+supports the same two MCP protocol profiles as the standalone server.
+
+See [native editor controls](../crates/voxelite-app/README.md) and
+[the executable round 2 review](reviews/app-polish-2.md). The process test
+`cargo test -p voxelite-mcp --test attached` runs a real stdio bridge against the
+app-side attachment and checks shared history, conflicts, pause, retries and
+socket cleanup. `scripts/capture-native.sh` also exercises the live GPUI window.
