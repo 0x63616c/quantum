@@ -6,7 +6,7 @@ Scope: 493 working-tree/generated files; 122 commits and 2863 unique historical 
 
 Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.
 
-Identity rows were triaged against the detected Git names/usernames; generic project and contributor labels were excluded. Historical build-directory paths remain in immutable blobs, even though those directories are now ignored. The spec contains a personal display-name example at the location below; it was reported, not silently rewritten.
+Identity rows were triaged against the detected Git names/usernames; generic project and contributor labels were excluded. Historical build-directory paths remain in immutable blobs, even though those directories are now ignored. The scan originally found a personal display-name example in the spec at the location below; it has since been replaced with a neutral role label as explicitly requested.
 ## Git metadata
 
 - 4 distinct author/committer identity pairs are present across 122 commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.
@@ -16,7 +16,7 @@ Identity rows were triaged against the detected Git names/usernames; generic pro
 
 | File:line | Category | Disposition |
 | --- | --- | --- |
-| `PLAN.md:262` | Git identity name/username | Personal display-name example; retained because automatic fixes are limited to path leaks. |
+| `PLAN.md:262` | Git identity name/username | Resolved: replaced with “the project owner”; historical blobs retain the original example. |
 | `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
 | `design/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
 | `design/concepts/history/v2/concept-c-dark.png:815` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
