@@ -24,8 +24,10 @@ Workshop, composed by GPUI; the chrome is native Rust, not an HTML capture.
 
 Checked both explicit themes, palette previews, command-search text isolation,
 search/arrow/Enter operation, in-window menus, tool selection, hover picking,
-pointer placement, keyboard placement, undo, native GTK Save As via GPUI/XDG
-portal, subsequent saves to that path, and the CLI path argument. A saved
+pointer placement, keyboard placement, undo, native GTK Open and Save As via
+GPUI/XDG portal, subsequent saves to that path, and the CLI path argument.
+Reopening the original diorama through the native Open dialog restored the
+27,897-voxel document and reset transient history. A saved
 keyboard/pointer edit produced 27,898 voxels; undo and save restored 27,897.
 Saving uses the canonical format and retains project identity and metadata.
 
