@@ -9,19 +9,21 @@ Started 2026-10-25 from `9eb0d95`. Local work only; never deploy or push.
 - [x] Rust-generated docs and live MCP tool catalog; format/build guides.
 - [x] Four portable agent skills and host installation notes.
 - [x] Playwright desktop 1440×900 and mobile 390px full-page captures, both themes.
-- [x] Three independent screenshot critique/fix/recapture rounds.
+- [x] Four screenshot critique/fix/recapture rounds, with pre/post scoring in round 4.
 - [x] Repository and reachable Git history personal-info scan.
 
 ## Review scores
 
-Scores refer to the images reviewed before each round's fixes. Final captures
-are separate evidence, not retroactively higher review scores.
+Rounds 1–3 retain their original pre-fix scores. Round 4 independently scores
+both the existing final captures and the newly recaptured result; earlier scores
+are not changed retroactively.
 
-| Round | Desktop /10 | Mobile /10 | Evidence | Fixes / recapture |
+| Round | Desktop /10 (pre → post) | Mobile /10 (pre → post) | Evidence | Fixes / recapture |
 | --- | --- | --- | --- | --- |
 | 1 | 6.5 | 5.5 | `docs/reviews/site-review-1.md` | Device disclosure, enlarged crop, native evidence, palette, links; `screenshots/site/round-2/` |
 | 2 | 7.2 | 6.5 | `docs/reviews/site-review-2.md` | Native hero, clean canvas crop, proof order, device-specific labels; `screenshots/site/round-3/` |
 | 3 | 7.7 | 7.1 | `docs/reviews/site-review-3.md` | Actual before/after MCP recording, immediate mobile session proof, shorter narrative, setup CTA, caption wrapping; `screenshots/site/final/` |
+| 4 | 7.8 → **8.6** | 7.0 → **8.2** | `docs/reviews/site-review-4.md` | Complete workspace in first desktop viewport, mobile comparison controls, clean session crop, setup shortcuts and code bars; 16 inspected captures in `screenshots/site/final/` |
 
 ## Verified boundaries
 
@@ -58,6 +60,22 @@ creation was performed; no file under `design/` was modified.
 - The recorded before/after demo uses the actual MCP server, adds exactly 3 visible voxels, and records identical camera/lighting plus PNG/source hashes in `screenshots/site/proof/provenance.json`. Original native screenshot r8 and the new demonstration r1 are separate, labeled sessions.
 - Personal-info scan: `docs/reviews/pii-scan.md`. Scanned working tree/generated bundles and 122 commits / 2,863 unique historical blobs at the scan snapshot. Identity headers, historical build paths, font attribution and one spec display-name example remain documented; no token-pattern hits. No trivially safe authored path leak required editing. Final captures were visually inspected as well.
 
-Reproduce local build, captures and checks using `site/README.md`. Scores above
-are the independent pre-fix reviews; final captures are not assigned invented
-post-fix scores.
+## Round 4 follow-up — 2026-10-25
+
+- Rebuilt web bundles with stable source-path remapping and no debug information;
+  no home/workspace/root path bytes remain. Both copies match. The original
+  email-shaped Wasm match is confirmed random binary data, not an email address.
+  See the remediation commands and hash in `docs/reviews/pii-scan.md`.
+- Replaced the spec's personal display-name example with “the project owner.”
+- All eight original final images were visually reviewed before changes, then
+  all new homepage/docs views and mobile comparison states were reviewed after
+  recapture. The site remains below the 9/10 target; the review names the gaps.
+- Linux workspace build, 112 tests, Clippy with warnings denied, formatting,
+  static-site checks and software-WebGL2 editor startup pass.
+- The capture suite now checks five widths, native radio keyboard/pointer use,
+  no-JavaScript comparison/setup navigation, and captures the first viewport as
+  well as full-page composition. `verification.json` records all 16 captures.
+
+Reproduce local build, captures and checks using `site/README.md`. Round 4's
+post-fix scores are judgments of the new images, not a claim that all broader
+product, gallery or documentation release requirements are complete.

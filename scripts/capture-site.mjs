@@ -47,6 +47,9 @@ try {
         assert.equal(await page.locator('.proof-after').isVisible(), true);
         await after.blur();
         await page.locator('.edit-proof').screenshot({ path: `${directory}/proof-after-${theme}.png` });
+        for (const state of ['before', 'after']) {
+          report.captures.push({ name: `proof-${state}-${theme}`, width, element: '.edit-proof', state });
+        }
       }
       report.captures.push({ name, width, height: 900, fullPage: true });
       await page.getByRole('button', { name: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` }).click();
@@ -65,9 +68,11 @@ try {
         assert.equal(response.status(), 200);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} fits ${width}`);
         assert.equal(await page.getByRole('heading', { level: 1 }).count(), 1);
-        if (route === '/docs/getting-started/' && width !== 320) {
+        if (route === '/docs/getting-started/' && (width === 1440 || width === 390)) {
           await page.evaluate(() => document.fonts.ready);
-          await page.screenshot({ path: `${directory}/docs-${width === 1440 ? 'desktop' : 'mobile'}-${theme}.png` });
+          const name = `docs-${width === 1440 ? 'desktop' : 'mobile'}-${theme}`;
+          await page.screenshot({ path: `${directory}/${name}.png` });
+          report.captures.push({ name, width, height: 900, fullPage: false });
         }
       }
       await page.goto(base);

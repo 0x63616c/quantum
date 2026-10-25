@@ -33,9 +33,12 @@ node scripts/capture-site.mjs screenshots/site/final
 
 The browser script requires the local server and the repository's Playwright
 installation (`npm ci`, `npx playwright install chromium` when absent). It captures
-1440×900 and 390px full-page homepages in both themes, plus docs views. It checks
-320px docs, keyboard focus, reduced motion, theme persistence, clipboard copying,
-no-JavaScript navigation and absence of third-party homepage requests.
+1440×900 and 390×900 homepages (full page and first viewport) in both themes,
+plus docs views and both mobile comparison states. It checks homepage/docs widths
+from 320 to 1440px, keyboard comparison controls, focus, reduced motion, theme
+persistence, clipboard copying, no-JavaScript navigation/comparison and absence
+of third-party homepage requests. Hidden comparison images are explicitly loaded
+for capture so lazy loading cannot leave incomplete screenshots.
 
 `python3 scripts/capture-site-proof.py` records a new real MCP edit and produces
 the matched-camera detail comparison, with SHA-256 provenance. Build

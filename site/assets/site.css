@@ -25,7 +25,7 @@
 .eyebrow, .shot-top, .panel-bar { font-size: 12px; }
 .hero-copy { min-width: 0; }
 @media (min-width: 1100px) {
-  .header .nav, .hero { max-width: 1344px; }
+  .marketing .nav, .hero { max-width: 1344px; }
   .hero {
     display: grid;
     grid-template-columns: 380px minmax(0, 1fr);
@@ -75,6 +75,7 @@
 .code-bar > span { color: var(--muted); font: 12px 'Geist Mono', monospace; }
 .code-bar .copy-code { margin: 0; min-height: 44px; border: 0; background: none; }
 .code-bar .copy-code:hover { color: var(--accent); }
+.code-bar .copy-code:focus-visible { outline-offset: -4px; }
 .docs-content .code-example pre { margin: 0; border: 0; border-radius: 0; }
 @media (max-width: 700px) {
   .hero h1 { font-size: clamp(34px, 11vw, 44px); }
