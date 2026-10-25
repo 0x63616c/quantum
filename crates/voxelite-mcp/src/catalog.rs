@@ -541,7 +541,7 @@ fn build() -> Vec<Spec> {
         "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Thread and message pages default to 50, max 200. message_offset applies per thread; bind pages with revision.",
         vec![
             opt("state", choice(&["open", "resolved", "all"])),
-            opt("offset", integer(0, 512)),
+            opt("offset", integer(0, 1024)),
             opt("limit", integer(1, 200)),
             opt("message_offset", integer(0, 10000)),
             opt("message_limit", integer(1, 200)),

@@ -546,7 +546,7 @@
           "type": "string"
         },
         "offset": {
-          "maximum": 512,
+          "maximum": 1024,
           "minimum": 0,
           "type": "integer"
         },

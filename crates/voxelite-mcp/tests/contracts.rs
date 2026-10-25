@@ -482,3 +482,71 @@ fn composite_reads_respect_visibility_and_duplicate_model_open_rejects() {
     );
     assert_eq!(r["error"]["code"], "model_already_open");
 }
+
+#[test]
+fn discussion_message_pages_remain_accessible() {
+    let f = Fixture::new();
+    let thread = f.edit(
+        "comments_add",
+        json!({"anchor":{"kind":"voxel","at":[0,0,0]},"text":"First"}),
+    )["thread_id"]
+        .clone();
+    f.edit(
+        "comments_reply",
+        json!({"thread_id":thread,"text":"Second"}),
+    );
+    f.edit("comments_reply", json!({"thread_id":thread,"text":"Third"}));
+    let first = f.read("comments_list", json!({"message_limit":1}));
+    assert_eq!(first["comments"][0]["message_count"], 3);
+    assert_eq!(first["comments"][0]["next_message_offset"], 1);
+    let second = f.read(
+        "comments_list",
+        json!({"message_offset":1,"message_limit":1,"revision":first["revision"]}),
+    );
+    assert_eq!(
+        second["comments"][0]["thread"]["messages"][0]["text"],
+        "Second"
+    );
+    let last = f.read(
+        "comments_list",
+        json!({"message_offset":2,"message_limit":1}),
+    );
+    assert!(last["comments"][0]["next_message_offset"].is_null());
+    assert_eq!(
+        f.read("comments_list", json!({"offset":1024}))["comments"],
+        json!([])
+    );
+}
+#[test]
+fn open_edit_save_preserves_inert_unknown_project_metadata() {
+    let f = Fixture::new();
+    let mut project: Value = serde_json::from_str(include_str!(
+        "../../../spec/voxl/1.0/fixtures/populated.input.voxl"
+    ))
+    .unwrap();
+    project["future_optional"] = json!({"nested":[1,"retained"]});
+    project["layers"][0]["future_layer"] = json!({"inert":true});
+    std::fs::write(
+        f.root.path().join("future.voxl"),
+        serde_json::to_vec(&project).unwrap(),
+    )
+    .unwrap();
+    let opened = f.call(
+        "document_open",
+        json!({"path":"future.voxl","expected_epoch":f.epoch,"operation_id":Uuid::new_v4()}),
+    );
+    assert_eq!(opened["ok"], true, "{opened}");
+    let model = opened["data"]["model_id"].clone();
+    let renamed=f.call("layers_rename",json!({"model_id":model,"expected_epoch":f.epoch,"operation_id":Uuid::new_v4(),"expected_revision":"0","layer":opened["data"]["layers"][0]["id"],"name":"Renamed"}));
+    assert_eq!(renamed["ok"], true);
+    let saved=f.call("document_save",json!({"model_id":model,"expected_epoch":f.epoch,"operation_id":Uuid::new_v4(),"expected_revision":renamed["data"]["revision"],"path":"future.voxl"}));
+    assert_eq!(saved["ok"], true);
+    let roundtrip: Value =
+        serde_json::from_slice(&std::fs::read(f.root.path().join("future.voxl")).unwrap()).unwrap();
+    assert_eq!(roundtrip["future_optional"], project["future_optional"]);
+    assert_eq!(
+        roundtrip["layers"][0]["future_layer"],
+        project["layers"][0]["future_layer"]
+    );
+    assert_eq!(roundtrip["layers"][0]["name"], "Renamed");
+}
