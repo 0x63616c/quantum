@@ -15,7 +15,7 @@ than assuming the full planned API exists. This workflow needs no GPU/display.
 3. Compose major masses before details. Use named material roles and reuse stable
    palette slots. Prefer boxes and atomic `voxelite_voxels_batch` operations over
    one call per cell. Bounds are min-inclusive/max-exclusive; Y is up.
-4. Every write uses the captured epoch/revision and a fresh UUID operation ID.
+4. Every content mutation and document save uses the captured epoch/revision and a fresh UUID operation ID.
    Accept the new revision only after checking `isError`, `ok` and returned data.
    A batch must be fully valid; hidden/locked layers reject voxel edits.
 5. Call `voxelite_render` for iso/front/right/back at the same captured revision.
@@ -23,7 +23,9 @@ than assuming the full planned API exists. This workflow needs no GPU/display.
    unreadable materials and accidental occlusion before fine decoration.
 6. Save an accepted named version. In standalone mode save `.voxl` with
    `voxelite_document_save`, then export GLB/PNG to new relative paths inside the
-   server root. Attached mode needs a native app save. An export is not a save.
+   server root. Export tools use `revision`, without `expected_epoch`,
+   `expected_revision` or `operation_id`; consult their discovered schemas.
+   Attached mode needs a native app save. An export is not a save.
 
 On a revision conflict, reread and rebase; do not overwrite intervening work.
 A lost response can be retried only with the identical tool, arguments and
