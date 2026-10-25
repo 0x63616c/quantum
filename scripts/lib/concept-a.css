@@ -1839,3 +1839,59 @@ input, select, .reply-form textarea { background: var(--field); border-color: va
 .share-member { height: 34px; padding: 2px 0; gap: 8px; }
 .share-member .avatar { height: 24px; width: 24px; margin: 0; border: 1px solid var(--line); }
 .share-member select { font-size: 12px; }
+
+/* Menu navigation uses filled highlights. Persistent selection uses a check. */
+.dropdown-menu { width: 242px; }
+.dropdown-menu[data-menu-name="Export"] { width: 204px; }
+.dropdown-menu[data-menu-name="ToolPicker"], .dropdown-menu[data-menu-name="Extensions"] { width: 264px; }
+.dropdown-menu > button:focus, .dropdown-menu > button:hover, .dropdown-menu > button[aria-expanded="true"] {
+  background: var(--selection); color: var(--strong); outline: none;
+}
+.dropdown-menu > button > kbd { color: var(--text); }
+.dropdown-menu > button .menu-check { margin-left: auto; color: var(--accent); width: 14px; }
+.dropdown-menu > button .menu-check + kbd, .dropdown-menu > button .menu-check + .menu-agent-badge { margin-left: 4px; }
+.dropdown-menu > button[aria-checked="true"] { color: var(--strong); }
+.menu-search { display: flex; align-items: center; gap: 8px; margin: 0 2px 5px; padding: 2px 6px 6px; border-bottom: 1px solid var(--line); }
+.menu-search .icon { width: 15px; height: 15px; color: var(--muted); }
+.menu-search input { background: transparent; width: 100%; border: 0; outline: 0; padding: 0; height: 30px; font-size: 13px; }
+.menu-empty { padding: 14px 10px; color: var(--muted); font-size: 12px; }
+.tool-settings { margin: 0 0 16px; padding: 10px 0 12px; border-top: 0; border-bottom: 1px solid var(--line); }
+
+
+/* A single scrub track carries both the thumb and actor ticks; the event list is compact. */
+.history-panel { display: flex; flex-direction: column; padding: 16px 20px; }
+.history-panel > * { flex-shrink: 0; }
+.history-branch { margin-top: 6px; }
+.history-preview-title { margin-top: 20px; margin-bottom: 0; }
+.history-navigation { margin: 10px 0 6px; gap: 8px; }
+.history-navigation button { border: 1px solid var(--line); background: var(--field); color: var(--text); height: 28px; padding: 0 9px; }
+.history-scrubber { height: 28px; position: relative; margin-top: 4px; }
+.history-scrubber input { position: absolute; inset: 0; margin: 0; height: 28px; z-index: 1; cursor: ew-resize; }
+.history-scrubber input::-webkit-slider-runnable-track { background: transparent; }
+.history-scrubber input::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -5.5px; border-width: 3px; }
+.timeline-marks { position: absolute; inset: 13px 7px auto; height: 2px; display: flex; justify-content: space-between; align-items: center; background: var(--line); }
+.timeline-marks i { width: 6px; height: 6px; flex: none; }
+.timeline-endpoints { margin-top: 0; }
+.timeline-legend { margin: 12px 0 18px; gap: 16px; }
+.history-list-label { margin-bottom: 7px; }
+.history-event-list { flex: 1 1 360px; min-height: 200px; max-height: none; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; padding: 4px; background: var(--field); }
+.history-event { height: 39px; padding: 0 7px; gap: 8px; border: 1px solid transparent; border-radius: 5px; margin: 1px 0; }
+.history-event .event-origin { display: flex; align-items: center; justify-content: center; width: 10px; flex: none; }
+.history-event.active > .event-origin { border: 0; }
+.history-event .event-title { font-size: 12px; }
+.history-event small { margin-left: auto; font-size: 12px; }
+.history-event.active { background: var(--selection); border-color: var(--selection-line); color: var(--strong); }
+.history-event.active .event-title { font-weight: 550; }
+.versions-heading { margin-top: 16px; padding-top: 12px; border: 0; }
+.version-list { max-height: 190px; overflow-y: auto; scrollbar-width: thin; }
+.version-item { padding-block: 10px; }
+.version-item + .version-item { border-top: 1px solid var(--line); }
+.version-form { flex-wrap: wrap; }
+.version-form p { width: 100%; font-size: 12px; color: var(--muted); }
+.history-preview-banner span { color: var(--text); }
+.tool-picker:disabled { opacity: 1; color: var(--muted); background: var(--field); border-color: var(--line); cursor: not-allowed; }
+.tool-picker:disabled [data-current-tool] { text-decoration: line-through; }
+
+.sidebar { padding-bottom: 12px; }
+.palette-sheet-open .workspace { grid-template-columns: minmax(0,1fr) 400px; }
+.palette-sheet-open .sidebar-resizer { display: none; }
