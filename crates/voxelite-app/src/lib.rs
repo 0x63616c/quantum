@@ -1,4 +1,6 @@
 //! Display-independent editor state, picking, camera, and file persistence.
+#[cfg(unix)]
+mod attachment;
 pub mod comments;
 pub mod editor;
 pub mod frame_meter;

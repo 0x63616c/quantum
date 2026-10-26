@@ -1,0 +1,209 @@
+use super::*;
+use serde_json::json;
+use voxelite_core::{Document, Limits};
+
+fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>) {
+    let project = Project::new(Document::new(Uuid::new_v4(), Uuid::new_v4())).unwrap();
+    let document = DocumentSession::new(project.clone(), None, Limits::default()).unwrap();
+    let mut session = Session::new(PathBuf::new());
+    session.attach(project).unwrap();
+    let (send, requests) = mpsc::sync_channel(16);
+    (
+        AttachedSession {
+            session,
+            requests,
+            stop: None,
+            worker: None,
+            path: PathBuf::new(),
+            clients: Arc::new(AtomicUsize::new(0)),
+            render: None,
+            paused: false,
+        },
+        document,
+        send,
+    )
+}
+fn queue(
+    send: &mpsc::SyncSender<Request>,
+    name: &str,
+    arguments: Value,
+) -> oneshot::Receiver<Result<CallToolResult, ErrorData>> {
+    let (reply, receive) = oneshot::channel();
+    send.send(Request {
+        name: name.into(),
+        arguments,
+        reply,
+    })
+    .unwrap();
+    receive
+}
+fn edit(
+    attachment: &AttachedSession,
+    document: &DocumentSession,
+    revision: u64,
+    slot: i32,
+) -> Value {
+    json!({"model_id":document.engine.document().id,"expected_epoch":attachment.session.epoch,
+        "expected_revision":revision.to_string(),"operation_id":Uuid::new_v4(),
+        "layer":"Base","voxels":[{"at":[slot,0,0],"slot":1}]})
+}
+fn result(receive: &mut oneshot::Receiver<Result<CallToolResult, ErrorData>>) -> Value {
+    receive
+        .try_recv()
+        .unwrap()
+        .unwrap()
+        .structured_content
+        .unwrap()
+}
+
+#[test]
+fn document_poll_preserves_fifo_budget_cancellation_and_pause() {
+    let (mut attachment, mut document, send) = attachment();
+    let info = json!({"model_id":document.engine.document().id});
+    let mut first = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 0, 0),
+    );
+    let mut read = queue(&send, "voxelite_document_info", info.clone());
+    let mut stale = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 0, 1),
+    );
+    drop(queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 1, 2),
+    ));
+    let mut next = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 1, 3),
+    );
+    let mut last = queue(&send, "voxelite_document_info", info.clone());
+    let events = attachment.poll(&mut document);
+    assert_eq!(events.len(), 3, "four dequeues include the cancelled call");
+    assert_eq!(
+        events
+            .iter()
+            .map(|e| (e.success, e.revision))
+            .collect::<Vec<_>>(),
+        [(true, 1), (true, 1), (false, 1)]
+    );
+    assert_eq!(result(&mut first)["ok"], true);
+    assert_eq!(result(&mut read)["data"]["revision"], "1");
+    assert_eq!(result(&mut stale)["error"]["code"], "revision_conflict");
+    assert!(matches!(
+        next.try_recv(),
+        Err(oneshot::error::TryRecvError::Empty)
+    ));
+    assert_eq!(document.engine.revision(), 1);
+    let events = attachment.poll(&mut document);
+    assert_eq!(events.len(), 2);
+    assert_eq!(result(&mut next)["ok"], true);
+    assert_eq!(result(&mut last)["data"]["revision"], "2");
+    let voxels = &document.engine.document().content.layers[0].voxels;
+    assert_eq!(voxels.len(), 2);
+    assert_eq!(voxels.get([2, 0, 0]), 0, "cancelled request never commits");
+    assert!(document.is_dirty());
+
+    let mut paused = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 2, 4),
+    );
+    let mut read = queue(&send, "voxelite_document_info", info);
+    attachment.paused = true; // Pause takes effect before already queued work executes.
+    let events = attachment.poll(&mut document);
+    assert_eq!(events.len(), 2);
+    assert_eq!(result(&mut paused)["error"]["code"], "agent_paused");
+    assert_eq!(result(&mut read)["ok"], true);
+    assert_eq!(document.engine.revision(), 2);
+}
+
+#[test]
+fn completed_renders_precede_queued_calls_and_old_epochs_are_discarded() {
+    let (mut attachment, mut document, send) = attachment();
+    let event = SessionEvent {
+        tool: "voxelite_render".into(),
+        label: "Render".into(),
+        success: true,
+        revision: 0,
+        entry: None,
+        changes: Changes::default(),
+        error: None,
+        inspection: Some(Arc::new(document.engine.document().content.clone())),
+        views: vec!["front".into()],
+    };
+    let old_epoch = attachment.session.epoch;
+    let (finished, receive) = mpsc::channel();
+    attachment.render = Some(receive);
+    finished.send((old_epoch, event.clone())).unwrap();
+    let mut edit = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 0, 0),
+    );
+    let events = attachment.poll(&mut document);
+    assert_eq!(
+        events.iter().map(|e| e.tool.as_str()).collect::<Vec<_>>(),
+        ["voxelite_render", "voxelite_voxels_set"]
+    );
+    assert_eq!(events[0].revision, 0);
+    assert_eq!(events[1].revision, 1);
+    assert_eq!(result(&mut edit)["ok"], true);
+
+    attachment.replace(document.project()).unwrap();
+    let (finished, receive) = mpsc::channel();
+    attachment.render = Some(receive);
+    finished.send((old_epoch, event)).unwrap();
+    assert!(attachment.poll(&mut document).is_empty());
+    assert_eq!(document.engine.revision(), 1);
+}
+
+#[test]
+fn attached_reads_share_the_owners_save_state_without_adopting_the_placeholder() {
+    use voxelite_format::session::SavePolicy;
+
+    let (mut attachment, mut document, send) = attachment();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("project.voxl");
+    let info = json!({"model_id":document.engine.document().id});
+    let mut unsaved = queue(&send, "voxelite_document_info", info.clone());
+    attachment.poll(&mut document);
+    assert_eq!(result(&mut unsaved)["data"]["dirty"], true);
+
+    let receipt = document
+        .prepare_save(&path, SavePolicy::ReplaceSelected)
+        .write()
+        .unwrap();
+    document.finish_save(receipt);
+    let mut saved = queue(&send, "voxelite_document_info", info.clone());
+    let mut capabilities = queue(&send, "voxelite_capabilities_get", json!({}));
+    attachment.poll(&mut document);
+    assert_eq!(result(&mut saved)["data"]["dirty"], false);
+    assert_eq!(
+        result(&mut capabilities)["data"]["documents"][0]["dirty"],
+        false
+    );
+    assert_eq!(document.path, Some(path.canonicalize().unwrap()));
+    assert!(!document.needs_save());
+
+    let mut changed = queue(
+        &send,
+        "voxelite_voxels_set",
+        edit(&attachment, &document, 0, 0),
+    );
+    let mut dirty = queue(&send, "voxelite_document_info", info);
+    attachment.poll(&mut document);
+    assert_eq!(result(&mut changed)["ok"], true);
+    assert_eq!(result(&mut dirty)["data"]["dirty"], true);
+    assert!(document.is_dirty());
+    let receipt = document
+        .prepare_save(&path, SavePolicy::ReplaceSelected)
+        .write()
+        .unwrap();
+    document.finish_save(receipt);
+    assert!(!document.needs_save());
+}

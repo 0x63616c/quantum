@@ -1,14 +1,17 @@
 //! Human tool gestures translated into atomic shared-core commands.
-#[cfg(not(target_family = "wasm"))]
-use crate::persistence::{self, Fingerprint};
-#[cfg(not(target_family = "wasm"))]
-pub use crate::persistence::{SaveTask, SavedProject};
 use glam::DVec3;
 #[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 use std::path::PathBuf;
 use voxelite_core::*;
-use voxelite_format::Project;
+#[cfg(not(target_family = "wasm"))]
+use voxelite_format::session::SavePolicy;
+#[cfg(not(target_family = "wasm"))]
+pub use voxelite_format::session::{SaveTask, SavedProject};
+use voxelite_format::{
+    Project,
+    session::{DocumentSession, SessionError},
+};
 use voxelite_render::{Camera, PresetView, Projection};
 
 /// Failures presented by the shell without dropping the current document.
@@ -26,6 +29,15 @@ pub enum EditorError {
     /// Invalid human gesture.
     #[error("{0}")]
     Gesture(String),
+}
+impl From<SessionError> for EditorError {
+    fn from(error: SessionError) -> Self {
+        match error {
+            SessionError::Format(e) => Self::Format(e),
+            SessionError::Io(e) => Self::Io(e),
+            e => Self::Gesture(e.to_string()),
+        }
+    }
 }
 /// Result of an editor operation.
 pub type EditorResult<T> = std::result::Result<T, EditorError>;
@@ -320,8 +332,7 @@ pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
 
 /// One open project, with UI preferences separate from portable document content.
 pub struct Editor {
-    /// Shared validated command engine.
-    pub engine: Engine,
+    pub(crate) session: DocumentSession,
     /// Read-only preview, separate from the live authority.
     pub preview: Option<crate::history::Preview>,
     pub(crate) playback: Option<crate::history::Playback>,
@@ -337,26 +348,26 @@ pub struct Editor {
     pub camera: OrbitCamera,
     /// First corner of an uncommitted box.
     pub box_start: Option<Pos>,
-    /// Current successful open/save path; examples start untitled.
-    pub path: Option<PathBuf>,
-    project: Project,
-    #[cfg(not(target_family = "wasm"))]
-    saved_file: Option<(PathBuf, Fingerprint)>,
+}
+// Preserve the shell's engine/path access while the shared session owns both.
+impl std::ops::Deref for Editor {
+    type Target = DocumentSession;
+    fn deref(&self) -> &Self::Target {
+        &self.session
+    }
+}
+impl std::ops::DerefMut for Editor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.session
+    }
 }
 impl Editor {
     /// Open a validated portable project, preserving unknown optional metadata.
     pub fn new(project: Project, path: Option<PathBuf>) -> EditorResult<Self> {
-        #[cfg(not(target_family = "wasm"))]
-        let saved_file = path
-            .as_deref()
-            .map(|path| {
-                let path = path.canonicalize()?;
-                let hash = persistence::fingerprint(&persistence::read(&path)?);
-                Ok::<_, EditorError>((path, hash))
-            })
-            .transpose()?;
-        let engine = project.open_engine(Limits::default())?;
-        let s = &engine.document().content;
+        Self::from_session(DocumentSession::new(project, path, Limits::default())?)
+    }
+    fn from_session(session: DocumentSession) -> EditorResult<Self> {
+        let s = &session.engine.document().content;
         let layer = s
             .layers
             .iter()
@@ -371,7 +382,7 @@ impl Editor {
             .clone();
         let camera = OrbitCamera::fit(s, 1.3);
         Ok(Self {
-            engine,
+            session,
             preview: None,
             playback: None,
             layer,
@@ -380,10 +391,6 @@ impl Editor {
             color,
             camera,
             box_start: None,
-            path,
-            project,
-            #[cfg(not(target_family = "wasm"))]
-            saved_file,
         })
     }
     /// Load the bundled diorama, independent of the current working directory.
@@ -405,18 +412,11 @@ impl Editor {
     /// Read a file without touching the current editor on failure.
     #[cfg(not(target_family = "wasm"))]
     pub fn open(path: &Path) -> EditorResult<Self> {
-        let path = path.canonicalize()?;
-        let bytes = persistence::read(&path)?;
-        let mut editor = Self::new(voxelite_format::read(bytes.as_slice())?, None)?;
-        editor.saved_file = Some((path.clone(), persistence::fingerprint(&bytes)));
-        editor.path = Some(path);
-        Ok(editor)
+        Self::from_session(DocumentSession::open(path, Limits::default())?)
     }
     /// Capture portable metadata and current content for a local MCP attachment.
     pub fn project(&self) -> Project {
-        let mut p = self.project.clone();
-        p.document = self.engine.document().clone();
-        p
+        self.session.project()
     }
     /// Reconcile local selection after commands committed by the attached agent.
     pub fn agent_updated(&mut self) {
@@ -426,7 +426,7 @@ impl Editor {
     }
     /// Current document content.
     pub fn snapshot(&self) -> &Snapshot {
-        &self.engine.document().content
+        &self.session.engine.document().content
     }
     /// Save through a synced temporary file in the destination directory, then atomically rename.
     /// Dirty state is cleared only after successful persistence.
@@ -439,33 +439,18 @@ impl Editor {
     /// Capture the current document without performing filesystem I/O.
     #[cfg(not(target_family = "wasm"))]
     pub fn prepare_save(&self, path: &Path) -> SaveTask {
-        let mut project = self.project.clone();
-        project.document = self.engine.document().clone();
-        SaveTask {
-            project,
-            path: path.to_path_buf(),
-            baseline: self.saved_file.clone(),
-            revision: self.engine.revision(),
-        }
+        self.session.prepare_save(path, SavePolicy::ReplaceSelected)
     }
     /// Adopt a successful save; edits made after its snapshot remain dirty.
     #[cfg(not(target_family = "wasm"))]
     pub fn finish_save(&mut self, saved: SavedProject) {
-        if saved.project.document.id != self.engine.document().id {
-            return;
-        }
-        self.project = saved.project;
-        self.path = Some(saved.path.clone());
-        self.saved_file = Some((saved.path, saved.fingerprint));
-        if self.engine.revision() == saved.revision {
-            self.engine.mark_saved();
-        }
+        self.session.finish_save(saved);
     }
     /// Execute a single attributed, atomic command.
     pub fn execute(&mut self, label: &str, command: Command) -> EditorResult<bool> {
         self.ensure_live()?;
-        let receipt = self.engine.execute(Transaction {
-            expected_revision: self.engine.revision(),
+        let receipt = self.session.engine.execute(Transaction {
+            expected_revision: self.session.engine.revision(),
             id: Uuid::new_v4(),
             actor: Actor {
                 origin: Origin::Human,
@@ -487,8 +472,8 @@ impl Editor {
     /// Compensate one applied step, retaining unrelated newer work.
     pub fn revert_step(&mut self, id: Uuid) -> EditorResult<()> {
         self.ensure_live()?;
-        self.engine.revert(
-            self.engine.revision(),
+        self.session.engine.revert(
+            self.session.engine.revision(),
             id,
             Uuid::new_v4(),
             Actor::new(Origin::Human),
@@ -499,8 +484,10 @@ impl Editor {
     /// Undo the most recent complete gesture.
     pub fn undo(&mut self) -> EditorResult<()> {
         self.ensure_live()?;
-        if let Some(id) = self.engine.head() {
-            self.engine.undo(self.engine.revision(), id)?;
+        if let Some(id) = self.session.engine.head() {
+            self.session
+                .engine
+                .undo(self.session.engine.revision(), id)?;
         }
         self.reconcile();
         Ok(())
@@ -508,8 +495,10 @@ impl Editor {
     /// Redo the most recently undone gesture.
     pub fn redo(&mut self) -> EditorResult<()> {
         self.ensure_live()?;
-        if let Some(id) = self.engine.redo_head() {
-            self.engine.redo(self.engine.revision(), id)?;
+        if let Some(id) = self.session.engine.redo_head() {
+            self.session
+                .engine
+                .redo(self.session.engine.revision(), id)?;
         }
         self.reconcile();
         Ok(())

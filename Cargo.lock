@@ -5954,7 +5954,6 @@ dependencies = [
  "objc2 0.6.5",
  "serde",
  "serde_json",
- "sha2",
  "tempfile",
  "thiserror 2.0.21",
  "uuid",
@@ -6003,6 +6002,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "thiserror 2.0.21",
  "voxelite-core",
 ]
@@ -6017,7 +6017,6 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
- "sha2",
  "tempfile",
  "tokio",
  "voxelite-core",

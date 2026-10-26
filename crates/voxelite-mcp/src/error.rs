@@ -95,6 +95,30 @@ impl From<voxelite_format::FormatError> for Failure {
         }
     }
 }
+impl From<voxelite_format::session::SessionError> for Failure {
+    fn from(error: voxelite_format::session::SessionError) -> Self {
+        use voxelite_format::session::SessionError;
+        match error {
+            SessionError::Format(e) => e.into(),
+            SessionError::Io(e) => e.into(),
+            SessionError::ExternalChange => Self::new(
+                "external_file_conflict",
+                "destination changed since open/save; save to a new path or reopen",
+            ),
+            SessionError::FileExists => {
+                Self::new("file_exists", "destination exists; choose a new path")
+            }
+            SessionError::TooLarge => Self::new("limit_exceeded", "file exceeds 128 MiB"),
+            SessionError::DirectorySync(e) => Self::new(
+                "outcome_unknown",
+                format!(
+                    "file was renamed but directory sync failed: {e}; verify destination before retrying"
+                ),
+            ),
+            e => Self::invalid(e.to_string()),
+        }
+    }
+}
 impl From<voxelite_render::RenderError> for Failure {
     fn from(e: voxelite_render::RenderError) -> Self {
         Self::new("render_failed", e.to_string())
