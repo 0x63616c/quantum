@@ -10,16 +10,31 @@ permissions:
 concurrency: { group: release-macos, cancel-in-progress: false }
 jobs:
   dmg:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, ARM64, xcode]
+    timeout-minutes: 120
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.tag || github.ref }}" }
-      - name: Build and package
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - name: Set up runner tools
         run: |
-          export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:$PATH"; echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+      - name: Build and package
+        env:
+          MACOS_SIGNING_MODE: auto
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
           VERSION="${TAG#v}" scripts/package-macos.sh
       - name: Publish release
         env: { GH_TOKEN: "${{ github.token }}" }
