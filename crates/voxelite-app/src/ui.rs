@@ -231,7 +231,10 @@ impl EditorView {
         let weak = cx.weak_entity();
         window.on_window_should_close(cx, move |_, cx| {
             weak.update(cx, |this, cx| {
-                match this.save_flow.request_close(this.editor.engine.is_dirty()) {
+                match this
+                    .save_flow
+                    .request_close(|| this.editor.engine.is_dirty())
+                {
                     save_flow::CloseRequest::Allow => true,
                     save_flow::CloseRequest::Blocked => false,
                     save_flow::CloseRequest::Confirm => {
@@ -464,7 +467,7 @@ impl EditorView {
         self.palette_open = false;
         if self
             .save_flow
-            .confirm_if_dirty(op, self.editor.engine.is_dirty())
+            .confirm_if_dirty(op, || self.editor.engine.is_dirty())
         {
             cx.notify();
             return;
