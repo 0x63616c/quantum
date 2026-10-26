@@ -135,6 +135,9 @@
 .source-links a { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; }
 .browser-inner { max-width: 800px; padding-block: 72px 32px; }
 .footer { border-top: 0; }
+.footer nav { align-items: center; }
+.footer .github-link { display: inline-flex; align-items: center; gap: 8px; }
+.footer .github-link svg { flex: none; }
 
 /* Static section navigation remains available with JavaScript disabled. */
 .documentation .shell { max-width: 1344px; }
