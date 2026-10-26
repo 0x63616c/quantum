@@ -47,7 +47,7 @@ impl Agent {
 }
 impl EditorView {
     pub(super) fn poll_agent(&mut self, cx: &mut Context<Self>) {
-        if self.dialog_open || self.pending.is_some() {
+        if self.save_flow.dialog_open() || self.save_flow.needs_confirmation() {
             return;
         }
         let Some(session) = &mut self.agent.session else {
@@ -298,7 +298,7 @@ impl EditorView {
     }
 
     fn set_agent_view(&mut self, view: PresetView, cx: &mut Context<Self>) {
-        let b = self.viewport.get();
+        let b = self.viewport.bounds();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
         self.editor.camera = OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
         self.camera_view = match view {

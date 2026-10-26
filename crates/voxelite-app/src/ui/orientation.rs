@@ -16,7 +16,10 @@ impl EditorView {
             return None;
         }
         let local = position - bounds.origin;
-        gizmo::hit_test(self.display_camera, [local.x.into(), local.y.into()])
+        gizmo::hit_test(
+            self.viewport.display_camera(),
+            [local.x.into(), local.y.into()],
+        )
     }
 
     pub(super) fn move_gizmo(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) {
@@ -72,7 +75,7 @@ impl EditorView {
 
     pub(super) fn orientation(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        let ends = gizmo::project(self.display_camera);
+        let ends = gizmo::project(self.viewport.display_camera());
         let bounds_cell = self.gizmo_bounds.clone();
         let hovered = self.gizmo_hover;
         div().id("orientation").absolute().top(px(12.0)).right(px(12.0)).size(px(SIZE))
