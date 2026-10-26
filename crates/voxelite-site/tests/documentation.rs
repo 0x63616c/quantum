@@ -3,6 +3,38 @@ use serde_json::{Value, json};
 use voxelite_mcp::VoxeliteServer;
 
 #[test]
+fn published_docs_match_a_fresh_build() {
+    let output = tempfile::tempdir().unwrap();
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_voxelite-site"))
+        .arg(output.path())
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let published = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site");
+    let mut directories = vec![output.path().to_owned()];
+    while let Some(directory) = directories.pop() {
+        for entry in std::fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                directories.push(path);
+            } else {
+                let relative = path.strip_prefix(output.path()).unwrap();
+                assert!(
+                    std::fs::read(&path).unwrap()
+                        == std::fs::read(published.join(relative)).unwrap(),
+                    "Stale generated page: {}. Run scripts/build-site.sh --skip-web",
+                    relative.display()
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn downloadable_project_is_valid_and_canonical() {
     let bytes = include_bytes!("../../../site/assets/minimal.voxl");
     let project = voxelite_format::from_bytes(bytes).expect("download must open");

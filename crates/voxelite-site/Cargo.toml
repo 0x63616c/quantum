@@ -6,7 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+htmd = "0.5.6"
+same-file = "1"
 serde_json.workspace = true
+url = "2"
 voxelite-mcp = { path = "../voxelite-mcp" }
 
 [dev-dependencies]

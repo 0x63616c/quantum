@@ -125,6 +125,59 @@ try {
   await clipboard.getByRole('button', { name: 'Copy code example' }).first().click();
   assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), code);
   report.checks.push('Documentation Copy code writes the complete example to clipboard');
+  const clipboardErrors = [];
+  clipboard.on('pageerror', error => clipboardErrors.push(error.message));
+  for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/']) {
+    await clipboard.goto(base + route);
+    const raw = route.replace(/\/$/, '.md');
+    const expected = await (await clipboard.request.get(base + raw)).text();
+    const alias = await clipboard.request.get(base + route + 'index.md');
+    assert.equal(alias.status(), 200);
+    assert.equal(await alias.text(), expected);
+    assert.equal(await clipboard.getByRole('link', { name: 'View .md', exact: true }).getAttribute('href'), raw);
+    const copy = clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true });
+    await copy.focus();
+    await clipboard.keyboard.press('Enter');
+    await clipboard.getByRole('status').filter({ hasText: /^Copied$/ }).waitFor();
+    assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), expected);
+    assert.equal(await copy.isEnabled(), true);
+  }
+  await clipboard.route('**/docs/skills.md', route => route.fulfill({ status: 503, body: 'Unavailable' }));
+  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+  await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
+  await clipboard.unroute('**/docs/skills.md');
+  await clipboard.context().clearPermissions();
+  await clipboard.context().grantPermissions(['clipboard-read']);
+  await clipboard.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
+    value: { write: async () => { throw new DOMException('Permission denied', 'NotAllowedError'); } }
+  }));
+  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+  await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
+  assert.equal(await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).isEnabled(), true);
+  // Deny the clipboard before completing the download. A later fetch rejection
+  // must still be handled even when the browser never reads the ClipboardItem.
+  for (const failure of ['http', 'network', 'unexpected-content']) {
+    let receiveDownload;
+    const downloadReady = new Promise(resolve => { receiveDownload = resolve; });
+    await clipboard.route('**/docs/skills.md', route => receiveDownload(route));
+    await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+    const download = await downloadReady;
+    await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
+    if (failure === 'network') await download.abort();
+    else await download.fulfill({ status: failure === 'http' ? 503 : 200, body: '<html>Unavailable</html>' });
+    await clipboard.waitForLoadState('networkidle');
+    assert.deepEqual(clipboardErrors, [], `No unhandled rejection after delayed ${failure} failure`);
+    await clipboard.unroute('**/docs/skills.md');
+  }
+  await clipboard.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await clipboard.reload();
+  await clipboard.evaluate(() => Object.defineProperty(window, 'ClipboardItem', { value: undefined }));
+  const fallbackMarkdown = await (await clipboard.request.get(base + '/docs/skills.md')).text();
+  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+  await clipboard.getByRole('status').filter({ hasText: /^Copied$/ }).waitFor();
+  assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), fallbackMarkdown);
+  assert.deepEqual(clipboardErrors, []);
+  report.checks.push('All doc Markdown aliases return identical content; keyboard copying preserves the complete page including schemas; writeText fallback works; simultaneous clipboard denial and delayed HTTP, network or content failures remain handled');
   await clipboard.close();
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await page.goto(base);
@@ -146,6 +199,14 @@ try {
   await page.goto(base + '/docs/getting-started/');
   await page.getByRole('link', { name: 'Connect MCP', exact: false }).click();
   assert.equal(new URL(page.url()).hash, '#connect');
+  assert.equal(await page.getByRole('button', { name: 'Copy page as Markdown', exact: true }).count(), 0);
+  const rawResponse = await Promise.all([
+    page.waitForResponse(response => response.url() === base + '/docs/getting-started.md'),
+    page.getByRole('link', { name: 'View .md', exact: true }).click()
+  ]);
+  assert.equal(rawResponse[0].status(), 200);
+  assert.ok((await rawResponse[0].text()).startsWith('# Getting started\n'));
+  report.checks.push('View .md works with JavaScript disabled');
   report.checks.push('Mobile comparison switches with keyboard, pointer and JavaScript disabled; no-JavaScript setup navigation');
   report.checks.push('No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation');
   await page.close();

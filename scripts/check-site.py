@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check static site navigation, SEO metadata, crawl files and source parity."""
+"""Check site navigation, Markdown exports, SEO, crawl files and source parity."""
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -18,11 +18,15 @@ class Page(HTMLParser):
         self.links, self.ids = [], set()
         self.head, self.titles, self.structured_data = [], [], []
         self.in_head, self.head_count, self.capture = False, 0, None
+        self.elements, self.examples, self.example = [], [], None
         self.feed(text)
         self.close()
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        self.elements.append((tag, attrs))
+        if tag == 'pre':
+            self.example = []
         if tag == 'head':
             self.in_head = True
             self.head_count += 1
@@ -38,10 +42,15 @@ class Page(HTMLParser):
                 self.links.append(attrs[key])
 
     def handle_data(self, data):
+        if self.example is not None:
+            self.example.append(data)
         if self.capture is not None:
             self.capture.append(data)
 
     def handle_endtag(self, tag):
+        if tag == 'pre' and self.example is not None:
+            self.examples.append(''.join(self.example))
+            self.example = None
         if self.in_head and self.capture is not None and tag in ('title', 'script'):
             target = self.titles if tag == 'title' else self.structured_data
             target.append(''.join(self.capture).strip())
@@ -190,10 +199,65 @@ sitemap = ElementTree.parse(SITE / 'sitemap.xml').getroot()
 assert sitemap.tag == f'{namespace}urlset', 'Incorrect sitemap namespace'
 locations = [loc.text for loc in sitemap.findall(f'{namespace}url/{namespace}loc')]
 expected_urls = {page_url(path) for path in pages if path != SITE / '404.html'}
+doc_pages = {path: page for path, page in pages.items() if path.is_relative_to(SITE / 'docs')}
+markdown_urls = {page_url(path).rstrip('/') + '.md' for path in doc_pages}
+expected_urls.update(markdown_urls | {f'{BASE_URL}/llms.txt', f'{BASE_URL}/llms-full.txt'})
 assert len(locations) == len(set(locations)), 'Duplicate sitemap URLs'
-assert set(locations) == expected_urls, 'Sitemap must list every public page and exclude the 404'
-robots = [line.strip() for line in (SITE / 'robots.txt').read_text().splitlines() if line.strip()]
+assert set(locations) == expected_urls, 'Sitemap must list public HTML, canonical Markdown and LLM indexes, excluding the 404 and raw aliases'
+for location in locations:
+    check(SITE / 'sitemap.xml', location)
+robots_text = (SITE / 'robots.txt').read_text()
+robots = [line.strip() for line in robots_text.splitlines() if line.strip() and not line.startswith('#')]
 assert robots == ['User-agent: *', 'Allow: /', f'Sitemap: {BASE_URL}/sitemap.xml'], 'Robots must allow all and link the sitemap'
+for name in ('llms.txt', 'llms-full.txt'):
+    assert f'{BASE_URL}/{name}' in robots_text, f'Robots must advertise {name} in a comment'
+
+def markdown_links(text):
+    # The exports use inline links; ignore fenced examples when checking URLs.
+    prose = re.sub(r'^(`{3,}|~{3,})[^\n]*\n.*?^\1\s*$', '', text, flags=re.M | re.S)
+    return re.findall(r'\[[^\]]+\]\(([^ )]+)\)', prose)
+
+
+llms = (SITE / 'llms.txt').read_text()
+full = (SITE / 'llms-full.txt').read_text()
+assert llms.startswith('# Voxelite\n\n> '), 'llms.txt must start with an H1 and summary blockquote'
+assert '\n## Documentation\n\n' in llms, 'Missing llms.txt documentation section'
+entries = re.findall(r'^- \[([^\]]+)\]\(([^)]+)\): (.+)$', llms, flags=re.M)
+assert len(entries) == len(doc_pages), 'llms.txt must list each doc exactly once'
+assert {url for _, url, _ in entries} == markdown_urls, 'llms.txt must link to every canonical .md page'
+assert full.startswith('# Voxelite documentation\n\n> '), 'Missing full documentation heading'
+assert full.count('\nSource: [') == len(doc_pages), 'llms-full.txt must contain each doc exactly once'
+for html, page in doc_pages.items():
+    url = page_url(html).rstrip('/') + '.md'
+    path = SITE / urlsplit(url).path.lstrip('/')
+    markdown = path.read_text()
+    alias = html.with_suffix('.md')
+    assert alias.read_bytes() == path.read_bytes(), f'Markdown aliases differ: {path}'
+    title = page.titles[0].removesuffix(' — Voxelite docs')
+    assert markdown.startswith(f'# {title}\n\n'), f'Incorrect Markdown heading: {path}'
+    assert (title, url, page.meta('description')) in entries, f'Stale llms.txt entry: {path}'
+    assert f'\nSource: [{url}]({url})\n\n{markdown}' in full, f'Stale llms-full.txt content: {path}'
+    alternate = page.tags('link', rel='alternate', type='text/markdown')
+    assert len(alternate) == 1 and alternate[0].get('href') == urlsplit(url).path, f'Incorrect Markdown alternate: {html}'
+    describedby = page.tags('link', rel='describedby', type='text/markdown')
+    assert len(describedby) == 1 and describedby[0].get('href') == '/llms.txt', f'Missing LLM discovery link: {html}'
+    controls = [attrs for tag, attrs in page.elements if tag == 'a' and 'data-markdown' in attrs]
+    assert len(controls) == 1 and controls[0].get('href') == urlsplit(url).path, f'Missing Markdown view/copy affordance: {html}'
+    examples = re.findall(r'^(`{3,}|~{3,})[^\n]*\n(.*?)\n\1\s*$', markdown, flags=re.M | re.S)
+    assert [code for _, code in examples] == page.examples, f'Lost or changed code/schema examples: {path}'
+    assert not re.search(r'<(?:script|style|nav|header|footer|table|details)\b', markdown), f'HTML chrome in Markdown: {path}'
+    for source in (path, alias):
+        for link in markdown_links(markdown):
+            check(source, link)
+for path in (SITE / 'llms.txt', SITE / 'llms-full.txt'):
+    for link in markdown_links(path.read_text()):
+        check(path, link)
+
+catalog = json.loads((SITE / 'assets/mcp-tools.json').read_text())
+mcp = (SITE / 'docs/mcp.md').read_text()
+schemas = [json.loads(block) for block in re.findall(r'^```json\n(.*?)\n```', mcp, flags=re.M | re.S)]
+expected_schemas = [tool[key] for tool in catalog for key in ('inputSchema', 'outputSchema') if key in tool]
+assert schemas == expected_schemas, 'Markdown MCP schemas must exactly match the live catalog'
 
 for path in (SITE / 'assets').rglob('*.md'):
     for link in re.findall(r'\[[^\]]+\]\(([^ )]+)\)', path.read_text()):
@@ -210,5 +274,5 @@ assert json.loads((SITE / 'assets/mcp-tools.json').read_text()) == json.loads((R
 for name in ('index.html', 'voxelite_app.js', 'voxelite_app_bg.wasm'):
     assert (SITE / 'app' / name).read_bytes() == (ROOT / 'web/dist' / name).read_bytes(), f'Stale app: {name}'
 assert (SITE / 'app/index.html').read_bytes() == (ROOT / 'web/index.html').read_bytes(), 'Stale app template'
-print(f'Checked {len(pages)} pages with SEO metadata, {len(locations)} sitemap URLs, robots.txt, '
+print(f'Checked {len(pages)} pages with SEO metadata, {len(doc_pages) * 2} Markdown exports, LLM indexes, {len(locations)} sitemap URLs, robots.txt, '
       f'homepage JSON-LD, {checked} local links/assets, skill archive, MCP catalog and bundled app.')
