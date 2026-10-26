@@ -1,4 +1,4 @@
-//! Compact viewport telemetry. Timings describe CPU renders, not display refresh.
+//! Compact viewport telemetry for newly painted content, not display refresh.
 use super::{AnchoredTooltip, EditorView, STATUSBAR_HEIGHT, TooltipSide, icon, mono, row};
 use gpui::{prelude::*, *};
 use voxelite_core::Pos;
@@ -74,13 +74,14 @@ impl EditorView {
             },
         );
         let zoom = self.zoom_reference_span / self.display_camera.span * 100.0;
-        let performance = self.render_ms.map_or_else(
-            || "CPU — FPS / — ms".into(),
-            |ms| {
+        let renderer = self.frame_meter.renderer().label();
+        let performance = self.frame_meter.average().map_or_else(
+            || format!("{renderer} idle / — ms"),
+            |average| {
                 format!(
-                    "CPU {} FPS / {} ms",
-                    grouped(format!("{:.1}", 1000.0 / ms.max(0.001))),
-                    grouped(format!("{ms:.1}"))
+                    "{renderer} {} FPS / {} ms",
+                    grouped(format!("{:.1}", average.fps)),
+                    grouped(format!("{:.1}", average.frame_ms))
                 )
             },
         );
@@ -105,7 +106,7 @@ impl EditorView {
             .child(row().gap(px(12.0)).flex_shrink_0()
                 .child(row().id("status-zoom").anchored_hint("Zoom relative to the last fitted view", t, TooltipSide::Above).child(number(format!("{}%", grouped(format!("{zoom:.0}"))))))
                 .when(self.preferences.show_performance, |d| d.child(row().id("status-performance")
-                    .anchored_hint("Last completed CPU render: reciprocal throughput and elapsed frame time. The viewport renders on demand; this is not display refresh rate.", t, TooltipSide::Above)
+                    .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above)
                     .text_color(if self.rendering { t.accent() } else { t.muted() }).child(number(performance))))
                 .child(separator())
                 .child(row().id("status-dimensions").anchored_hint(format!("Model dimensions · {} occupied voxels", grouped(voxels)), t, TooltipSide::Above)

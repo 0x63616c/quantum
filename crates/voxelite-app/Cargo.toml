@@ -29,6 +29,7 @@ serde_json.workspace = true
 serde.workspace = true
 sha2.workspace = true
 anyhow = "1"
+web-time = "1"
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
 gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
 image = { version = "0.25", default-features = false, optional = true }

@@ -502,7 +502,7 @@ impl SettingsView {
                     ),
                     self.form_row(
                         "Render performance",
-                        "Show CPU render FPS and milliseconds per frame.",
+                        "Show viewport FPS, average frame time and renderer.",
                         self.toggle(
                             "performance",
                             p.show_performance,
