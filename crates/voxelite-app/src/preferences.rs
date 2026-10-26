@@ -29,7 +29,7 @@ pub struct Preferences {
     pub grid: bool,
     /// Supersample settled viewport renders.
     pub antialiasing: bool,
-    /// Display measured CPU render performance in the status bar.
+    /// Display viewport FPS, average frame time and renderer in the status bar.
     pub show_performance: bool,
     /// Display mouse navigation hints over the viewport.
     pub navigation_hints: bool,

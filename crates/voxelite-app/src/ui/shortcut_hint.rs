@@ -165,20 +165,36 @@ impl RenderOnce for HintText {
             return text.clone().into_any_element();
         }
         let mut result = div().flex().flex_col();
-        let mut line = div().flex().items_center().gap_x(px(2.0)).gap_y(px(4.0));
+        let mut line = div()
+            .flex()
+            .flex_row()
+            .flex_nowrap()
+            .whitespace_nowrap()
+            .flex_none()
+            .items_center()
+            .gap_x(px(2.0));
         for part in self.0 {
             match part {
-                HintPart::Key(key) => line = line.child(key),
+                HintPart::Key(key) => line = line.child(div().flex_none().ml(px(4.0)).child(key)),
                 HintPart::Text(text) => {
                     for (index, paragraph) in text.split('\n').enumerate() {
                         if index > 0 {
                             result = result.child(line);
-                            line = div().flex().items_center().gap_x(px(2.0)).gap_y(px(4.0));
+                            line = div()
+                                .flex()
+                                .flex_row()
+                                .flex_nowrap()
+                                .whitespace_nowrap()
+                                .flex_none()
+                                .items_center()
+                                .gap_x(px(2.0));
                         }
                         // Explicit newlines split paragraphs; each line stays
                         // intact when the tooltip requests its intrinsic size.
                         for word in paragraph.split_inclusive(' ') {
-                            line = line.child(SharedString::from(word.to_owned()));
+                            line = line.child(
+                                div().flex_none().child(SharedString::from(word.to_owned())),
+                            );
                         }
                     }
                 }

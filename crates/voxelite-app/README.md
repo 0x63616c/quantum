@@ -117,10 +117,16 @@ The transparent native titlebar places real traffic lights in the top toolbar.
 Linux and web retain their in-window menus.
 
 The bottom bar shows hovered voxel coordinates, active layer/tool, zoom relative
-to the last fitted view, model bounds and CPU render performance. Selection size
+to the last fitted view, model bounds and viewport performance. Selection size
 and count describe the inclusive box-tool preview; after commit they return to
-zero. FPS is the reciprocal of the last completed CPU render duration, not the
-monitor refresh rate. Rendering is demand-driven; idle frames are not synthesized.
+zero. Performance shows the active voxel renderer (`CPU`), rolling average FPS
+and average time between newly painted viewport images over about one second.
+Only successful paints of new images count; render completions that never reach
+the viewport and repaints of unchanged content are excluded. These timings include
+rendering, scheduling and presentation cadence, not just CPU render cost or monitor
+refresh rate. The bar holds its last average while idle (or shows `idle` before
+two frames are timed). Starting work after an idle pause longer than one second
+opens a fresh sample window; slow renders still count their full frame interval.
 `--exit-after SECONDS` (alias `--screenshot-delay`) exits after the specified
 interval for unattended captures. This explicit automation option does not
 prompt about unsaved edits.

@@ -1,6 +1,7 @@
 //! Display-independent editor state, picking, camera, and file persistence.
 pub mod comments;
 pub mod editor;
+pub mod frame_meter;
 pub mod gizmo;
 pub mod history;
 pub mod palettes;

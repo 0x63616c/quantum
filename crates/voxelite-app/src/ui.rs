@@ -26,6 +26,7 @@ use gpui::{prelude::*, *};
 use shortcut_hint::{HintText, action_shortcut, shortcut};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
+use voxelite_app::frame_meter::{FrameMeter, RendererKind};
 use voxelite_core::{Palette, Pos, Preset};
 use voxelite_render::{PresetView, RenderOptions, View};
 
@@ -86,10 +87,11 @@ pub struct EditorView {
     sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
+    image_renderer: RendererKind,
     painted_image: Option<Arc<RenderImage>>,
     last_title: String,
     rendering: bool,
-    render_ms: Option<f64>,
+    frame_meter: FrameMeter,
     zoom_reference_span: f64,
     render_pending: bool,
     render_size: [u32; 2],
@@ -378,10 +380,11 @@ impl EditorView {
             theme,
             focus,
             image: None,
+            image_renderer: RendererKind::Cpu,
             painted_image: None,
             last_title: String::new(),
             rendering: false,
-            render_ms: None,
+            frame_meter: FrameMeter::new(RendererKind::Cpu),
             render_pending: false,
             render_size: [0, 0],
             viewport: Rc::new(Cell::new(Bounds::default())),
@@ -446,6 +449,9 @@ impl EditorView {
             self.render_pending = true;
             return;
         }
+        if !self.render_pending {
+            self.frame_meter.begin_frame(cx.background_executor().now());
+        }
         self.rendering = true;
         self.render_pending = false;
         let snapshot = self.editor.display_snapshot().clone();
@@ -472,14 +478,11 @@ impl EditorView {
             background: [0; 4],
             ..Default::default()
         };
-        let clock = cx.background_executor().clone();
-        let task = cx.background_executor().spawn(async move {
-            let started = clock.now();
-            let result = voxelite_render::render(&snapshot, &options);
-            (result, (clock.now() - started).as_secs_f64() * 1000.0)
-        });
+        let task = cx
+            .background_executor()
+            .spawn(async move { voxelite_render::render(&snapshot, &options) });
         cx.spawn(async move |this, cx| {
-            let (result, elapsed_ms) = task.await;
+            let result = task.await;
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
                 // Never install a render from a replaced document or an older edit.
@@ -489,7 +492,6 @@ impl EditorView {
                 {
                     match result {
                         Ok(mut frame) => {
-                            this.render_ms = Some(elapsed_ms);
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
@@ -501,6 +503,7 @@ impl EditorView {
                             this.displayed = Some(identity);
                             this.image =
                                 Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
+                            this.image_renderer = RendererKind::Cpu;
                         }
                         Err(e) => {
                             this.error = true;
@@ -545,7 +548,7 @@ impl EditorView {
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
         self.zoom_reference_span = editor.camera.span;
-        self.render_ms = None;
+        self.frame_meter = FrameMeter::new(self.image_renderer);
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
@@ -1571,6 +1574,9 @@ impl EditorView {
         let t = self.theme;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
+        let renderer = self.image_renderer;
+        let generation = self.document_generation;
+        let view = cx.weak_entity();
         let camera = self.display_camera;
         let frame_size = self.displayed.map(|_| self.display_size);
         let hover = self.hover;
@@ -1598,7 +1604,7 @@ impl EditorView {
             move |bounds, _, _| {
                 bounds_cell.set(bounds);
             },
-            move |bounds, _, window, _| {
+            move |bounds, _, window, cx| {
                 let aspect = frame_size
                     .map(|s| f64::from(s[0]) / f64::from(s[1].max(1)))
                     .unwrap_or_else(|| {
@@ -1627,7 +1633,27 @@ impl EditorView {
                     }
                 }
                 if let Some(image) = image {
-                    let _ = window.paint_image(bounds, bounds, Corners::default(), image, 0, false);
+                    let frame_id = image.id.0;
+                    let visible = bounds.intersect(&window.content_mask().bounds);
+                    if visible.size.width > px(0.0)
+                        && visible.size.height > px(0.0)
+                        && window
+                            .paint_image(bounds, bounds, Corners::default(), image, 0, false)
+                            .is_ok()
+                    {
+                        let at = cx.background_executor().now();
+                        // Measure successful paints, not render completions or UI
+                        // repaints. Defer the notification until drawing is over.
+                        window.defer(cx, move |_, cx| {
+                            let _ = view.update(cx, |this, cx| {
+                                if this.document_generation == generation
+                                    && this.frame_meter.record_presented(renderer, frame_id, at)
+                                {
+                                    cx.notify();
+                                }
+                            });
+                        });
+                    }
                 }
                 if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
