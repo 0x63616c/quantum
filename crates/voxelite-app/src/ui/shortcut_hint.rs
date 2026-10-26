@@ -116,6 +116,14 @@ pub(super) fn action_shortcut(op: Op) -> Div {
     div().when_some(op.key(), |d, key| d.child(shortcut(key)))
 }
 
+pub(super) fn sheet_shortcut(op: Op) -> Div {
+    if op.key().is_some() {
+        action_shortcut(op)
+    } else {
+        div().child("—")
+    }
+}
+
 #[derive(Clone)]
 enum HintPart {
     Text(SharedString),
