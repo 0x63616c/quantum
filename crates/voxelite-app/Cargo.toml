@@ -52,6 +52,7 @@ voxelite-mcp = { path = "../voxelite-mcp" }
 tempfile = "3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
+gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
 objc2 = "0.6.5"
 libloading = "0.8.9"
 
@@ -68,5 +69,3 @@ uuid = { workspace = true, features = ["js"] }
 workspace = true
 features = ["gpu"]
 
-[target.'cfg(target_os = "macos")'.dependencies]
-gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
