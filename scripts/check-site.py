@@ -233,7 +233,7 @@ for html, page in doc_pages.items():
     markdown = path.read_text()
     alias = html.with_suffix('.md')
     assert alias.read_bytes() == path.read_bytes(), f'Markdown aliases differ: {path}'
-    title = page.titles[0].removesuffix(' — Voxelite docs')
+    title = page.titles[0].removesuffix(': Voxelite docs')
     assert markdown.startswith(f'# {title}\n\n'), f'Incorrect Markdown heading: {path}'
     assert (title, url, page.meta('description')) in entries, f'Stale llms.txt entry: {path}'
     assert f'\nSource: [{url}]({url})\n\n{markdown}' in full, f'Stale llms-full.txt content: {path}'
