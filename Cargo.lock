@@ -5925,6 +5925,7 @@ dependencies = [
  "proptest",
  "thiserror 2.0.21",
  "voxelite-core",
+ "wasm-bindgen",
 ]
 
 [[package]]

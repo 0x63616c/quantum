@@ -126,6 +126,7 @@ impl Basis {
 /// Lighting is evaluated in linear RGB, then supersamples resolve with premultiplied
 /// alpha and one sRGB conversion. Geometry and shadow traversal are deterministic.
 pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<RenderedImage> {
+    let _total = perf::Span::new("render_total");
     let samples = u64::from(options.width)
         * u64::from(options.height)
         * u64::from(options.supersampling).pow(2);
@@ -155,7 +156,11 @@ pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Rend
             perspective,
         )?,
     };
-    let mesh = greedy_mesh(snapshot)?;
+    let mesh = {
+        let _span = perf::Span::new("mesh");
+        greedy_mesh(snapshot)?
+    };
+    let geometry_span = perf::Span::new("raster_geometry");
     let ss = usize::from(options.supersampling);
     let width = options.width as usize * ss;
     let height = options.height as usize * ss;
@@ -211,6 +216,8 @@ pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Rend
             );
         }
     }
+    drop(geometry_span);
+    let _shading = perf::Span::new("raster_shading");
     let cells: HashMap<_, _> = snapshot.composite().into_iter().collect();
     let light = (-right * 0.55 + up * 0.7 - forward * 0.65 + DVec3::Y * 0.65).normalize();
     let palette: HashMap<_, _> = snapshot

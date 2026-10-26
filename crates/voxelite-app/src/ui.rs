@@ -20,7 +20,7 @@ use gpui::{prelude::*, *};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos, Preset};
-use voxelite_render::{PresetView, RenderOptions, View};
+use voxelite_render::{PresetView, RenderOptions, View, perf};
 
 // Keep render sizing and native layout on the same logical-pixel metrics.
 const SIDEBAR_WIDTH: f32 = 352.0;
@@ -52,6 +52,7 @@ pub struct EditorView {
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
     painted_image: Option<Arc<RenderImage>>,
+    perf_frame: u64,
     last_title: String,
     rendering: bool,
     render_pending: bool,
@@ -258,6 +259,7 @@ impl EditorView {
             focus,
             image: None,
             painted_image: None,
+            perf_frame: 0,
             last_title: String::new(),
             rendering: false,
             render_pending: false,
@@ -318,7 +320,11 @@ impl EditorView {
         }
         self.rendering = true;
         self.render_pending = false;
-        let snapshot = self.editor.display_snapshot().clone();
+        perf::event("render_start", self.editor.engine.revision() as f64, self.navigation_epoch as f64);
+        let snapshot = {
+            let _span = perf::Span::new("snapshot");
+            self.editor.display_snapshot().clone()
+        };
         let camera = self.editor.camera;
         let identity = self.frame_identity();
         let interactive = self.interactive_render;
@@ -352,6 +358,9 @@ impl EditorView {
                 {
                     match result {
                         Ok(mut frame) => {
+                            let _span = perf::Span::new("image_convert");
+                            this.perf_frame += 1;
+                            perf::event("image_ready", this.perf_frame as f64, identity.revision as f64);
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
@@ -379,6 +388,7 @@ impl EditorView {
         .detach();
     }
     fn request_navigation(&mut self, cx: &mut Context<Self>) {
+        perf::event("navigation", 0.0, 0.0);
         self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
         let epoch = self.navigation_epoch;
         self.interactive_render = true;
@@ -1441,6 +1451,8 @@ impl EditorView {
         let compact = self.render_size[0] < 800;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
+        let perf_frame = self.perf_frame;
+        let revision = self.displayed.map_or(0, |f| f.revision);
         let camera = self.display_camera;
         let frame_size = self.displayed.map(|_| self.display_size);
         let hover = self.hover;
@@ -1497,7 +1509,9 @@ impl EditorView {
                     }
                 }
                 if let Some(image) = image {
+                    let _span = perf::Span::new("image_upload");
                     let _ = window.paint_image(bounds, bounds, Corners::default(), image, 0, false);
+                    perf::event("paint", perf_frame as f64, revision as f64);
                 }
                 if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
@@ -1707,6 +1721,7 @@ impl EditorView {
                             return;
                         }
                         let r = this.editor.click(ray, e.modifiers.alt);
+                        perf::event("edit_result", this.editor.engine.revision() as f64, f64::from(r.as_ref().is_ok_and(|changed| *changed)));
                         this.report(
                             r,
                             if this.editor.box_start.is_some() {
@@ -2667,6 +2682,7 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let _span = perf::Span::new("ui_render");
         #[cfg(target_family = "wasm")]
         crate::web::set_unsaved(self.editor.engine.is_dirty());
         for comment in self
