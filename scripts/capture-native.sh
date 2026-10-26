@@ -45,7 +45,7 @@ for theme in dark light; do
   done
   [[ -n "$window" ]] || { cat "$XDG_RUNTIME_DIR/$theme.log"; exit 1; }
   xdotool windowmove "$window" 0 0 windowsize "$window" 1440 900
-  xdotool mousemove 1439 899
+  xdotool mousemove 400 60
   # Allow the full-quality CPU render and compositor upload to finish.
   sleep 6
   kill -0 "$app_pid"
@@ -56,7 +56,9 @@ for theme in dark light; do
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
   mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_DIR/app-$theme-small.png"
-  if [[ "${VOXELITE_CAPTURE_UI_ONLY:-0}" == 1 ]]; then
+  if [[ "${VOXELITE_CAPTURE_UI2:-0}" == 1 ]]; then
+    source scripts/lib/capture-ui2.sh
+  elif [[ "${VOXELITE_CAPTURE_UI_ONLY:-0}" == 1 ]]; then
     source scripts/lib/capture-ui.sh
   else
     source scripts/lib/capture-polish-2.sh
