@@ -15,6 +15,7 @@ use keyboard_guide::keyboard_guide;
 mod orientation;
 use comments::Panel;
 mod palettes;
+mod save_flow;
 mod settings;
 mod shortcut_hint;
 mod tooltip;
@@ -99,11 +100,8 @@ pub struct EditorView {
     palette_cursor: usize,
     palette_scroll: ScrollHandle,
     swatch_scroll: ScrollHandle,
-    pending_choice: usize,
-    after_save: Option<Op>,
-    dialog_open: bool,
+    save_flow: save_flow::SaveFlow,
     info: Option<(&'static str, InfoContent)>,
-    pending: Option<Op>,
     status: HintText,
     error: bool,
 }
@@ -233,16 +231,13 @@ impl EditorView {
         let weak = cx.weak_entity();
         window.on_window_should_close(cx, move |_, cx| {
             weak.update(cx, |this, cx| {
-                if this.dialog_open {
-                    return false;
-                }
-                if this.editor.engine.is_dirty() {
-                    this.pending = Some(Op::Quit);
-                    this.pending_choice = 2;
-                    cx.notify();
-                    false
-                } else {
-                    true
+                match this.save_flow.request_close(this.editor.engine.is_dirty()) {
+                    save_flow::CloseRequest::Allow => true,
+                    save_flow::CloseRequest::Blocked => false,
+                    save_flow::CloseRequest::Confirm => {
+                        cx.notify();
+                        false
+                    }
                 }
             })
             .unwrap_or(true)
@@ -320,11 +315,8 @@ impl EditorView {
             palette_cursor: 0,
             palette_scroll: ScrollHandle::new(),
             swatch_scroll: ScrollHandle::new(),
-            pending_choice: 2,
-            after_save: None,
-            dialog_open: false,
+            save_flow: save_flow::SaveFlow::default(),
             info: None,
-            pending: None,
             status: library_error
                 .clone()
                 .or(agent_error.clone())
@@ -408,8 +400,8 @@ impl EditorView {
     }
     fn availability(&self, op: Op) -> Result<(), &'static str> {
         op.availability(CommandContext::Editor(EditorState {
-            dialog_open: self.dialog_open,
-            pending_confirmation: self.pending.is_some(),
+            dialog_open: self.save_flow.dialog_open(),
+            pending_confirmation: self.save_flow.needs_confirmation(),
             modal_open: self.info.is_some() || self.palettes.open,
             preview: self.editor.preview.is_some(),
             history_playing: self.editor.history_playing(),
@@ -470,9 +462,10 @@ impl EditorView {
         self.menu = None;
         self.commands.close();
         self.palette_open = false;
-        if matches!(op, Op::New | Op::Open | Op::Quit) && self.editor.engine.is_dirty() {
-            self.pending = Some(op);
-            self.pending_choice = 2;
+        if self
+            .save_flow
+            .confirm_if_dirty(op, self.editor.engine.is_dirty())
+        {
             cx.notify();
             return;
         }
@@ -616,136 +609,6 @@ impl EditorView {
         }
         cx.notify();
     }
-    #[cfg(not(target_family = "wasm"))]
-    fn open_dialog(&mut self, cx: &mut Context<Self>) {
-        self.dialog_open = true;
-        self.status = "Choose a project to open…".into();
-        self.drag = None;
-        let receiver = cx.prompt_for_paths(PathPromptOptions {
-            files: true,
-            directories: false,
-            multiple: false,
-            prompt: Some("Open .voxl project".into()),
-        });
-        cx.spawn(async move |this, cx| {
-            let result = receiver.await;
-            let _ = this.update(cx, |this, cx| {
-                match result {
-                    Ok(Ok(Some(paths))) if !paths.is_empty() => {
-                        let path = paths[0].clone();
-                        this.status = "Opening project…".into();
-                        let task = cx.background_executor().spawn(async move { Editor::open(&path) });
-                        cx.spawn(async move |this, cx| {
-                            let result = task.await;
-                            let _ = this.update(cx, |this, cx| {
-                                this.dialog_open = false;
-                                match result {
-                                    Ok(editor) => { this.replace_editor(editor, cx); this.status = "Project opened".into(); }
-                                    Err(error) => { this.status = error.to_string().into(); this.error = true; }
-                                }
-                                cx.notify();
-                            });
-                        }).detach();
-                    }
-                    Ok(Ok(_)) => { this.dialog_open = false; }
-                    _ => {
-                        this.dialog_open = false;
-                        this.status = "Open dialog unavailable. Enable a desktop file portal or open a .voxl path from the command line.".into();
-                        this.error = true;
-                    }
-                }
-                cx.notify();
-            });
-        }).detach();
-    }
-    #[cfg(not(target_family = "wasm"))]
-    fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        self.dialog_open = true;
-        self.status = "Saving project…".into();
-        let save = self.editor.prepare_save(&path);
-        let task = cx.background_executor().spawn(async move { save.write() });
-        cx.spawn(async move |this, cx| {
-            let result = task.await;
-            let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
-                let next = this.after_save.take();
-                match result {
-                    Ok(saved) => {
-                        this.editor.finish_save(saved);
-                        this.status = "Saved".into();
-                        this.error = false;
-                        if let Some(op) = next {
-                            this.run(op, cx);
-                        }
-                    }
-                    Err(error) => {
-                        this.status = error.to_string().into();
-                        this.error = true;
-                    }
-                }
-                cx.notify();
-            });
-        })
-        .detach();
-    }
-    #[cfg(not(target_family = "wasm"))]
-    fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
-        if !save_as && let Some(path) = self.editor.path.clone() {
-            self.write_project(path, cx);
-            return;
-        }
-        self.choose_save_path(cx);
-    }
-    #[cfg(not(target_family = "wasm"))]
-    fn choose_save_path(&mut self, cx: &mut Context<Self>) {
-        let directory = self
-            .editor
-            .path
-            .as_ref()
-            .and_then(|p| p.parent())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-        let suggested = format!(
-            "{}.voxl",
-            self.editor.snapshot().name.replace(['/', '\\'], "-")
-        );
-        self.dialog_open = true;
-        self.status = "Choose where to save this project…".into();
-        let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
-        cx.spawn(async move |this, cx| {
-            let result = receiver.await;
-            let _ = this.update(cx, |this, cx| {
-                match result {
-                    Ok(Ok(Some(mut path))) => {
-                        if path.extension().is_none() { path.set_extension("voxl"); }
-                        this.write_project(path, cx);
-                    }
-                    Ok(Ok(None)) => { this.dialog_open = false; this.after_save = None; }
-                    _ => {
-                        this.dialog_open = false;
-                        this.after_save = None;
-                        this.status = "Save dialog unavailable. Enable a desktop file portal; edits are still open.".into();
-                        this.error = true;
-                    }
-                }
-                cx.notify();
-            });
-        }).detach();
-    }
-    fn resolve_pending(&mut self, choice: usize, cx: &mut Context<Self>) {
-        let Some(op) = self.pending.take() else {
-            return;
-        };
-        match choice {
-            0 => self.run(op, cx),
-            2 => {
-                self.after_save = Some(op);
-                self.save(false, cx);
-            }
-            _ => {}
-        }
-        cx.notify();
-    }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
         if self.gizmo_drag.is_some() {
             return;
@@ -754,8 +617,8 @@ impl EditorView {
             || self.menu.is_some()
             || self.palette_open
             || self.info.is_some()
-            || self.pending.is_some()
-            || self.dialog_open
+            || self.save_flow.needs_confirmation()
+            || self.save_flow.dialog_open()
         {
             return;
         }
@@ -796,27 +659,8 @@ impl EditorView {
         if self.settings_modal.is_some() {
             return;
         }
-        if self.pending.is_some() {
-            let key = navigation_key(&e.keystroke).unwrap_or_default();
-            if e.keystroke.key == "d"
-                && ShortcutPlatform::current().is_primary(e.keystroke.modifiers)
-            {
-                self.resolve_pending(0, cx);
-            } else {
-                match key {
-                    "escape" => self.resolve_pending(1, cx),
-                    "left" => self.pending_choice = (self.pending_choice + 2) % 3,
-                    "right" | "tab" => {
-                        self.pending_choice = (self.pending_choice
-                            + if e.keystroke.modifiers.shift { 2 } else { 1 })
-                            % 3
-                    }
-                    "enter" => self.resolve_pending(self.pending_choice, cx),
-                    _ => {}
-                }
-            }
-            cx.stop_propagation();
-            cx.notify();
+        if self.save_flow.needs_confirmation() {
+            self.pending_key(&e.keystroke, cx);
             return;
         }
         if self.palette_focus.is_focused(window) {
@@ -857,14 +701,14 @@ impl EditorView {
                 return;
             }
         }
-        if self.dialog_open {
+        if self.save_flow.dialog_open() {
             cx.stop_propagation();
             return;
         }
         let key = navigation_key(&e.keystroke).unwrap_or_default();
 
         if key == "tab"
-            && self.pending.is_none()
+            && !self.save_flow.needs_confirmation()
             && !self.commands.is_open()
             && self.menu.is_none()
             && self.info.is_none()
@@ -917,7 +761,7 @@ impl EditorView {
             self.commands.close();
             self.palette_open = false;
             self.info = None;
-            self.pending = None;
+            self.save_flow.cancel_confirmation();
             self.editor.box_start = None;
             self.drag = None;
             self.gizmo_drag = None;
@@ -976,7 +820,7 @@ impl EditorView {
             cx.notify();
             return;
         }
-        if self.info.is_some() || self.pending.is_some() || self.palette_open {
+        if self.info.is_some() || self.save_flow.needs_confirmation() || self.palette_open {
             cx.stop_propagation();
             return;
         }
@@ -1411,7 +1255,7 @@ impl EditorView {
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, e: &MouseDownEvent, _, cx| {
-                    if this.dialog_open {
+                    if this.save_flow.dialog_open() {
                         return;
                     }
                     this.drag = Some(e.position);
@@ -1421,7 +1265,7 @@ impl EditorView {
             .on_mouse_down(
                 MouseButton::Middle,
                 cx.listener(|this, e: &MouseDownEvent, _, cx| {
-                    if this.dialog_open {
+                    if this.save_flow.dialog_open() {
                         return;
                     }
                     this.drag = Some(e.position);
@@ -1439,8 +1283,8 @@ impl EditorView {
                     }
                     if this.commands.is_open()
                         || this.info.is_some()
-                        || this.pending.is_some()
-                        || this.dialog_open
+                        || this.save_flow.needs_confirmation()
+                        || this.save_flow.dialog_open()
                     {
                         return;
                     }
@@ -1489,12 +1333,12 @@ impl EditorView {
                 cx.listener(|this, _, _, _| this.drag = None),
             )
             .on_scroll_wheel(cx.listener(|this, e: &ScrollWheelEvent, _, cx| {
-                if this.dialog_open
+                if this.save_flow.dialog_open()
                     || this.commands.is_open()
                     || this.palette_open
                     || this.menu.is_some()
                     || this.info.is_some()
-                    || this.pending.is_some()
+                    || this.save_flow.needs_confirmation()
                 {
                     return;
                 }
@@ -2050,13 +1894,13 @@ impl EditorView {
                     .into_any_element(),
             );
         }
-        if self.agent.open && !self.dialog_open {
+        if self.agent.open && !self.save_flow.dialog_open() {
             return Some(self.agent_popover(cx));
         }
-        if self.palettes.open && !self.dialog_open {
+        if self.palettes.open && !self.save_flow.dialog_open() {
             return Some(self.palette_manager(cx));
         }
-        if self.dialog_open {
+        if self.save_flow.dialog_open() {
             return Some(
                 div()
                     .absolute()
@@ -2069,7 +1913,7 @@ impl EditorView {
                     .into_any_element(),
             );
         }
-        if self.pending.is_some() {
+        if self.save_flow.needs_confirmation() {
             return Some(
                 div()
                     .absolute()
@@ -2120,16 +1964,18 @@ impl EditorView {
                                                 .when(i == 0, |d| d.mr_auto())
                                                 .rounded(px(6.0))
                                                 .border_1()
-                                                .border_color(if self.pending_choice == i {
-                                                    t.accent()
-                                                } else {
-                                                    t.line()
-                                                })
+                                                .border_color(
+                                                    if self.save_flow.choice_index() == i {
+                                                        t.accent()
+                                                    } else {
+                                                        t.line()
+                                                    },
+                                                )
                                                 .bg(t.background())
                                                 .when(i == 2, |d| {
                                                     d.bg(t.accent()).text_color(t.background())
                                                 })
-                                                .when(self.pending_choice == i, |d| {
+                                                .when(self.save_flow.choice_index() == i, |d| {
                                                     d.shadow(focus_ring(t))
                                                 })
                                                 .cursor_pointer()
@@ -2532,9 +2378,9 @@ impl Render for EditorView {
                 "CommandPalette"
             } else if self.menu.is_some()
                 || self.palette_open
-                || self.pending.is_some()
+                || self.save_flow.needs_confirmation()
                 || self.info.is_some()
-                || self.dialog_open
+                || self.save_flow.dialog_open()
                 || self.palettes.open
                 || self.agent.open
             {
@@ -2608,7 +2454,7 @@ impl Render for EditorView {
                             this.palette_open = false;
                             this.commands.close();
                             this.info = None;
-                            this.pending = None;
+                            this.save_flow.cancel_confirmation();
                             this.drag = None;
                             cx.stop_propagation();
                             cx.notify();

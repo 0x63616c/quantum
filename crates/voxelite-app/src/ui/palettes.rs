@@ -172,7 +172,7 @@ impl EditorView {
     }
     #[cfg(not(target_family = "wasm"))]
     fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
-        self.dialog_open = true;
+        self.save_flow.begin_dialog();
         let palette = self.active_palette();
         let name = self.palette_name();
         cx.spawn(async move |this, cx| {
@@ -245,7 +245,7 @@ impl EditorView {
                 Err(e) => Err(voxelite_app::editor::EditorError::Gesture(e.to_string())),
             };
             let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
+                this.save_flow.finish_dialog();
                 let result = result.and_then(|import| {
                     if let Some((name, palette)) = import {
                         let mut id = None;
@@ -288,7 +288,7 @@ impl EditorView {
                 return;
             }
         };
-        self.dialog_open = true;
+        self.save_flow.begin_dialog();
         cx.spawn(async move |this, cx| {
             let result = upload.await.and_then(|selection| {
                 selection
@@ -313,7 +313,7 @@ impl EditorView {
                     .transpose()
             });
             let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
+                this.save_flow.finish_dialog();
                 let result = result.and_then(|selection| {
                     if let Some((name, palette)) = selection {
                         let mut id = None;

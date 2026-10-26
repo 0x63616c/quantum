@@ -47,7 +47,7 @@ impl Agent {
 }
 impl EditorView {
     pub(super) fn poll_agent(&mut self, cx: &mut Context<Self>) {
-        if self.dialog_open || self.pending.is_some() {
+        if self.save_flow.dialog_open() || self.save_flow.needs_confirmation() {
             return;
         }
         let Some(session) = &mut self.agent.session else {
