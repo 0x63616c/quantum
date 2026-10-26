@@ -8,6 +8,7 @@ mod agent;
 mod browser;
 mod comments;
 mod history;
+mod orientation;
 use comments::Panel;
 mod palettes;
 mod settings;
@@ -80,6 +81,9 @@ pub struct EditorView {
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
+    gizmo_drag: Option<orientation::GizmoDrag>,
+    gizmo_hover: Option<voxelite_app::gizmo::AxisEnd>,
+    gizmo_bounds: Rc<Cell<Bounds<Pixels>>>,
     grid: bool,
     menu: Option<usize>,
     menu_index: usize,
@@ -129,6 +133,15 @@ impl Render for Hint {
 }
 fn row() -> Div {
     div().flex().items_center()
+}
+fn focus_ring(theme: Theme) -> Vec<BoxShadow> {
+    vec![BoxShadow {
+        inset: false,
+        color: theme.accent(),
+        offset: point(px(0.0), px(0.0)),
+        blur_radius: px(0.0),
+        spread_radius: px(2.0),
+    }]
 }
 fn mono(text: impl Into<SharedString>) -> Div {
     div()
@@ -349,6 +362,9 @@ impl EditorView {
             viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
+            gizmo_drag: None,
+            gizmo_hover: None,
+            gizmo_bounds: Rc::new(Cell::new(Bounds::default())),
             menu: None,
             menu_index: 0,
             palette_open: false,
@@ -936,6 +952,9 @@ impl EditorView {
         )
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.gizmo_drag.is_some() {
+            return;
+        }
         if self.command_open
             || self.menu.is_some()
             || self.palette_open
@@ -1089,6 +1108,8 @@ impl EditorView {
             self.pending = None;
             self.editor.box_start = None;
             self.drag = None;
+            self.gizmo_drag = None;
+            self.gizmo_hover = None;
             self.hover = None;
             self.status = "Ready".into();
             self.error = false;
@@ -1525,76 +1546,6 @@ impl EditorView {
                     .text_color(t.background()),
             )
     }
-    /// Project the world axes with the displayed camera, not a fixed illustration.
-    fn orientation(&self, cx: &Context<Self>) -> Stateful<Div> {
-        let t = self.theme;
-        let (right, up, _) = self.display_camera.basis();
-        let axes = [
-            ("X", DVec3::X, Op::Right),
-            ("Y", DVec3::Y, Op::Top),
-            ("Z", DVec3::Z, Op::Front),
-        ]
-        .map(|(label, axis, op)| {
-            (
-                label,
-                [axis.dot(right) as f32 * 34.0, -axis.dot(up) as f32 * 34.0],
-                op,
-            )
-        });
-        div()
-            .id("orientation")
-            .absolute()
-            .top(px(12.0))
-            .right(px(12.0))
-            .size(px(104.0))
-            .cursor_default()
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| {
-                        let center = bounds.origin + point(px(52.0), px(52.0));
-                        let mut path = PathBuilder::stroke(px(1.0));
-                        for (_, delta, _) in axes {
-                            path.move_to(center - point(px(delta[0] * 0.5), px(delta[1] * 0.5)));
-                            path.line_to(center + point(px(delta[0]), px(delta[1])));
-                        }
-                        if let Ok(path) = path.build() {
-                            window.paint_path(path, t.muted().opacity(0.55));
-                        }
-                    },
-                )
-                .size_full(),
-            )
-            .children(axes.into_iter().enumerate().map(|(i, (label, delta, op))| {
-                row()
-                    .id(("axis", i))
-                    .absolute()
-                    .left(px(36.0 + delta[0]))
-                    .top(px(36.0 + delta[1]))
-                    .size(px(32.0))
-                    .justify_center()
-                    .rounded_full()
-                    .cursor_pointer()
-                    .tooltip(hint(op.label(), t))
-                    .hover(move |d| d.bg(t.hover()))
-                    .child(
-                        row()
-                            .size(px(22.0))
-                            .justify_center()
-                            .rounded_full()
-                            .border_1()
-                            .border_color(t.line())
-                            .bg(t.background())
-                            .text_size(px(12.0))
-                            .text_color(t.muted())
-                            .child(label),
-                    )
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_click(cx.listener(move |this, _, window, cx| this.invoke(op, window, cx)))
-            }))
-            .on_mouse_move(|_, _, cx| cx.stop_propagation())
-    }
-
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         let compact = self.render_size[0] < 800;
@@ -2966,6 +2917,25 @@ impl Render for EditorView {
             .font(gpui::font("Geist"))
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
+            .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
+                if this.gizmo_drag.is_some() {
+                    this.move_gizmo(event, cx);
+                }
+            }))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseUpEvent, _, cx| {
+                    this.release_gizmo(event.position, cx);
+                }),
+            )
+            .on_mouse_up_out(
+                MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.gizmo_drag = None;
+                    this.gizmo_hover = None;
+                    cx.notify();
+                }),
+            )
             .on_action(cx.listener(|this, op: &Op, window, cx| {
                 if matches!(
                     op,
