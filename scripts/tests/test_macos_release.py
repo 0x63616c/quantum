@@ -38,8 +38,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("ref: refs/tags/${{ env.TAG }}", WORKFLOW.read_text())
 
     def test_self_hosted_guards_and_pins(self):
-        guard = ("    if: github.event_name != 'pull_request' || "
-                 "github.event.pull_request.head.repo.full_name == github.repository")
+        guard = ("    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || "
+                 "github.event.pull_request.head.repo.full_name == github.repository)")
         for path in (ROOT / ".github/workflows").glob("*.yml"):
             workflow = path.read_text()
             self.assertNotIn("pull_request_target:", workflow)
