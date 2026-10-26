@@ -10,6 +10,20 @@ use voxelite_format::Project;
 
 pub(crate) type Fingerprint = [u8; 32];
 
+/// Replace app preferences atomically, using the same durable staging as project saves.
+pub(crate) fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
+    use std::io::Write;
+    let parent = path
+        .parent()
+        .ok_or_else(|| EditorError::Gesture("Invalid settings path".into()))?;
+    fs::create_dir_all(parent)?;
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    temporary.write_all(bytes)?;
+    temporary.as_file().sync_all()?;
+    temporary.persist(path).map_err(|e| e.error)?;
+    Ok(())
+}
+
 pub(crate) fn read(path: &Path) -> EditorResult<Vec<u8>> {
     // Reject devices and FIFOs before open, which could otherwise block forever.
     if !fs::metadata(path)?.is_file() {
