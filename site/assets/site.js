@@ -18,8 +18,13 @@ for (const link of document.querySelectorAll('[data-markdown]')) {
       // A promised ClipboardItem keeps the write within the click's user
       // activation in browsers that require it, even while fetching the page.
       if (window.ClipboardItem && navigator.clipboard.write) {
+        const content = markdown.then(text => new Blob([text], { type: 'text/plain' }));
+        // A denied write can reject before it consumes the promised content.
+        // Observe a later download failure even when the clipboard ignores it;
+        // the original promise still rejects for writes that do consume it.
+        void content.catch(() => {});
         await navigator.clipboard.write([new ClipboardItem({
-          'text/plain': markdown.then(text => new Blob([text], { type: 'text/plain' }))
+          'text/plain': content
         })]);
       } else {
         await navigator.clipboard.writeText(await markdown);

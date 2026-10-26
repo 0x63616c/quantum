@@ -154,8 +154,30 @@ try {
   await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
   await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
   assert.equal(await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).isEnabled(), true);
+  // Deny the clipboard before completing the download. A later fetch rejection
+  // must still be handled even when the browser never reads the ClipboardItem.
+  for (const failure of ['http', 'network', 'unexpected-content']) {
+    let receiveDownload;
+    const downloadReady = new Promise(resolve => { receiveDownload = resolve; });
+    await clipboard.route('**/docs/skills.md', route => receiveDownload(route));
+    await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+    const download = await downloadReady;
+    await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
+    if (failure === 'network') await download.abort();
+    else await download.fulfill({ status: failure === 'http' ? 503 : 200, body: '<html>Unavailable</html>' });
+    await clipboard.waitForLoadState('networkidle');
+    assert.deepEqual(clipboardErrors, [], `No unhandled rejection after delayed ${failure} failure`);
+    await clipboard.unroute('**/docs/skills.md');
+  }
+  await clipboard.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await clipboard.reload();
+  await clipboard.evaluate(() => Object.defineProperty(window, 'ClipboardItem', { value: undefined }));
+  const fallbackMarkdown = await (await clipboard.request.get(base + '/docs/skills.md')).text();
+  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
+  await clipboard.getByRole('status').filter({ hasText: /^Copied$/ }).waitFor();
+  assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), fallbackMarkdown);
   assert.deepEqual(clipboardErrors, []);
-  report.checks.push('All doc Markdown aliases return identical content; keyboard copying preserves the complete page including schemas; fetch and clipboard failures give a usable fallback');
+  report.checks.push('All doc Markdown aliases return identical content; keyboard copying preserves the complete page including schemas; writeText fallback works; simultaneous clipboard denial and delayed HTTP, network or content failures remain handled');
   await clipboard.close();
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await page.goto(base);
