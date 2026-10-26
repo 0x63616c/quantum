@@ -35,7 +35,7 @@ const PAGES: &[DocPage] = &[
     DocPage {
         slug: "getting-started",
         title: "Getting started",
-        description: "Build Voxelite from source, connect your AI agent through MCP, and create your first voxel model with a step-by-step guide to editing and exports.",
+        description: "Download Voxelite for Mac or build from source, connect your AI agent through MCP, and create your first voxel model with a guide to editing and exports.",
         content: include_str!("../../../site/content/getting-started.html"),
     },
     DocPage {
@@ -114,7 +114,7 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {metadata}
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){{(window.vaq=window.vaq||[]).push(arguments)}};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){{(window.siq=window.siq||[]).push(arguments)}};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
-<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Voxelite</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
 "##
     )
@@ -207,6 +207,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             structured_data = seo::software_application(),
         ),
     )?;
+    fs::create_dir_all(root.join("download"))?;
+    fs::write(
+        root.join("download/index.html"),
+        format!(
+            include_str!("../templates/download.html"),
+            metadata = seo::metadata(
+                "/download/",
+                "Download Voxelite for Mac — Voxelite",
+                "Download Voxelite for Mac, the free, open-source voxel editor built for AI agents. Install on Apple silicon with macOS 13 or later and start creating.",
+            ),
+        ),
+    )?;
     fs::write(
         root.join("assets/mcp-tools.json"),
         format!("{}\n", serde_json::to_string_pretty(&tools)?),
@@ -242,11 +254,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             "<p>This page could not be found. Head back to the <a href=\"/\">Voxelite homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
         ),
     )?;
-    let mut public_paths = vec!["/".to_owned(), "/app/".to_owned()];
+    let mut public_paths = vec!["/".to_owned(), "/download/".to_owned(), "/app/".to_owned()];
     public_paths.extend(PAGES.iter().map(DocPage::path));
     seo::write_crawl_files(root, &public_paths)?;
     println!(
-        "Generated homepage, {} documentation pages and {} MCP tool references",
+        "Generated homepage, download page, {} documentation pages and {} MCP tool references",
         PAGES.len(),
         tools.len()
     );
