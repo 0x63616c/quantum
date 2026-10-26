@@ -1,7 +1,9 @@
 # Voxelite website
 
-A local-first static marketing site and Rust-generated documentation. No tracking,
-remote fonts, or runtime framework. Dark and light themes share the app's Geist
+A local-first static marketing site and Rust-generated documentation. No cookies,
+remote fonts, or runtime framework. Every page loads Vercel Web Analytics and
+Speed Insights from same-origin `/_vercel/` paths: cookie-free, anonymous page-view
+and performance counts, nothing in the editor or your files. Dark and light themes share the app's Geist
 fonts and neutral tokens. The bundled editor is the actual Rust GPUI wasm app.
 
 From the repository root:

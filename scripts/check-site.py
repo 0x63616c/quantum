@@ -68,6 +68,8 @@ checked = 0
 def check(source, link):
     global checked
     url = urlsplit(link)
+    if url.path.startswith('/_vercel/'):
+        return  # Served by Vercel at the edge, not part of the static tree.
     if (url.scheme or url.netloc) and (url.scheme, url.netloc) != ('https', urlsplit(BASE_URL).netloc):
         return
     target = (SITE / unquote(url.path).lstrip('/') if url.path.startswith('/')
@@ -134,8 +136,22 @@ def check_seo(path, page):
     assert icons[0].get('href') in ('/assets/mark.svg', f'{BASE_URL}/assets/mark.svg'), 'Incorrect favicon'
 
 
+ANALYTICS_SCRIPTS = ('/_vercel/insights/script.js', '/_vercel/speed-insights/script.js')
+ANALYTICS_QUEUES = ('window.va=window.va||', 'window.si=window.si||')
+
+def check_analytics(path, page):
+    sources = [attrs.get('src') for name, attrs in page.head if name == 'script']
+    for src in ANALYTICS_SCRIPTS:
+        assert sources.count(src) == 1, f'Expected one {src} in head'
+        assert 'defer' in next(a for n, a in page.head if n == 'script' and a.get('src') == src), f'{src} must be deferred'
+    text = path.read_text()
+    for queue in ANALYTICS_QUEUES:
+        assert queue in text, f'Missing analytics queue {queue}'
+
+
 for path, page in pages.items():
     try:
+        check_analytics(path, page)
         check_seo(path, page)
     except AssertionError as error:
         raise AssertionError(f'{path.relative_to(SITE)}: {error}') from error
