@@ -78,11 +78,12 @@ impl Theme {
     pub fn disabled(self) -> Hsla {
         rgb(0x737373).into()
     }
-    pub fn toggle(&mut self) {
-        *self = if *self == Self::Dark {
-            Self::Light
-        } else {
-            Self::Dark
-        };
+    /// Conventional world-axis colors with legible inverse labels in both themes.
+    pub fn axis(self, axis: usize) -> Hsla {
+        rgb(match self {
+            Self::Dark => [0xf87171, 0x86efac, 0x93c5fd][axis],
+            Self::Light => [0xb91c1c, 0x15803d, 0x1d4ed8][axis],
+        })
+        .into()
     }
 }

@@ -28,6 +28,15 @@ pub fn init() {
     });
 }
 
+/// Whether the bundled updater is available on the main thread.
+pub fn is_available() -> bool {
+    if MainThreadMarker::new().is_none() {
+        return false;
+    }
+    init();
+    CONTROLLER.with(|slot| matches!(slot.get(), Some(Some(_))))
+}
+
 /// Handle the macOS “Check for Updates…” menu action on GPUI's main thread.
 ///
 /// Does nothing if Sparkle is unavailable or an update check is already active.

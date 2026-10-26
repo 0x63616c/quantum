@@ -136,6 +136,12 @@ impl EditorView {
         let t = self.theme;
         row()
             .id(id)
+            .tab_index(0)
+            .focus_visible(move |d| {
+                d.bg(if name == "send" { t.text() } else { t.hover() })
+                    .shadow(focus_ring(t))
+            })
+            .active(move |d| d.bg(t.selected()).text_color(t.accent()))
             .h(px(34.0))
             .px(px(10.0))
             .gap(px(6.0))
@@ -144,11 +150,13 @@ impl EditorView {
             .border_color(t.line())
             .cursor_pointer()
             .hover(move |d| d.bg(t.hover()))
-            .child(icon(name).text_color(if matches!(name, "send") {
-                t.background()
-            } else {
-                t.muted()
-            }))
+            .when(!name.is_empty(), |d| {
+                d.child(icon(name).text_color(if matches!(name, "send") {
+                    t.background()
+                } else {
+                    t.muted()
+                }))
+            })
             .child(
                 div()
                     .min_w(px(0.0))

@@ -114,24 +114,33 @@ fn main() -> anyhow::Result<()> {
                 .expect("bundled fonts");
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
-            let theme = options
-                .theme
-                .unwrap_or_else(|| match cx.window_appearance() {
-                    WindowAppearance::Light | WindowAppearance::VibrantLight => Theme::Light,
-                    _ => Theme::Dark,
-                });
             let bounds = Bounds::centered(None, size(px(1440.0), px(900.0)), cx);
             if let Err(error) = cx.open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    titlebar: None,
+                    titlebar: if cfg!(target_os = "macos") {
+                        Some(TitlebarOptions {
+                            title: Some("Voxelite".into()),
+                            appears_transparent: true,
+                            traffic_light_position: Some(point(px(20.0), px(24.0))),
+                        })
+                    } else {
+                        None
+                    },
+                    app_owns_titlebar_drag: cfg!(target_os = "macos"),
                     window_min_size: Some(size(px(1024.0), px(640.0))),
                     app_id: Some("dev.voxelite.editor".into()),
                     ..Default::default()
                 },
                 |window, cx| {
                     cx.new(|cx| {
-                        ui::EditorView::new(editor, theme, options.session_socket, window, cx)
+                        ui::EditorView::new(
+                            editor,
+                            options.theme,
+                            options.session_socket,
+                            window,
+                            cx,
+                        )
                     })
                 },
             ) {

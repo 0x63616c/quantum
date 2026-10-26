@@ -6,28 +6,33 @@ use crate::{
 use gpui::{prelude::*, *};
 
 #[derive(Clone, IntoElement)]
-struct Shortcut {
+struct Keycap {
     tokens: Vec<ShortcutToken>,
 }
 
-impl Shortcut {
+impl Keycap {
     fn new(binding: &str) -> Self {
+        let platform = ShortcutPlatform::current();
+        // Headless Linux captures can exercise the Mac typography without
+        // changing real key bindings. This hook is absent from release builds.
+        #[cfg(all(debug_assertions, not(target_family = "wasm")))]
+        let platform = if std::env::var_os("VOXELITE_CAPTURE_MAC_UI").is_some() {
+            ShortcutPlatform::Apple
+        } else {
+            platform
+        };
         Self {
-            tokens: shortcut_tokens(binding, ShortcutPlatform::current()),
+            tokens: shortcut_tokens(binding, platform),
         }
     }
 }
 
-impl RenderOnce for Shortcut {
+impl RenderOnce for Keycap {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let style = window.text_style();
-        let font_size = style.font_size.to_pixels(window.rem_size());
-        let line_height = window.pixel_snap(
-            style
-                .line_height
-                .to_pixels(font_size.into(), window.rem_size()),
-        );
-        let font = gpui::font("Geist Mono");
+        let font_size = px(12.0);
+        let line_height = px(16.0);
+        let font = gpui::font("Geist");
         let font_id = cx.text_system().resolve_font(&font);
         let cap_height = cx.text_system().cap_height(font_id, font_size);
         // Use the same shaped-line metrics as GPUI's text painter. Some
@@ -45,6 +50,7 @@ impl RenderOnce for Shortcut {
             .flex_shrink_0()
             .h(line_height)
             .font(font)
+            .text_size(font_size)
             .font_weight(FontWeight::NORMAL)
             .line_height(line_height)
             .role(Role::Label)
@@ -62,22 +68,22 @@ impl RenderOnce for Shortcut {
                         ShortcutSymbol::Return | ShortcutSymbol::Tab | ShortcutSymbol::Space => 1.2,
                         _ => 1.0,
                     };
-                    // Paths include their stroke within a 20-unit cap box. A
-                    // 2-unit stroke is 0.852px at 12px, like Geist Mono Regular.
-                    // The small trailing bearing keeps Mac chords compact.
+                    // The SVG ink fills its viewBox. Match the UI letter cap
+                    // height and leave a single logical pixel between symbols.
+                    let symbol_height = window.pixel_snap(cap_height);
                     result = result.child(
                         div()
                             .relative()
                             .flex_shrink_0()
-                            .w(cap_height * aspect + font_size * 0.08)
+                            .w(symbol_height * aspect + px(1.0))
                             .h(line_height)
                             .child(
                                 svg()
                                     .path(symbol.path())
                                     .absolute()
-                                    .top(baseline - cap_height)
-                                    .w(cap_height * aspect)
-                                    .h(cap_height)
+                                    .top(window.pixel_snap(baseline - symbol_height))
+                                    .w(symbol_height * aspect)
+                                    .h(symbol_height)
                                     .text_color(style.color),
                             ),
                     );
@@ -87,12 +93,23 @@ impl RenderOnce for Shortcut {
         if !text.is_empty() {
             result = result.child(text);
         }
-        result
+        div()
+            .flex()
+            .items_center()
+            .justify_center()
+            .flex_shrink_0()
+            .min_w(px(22.0))
+            .h(px(22.0))
+            .px(px(5.0))
+            .rounded(px(4.0))
+            .border_1()
+            .border_color(style.color.opacity(0.28))
+            .child(result)
     }
 }
 
 pub(super) fn shortcut(binding: &str) -> Div {
-    div().text_size(px(12.0)).child(Shortcut::new(binding))
+    div().text_size(px(12.0)).child(Keycap::new(binding))
 }
 
 pub(super) fn action_shortcut(op: Op) -> Div {
@@ -102,7 +119,7 @@ pub(super) fn action_shortcut(op: Op) -> Div {
 #[derive(Clone)]
 enum HintPart {
     Text(SharedString),
-    Key(Shortcut),
+    Key(Keycap),
 }
 
 /// Rich prose keeps bindings structured even inside tooltips and help text.
@@ -128,7 +145,7 @@ impl HintText {
     }
 
     pub(super) fn key(mut self, binding: &str) -> Self {
-        self.0.push(HintPart::Key(Shortcut::new(binding)));
+        self.0.push(HintPart::Key(Keycap::new(binding)));
         self
     }
 
@@ -148,7 +165,7 @@ impl RenderOnce for HintText {
             return text.clone().into_any_element();
         }
         let mut result = div().flex().flex_col();
-        let mut line = div().flex().flex_wrap();
+        let mut line = div().flex().items_center().gap_x(px(2.0)).gap_y(px(4.0));
         for part in self.0 {
             match part {
                 HintPart::Key(key) => line = line.child(key),
@@ -156,10 +173,10 @@ impl RenderOnce for HintText {
                     for (index, paragraph) in text.split('\n').enumerate() {
                         if index > 0 {
                             result = result.child(line);
-                            line = div().flex().flex_wrap();
+                            line = div().flex().items_center().gap_x(px(2.0)).gap_y(px(4.0));
                         }
-                        // Keep prose wrapping at word boundaries while a key
-                        // chord remains an indivisible inline item.
+                        // Explicit newlines split paragraphs; each line stays
+                        // intact when the tooltip requests its intrinsic size.
                         for word in paragraph.split_inclusive(' ') {
                             line = line.child(SharedString::from(word.to_owned()));
                         }

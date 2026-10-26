@@ -118,49 +118,25 @@ impl EditorView {
             let invitation = div()
                 .px(px(PANEL_GUTTER))
                 .py(px(if compact { 16.0 } else { 20.0 }))
-                .child(
-                    row()
-                        .gap(px(12.0))
-                        .justify_between()
-                        .child(div().font_weight(FontWeight::MEDIUM).child(if connected {
-                            "Ready for agent edits"
-                        } else {
-                            "Build with an agent"
-                        }))
-                        .when(compact && !connected, |d| {
-                            d.child(self.control(
-                                "connect-agent-compact",
-                                "plug",
-                                "Connect",
-                                cx,
-                                |this, _, cx| {
-                                    this.agent.open = true;
-                                    cx.notify();
-                                },
-                            ))
-                        }),
-                )
-                .when(!compact, |d| {
-                    d.child(div().mt(px(6.0)).text_color(t.muted()).child(if connected {
-                        "Edits will appear here as they happen."
-                    } else {
-                        "Watch your scene take shape, live."
-                    }))
-                    .when(!connected, |d| {
-                        d.child(
-                            self.control(
-                                "connect-agent",
-                                "plug",
-                                "Connect agent",
-                                cx,
-                                |this, _, cx| {
-                                    this.agent.open = true;
-                                    cx.notify();
-                                },
-                            )
-                            .mt(px(14.0)),
-                        )
-                    })
+                .when(connected, |d| {
+                    d.child(section_title("Ready for agent edits")).child(
+                        div()
+                            .mt(px(6.0))
+                            .text_color(t.muted())
+                            .child("Edits will appear here as they happen."),
+                    )
+                })
+                .when(!connected, |d| {
+                    d.child(self.control(
+                        "connect-agent",
+                        "plug",
+                        "Connect agent",
+                        cx,
+                        |this, _, cx| {
+                            this.agent.open = true;
+                            cx.notify();
+                        },
+                    ))
                 });
             return div()
                 .flex_shrink_0()

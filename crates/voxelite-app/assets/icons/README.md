@@ -27,9 +27,9 @@ Local semantic aliases:
 
 Other filenames match upstream.
 
-Control audit: Save/Share, tools and mirrors, camera views, menus and command
+Control audit: Save/Settings, tools and mirrors, camera views, menus and command
 search, sidebar tabs and filters, connection/pause/revert actions, comments,
-history and named versions, palette authoring/interchange, local link settings,
+history and named versions, palette authoring/interchange, application settings,
 and unsaved-change choices use these glyphs. Labels remain where they distinguish
 actions. Menu-bar titles, coordinates, swatch values, axis labels and numbered
 comment pins remain text. Camera gestures use a compact mouse/key legend with a
