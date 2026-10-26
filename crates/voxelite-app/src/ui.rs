@@ -13,6 +13,8 @@ use comments::Panel;
 mod palettes;
 mod settings;
 mod shortcut_hint;
+mod tooltip;
+use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
 use crate::{
     actions::{MENUS, Op},
@@ -1307,17 +1309,28 @@ impl EditorView {
         row()
             .id(id)
             .aria_keyshortcuts(op.shortcut())
-            .tooltip(move |_, cx| {
-                cx.new(|_| Hint {
-                    text: if enabled {
-                        HintText::from(op.label()).text("  ").action(op)
-                    } else {
-                        format!("{} · {}", op.label(), disabled_reason).into()
-                    },
-                    theme,
-                })
-                .into()
+            .aria_label(op.label())
+            .when(enabled, |d| d.tab_index(0))
+            .focus_visible(move |d| {
+                d.bg(if primary { theme.text() } else { theme.hover() })
+                    .shadow(focus_ring(theme))
             })
+            .active(move |d| d.bg(theme.selected()).text_color(theme.accent()))
+            .anchored_hint(
+                if enabled {
+                    HintText::from(op.label()).text("  ").action(op)
+                } else {
+                    format!("{} · {}", op.label(), disabled_reason).into()
+                },
+                theme,
+                if id.starts_with("rail-") {
+                    TooltipSide::Right
+                } else if id.starts_with("view-") {
+                    TooltipSide::Above
+                } else {
+                    TooltipSide::Below
+                },
+            )
             .h(px(32.0))
             .min_w(px(32.0))
             .px(px(9.0))
@@ -1522,14 +1535,7 @@ impl EditorView {
                 )
                 .h(px(36.0))
                 .gap(px(12.0))
-                .child(
-                    action_shortcut(Op::Commands)
-                        .px(px(5.0))
-                        .py(px(2.0))
-                        .rounded(px(4.0))
-                        .border_1()
-                        .border_color(t.line()),
-                ),
+                .child(action_shortcut(Op::Commands)),
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
             .child(self.button("settings", "sliders-horizontal", "", Op::Settings, cx))
