@@ -516,26 +516,16 @@ impl SettingsView {
                 t,
             ),
             Section::Shortcuts => self.group(
-                [
-                    Op::New,
-                    Op::Open,
-                    Op::Save,
-                    Op::SaveAs,
-                    Op::Undo,
-                    Op::Redo,
-                    Op::Commands,
-                    Op::Settings,
-                    Op::Frame,
-                    Op::Place,
-                    Op::Erase,
-                    Op::Paint,
-                    Op::Box,
-                ]
-                .into_iter()
-                .map(|op| {
-                    self.form_row(op.label(), "", super::shortcut_hint::action_shortcut(op), t)
-                })
-                .collect(),
+                actions::shortcut_sheet(ShortcutPlatform::current())
+                    .map(|op| {
+                        self.form_row(
+                            op.label(),
+                            op.menu(cfg!(target_os = "macos")),
+                            super::shortcut_hint::sheet_shortcut(op),
+                            t,
+                        )
+                    })
+                    .collect(),
                 t,
             ),
             Section::Agent => self.group(
@@ -633,19 +623,10 @@ impl Render for SettingsView {
             cx.set_menus(actions::menus(
                 |_| false,
                 |op| {
-                    matches!(
-                        op,
-                        Op::About
-                            | Op::Settings
-                            | Op::CheckUpdates
-                            | Op::Quit
-                            | Op::Hide
-                            | Op::HideOthers
-                            | Op::ShowAll
-                            | Op::Minimize
-                            | Op::ZoomWindow
-                            | Op::Help
-                    ) && (op != Op::CheckUpdates || super::updates_available())
+                    op.availability(actions::CommandContext::Settings {
+                        updates_available: super::updates_available(),
+                    })
+                    .is_ok()
                 },
             ));
         }
@@ -670,6 +651,14 @@ impl Render for SettingsView {
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
+                if op
+                    .availability(actions::CommandContext::Settings {
+                        updates_available: super::updates_available(),
+                    })
+                    .is_err()
+                {
+                    return;
+                }
                 match op {
                     Op::Settings => window.activate_window(),
                     Op::About => this.section = Section::General,
