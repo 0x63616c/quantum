@@ -214,7 +214,9 @@ fn copy_appcast(source: &Path, root: &Path) -> std::io::Result<()> {
         return Ok(());
     }
     let destination = root.join("appcast.xml");
-    if destination.try_exists()? && source.canonicalize()? == destination.canonicalize()? {
+    // Canonical paths can differ for hard links to the same file. Copying onto
+    // any alias would truncate the real feed before reading it.
+    if destination.try_exists()? && same_file::is_same_file(source, &destination)? {
         return Ok(());
     }
     fs::copy(source, destination)?;
@@ -337,5 +339,42 @@ mod tests {
         );
         copy_appcast(&feed, &source.path().join(".")).unwrap();
         assert_eq!(fs::read(&feed).unwrap(), contents);
+    }
+
+    #[test]
+    fn hard_linked_appcast_does_not_truncate_the_source() {
+        let source = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let feed = source.path().join("appcast.xml");
+        let contents = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"/>\n";
+        fs::write(&feed, contents).unwrap();
+        fs::hard_link(&feed, output.path().join("appcast.xml")).unwrap();
+
+        copy_appcast(&feed, output.path()).unwrap();
+
+        assert_eq!(fs::read(&feed).unwrap(), contents);
+        assert_eq!(
+            fs::read(output.path().join("appcast.xml")).unwrap(),
+            contents
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symbolic_appcast_alias_preserves_the_source() {
+        let source = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let feed = source.path().join("appcast.xml");
+        let contents = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"/>\n";
+        fs::write(&feed, contents).unwrap();
+        std::os::unix::fs::symlink(&feed, output.path().join("appcast.xml")).unwrap();
+
+        copy_appcast(&feed, output.path()).unwrap();
+
+        assert_eq!(fs::read(&feed).unwrap(), contents);
+        assert_eq!(
+            fs::read(output.path().join("appcast.xml")).unwrap(),
+            contents
+        );
     }
 }

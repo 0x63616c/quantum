@@ -6028,6 +6028,7 @@ name = "voxelite-site"
 version = "0.1.0"
 dependencies = [
  "htmd",
+ "same-file",
  "serde_json",
  "tempfile",
  "url",
