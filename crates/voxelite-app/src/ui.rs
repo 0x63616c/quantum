@@ -90,7 +90,6 @@ pub struct EditorView {
     focus: FocusHandle,
     gpu: gpu_viewport::State,
     image: Option<Arc<RenderImage>>,
-    image_renderer: RendererKind,
     painted_image: Option<Arc<RenderImage>>,
     painted_frame: Rc<Cell<Option<FrameIdentity>>>,
     last_title: String,
@@ -357,6 +356,12 @@ impl EditorView {
         .detach();
         #[cfg(target_os = "macos")]
         Self::monitor_gpu(cx);
+        let gpu = gpu_viewport::State::new();
+        let renderer = if gpu.enabled {
+            RendererKind::Gpu
+        } else {
+            RendererKind::Cpu
+        };
         Self {
             agent,
             palettes,
@@ -385,14 +390,13 @@ impl EditorView {
             sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
-            gpu: gpu_viewport::State::new(),
+            gpu,
             image: None,
-            image_renderer: RendererKind::Cpu,
             painted_image: None,
             painted_frame: Rc::new(Cell::new(None)),
             last_title: String::new(),
             rendering: false,
-            frame_meter: FrameMeter::new(RendererKind::Cpu),
+            frame_meter: FrameMeter::new(renderer),
             render_pending: false,
             render_size: [0, 0],
             viewport: Rc::new(Cell::new(Bounds::default())),
@@ -520,7 +524,6 @@ impl EditorView {
                             this.displayed = Some(identity);
                             this.image =
                                 Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
-                            this.image_renderer = RendererKind::Cpu;
                         }
                         Err(e) => {
                             this.error = true;
@@ -570,7 +573,11 @@ impl EditorView {
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
         self.zoom_reference_span = editor.camera.span;
-        self.frame_meter = FrameMeter::new(self.image_renderer);
+        self.frame_meter = FrameMeter::new(if self.gpu.enabled {
+            RendererKind::Gpu
+        } else {
+            RendererKind::Cpu
+        });
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
@@ -1598,11 +1605,14 @@ impl EditorView {
         let t = self.theme;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
-        let renderer = self.image_renderer;
         let generation = self.document_generation;
         let view = cx.weak_entity();
         #[cfg(target_os = "macos")]
-        let gpu_frame = self.gpu.frame.clone();
+        let gpu_frame = self
+            .gpu
+            .frame
+            .clone()
+            .map(|frame| (frame, self.gpu.frame_serial));
         let gpu_active = self.gpu.enabled;
         let entity = cx.weak_entity();
         let painted_frame = self.painted_frame.clone();
@@ -1667,37 +1677,42 @@ impl EditorView {
                         window.paint_path(path, t.line().opacity(0.24));
                     }
                 }
-                let mut painted = false;
-                #[cfg(target_os = "macos")]
-                if let Some(frame) = gpu_frame {
-                    window.paint_surface(bounds, frame.pixel_buffer());
-                    painted = true;
-                }
-                if let Some(image) = image {
-                    let frame_id = image.id.0;
-                    let visible = bounds.intersect(&window.content_mask().bounds);
-                    if visible.size.width > px(0.0)
-                        && visible.size.height > px(0.0)
-                        && window
+                let mut presented = None;
+                let visible = bounds.intersect(&window.content_mask().bounds);
+                if visible.size.width > px(0.0) && visible.size.height > px(0.0) {
+                    #[cfg(target_os = "macos")]
+                    if let Some((frame, serial)) = gpu_frame {
+                        window.paint_surface(bounds, frame.pixel_buffer());
+                        presented = Some((RendererKind::Gpu, serial));
+                    }
+                    if presented.is_none()
+                        && let Some(image) = image
+                    {
+                        let frame_id = image.id.0;
+                        if window
                             .paint_image(bounds, bounds, Corners::default(), image, 0, false)
                             .is_ok()
-                    {
-                        painted = true;
-                        let at = cx.background_executor().now();
-                        // Measure successful paints, not render completions or UI
-                        // repaints. Defer the notification until drawing is over.
-                        window.defer(cx, move |_, cx| {
-                            let _ = view.update(cx, |this, cx| {
-                                if this.document_generation == generation
-                                    && this.frame_meter.record_presented(renderer, frame_id, at)
-                                {
-                                    cx.notify();
-                                }
-                            });
-                        });
+                        {
+                            presented = Some((RendererKind::Cpu, frame_id));
+                        }
                     }
                 }
-                painted_frame.set(if painted { identity } else { None });
+                painted_frame.set(presented.and(identity));
+                if let Some((renderer, frame_id)) = presented {
+                    let at = cx.background_executor().now();
+                    // Count distinct content handed to GPUI, not completions or
+                    // repeated paints. Notify only after drawing has finished.
+                    window.defer(cx, move |_, cx| {
+                        let _ = view.update(cx, |this, cx| {
+                            if this.document_generation == generation
+                                && (renderer != RendererKind::Gpu || this.gpu.enabled)
+                                && this.frame_meter.record_presented(renderer, frame_id, at)
+                            {
+                                cx.notify();
+                            }
+                        });
+                    });
+                }
                 if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
                         .map(|s| std::array::from_fn(|a| s[a].min(at[a])))

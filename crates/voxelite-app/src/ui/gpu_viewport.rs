@@ -8,6 +8,10 @@ pub(super) struct State {
     pub renderer: Option<voxelite_render::gpu::Worker>,
     #[cfg(target_os = "macos")]
     pub frame: Option<voxelite_render::gpu::Frame>,
+    // Pixel-buffer pool addresses and scene identities can both be reused.
+    // Advance only when installing new surface content, never on UI repaints.
+    #[cfg(target_os = "macos")]
+    pub frame_serial: usize,
     #[cfg(target_os = "macos")]
     content: Option<(u64, u64, Option<voxelite_app::history::PreviewSource>)>,
 }
@@ -23,6 +27,8 @@ impl State {
             renderer: None,
             #[cfg(target_os = "macos")]
             frame: None,
+            #[cfg(target_os = "macos")]
+            frame_serial: 0,
             #[cfg(target_os = "macos")]
             content: None,
         }
@@ -73,6 +79,7 @@ impl EditorView {
     }
     fn gpu_fallback(&mut self, error: voxelite_render::RenderError, cx: &mut Context<Self>) {
         self.gpu.enabled = false;
+        self.frame_meter = FrameMeter::new(RendererKind::Cpu);
         self.gpu.clear_frame();
         self.gpu.renderer = None;
         self.gpu.content = None;
@@ -92,6 +99,9 @@ impl EditorView {
         if self.rendering {
             self.render_pending = true;
             return;
+        }
+        if !self.render_pending {
+            self.frame_meter.begin_frame(cx.background_executor().now());
         }
         self.rendering = true;
         self.render_pending = false;
@@ -156,6 +166,7 @@ impl EditorView {
                             this.display_size = identity.size;
                             this.displayed = Some(identity);
                             this.image = None;
+                            this.gpu.frame_serial = this.gpu.frame_serial.wrapping_add(1);
                             this.gpu.frame = Some(frame);
                         }
                     }
