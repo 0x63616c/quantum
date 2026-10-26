@@ -2003,7 +2003,7 @@ impl EditorView {
                 div()
                     .id("swatch-scroll")
                     .track_focus(&self.palette_focus)
-                    .focus(move |d| d.border_1().border_color(t.accent()))
+                    .focus(move |d| d.bg(t.accent().opacity(0.22)))
                     .track_scroll(&self.swatch_scroll)
                     .max_h(px(swatch_height))
                     .overflow_y_scroll()
