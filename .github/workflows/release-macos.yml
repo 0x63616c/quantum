@@ -1,0 +1,28 @@
+name: Release macOS
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag: { description: "Release tag, e.g. v0.1.0", required: true }
+permissions:
+  contents: write
+concurrency: { group: release-macos, cancel-in-progress: false }
+jobs:
+  dmg:
+    runs-on: [self-hosted, macOS, ARM64, xcode]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}" }
+      - name: Build and package
+        run: |
+          export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:$PATH"; echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          VERSION="${TAG#v}" scripts/package-macos.sh
+      - name: Publish release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Voxelite $TAG" --notes-file packaging/macos/RELEASE_NOTES.md --verify-tag
+          gh release upload "$TAG" dist/Voxelite.dmg dist/Voxelite.dmg.sha256 --clobber
