@@ -25,7 +25,7 @@ The presentation sequence is:
 
 1. Multiply the laid-out viewport bounds by the window scale factor to obtain
    physical display pixels. Render the scene at twice those dimensions, with
-   4x MSAA, ambient occlusion, hard shadows, outlines and an opaque background/grid.
+   4x MSAA, ambient occlusion, filtered shadows, outlines and an opaque background/grid.
 2. Resolve linear shading to nonlinear RGB in an RGBA8Unorm target. Convert it
    with the exact inverse of GPUI 1.25.3's full-range BT.601 matrix, including
    its four-decimal coefficients and 0.5 chroma center.
@@ -41,6 +41,18 @@ count and allocation threshold are both three. CoreVideo decides reuse from
 ownership; the implementation never samples retain counts or blindly rotates
 slots. Resizing replaces the pool while existing frames keep old allocations
 alive until their consumers release them.
+
+Directional shadows use one 4096² `Depth32Float` map (64 MiB). Its light-space
+X/Y projection fits the convex intersection of the camera frustum and scene
+bounds, including edge/face intersections in orthographic and perspective views.
+Light-space depth still covers the entire scene so offscreen casters can shadow
+visible receivers. The fit uses a world-anchored, texel-snapped center and small
+upward extent steps to reduce motion shimmer. Guard bands cover the normal
+offset and 3×3 bilinear comparison PCF; slope-scaled raster depth bias and a
+texel-sized normal offset limit acne without a fixed close-up gap. Camera/light,
+aspect, bounds or chunk changes invalidate the map; style-only frames reuse it.
+The fit takes at most 220 plane intersections and never scans mesh vertices.
+The software rasterizer is unchanged.
 
 ## Review findings and fixes
 

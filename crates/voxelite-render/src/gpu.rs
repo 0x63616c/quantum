@@ -1,7 +1,8 @@
-//! Full-resolution wgpu viewport: persistent chunks, vertex AO, hard shadows,
+//! Full-resolution wgpu viewport: persistent chunks, vertex AO, fitted shadows,
 //! four-sample MSAA and shader outlines. CPU rendering remains for exports.
 //!
 //! Presentation stays on the GPU: IOSurface planes consumed by GPUI on macOS.
+use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
 use crate::{Camera, ChunkMeshes, MeshVertex, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use std::{
@@ -28,7 +29,6 @@ pub struct Style {
     pub grid_color: [f32; 4],
 }
 
-const SHADOW_SIZE: u32 = 2048;
 const SAMPLES: u32 = 4;
 fn error(e: impl std::fmt::Display) -> RenderError {
     RenderError::Invalid(format!("GPU viewport: {e}"))
@@ -46,6 +46,7 @@ struct Globals {
     inverse_projection: [[f32; 4]; 4],
     grid: [f32; 4],
     grid_color: [f32; 4],
+    shadow_settings: [f32; 4],
 }
 struct ChunkBuffer {
     buffer: wgpu::Buffer,
@@ -64,8 +65,8 @@ struct Targets {
     output: Target,
     resolve: wgpu::BindGroup,
 }
-/// Persistent GPU resources for one editor viewport. Camera updates only change
-/// uniforms; edits replace the buffers returned by the chunk invalidation cache.
+/// Persistent GPU resources for one editor viewport. Camera updates refit shadows;
+/// edits replace the buffers returned by the chunk invalidation cache.
 struct Viewport {
     device: wgpu::Device,
     errors: Arc<Mutex<Option<String>>>,
@@ -74,6 +75,7 @@ struct Viewport {
     uniform: wgpu::Buffer,
     globals: wgpu::BindGroup,
     shadow: Target,
+    shadow_cache: ShadowCache,
     shadow_bind: wgpu::BindGroup,
     main_pipeline: wgpu::RenderPipeline,
     shadow_pipeline: wgpu::RenderPipeline,
@@ -124,7 +126,7 @@ impl Viewport {
             *sink.lock().unwrap() = Some(format!("device lost ({reason:?}): {message}"));
         });
         let message = format!(
-            "Voxelite GPU viewport: {:?} / {} / full resolution / 4x MSAA / 2048 shadows",
+            "Voxelite GPU viewport: {:?} / {} / full resolution / 4x MSAA / {SHADOW_SIZE} fitted shadows",
             adapter.get_info().backend,
             adapter.get_info().name
         );
@@ -178,8 +180,10 @@ impl Viewport {
             "shadow",
         );
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("hard directional shadow"),
+            label: Some("filtered directional shadow"),
             compare: Some(wgpu::CompareFunction::LessEqual),
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
         let shadow_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -264,6 +268,7 @@ impl Viewport {
             uniform,
             globals,
             shadow,
+            shadow_cache: ShadowCache::default(),
             shadow_bind,
             main_pipeline,
             shadow_pipeline,
@@ -357,32 +362,32 @@ impl Viewport {
                 Mat4::perspective_rh((fov_y_degrees as f32).to_radians(), aspect, 0.001, 4096.)
             }
         };
-        let lo = Vec3::from_array(bounds.min.map(|v| v as f32));
-        let hi = Vec3::from_array(bounds.max.map(|v| v as f32));
-        let midpoint = (lo + hi) * 0.5;
-        let radius = (hi - lo).length() * 0.5 + 2.;
-        let light_view = Mat4::look_at_rh(
-            midpoint + light * (radius * 2.),
-            midpoint,
-            if light.dot(Vec3::Y).abs() > 0.99 {
-                Vec3::Z
-            } else {
-                Vec3::Y
+        let view_projection = projection * Mat4::look_at_rh(eye, center, up);
+        let redraw_shadow = self.shadow_cache.update(
+            ShadowInput {
+                bounds,
+                view_projection,
+                light,
             },
+            !updates.is_empty(),
         );
-        let light_projection =
-            Mat4::orthographic_rh(-radius, radius, -radius, radius, 0.1, radius * 4.) * light_view;
+        let shadow_fit = self.shadow_cache.fit;
         let globals = Globals {
-            view_projection: (projection * Mat4::look_at_rh(eye, center, up)).to_cols_array_2d(),
-            light_projection: light_projection.to_cols_array_2d(),
+            view_projection: view_projection.to_cols_array_2d(),
+            light_projection: shadow_fit
+                .map_or(Mat4::IDENTITY, |fit| fit.projection)
+                .to_cols_array_2d(),
             light: light.extend(0.).to_array(),
             eye: eye.extend(0.).to_array(),
             forward: forward.extend(0.).to_array(),
-            settings: [size[0] as f32, size[1] as f32, 1., f32::from(style.outline)],
+            settings: [
+                size[0] as f32,
+                size[1] as f32,
+                f32::from(shadow_fit.is_some()),
+                f32::from(style.outline),
+            ],
             background: style.background,
-            inverse_projection: (projection * Mat4::look_at_rh(eye, center, up))
-                .inverse()
-                .to_cols_array_2d(),
+            inverse_projection: view_projection.inverse().to_cols_array_2d(),
             grid: [
                 bounds.min[1] as f32 - 0.05,
                 bounds.min[0].min(bounds.min[2]) as f32 - 16.,
@@ -390,6 +395,12 @@ impl Viewport {
                 f32::from(style.grid),
             ],
             grid_color: style.grid_color,
+            shadow_settings: [
+                1.0 / SHADOW_SIZE as f32,
+                shadow_fit.map_or(0.0, |fit| fit.normal_offset),
+                0.0,
+                0.0,
+            ],
         };
 
         self.queue
@@ -399,7 +410,7 @@ impl Viewport {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("voxel viewport"),
             });
-        {
+        if redraw_shadow {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("voxel shadow"),
                 color_attachments: &[],
@@ -650,7 +661,15 @@ fn pipeline(
             depth_write_enabled: Some(true),
             depth_compare: Some(wgpu::CompareFunction::LessEqual),
             stencil: Default::default(),
-            bias: Default::default(),
+            bias: if vs == "vs_shadow" {
+                wgpu::DepthBiasState {
+                    constant: 2,
+                    slope_scale: 1.5,
+                    clamp: 0.0,
+                }
+            } else {
+                Default::default()
+            },
         }),
         multisample: wgpu::MultisampleState {
             count: samples,

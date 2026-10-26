@@ -6,6 +6,7 @@ struct Globals {
     inverse_projection: mat4x4<f32>,
     grid: vec4<f32>,
     grid_color: vec4<f32>,
+    shadow_settings: vec4<f32>,
 };
 @group(0) @binding(0) var<uniform> globals: Globals;
 @group(1) @binding(0) var colors: texture_2d<f32>;

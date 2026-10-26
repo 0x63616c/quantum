@@ -9,6 +9,7 @@ struct Globals {
     inverse_projection: mat4x4<f32>,
     grid: vec4<f32>,
     grid_color: vec4<f32>,
+    shadow_settings: vec4<f32>, // inverse map size, world-space normal offset, reserved
 };
 @group(0) @binding(0) var<uniform> globals: Globals;
 @group(1) @binding(0) var shadow_map: texture_depth_2d;
@@ -39,14 +40,30 @@ struct Fragment {
     @location(0) color: vec4<f32>,
     @location(1) geometry: vec4<f32>,
 };
+fn shadow_visibility(world: vec3<f32>, normal: vec3<f32>, diffuse: f32) -> f32 {
+    if globals.settings.z < 0.5 || diffuse <= 0.0 { return 1.0; }
+    // Bias follows the fitted texel size and surface slope, so it shrinks when
+    // zooming in instead of detaching close-up contact shadows from the voxels.
+    let offset = globals.shadow_settings.y * sqrt(max(0.0, 1.0 - diffuse * diffuse));
+    let position = globals.light_projection * vec4(world + normal * offset, 1.0);
+    let uv = position.xy * vec2(0.5, -0.5) + vec2(0.5);
+    if any(uv < vec2(0.0)) || any(uv > vec2(1.0)) || position.z < 0.0 || position.z > 1.0 {
+        return 1.0;
+    }
+    // Nine bilinear hardware comparisons. Explicit LOD permits the early-outs
+    // above without derivative-uniformity issues on Metal or in WGSL validation.
+    var visibility = 0.0;
+    for (var y = -1; y <= 1; y++) {
+        for (var x = -1; x <= 1; x++) {
+            visibility += textureSampleCompareLevel(shadow_map, shadow_sampler,
+                uv + vec2(f32(x), f32(y)) * globals.shadow_settings.x, position.z);
+        }
+    }
+    return visibility / 9.0;
+}
 @fragment fn fs_main(v: Varying) -> Fragment {
     let diffuse = max(0.0, dot(v.normal, globals.light.xyz));
-    let light_position = globals.light_projection * vec4(v.world + v.normal * 0.025, 1.0);
-    let uv = light_position.xy * vec2(0.5, -0.5) + vec2(0.5);
-    // One hardware comparison, with a constant world-space normal bias. The CPU
-    // reference also uses hard directional shadows, not a moving quality level.
-    let visibility = textureSampleCompare(shadow_map, shadow_sampler, uv, light_position.z);
-    let shadow = select(1.0, 0.2 + 0.8 * visibility, globals.settings.z > 0.5);
+    let shadow = 0.2 + 0.8 * shadow_visibility(v.world, v.normal, diffuse);
     let illumination = (0.44 + 0.56 * diffuse * shadow) * v.color_ao.a;
     var out: Fragment;
     out.color = vec4(v.color_ao.rgb * illumination, 1.0);
