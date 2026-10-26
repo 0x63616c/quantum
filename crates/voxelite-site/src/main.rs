@@ -83,6 +83,14 @@ fn section_links(content: &str) -> String {
         let Some((label, _)) = rest.split_once("</h2>") else {
             continue;
         };
+        let label = match id {
+            "web" => "Web editor and site",
+            "canonical" => "Bytes and hashes",
+            "portable" => "Comments and versions",
+            "hands" => "First edit by hand",
+            "first-model" => "First model through MCP",
+            _ => label,
+        };
         write!(links, "<a href=\"#{}\">{label}</a>", escape(id)).expect("string write");
     }
     links
@@ -112,7 +120,7 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
         String::new()
     } else {
         format!(
-            "<aside class=\"docs-toc\"><p class=\"eyebrow\">ON THIS PAGE</p><nav aria-label=\"Page sections\">{sections}</nav></aside>"
+            "<aside class=\"docs-toc\"><p class=\"nav-label\">On this page</p><nav aria-label=\"Page sections\">{sections}</nav></aside>"
         )
     };
     let mut navigation = String::new();
@@ -131,8 +139,8 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {metadata}{markdown_metadata}
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){{(window.vaq=window.vaq||[]).push(arguments)}};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){{(window.siq=window.siq||[]).push(arguments)}};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
-<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
-<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{markdown_actions}{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Voxelite</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor</a></div></div></header>
+<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">Voxelite documentation</p>{navigation}</nav><main class="docs-content" id="main"><h1>{title}</h1>{markdown_actions}<p class="build-note">This development build uses API <code>voxelite.v1</code>.</p>{content}<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Voxelite</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
 "##,
         github_link = GITHUB_LINK.trim(),
     )
@@ -154,7 +162,10 @@ fn catalog(tools: &[Value]) -> Result<String, Box<dyn Error>> {
     html.push_str("</div>");
     for tool in tools {
         let name = tool["name"].as_str().ok_or("tool has no name")?;
-        let description = escape(tool["description"].as_str().unwrap_or(""));
+        let description = escape(&tool["description"].as_str().unwrap_or("").replace(
+            "Unlock in a separate operation",
+            "Clear the lock in a separate operation",
+        ));
         let required = tool["inputSchema"]["required"].as_array();
         write!(
             html,
@@ -253,7 +264,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             include_str!("../templates/download.html"),
             metadata = seo::metadata(
                 "/download/",
-                "Download Voxelite for Mac — Voxelite",
+                "Download Voxelite for Mac: Voxelite",
                 "Download Voxelite for Mac, the free voxel editor built for AI agents. Install on Apple silicon with macOS 13 or later and start creating.",
             ),
             github_link = GITHUB_LINK.trim(),
@@ -274,7 +285,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
         let metadata = seo::metadata(
             &page.path(),
-            &format!("{} — Voxelite docs", page.title),
+            &format!("{}: Voxelite docs", page.title),
             page.description,
         );
         fs::write(
@@ -297,7 +308,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "A little off the grid",
             &seo::metadata(
                 "/404.html",
-                "Page not found — Voxelite",
+                "Page not found: Voxelite",
                 "This page could not be found. Explore Voxelite's documentation to build voxel models, connect an AI agent, or get started in the browser editor.",
             ),
             "<p>This page could not be found. Head back to the <a href=\"/\">Voxelite homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",

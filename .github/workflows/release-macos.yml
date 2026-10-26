@@ -10,7 +10,8 @@ permissions:
 concurrency: { group: release-macos, cancel-in-progress: false }
 jobs:
   dmg:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Only the owner may schedule work on the homelab runner; fork PRs never run here.
+    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, macOS, ARM64, xcode]
     timeout-minutes: 120
     env:
