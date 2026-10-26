@@ -2,11 +2,11 @@
 
 Install Voxelite. Connect your agent. Make your first model.
 
-- [Download for Mac ↘](https://voxelite.worldwidewebb.co/download/)
-- [Connect MCP ↘](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
+- [Download for Mac](https://voxelite.worldwidewebb.co/download/)
+- [Connect MCP](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
 
 Just exploring? [Try the web editor](https://voxelite.worldwidewebb.co/app/) on desktop.\
-Keyboard & mouse required · 1024 × 640 minimum.
+Keyboard & mouse required, 1024 × 640 minimum.
 
 ## Build from source
 

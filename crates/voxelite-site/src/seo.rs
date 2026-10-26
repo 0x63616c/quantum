@@ -4,7 +4,7 @@ use std::{error::Error, fmt::Write as _, fs, path::Path};
 
 use crate::{SITE_BASE_URL, escape};
 
-pub const HOME_TITLE: &str = "Voxelite — The voxel editor built for AI agents";
+pub const HOME_TITLE: &str = "Voxelite: The voxel editor built for AI agents";
 pub const HOME_DESCRIPTION: &str = "Voxelite is a free Rust voxel editor. Build models through MCP, watch agent edits in the native app, and refine every detail by hand.";
 const IMAGE_PATH: &str = "/assets/session-dark.png";
 const IMAGE_ALT: &str =

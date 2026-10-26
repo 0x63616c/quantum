@@ -4,10 +4,10 @@ A small world starts with a good first step.
 
 Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, and a browser build of the same editor. Create with an agent, work by hand, or move between both in a native session.
 
-- [**Getting started ↗** Install the app, connect a host, and make your first model.](https://voxelite.worldwidewebb.co/docs/getting-started.md)
-- [**MCP tools ↗** The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
-- [**The .voxl format ↗** Portable projects, canonical JSON, and the rules on disk.](https://voxelite.worldwidewebb.co/docs/format.md)
-- [**Agent skills ↗** Reusable workflows for composition, palettes and visual review.](https://voxelite.worldwidewebb.co/docs/skills.md)
+- [**Getting started**Install the app, connect a host, and make your first model.](https://voxelite.worldwidewebb.co/docs/getting-started.md)
+- [**MCP tools**The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
+- [**The .voxl format**Portable projects, canonical JSON, and the rules on disk.](https://voxelite.worldwidewebb.co/docs/format.md)
+- [**Agent skills**Reusable workflows for composition, palettes and visual review.](https://voxelite.worldwidewebb.co/docs/skills.md)
 
 ## Choose your workspace
 
