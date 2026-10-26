@@ -6,6 +6,7 @@ mod agent;
 mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
+mod command_palette;
 mod comments;
 mod history;
 mod keyboard_guide;
@@ -92,18 +93,14 @@ pub struct EditorView {
     grid: bool,
     menu: Option<usize>,
     menu_index: usize,
+    commands: command_palette::CommandPalette,
     palette_open: bool,
     palette_index: usize,
-    command_open: bool,
-    tools_only: bool,
     palette_cursor: usize,
     palette_scroll: ScrollHandle,
     swatch_scroll: ScrollHandle,
     pending_choice: usize,
     after_save: Option<Op>,
-    query: String,
-    command_index: usize,
-    command_scroll: ScrollHandle,
     dialog_open: bool,
     info: Option<(&'static str, InfoContent)>,
     pending: Option<Op>,
@@ -317,18 +314,14 @@ impl EditorView {
             gizmo_bounds: Rc::new(Cell::new(Bounds::default())),
             menu: None,
             menu_index: 0,
+            commands: command_palette::CommandPalette::default(),
             palette_open: false,
             palette_index: 0,
-            command_open: false,
-            tools_only: false,
             palette_cursor: 0,
             palette_scroll: ScrollHandle::new(),
             swatch_scroll: ScrollHandle::new(),
             pending_choice: 2,
             after_save: None,
-            query: String::new(),
-            command_index: 0,
-            command_scroll: ScrollHandle::new(),
             dialog_open: false,
             info: None,
             pending: None,
@@ -413,9 +406,6 @@ impl EditorView {
             .map(|p| p.palette())
             .unwrap_or_else(|| self.editor.display_snapshot().palette.clone())
     }
-    fn filtered_actions(&self) -> Vec<Op> {
-        crate::actions::search(&self.query, self.tools_only)
-    }
     fn availability(&self, op: Op) -> Result<(), &'static str> {
         op.availability(CommandContext::Editor(EditorState {
             dialog_open: self.dialog_open,
@@ -478,7 +468,7 @@ impl EditorView {
             return;
         }
         self.menu = None;
-        self.command_open = false;
+        self.commands.close();
         self.palette_open = false;
         if matches!(op, Op::New | Op::Open | Op::Quit) && self.editor.engine.is_dirty() {
             self.pending = Some(op);
@@ -606,10 +596,7 @@ impl EditorView {
                 self.palette_cursor = self.palette_index;
             }
             Op::Commands | Op::ToolPicker => {
-                self.tools_only = op == Op::ToolPicker;
-                self.command_open = true;
-                self.query.clear();
-                self.command_index = 0;
+                self.commands.open(op == Op::ToolPicker);
             }
             Op::Agent => {
                 self.agent.open = true;
@@ -763,7 +750,7 @@ impl EditorView {
         if self.gizmo_drag.is_some() {
             return;
         }
-        if self.command_open
+        if self.commands.is_open()
             || self.menu.is_some()
             || self.palette_open
             || self.info.is_some()
@@ -878,7 +865,7 @@ impl EditorView {
 
         if key == "tab"
             && self.pending.is_none()
-            && !self.command_open
+            && !self.commands.is_open()
             && self.menu.is_none()
             && self.info.is_none()
         {
@@ -927,7 +914,7 @@ impl EditorView {
             self.palettes.open = false;
             window.focus(&self.focus, cx);
             self.menu = None;
-            self.command_open = false;
+            self.commands.close();
             self.palette_open = false;
             self.info = None;
             self.pending = None;
@@ -965,36 +952,8 @@ impl EditorView {
             cx.notify();
             return;
         }
-        if self.command_open {
-            let count = self.filtered_actions().len();
-            match key {
-                "backspace" => {
-                    self.query.pop();
-                    self.command_index = 0;
-                }
-                "down" => {
-                    self.command_index = (self.command_index + 1).min(count.saturating_sub(1))
-                }
-                "up" => self.command_index = self.command_index.saturating_sub(1),
-                "enter" => {
-                    if let Some(op) = self.filtered_actions().get(self.command_index).copied() {
-                        self.invoke(op, window, cx);
-                    }
-                }
-                _ => {
-                    if let Some(text) = &e.keystroke.key_char
-                        && self.query.len() + text.len() <= 128
-                        && !text.chars().any(char::is_control)
-                        && ShortcutPlatform::current().allows_text(e.keystroke.modifiers)
-                    {
-                        self.query.push_str(text);
-                        self.command_index = 0;
-                    }
-                }
-            }
-            self.command_scroll.scroll_to_item(self.command_index);
-            cx.stop_propagation();
-            cx.notify();
+        if self.commands.is_open() {
+            self.command_palette_key(&e.keystroke, window, cx);
             return;
         }
         if let Some(menu) = self.menu {
@@ -1204,7 +1163,7 @@ impl EditorView {
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.menu = if this.menu == Some(i) { None } else { Some(i) };
                         this.menu_index = 0;
-                        this.command_open = false;
+                        this.commands.close();
                         cx.notify();
                     }))
             }))
@@ -1478,7 +1437,7 @@ impl EditorView {
                         cx.notify();
                         return;
                     }
-                    if this.command_open
+                    if this.commands.is_open()
                         || this.info.is_some()
                         || this.pending.is_some()
                         || this.dialog_open
@@ -1531,7 +1490,7 @@ impl EditorView {
             )
             .on_scroll_wheel(cx.listener(|this, e: &ScrollWheelEvent, _, cx| {
                 if this.dialog_open
-                    || this.command_open
+                    || this.commands.is_open()
                     || this.palette_open
                     || this.menu.is_some()
                     || this.info.is_some()
@@ -2243,8 +2202,8 @@ impl EditorView {
                     .into_any_element(),
             );
         }
-        if self.command_open {
-            let matches = self.filtered_actions();
+        if self.commands.is_open() {
+            let matches = self.commands.filtered_actions();
             return Some(
                 div()
                     .absolute()
@@ -2273,20 +2232,22 @@ impl EditorView {
                                             .min_w(px(0.0))
                                             .overflow_hidden()
                                             .text_size(px(16.0))
-                                            .when(self.query.is_empty(), |d| {
-                                                d.text_color(t.muted()).child(if self.tools_only {
-                                                    "Search tools…"
-                                                } else {
-                                                    "Type a command…"
-                                                })
+                                            .when(self.commands.query().is_empty(), |d| {
+                                                d.text_color(t.muted()).child(
+                                                    if self.commands.tools_only() {
+                                                        "Search tools…"
+                                                    } else {
+                                                        "Type a command…"
+                                                    },
+                                                )
                                             })
-                                            .when(!self.query.is_empty(), |d| {
+                                            .when(!self.commands.query().is_empty(), |d| {
                                                 d.child(
                                                     div()
                                                         .min_w(px(0.0))
                                                         .overflow_hidden()
                                                         .text_ellipsis()
-                                                        .child(self.query.clone()),
+                                                        .child(self.commands.query().to_owned()),
                                                 )
                                                 .child(
                                                     div()
@@ -2302,12 +2263,12 @@ impl EditorView {
                             .child(
                                 div()
                                     .id("command-results")
-                                    .track_scroll(&self.command_scroll)
+                                    .track_scroll(self.commands.scroll())
                                     .flex_1()
                                     .overflow_y_scroll()
                                     .py(px(6.0))
                                     .children(matches.iter().enumerate().map(|(i, op)| {
-                                        self.action_row(*op, i, self.command_index == i, cx)
+                                        self.action_row(*op, i, self.commands.index() == i, cx)
                                     }))
                                     .when(matches.is_empty(), |d| {
                                         d.child(
@@ -2567,7 +2528,7 @@ impl Render for EditorView {
                 "TextField"
             } else if self.palette_focus.is_focused(window) {
                 "Palette"
-            } else if self.command_open {
+            } else if self.commands.is_open() {
                 "CommandPalette"
             } else if self.menu.is_some()
                 || self.palette_open
@@ -2645,7 +2606,7 @@ impl Render for EditorView {
                             this.palettes.open = false;
                             this.menu = None;
                             this.palette_open = false;
-                            this.command_open = false;
+                            this.commands.close();
                             this.info = None;
                             this.pending = None;
                             this.drag = None;
