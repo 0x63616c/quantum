@@ -22,3 +22,7 @@ workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+
+[[example]]
+name = "demo-history"
+path = "../../examples/demo_history.rs"

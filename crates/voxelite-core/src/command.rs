@@ -117,7 +117,8 @@ pub enum Shape {
     },
 }
 /// Collision behavior for a region transform.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Collision {
     /// Reject any occupied destination.
     Reject,
@@ -127,7 +128,7 @@ pub enum Collision {
     Skip,
 }
 /// Integer copy/move transform, in reflection → rotation → translation order.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Transform {
     /// Source layer identity.
     pub source: Uuid,
@@ -149,7 +150,8 @@ pub struct Transform {
     pub collision: Collision,
 }
 /// Literal palette edits, suitable for ordered atomic batches.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum PaletteEdit {
     /// Add a stable slot; None chooses the lowest unused slot.
     Add {
@@ -176,7 +178,8 @@ pub enum PaletteEdit {
     Reorder(Vec<u16>),
 }
 /// Layer metadata and structural edits.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LayerEdit {
     /// Insert an empty layer at a bottom-to-top index.
     Create {
@@ -213,13 +216,15 @@ pub enum LayerEdit {
     Delete(Uuid),
 }
 /// Typed command shared by human tools and agent adapters.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Command {
     /// Last explicit duplicate wins before mirror expansion.
     SetVoxels {
         /// Target layer.
         layer: Uuid,
         /// Explicit writes (at most 65,536).
+        #[serde(with = "voxel_tuples")]
         voxels: Vec<Voxel>,
         /// Editing semantics.
         mode: Mode,
@@ -990,4 +995,31 @@ fn transform(s: &mut Snapshot, t: &Transform, work: &mut Work) -> Result<()> {
         s.layer_mut(t.destination)?.voxels.set(p, slot);
     }
     Ok(())
+}
+
+// Command recipes use the same compact coordinate tuples as document volumes,
+// including slot zero for erasure. Voxel's public object representation is unchanged.
+mod voxel_tuples {
+    use super::Voxel;
+    use serde::{Deserialize, Deserializer, Serializer, de::Error, ser::SerializeSeq};
+
+    pub fn serialize<S: Serializer>(voxels: &[Voxel], serializer: S) -> Result<S::Ok, S::Error> {
+        let mut seq = serializer.serialize_seq(Some(voxels.len()))?;
+        for voxel in voxels {
+            seq.serialize_element(&[voxel.at[0], voxel.at[1], voxel.at[2], i32::from(voxel.slot)])?;
+        }
+        seq.end()
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Voxel>, D::Error> {
+        Vec::<[i32; 4]>::deserialize(deserializer)?
+            .into_iter()
+            .map(|[x, y, z, slot]| {
+                Ok(Voxel {
+                    at: [x, y, z],
+                    slot: u16::try_from(slot).map_err(D::Error::custom)?,
+                })
+            })
+            .collect()
+    }
 }

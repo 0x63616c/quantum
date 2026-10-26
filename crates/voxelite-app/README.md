@@ -213,7 +213,12 @@ outline. The snapshot's own comments appear while previewing history.
 
 **History** has a draggable timeline (also Left/Right when the panel is active),
 human circles and agent diamonds, and persistent named versions. Scrubbing keeps
-the live document, revision, dirty state and undo stack unchanged. Editing is
+the live document, revision, dirty state and undo stack unchanged. Play/Pause
+(Space while the History panel is active) replays the retained states at about
+four steps per second, starting at the current entry or the first entry when at
+the end. Playback stops at the last entry; scrubbing, edit/undo attempts, Return
+to live, Restore, and incoming agent edits pause it. Slow renders slow playback
+so each state can be displayed. Editing is
 blocked in preview. Return to live (also available in the viewport banner) or Escape discards the preview. Restore creates one new
 undoable edit and rejects an intervening live change; reselect a state to capture
 new restore preconditions. Named versions survive normal Save/Open.

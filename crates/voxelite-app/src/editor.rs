@@ -324,6 +324,7 @@ pub struct Editor {
     pub engine: Engine,
     /// Read-only preview, separate from the live authority.
     pub preview: Option<crate::history::Preview>,
+    pub(crate) playback: Option<crate::history::Playback>,
     /// Active layer identity, reconciled after undo/redo.
     pub layer: Uuid,
     /// Selected editing tool.
@@ -354,7 +355,7 @@ impl Editor {
                 Ok::<_, EditorError>((path, hash))
             })
             .transpose()?;
-        let engine = Engine::new(project.document.clone())?;
+        let engine = project.open_engine(Limits::default())?;
         let s = &engine.document().content;
         let layer = s
             .layers
@@ -372,6 +373,7 @@ impl Editor {
         Ok(Self {
             engine,
             preview: None,
+            playback: None,
             layer,
             tool: Tool::Place,
             mirror: [false; 3],
@@ -418,6 +420,7 @@ impl Editor {
     }
     /// Reconcile local selection after commands committed by the attached agent.
     pub fn agent_updated(&mut self) {
+        self.pause_history();
         self.reconcile();
         self.box_start = None;
     }
@@ -574,6 +577,7 @@ impl Editor {
     }
     /// Apply a pointer click, sampling without mutation when the picker is active.
     pub fn click(&mut self, ray: Ray, sample_only: bool) -> EditorResult<bool> {
+        self.pause_history();
         let hit = raycast(self.snapshot(), ray);
         if sample_only || self.tool == Tool::Picker {
             if let Some(hit) = hit {

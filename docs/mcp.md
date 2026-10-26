@@ -19,8 +19,10 @@ examples](../integrations/README.md).
 
 This stage has no GUI/plugin/web dependency and builds on stable Rust on Linux.
 Edits are held in memory; call `voxelite_document_save` before disconnecting.
-Undo history and retry receipts are session-local. Comments and named versions
-persist inside saved `.voxl` files. Comment lists page both threads and messages:
+Interactive undo history and retry receipts are session-local. A saved build recipe
+(such as the bundled demo) reconstructs its timeline when opened, subject to the
+host's history budget. Comments and named versions persist inside saved `.voxl`
+files. Comment lists page both threads and messages:
 `limit` and `message_limit` default to 50 (maximum 200); use `offset` and
 `message_offset` with the captured revision to read more.
 
