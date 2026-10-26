@@ -286,6 +286,8 @@ impl SettingsView {
         row()
             .id(id)
             .tab_index(0)
+            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+            .active(move |d| d.bg(t.selected()))
             .aria_label(id)
             .focus(move |d| d.border_2().border_color(t.accent()))
             .w(px(38.0))
@@ -314,6 +316,8 @@ impl SettingsView {
         row()
             .id(id)
             .tab_index(0)
+            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+            .active(move |d| d.bg(t.selected()))
             .aria_label(label)
             .focus(move |d| d.border_color(t.accent()))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
@@ -336,8 +340,8 @@ impl SettingsView {
             Section::General => self.group(
                 vec![
                     self.form_row(
-                        "Navigation hints",
-                        "Show orbit, pan and zoom hints in the viewport.",
+                        "Navigation help",
+                        "Show the keyboard and mouse guide button in the viewport.",
                         self.toggle(
                             "navigation-hints",
                             p.navigation_hints,
@@ -380,6 +384,8 @@ impl SettingsView {
                             div()
                                 .id(("appearance", i))
                                 .tab_index(0)
+                                .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+                                .active(move |d| d.bg(t.selected()))
                                 .aria_label(label)
                                 .focus(move |d| d.border_color(t.accent()))
                                 .flex_1()
@@ -720,6 +726,8 @@ impl Render for SettingsView {
                                 row()
                                     .id(("settings-section", i))
                                     .tab_index(0)
+                                    .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+                                    .active(move |d| d.bg(t.selected()))
                                     .aria_label(entry.title())
                                     .focus(move |d| d.bg(t.accent().opacity(0.22)))
                                     .h(px(42.0))

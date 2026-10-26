@@ -52,8 +52,7 @@ This table is the release boundary agreed on 2026-10-25. v1 is the working produ
 | Open Linux-like plugin core | DEFERRED — v1.x/v2 | Dropped from v1. Built-in editing tools remain internal Rust modules using the shared command engine. Runtime extension registration, public plugin interfaces and agent-authored tools follow v1. |
 | Native script/WASM plugin host foundation | DEFERRED — v1.x/v2 | Dropped from v1 with the plugin core. Runtime adapters, versioned ABI and capability grants require a separate future feasibility gate. |
 | Canonical JSON `.voxl`, GLB/PNG, agent engine | v1 | A single UTF-8 JSON project with deterministic voxel lines; CPU render-to-image, shared commands/undo/layers/palette, versioned MCP and GPUI shell in the build order below. |
-| Local Share preview | v1 | Concept A popover with Copy, stable `voxelite://share/<id>` identifier, View / Comment / Remix choices and a per-person list backed by the local share backend. Label “Local preview — hosted sharing coming soon”; Save a copy is secondary. No hosted authorization or invitations are implied. |
-| Hosted share links: view/comment/remix | v1.x | Requires hosting/persistence and enforced permissions; remix creates independent lineage. Local editing remains account-free. |
+| Hosted Share | v2 | Share returns with hosted sharing (v2). No local Share preview in v1; Save and local Comments remain available. |
 | Git integration | v1.x | After v1: repository state, commits and visual diffs alongside local history; canonical files already work with ordinary Git in v1. |
 | Real-time collaboration and presence | v2 | Hosted multi-user editing, presence and conflict/recovery contracts; distinct from v1 local human/agent live sessions. |
 | CAD-style precision | v2 | Dimensions, measurements, snapping, precision numeric inputs and parametric modelling. Existing integer voxel coordinates and basic shape fields remain v1 editing/API foundations. |
@@ -895,7 +894,7 @@ These are separate from the v1 M0–M10 gates; the scope table in §1 governs re
 
 | Release | Deliverable and acceptance |
 | --- | --- |
-| v1.x — hosted sharing | Define hosting/persistence, link issuance/revocation and server-enforced view/comment/remix permissions before launch. View cannot write; comment can create/reply/resolve within its grant; remix creates an independent project with source lineage and cannot mutate the original. Persist anchored threads and test revoked links, offline failures and artifact access. Static Vercel assets alone do not supply this authority; local editing remains account-free. |
+| v2 — hosted sharing | Define hosting/persistence, link issuance/revocation and server-enforced view/comment/remix permissions before launch. View cannot write; comment can create/reply/resolve within its grant; remix creates an independent project with source lineage and cannot mutate the original. Persist anchored threads and test revoked links, offline failures and artifact access. Static Vercel assets alone do not supply this authority; local editing remains account-free. |
 | v1.x — Git integration | After v1, expose repository status, explicit commits and visual/semantic diffs for canonical `.voxl`. Preserve external edits and surface conflicts; do not confuse local named-version branching with Git operations. |
 | v2 — collaboration/presence | Multi-user sessions need hosted identity/authorization, presence, concurrent-edit resolution, reconnect/recovery and explicit ownership rules. Local human/agent sessions remain the v1 foundation. |
 | v2 — CAD precision | Dimensions/measurements, snapping, precision numeric inputs and parametric constraints with reproducible evaluation; existing integer API coordinates/basic shape fields remain v1. |

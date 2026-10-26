@@ -61,6 +61,7 @@ pub struct EditorView {
     #[cfg(target_family = "wasm")]
     settings_modal: Option<Entity<settings::SettingsView>>,
     palette_focus: FocusHandle,
+    modal_focus: FocusHandle,
     sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
@@ -351,6 +352,7 @@ impl EditorView {
             #[cfg(target_family = "wasm")]
             settings_modal: None,
             palette_focus: cx.focus_handle(),
+            modal_focus: cx.focus_handle(),
             sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
@@ -387,7 +389,7 @@ impl EditorView {
             status: library_error
                 .clone()
                 .or(agent_error.clone())
-                .unwrap_or_else(|| "Ready".into())
+                .unwrap_or_default()
                 .into(),
             error: library_error.is_some() || agent_error.is_some(),
         }
@@ -1033,7 +1035,7 @@ impl EditorView {
                 cx.stop_propagation();
                 return;
             }
-            if e.keystroke.key != "escape" {
+            if !matches!(e.keystroke.key.as_str(), "escape" | "tab") {
                 // Choosing a brush color must never apply the viewport tool.
                 return;
             }
@@ -1043,52 +1045,43 @@ impl EditorView {
             return;
         }
         let key = navigation_key(&e.keystroke).unwrap_or_default();
+
         if key == "tab"
             && self.pending.is_none()
             && !self.command_open
             && self.menu.is_none()
-            && !self.agent.open
             && self.info.is_none()
         {
-            let fields = if self.palettes.open {
-                vec![
-                    self.palettes.name.focus_handle(cx),
-                    self.palettes.hex.focus_handle(cx),
-                ]
-            } else if self.panel == Panel::Comments
-                && self.editor.preview.is_none()
-                && (self.discussion.selected.is_some() || self.discussion.draft.is_some())
-            {
-                vec![self.discussion.text.focus_handle(cx)]
-            } else if self.panel == Panel::History && self.editor.preview.is_none() {
-                vec![self.timeline.name.focus_handle(cx)]
+            if e.keystroke.modifiers.shift {
+                window.focus_prev(cx);
             } else {
-                vec![]
-            };
-            if !fields.is_empty() {
-                let i = fields
-                    .iter()
-                    .position(|f| f.is_focused(window))
-                    .map_or(0, |i| {
-                        (i + if e.keystroke.modifiers.shift {
-                            fields.len() - 1
-                        } else {
-                            1
-                        }) % fields.len()
-                    });
-                window.focus(&fields[i], cx);
-                cx.stop_propagation();
-                cx.notify();
-                return;
+                window.focus_next(cx);
             }
+            if self.palettes.open || self.agent.open {
+                // Focus traversal wraps. Skip controls behind the modal sheet.
+                for _ in 0..256 {
+                    if self.modal_focus.contains_focused(window, cx) {
+                        break;
+                    }
+                    if e.keystroke.modifiers.shift {
+                        window.focus_prev(cx);
+                    } else {
+                        window.focus_next(cx);
+                    }
+                }
+            }
+            cx.stop_propagation();
+            return;
         }
-
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window))
         {
+            return;
+        }
+        if !self.focus.is_focused(window) && matches!(key, "enter" | "space") {
             return;
         }
         if key == "escape" {
@@ -1113,7 +1106,7 @@ impl EditorView {
             self.gizmo_drag = None;
             self.gizmo_hover = None;
             self.hover = None;
-            self.status = "Ready".into();
+            self.status = HintText::default();
             self.error = false;
             cx.stop_propagation();
             cx.notify();
@@ -1554,7 +1547,6 @@ impl EditorView {
     }
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        let compact = self.render_size[0] < 800;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
         let camera = self.display_camera;
@@ -1701,54 +1693,11 @@ impl EditorView {
             .child(self.orientation(cx))
             .when(self.preferences.navigation_hints, |d| {
                 d.child(
-                    div().absolute().bottom(px(20.0)).left(px(24.0)).child(
-                        row()
-                            .id("camera-hints")
-                            .h(px(32.0))
-                            .gap(px(12.0))
-                            .text_size(px(12.0))
-                            .text_color(t.muted())
-                            .child(
-                                row()
-                                    .id("orbit-hint")
-                                    .gap(px(4.0))
-                                    .tooltip(hint("Right-drag to orbit", t))
-                                    .child(icon("mouse").text_color(t.muted()))
-                                    .child(icon("orbit").text_color(t.muted()))
-                                    .when(!compact, |d| d.child("Orbit")),
-                            )
-                            .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                            .child(
-                                row()
-                                    .id("pan-hint")
-                                    .gap(px(4.0))
-                                    .tooltip(hint(
-                                        HintText::default()
-                                            .key("shift-rightdrag")
-                                            .text(" or middle-drag to pan"),
-                                        t,
-                                    ))
-                                    .child(icon("arrow-up").text_color(t.muted()))
-                                    .child(icon("mouse").text_color(t.muted()))
-                                    .child(icon("move").text_color(t.muted()))
-                                    .when(!compact, |d| d.child("Pan")),
-                            )
-                            .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                            .child(
-                                row()
-                                    .id("zoom-hint")
-                                    .gap(px(4.0))
-                                    .tooltip(hint(
-                                        HintText::from("Scroll to zoom · ")
-                                            .action(Op::Frame)
-                                            .text(" to frame the model"),
-                                        t,
-                                    ))
-                                    .child(icon("mouse").text_color(t.muted()))
-                                    .child(icon("zoom-in").text_color(t.muted()))
-                                    .when(!compact, |d| d.child("Zoom")),
-                            ),
-                    ),
+                    div()
+                        .absolute()
+                        .bottom(px(20.0))
+                        .left(px(24.0))
+                        .child(self.button("view-help", "keyboard", "", Op::Help, cx)),
                 )
             })
             .child(
@@ -1840,7 +1789,7 @@ impl EditorView {
                                 .key("escape")
                                 .text(" cancels")
                         } else {
-                            "Ready".into()
+                            HintText::default()
                         };
                         this.report(r, status, cx);
                     }
@@ -1905,6 +1854,9 @@ impl EditorView {
                     .child(
                         row()
                             .id("palette-switch")
+                            .tab_index(0)
+                            .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                            .active(move |d| d.bg(t.selected()))
                             .h(px(32.0))
                             .gap(px(8.0))
                             .rounded(px(6.0))
@@ -1916,7 +1868,7 @@ impl EditorView {
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .child(self.palette_name()),
                             )
-                            .child(icon("chevron").size(px(14.0)).text_color(t.muted()))
+                            .child(icon("chevron").size(px(14.0)).text_color(t.text()))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.palette_open = !this.palette_open;
                                 this.palette_cursor = this.palette_index;
@@ -1926,7 +1878,7 @@ impl EditorView {
                     .child(
                         div()
                             .text_size(px(12.0))
-                            .text_color(t.muted())
+                            .text_color(t.text())
                             .child(format!("{} colors", palette.order.len())),
                     ),
             )
@@ -1961,6 +1913,7 @@ impl EditorView {
                                 .cursor_pointer()
                                 .tooltip(hint(label, t))
                                 .hover(move |d| d.border_color(t.text()))
+                                .active(move |d| d.border_2().border_color(t.accent()))
                                 .when(selected, |d| {
                                     d.child(icon("check").size(px(16.0)).text_color(swatch_ink(c)))
                                 })
@@ -1977,8 +1930,8 @@ impl EditorView {
                     .mt(px(if compact { 8.0 } else { 12.0 }))
                     .gap(px(8.0))
                     .text_size(px(12.0))
-                    .text_color(t.muted())
-                    .child(mono(hex))
+                    .text_color(t.text())
+                    .child(hex)
                     .child(div().flex_1())
                     .when(!overflowing, |d| d.child("Brush color"))
                     .when(overflowing, |d| {
@@ -2047,6 +2000,9 @@ impl EditorView {
                                 let locked = layer.locked;
                                 row()
                                     .id(("layer", i))
+                                    .tab_index(0)
+                                    .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                                    .active(move |d| d.bg(t.selected()))
                                     .h(px(if compact { 32.0 } else { 36.0 }))
                                     .pl(px(6.0))
                                     .pr(px(8.0))
@@ -2076,6 +2032,11 @@ impl EditorView {
                                     .child(
                                         row()
                                             .id(("eye", i))
+                                            .tab_index(0)
+                                            .focus_visible(move |d| {
+                                                d.bg(t.hover()).shadow(focus_ring(t))
+                                            })
+                                            .active(move |d| d.bg(t.selected()))
                                             .w(px(32.0))
                                             .h(px(32.0))
                                             .justify_center()
@@ -2103,6 +2064,11 @@ impl EditorView {
                                     .child(
                                         row()
                                             .id(("lock", i))
+                                            .tab_index(0)
+                                            .focus_visible(move |d| {
+                                                d.bg(t.hover()).shadow(focus_ring(t))
+                                            })
+                                            .active(move |d| d.bg(t.selected()))
                                             .w(px(32.0))
                                             .h(px(32.0))
                                             .justify_center()
@@ -2318,15 +2284,6 @@ impl EditorView {
                                     "Editing on this device".into()
                                 }),
                         ),
-                    )
-                    .child(
-                        div()
-                            .id("revision")
-                            .tooltip(hint("Current document revision", t))
-                            .child(
-                                mono(format!("r{:03}", self.editor.engine.revision()))
-                                    .text_color(t.muted()),
-                            ),
                     ),
             )
             .child(self.panel_tabs(cx))
@@ -2382,6 +2339,8 @@ impl EditorView {
     fn floating(&self) -> Stateful<Div> {
         div()
             .id("floating-panel")
+            .track_focus(&self.modal_focus)
+            .tab_stop(false)
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .bg(self.theme.background())
@@ -2886,6 +2845,9 @@ impl Render for EditorView {
         let settings_open = self.settings_modal.is_some();
         #[cfg(not(target_family = "wasm"))]
         let settings_open = false;
+        if self.gizmo_drag.is_none() {
+            self.gizmo_hover = self.gizmo_hit(window.mouse_position());
+        }
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")
@@ -2914,6 +2876,7 @@ impl Render for EditorView {
                 "Editor"
             })
             .track_focus(&self.focus)
+            .tab_stop(false)
             .size_full()
             .relative()
             .flex()

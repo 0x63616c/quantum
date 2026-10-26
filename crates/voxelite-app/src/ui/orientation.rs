@@ -10,7 +10,7 @@ pub(super) struct GizmoDrag {
 }
 
 impl EditorView {
-    fn gizmo_hit(&self, position: Point<Pixels>) -> Option<AxisEnd> {
+    pub(super) fn gizmo_hit(&self, position: Point<Pixels>) -> Option<AxisEnd> {
         let bounds = self.gizmo_bounds.get();
         if !bounds.contains(&position) {
             return None;
