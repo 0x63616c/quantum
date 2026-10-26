@@ -1,6 +1,27 @@
 //! Bundled Lucide vector assets; see assets/icons/LICENSE for attribution.
 use gpui::{AssetSource, SharedString};
 use std::borrow::Cow;
+
+pub fn fonts() -> Vec<Cow<'static, [u8]>> {
+    vec![
+        Cow::Borrowed(include_bytes!("../assets/fonts/Geist.ttf")),
+        // Linux's font matcher needs concrete weight faces.
+        Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
+        Cow::Borrowed(include_bytes!("../assets/fonts/Geist-SemiBold.ttf")),
+        Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf")),
+        Cow::Borrowed(include_bytes!("../assets/fonts/ShortcutSymbols.ttf")),
+    ]
+}
+
+pub fn font(family: &'static str) -> gpui::Font {
+    gpui::Font {
+        fallbacks: Some(gpui::FontFallbacks::from_fonts(vec![
+            "Voxelite Shortcut Symbols".into(),
+        ])),
+        ..gpui::font(family)
+    }
+}
+
 pub struct Assets;
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {

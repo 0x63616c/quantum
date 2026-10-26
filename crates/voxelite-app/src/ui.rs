@@ -13,6 +13,7 @@ mod palettes;
 mod share;
 use crate::{
     actions::{MENUS, Op},
+    shortcuts::{ShortcutPlatform, format_shortcut, navigation_key},
     theme::Theme,
 };
 use glam::DVec3;
@@ -84,7 +85,7 @@ pub struct EditorView {
     command_index: usize,
     command_scroll: ScrollHandle,
     dialog_open: bool,
-    info: Option<(&'static str, &'static str)>,
+    info: Option<(&'static str, SharedString)>,
     pending: Option<Op>,
     status: String,
     error: bool,
@@ -109,7 +110,7 @@ impl Render for Hint {
             .border_color(self.theme.line())
             .bg(self.theme.background())
             .text_color(self.theme.text())
-            .font_family("Geist")
+            .font(crate::assets::font("Geist"))
             .text_size(px(12.0))
             .shadow_lg()
             .child(self.text.clone())
@@ -120,7 +121,7 @@ fn row() -> Div {
 }
 fn mono(text: impl Into<SharedString>) -> Div {
     div()
-        .font_family("Geist Mono")
+        .font(crate::assets::font("Geist Mono"))
         .text_size(px(12.0))
         .child(text.into())
 }
@@ -133,6 +134,49 @@ fn hint(text: impl Into<SharedString>, theme: Theme) -> impl Fn(&mut Window, &mu
         })
         .into()
     }
+}
+
+fn shortcut(binding: &str) -> String {
+    format_shortcut(binding, ShortcutPlatform::current())
+}
+
+fn keyboard_guide() -> String {
+    format!(
+        "{place} Place · {erase} Erase · {paint} Paint · {fill} Fill · {box_tool} Box · {picker} Picker\n\
+         Click to apply · {sample} to sample a color\n\
+         Right-drag to orbit · Middle-drag or {pan} to pan\n\
+         Scroll to zoom · {frame} to frame the model\n\
+         Box: click two corners · {escape} cancels\n\
+         {left}/{right}/{up}/{down} move X/Z · {page_up}/{page_down} move Y · {enter} applies\n\
+         {previous} / {next} cycle colors · {commands} searches commands\n\
+         {undo} undoes · {redo} redoes\n\
+         {open} opens · {save} saves · {save_as} saves as",
+        place = Op::Place.shortcut(),
+        erase = Op::Erase.shortcut(),
+        paint = Op::Paint.shortcut(),
+        fill = Op::Fill.shortcut(),
+        box_tool = Op::Box.shortcut(),
+        picker = Op::Picker.shortcut(),
+        sample = shortcut("alt-click"),
+        pan = shortcut("shift-rightdrag"),
+        frame = Op::Frame.shortcut(),
+        escape = shortcut("escape"),
+        left = shortcut("left"),
+        right = shortcut("right"),
+        up = shortcut("up"),
+        down = shortcut("down"),
+        page_up = shortcut("pageup"),
+        page_down = shortcut("pagedown"),
+        enter = shortcut("enter"),
+        previous = shortcut("["),
+        next = shortcut("]"),
+        commands = Op::Commands.shortcut(),
+        undo = Op::Undo.shortcut(),
+        redo = Op::Redo.shortcut(),
+        open = Op::Open.shortcut(),
+        save = Op::Save.shortcut(),
+        save_as = Op::SaveAs.shortcut(),
+    )
 }
 
 fn section_title(text: &'static str) -> Div {
@@ -605,7 +649,10 @@ impl EditorView {
                 };
                 self.editor.box_start = None;
                 self.status = if op == Op::Box {
-                    "Box: click the first corner, then the opposite corner. Esc cancels.".into()
+                    format!(
+                        "Box: click the first corner, then the opposite corner. {} cancels.",
+                        shortcut("escape")
+                    )
                 } else {
                     format!("{} tool", self.editor.tool.name())
                 };
@@ -640,13 +687,13 @@ impl EditorView {
             Op::Extensions => {
                 self.info = Some((
                     "Extensions",
-                    "Place, Erase, Paint, Fill, Box and Picker are included. Custom extensions are not available in this build.",
+                    "Place, Erase, Paint, Fill, Box and Picker are included. Custom extensions are not available in this build.".into(),
                 ))
             }
             Op::Help => {
                 self.info = Some((
                     "Make yourself at home",
-                    "B Place · E Erase · P Paint · G Fill · U Box · I Picker\nClick to apply · Alt-click to sample a color\nRight-drag to orbit · Middle-drag or Shift-right-drag to pan\nScroll to zoom · F to frame the model\nBox: click two corners · Escape cancels\nArrow keys move X/Z · Page Up/Down move Y · Enter applies\n[ / ] cycle colors · Ctrl/Cmd K searches commands\nCtrl/Cmd Z undoes · Shift Ctrl/Cmd Z redoes\nCtrl/Cmd O opens · Ctrl/Cmd S saves",
+                    keyboard_guide().into(),
                 ))
             }
         }
@@ -851,7 +898,7 @@ impl EditorView {
             cx.stop_propagation();
             return;
         }
-        let key = e.keystroke.key.as_str();
+        let key = navigation_key(&e.keystroke).unwrap_or_default();
         if key == "tab"
             && self.pending.is_none()
             && !self.command_open
@@ -991,8 +1038,7 @@ impl EditorView {
                     if let Some(text) = &e.keystroke.key_char
                         && self.query.len() + text.len() <= 128
                         && !text.chars().any(char::is_control)
-                        && !e.keystroke.modifiers.control
-                        && !e.keystroke.modifiers.platform
+                        && ShortcutPlatform::current().allows_text(e.keystroke.modifiers)
                     {
                         self.query.push_str(text);
                         self.command_index = 0;
@@ -1332,16 +1378,12 @@ impl EditorView {
                 .h(px(36.0))
                 .gap(px(12.0))
                 .child(
-                    mono(if cfg!(target_os = "macos") {
-                        "⌘ K"
-                    } else {
-                        "Ctrl K"
-                    })
-                    .px(px(5.0))
-                    .py(px(2.0))
-                    .rounded(px(4.0))
-                    .border_1()
-                    .border_color(t.line()),
+                    mono(Op::Commands.shortcut())
+                        .px(px(5.0))
+                        .py(px(2.0))
+                        .rounded(px(4.0))
+                        .border_1()
+                        .border_color(t.line()),
                 ),
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
@@ -1605,7 +1647,13 @@ impl EditorView {
                             row()
                                 .id("pan-hint")
                                 .gap(px(4.0))
-                                .tooltip(hint("Shift-right-drag or middle-drag to pan", t))
+                                .tooltip(hint(
+                                    format!(
+                                        "{} or middle-drag to pan",
+                                        shortcut("shift-rightdrag")
+                                    ),
+                                    t,
+                                ))
                                 .child(icon("arrow-up").text_color(t.muted()))
                                 .child(icon("mouse").text_color(t.muted()))
                                 .child(icon("move").text_color(t.muted()))
@@ -1616,7 +1664,13 @@ impl EditorView {
                             row()
                                 .id("zoom-hint")
                                 .gap(px(4.0))
-                                .tooltip(hint("Scroll to zoom · F to frame the model", t))
+                                .tooltip(hint(
+                                    format!(
+                                        "Scroll to zoom · {} to frame the model",
+                                        Op::Frame.shortcut()
+                                    ),
+                                    t,
+                                ))
                                 .child(icon("mouse").text_color(t.muted()))
                                 .child(icon("zoom-in").text_color(t.muted()))
                                 .when(!compact, |d| d.child("Zoom")),
@@ -1707,15 +1761,15 @@ impl EditorView {
                             return;
                         }
                         let r = this.editor.click(ray, e.modifiers.alt);
-                        this.report(
-                            r,
-                            if this.editor.box_start.is_some() {
-                                "First corner set · click opposite corner · Esc cancels"
-                            } else {
-                                "Ready"
-                            },
-                            cx,
-                        );
+                        let status = if this.editor.box_start.is_some() {
+                            format!(
+                                "First corner set · click opposite corner · {} cancels",
+                                shortcut("escape")
+                            )
+                        } else {
+                            "Ready".into()
+                        };
+                        this.report(r, &status, cx);
                     }
                 }),
             )
@@ -2272,7 +2326,7 @@ impl EditorView {
                 mono(if enabled {
                     op.shortcut()
                 } else {
-                    self.disabled_reason(op)
+                    self.disabled_reason(op).into()
                 })
                 .text_color(t.muted()),
             )
@@ -2382,13 +2436,18 @@ impl EditorView {
                                     .mt(px(16.0))
                                     .text_size(px(12.0))
                                     .text_color(t.muted())
-                                    .child("Tab to choose · Enter to confirm · Esc to cancel"),
+                                    .child(format!(
+                                        "{} to choose · {} to confirm · {} to cancel",
+                                        shortcut("tab"),
+                                        shortcut("enter"),
+                                        shortcut("escape")
+                                    )),
                             ),
                     )
                     .into_any_element(),
             );
         }
-        if let Some((title, text)) = self.info {
+        if let Some((title, text)) = &self.info {
             return Some(
                 div()
                     .absolute()
@@ -2409,7 +2468,7 @@ impl EditorView {
                                         div()
                                             .text_size(px(18.0))
                                             .font_weight(FontWeight::SEMIBOLD)
-                                            .child(title),
+                                            .child(*title),
                                     )
                                     .child(
                                         row()
@@ -2428,7 +2487,7 @@ impl EditorView {
                                 div()
                                     .text_color(t.muted())
                                     .line_height(px(26.0))
-                                    .child(text),
+                                    .child(text.clone()),
                             ),
                     )
                     .into_any_element(),
@@ -2476,7 +2535,7 @@ impl EditorView {
                                                 format!("{}│", self.query)
                                             }),
                                     )
-                                    .child(mono("ESC").text_color(t.muted())),
+                                    .child(mono(shortcut("escape")).text_color(t.muted())),
                             )
                             .child(
                                 div()
@@ -2505,7 +2564,13 @@ impl EditorView {
                                     .text_size(px(12.0))
                                     .border_t_1()
                                     .border_color(t.line())
-                                    .child("↑ ↓ to navigate   ·   Enter to run   ·   Esc to close"),
+                                    .child(format!(
+                                        "{} {} to navigate   ·   {} to run   ·   {} to close",
+                                        shortcut("up"),
+                                        shortcut("down"),
+                                        shortcut("enter"),
+                                        shortcut("escape")
+                                    )),
                             ),
                     )
                     .into_any_element(),
@@ -2526,7 +2591,7 @@ impl EditorView {
                                     .h(px(40.0))
                                     .justify_between()
                                     .child(section_title("Choose palette"))
-                                    .child(mono("Esc").text_color(t.muted())),
+                                    .child(mono(shortcut("escape")).text_color(t.muted())),
                             )
                             .child(
                                 div()
@@ -2790,7 +2855,7 @@ impl Render for EditorView {
             .flex_col()
             .bg(self.theme.background())
             .text_color(self.theme.text())
-            .font_family("Geist")
+            .font(crate::assets::font("Geist"))
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
             .on_action(cx.listener(|this, op: &Op, window, cx| {

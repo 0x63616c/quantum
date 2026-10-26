@@ -1,11 +1,12 @@
 //! Voxelite native GPUI editor and display-free viewport capture.
 mod actions;
 mod assets;
+mod shortcuts;
 mod text_field;
 mod theme;
 mod ui;
 use gpui::{prelude::*, *};
-use std::{borrow::Cow, path::PathBuf, time::Duration};
+use std::{path::PathBuf, time::Duration};
 use theme::Theme;
 use voxelite_app::editor::Editor;
 
@@ -105,15 +106,8 @@ fn main() -> anyhow::Result<()> {
         .with_assets(assets::Assets)
         .run(move |cx| {
             cx.text_system()
-                .add_fonts(vec![
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist.ttf")),
-                    // Linux's font matcher needs concrete weight faces; the
-                    // variable font alone resolves every requested weight to 400.
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-SemiBold.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf")),
-                ])
-                .expect("bundled Geist fonts");
+                .add_fonts(assets::fonts())
+                .expect("bundled fonts");
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
             let theme = options

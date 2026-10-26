@@ -38,12 +38,14 @@ cargo test -p voxelite-app --no-default-features
 | Zoom / frame | Wheel / F |
 | Keyboard cursor | Arrows for X/Z, Page Up/Down for Y |
 | Previous / next palette color | `[` / `]` |
-| Undo / redo | Ctrl/Cmd Z / Shift Ctrl/Cmd Z |
-| New / open / save / save as | Ctrl/Cmd N / O / S / Shift S |
-| Search commands | Ctrl/Cmd K; type, arrows, Enter, Escape |
+| Undo / redo | Ctrl+Z / Ctrl+Shift+Z; Apple: ⌘Z / ⇧⌘Z |
+| New / open / save / save as | Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S; Apple: ⌘N / ⌘O / ⌘S / ⇧⌘S |
+| Search commands | Ctrl+K (Apple: ⌘K); type, arrows, Enter, Escape |
 | Cancel box or dismiss menus | Escape |
 | Choose a preset palette | Palette menu, then Up/Down and Enter |
 | Unsaved-changes prompt | Tab or Left/Right, Enter to confirm, Escape to cancel |
+
+Apple shortcuts apply on native macOS and in browsers on Mac, iPhone and iPad.
 
 Box uses two clicked corners and commits one solid integer box. The first click
 is only a preview. Place targets the adjacent face or the bottom work plane.
