@@ -157,6 +157,69 @@ impl Volume {
     pub fn chunk(&self, at: Pos) -> Option<&Chunk> {
         self.chunks.get(&at).map(AsRef::as_ref)
     }
+    /// Allocated chunk coordinates, in unspecified order.
+    pub fn chunk_positions(&self) -> impl Iterator<Item = Pos> + '_ {
+        self.chunks.keys().copied()
+    }
+    /// Chunks whose content differs, including removed chunks. Shared immutable
+    /// chunks are skipped in O(1); independently loaded equal chunks are compared.
+    pub fn changed_chunks(&self, previous: &Self) -> Vec<Pos> {
+        let mut changed: Vec<_> = self
+            .chunks
+            .iter()
+            .filter_map(|(at, chunk)| {
+                (!previous
+                    .chunks
+                    .get(at)
+                    .is_some_and(|old| Arc::ptr_eq(old, chunk) || old == chunk))
+                .then_some(*at)
+            })
+            .collect();
+        changed.extend(
+            previous
+                .chunks
+                .keys()
+                .filter(|at| !self.chunks.contains_key(*at))
+                .copied(),
+        );
+        changed.sort_unstable();
+        changed
+    }
+    /// Exact cell differences, skipping immutable chunks shared with `previous`.
+    pub fn changed_cells(&self, previous: &Self) -> Vec<(Pos, u16, u16)> {
+        let mut out = Vec::new();
+        for at in self.changed_chunks(previous) {
+            let coords: std::collections::BTreeSet<_> = self
+                .chunk_entries(at)
+                .chain(previous.chunk_entries(at))
+                .map(|(p, _)| p)
+                .collect();
+            for p in coords {
+                let old = previous.get(p);
+                let new = self.get(p);
+                if old != new {
+                    out.push((p, old, new));
+                }
+            }
+        }
+        out
+    }
+    /// Occupied world cells belonging to one immutable chunk.
+    pub fn chunk_entries(&self, at: Pos) -> impl Iterator<Item = (Pos, u16)> + '_ {
+        self.chunks.get(&at).into_iter().flat_map(move |chunk| {
+            chunk.entries().map(move |(i, slot)| {
+                let i = i32::from(i);
+                (
+                    [
+                        at[0] * 16 + i % 16,
+                        at[1] * 16 + (i / 16) % 16,
+                        at[2] * 16 + i / 256,
+                    ],
+                    slot,
+                )
+            })
+        })
+    }
     /// Occupied cells in unspecified order; sort for portable output.
     pub fn iter(&self) -> impl Iterator<Item = (Pos, u16)> + '_ {
         self.chunks.iter().flat_map(|(c, chunk)| {

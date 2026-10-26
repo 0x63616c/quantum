@@ -180,37 +180,31 @@ mod tests {
 
     #[test]
     fn unchanged_repaints_neither_count_nor_shift_the_last_presentation() {
-        let start = Instant::now();
-        let mut meter = FrameMeter::new(RendererKind::Cpu);
-        meter.record_presented(RendererKind::Cpu, 1, start);
-        for ms in [5, 10, 15] {
-            assert!(!meter.record_presented(
-                RendererKind::Cpu,
-                1,
-                start + Duration::from_millis(ms)
-            ));
-        }
-        assert_eq!(meter.average(), None);
-        // Skipped IDs represent completed renders that were never painted.
-        meter.record_presented(RendererKind::Cpu, 4, start + Duration::from_millis(20));
-        assert_average(&meter, 50.0, 20.0);
-        for ms in [40, 1_000, 10_000] {
-            assert!(!meter.record_presented(
-                RendererKind::Cpu,
-                4,
-                start + Duration::from_millis(ms)
-            ));
+        for renderer in [RendererKind::Cpu, RendererKind::Gpu] {
+            let start = Instant::now();
+            let mut meter = FrameMeter::new(renderer);
+            meter.record_presented(renderer, 1, start);
+            for ms in [5, 10, 15] {
+                assert!(!meter.record_presented(renderer, 1, start + Duration::from_millis(ms)));
+            }
+            assert_eq!(meter.average(), None);
+            // Skipped IDs represent completed renders that were never painted.
+            meter.record_presented(renderer, 4, start + Duration::from_millis(20));
             assert_average(&meter, 50.0, 20.0);
+            for ms in [40, 1_000, 10_000] {
+                assert!(!meter.record_presented(renderer, 4, start + Duration::from_millis(ms)));
+                assert_average(&meter, 50.0, 20.0);
+            }
+            // A long idle gap is excluded; the held value lasts through warmup.
+            meter.begin_frame(start + Duration::from_secs(19));
+            assert_average(&meter, 50.0, 20.0);
+            // The old image may still be repainted while new work is in flight.
+            assert!(!meter.record_presented(renderer, 4, start + Duration::from_secs(19)));
+            meter.record_presented(renderer, 5, start + Duration::from_secs(20));
+            assert_average(&meter, 50.0, 20.0);
+            meter.record_presented(renderer, 6, start + Duration::from_millis(20_040));
+            assert_average(&meter, 25.0, 40.0);
         }
-        // A long idle gap is excluded; the held value lasts through warmup.
-        meter.begin_frame(start + Duration::from_secs(19));
-        assert_average(&meter, 50.0, 20.0);
-        // The old image may still be repainted while new work is in flight.
-        assert!(!meter.record_presented(RendererKind::Cpu, 4, start + Duration::from_secs(19)));
-        meter.record_presented(RendererKind::Cpu, 5, start + Duration::from_secs(20));
-        assert_average(&meter, 50.0, 20.0);
-        meter.record_presented(RendererKind::Cpu, 6, start + Duration::from_millis(20_040));
-        assert_average(&meter, 25.0, 40.0);
     }
 
     #[test]
@@ -269,5 +263,12 @@ mod tests {
         assert_eq!(meter.average(), None);
         meter.record_presented(RendererKind::Gpu, 2, start + Duration::from_millis(1_010));
         assert_average(&meter, 100.0, 10.0);
+        // A fallback starts a new CPU window even if its image ID overlaps a
+        // surface serial. Subsequent CPU paints must not inherit GPU timing.
+        assert!(meter.record_presented(RendererKind::Cpu, 2, start + Duration::from_secs(2)));
+        assert_eq!(meter.renderer().label(), "CPU");
+        assert_eq!(meter.average(), None);
+        meter.record_presented(RendererKind::Cpu, 3, start + Duration::from_millis(2_100));
+        assert_average(&meter, 10.0, 100.0);
     }
 }
