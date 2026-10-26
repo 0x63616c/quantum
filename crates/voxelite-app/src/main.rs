@@ -5,6 +5,8 @@ mod shortcuts;
 mod text_field;
 mod theme;
 mod ui;
+#[cfg(target_os = "macos")]
+pub mod updater;
 use gpui::{prelude::*, *};
 use std::{path::PathBuf, time::Duration};
 use theme::Theme;
@@ -105,6 +107,8 @@ fn main() -> anyhow::Result<()> {
     gpui_platform::application()
         .with_assets(assets::Assets)
         .run(move |cx| {
+            #[cfg(target_os = "macos")]
+            updater::init();
             cx.text_system()
                 .add_fonts(assets::fonts())
                 .expect("bundled fonts");

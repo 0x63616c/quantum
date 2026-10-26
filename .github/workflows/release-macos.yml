@@ -34,10 +34,21 @@ jobs:
           APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
         run: |
           VERSION="${TAG#v}" scripts/package-macos.sh
+      - name: Generate signed update feed
+        id: appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: scripts/generate-macos-appcast.sh
       - name: Publish release
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Voxelite $TAG" --notes-file packaging/macos/RELEASE_NOTES.md --verify-tag
           gh release upload "$TAG" dist/Voxelite.dmg dist/Voxelite.dmg.sha256 --clobber
+      - name: Upload update feed for the site deploy
+        if: steps.appcast.outputs.generated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" site/appcast.xml --clobber

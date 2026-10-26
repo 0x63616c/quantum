@@ -21,6 +21,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       MACOS_SIGNING_MODE: adhoc
+      SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:

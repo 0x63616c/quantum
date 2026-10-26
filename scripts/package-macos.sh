@@ -16,6 +16,12 @@ esac
 
 VERSION="${VERSION:-$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys;print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="voxelite-app"))')}"
 export VERSION
+SPARKLE_PUBLIC_ED_KEY=${SPARKLE_PUBLIC_ED_KEY:-}
+if [[ -z "$SPARKLE_PUBLIC_ED_KEY" && -f packaging/macos/sparkle_public_ed_key.txt ]]; then
+  SPARKLE_PUBLIC_ED_KEY=$(cat packaging/macos/sparkle_public_ed_key.txt)
+fi
+SPARKLE_PUBLIC_ED_KEY=$(printf '%s' "$SPARKLE_PUBLIC_ED_KEY" | tr -d '[:space:]')
+export SPARKLE_PUBLIC_ED_KEY
 APP=dist/Voxelite.app
 DMG=dist/Voxelite.dmg
 IDENTITY=-
@@ -64,12 +70,25 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp target/release/voxelite "$APP/Contents/MacOS/Voxelite"
 python3 - "$APP/Contents/Info.plist" <<'PY'
 import os
+import base64
 import plistlib
 import sys
 
 with open("packaging/macos/Info.plist", "rb") as source:
     info = plistlib.load(source)
 info["CFBundleVersion"] = info["CFBundleShortVersionString"] = os.environ["VERSION"]
+public_key = os.environ["SPARKLE_PUBLIC_ED_KEY"].strip()
+if public_key:
+    try:
+        if len(base64.b64decode(public_key, validate=True)) != 32:
+            raise ValueError()
+    except ValueError:
+        raise SystemExit("SPARKLE_PUBLIC_ED_KEY must be a base64-encoded 32-byte Ed25519 public key.") from None
+    info.update(
+        SUFeedURL="https://voxelite.worldwidewebb.co/appcast.xml",
+        SUPublicEDKey=public_key,
+        SUEnableAutomaticChecks=True,
+    )
 with open(sys.argv[1], "wb") as output:
     plistlib.dump(info, output)
 PY
@@ -80,6 +99,23 @@ for s in 16 32 128 256 512; do
   sips -z "$((s*2))" "$((s*2))" packaging/macos/icon-1024.png --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Voxelite.icns"
+
+if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
+  # Pin both the release and its archive digest; never execute unverified tools.
+  SPARKLE_VERSION=2.10.1
+  SPARKLE_SHA256=1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27
+  curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+    "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" \
+    --output "$WORK_DIR/Sparkle.tar.xz"
+  printf '%s  %s\n' "$SPARKLE_SHA256" "$WORK_DIR/Sparkle.tar.xz" | shasum -a 256 --check
+  mkdir -p dist/sparkle "$APP/Contents/Frameworks"
+  tar -xf "$WORK_DIR/Sparkle.tar.xz" -C dist/sparkle ./Sparkle.framework ./bin ./LICENSE
+  # ditto preserves the framework's versioned symlinks and executable modes.
+  ditto dist/sparkle/Sparkle.framework "$APP/Contents/Frameworks/Sparkle.framework"
+  cp dist/sparkle/LICENSE "$APP/Contents/Resources/Sparkle-LICENSE.txt"
+else
+  echo "NOTICE: No Sparkle public Ed25519 key configured; skipping Sparkle embedding and automatic updates."
+fi
 
 if [[ ${MACOS_SIGNING_MODE:-auto} != adhoc && -n ${MACOS_CERTIFICATE_P12_BASE64:-} && -n ${MACOS_CERTIFICATE_PASSWORD:-} ]]; then
   # Restrict secret files without changing permissions on the distributable app.
@@ -127,6 +163,15 @@ if [[ "$IDENTITY" != - ]]; then
 else
   # Ad-hoc development builds cannot satisfy hardened runtime library validation.
   SIGN_ARGS+=(--timestamp=none)
+fi
+if [[ -d "$APP/Contents/Frameworks/Sparkle.framework" ]]; then
+  FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+  # Sparkle 2.10.1's nested code, signed inside-out. Never use --deep to sign.
+  codesign "${SIGN_ARGS[@]}" "$FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
+  codesign "${SIGN_ARGS[@]}" --preserve-metadata=entitlements "$FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
+  codesign "${SIGN_ARGS[@]}" "$FRAMEWORK/Versions/B/Autoupdate"
+  codesign "${SIGN_ARGS[@]}" "$FRAMEWORK/Versions/B/Updater.app"
+  codesign "${SIGN_ARGS[@]}" "$FRAMEWORK"
 fi
 codesign "${SIGN_ARGS[@]}" --entitlements packaging/macos/Voxelite.entitlements "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
