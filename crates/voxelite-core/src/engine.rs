@@ -219,6 +219,14 @@ impl Engine {
     pub fn mark_saved(&mut self) {
         self.saved = self.document.clone();
     }
+    /// Record a successfully persisted snapshot, including a background save.
+    /// Later edits are compared with this snapshot, even after undo or redo.
+    /// Snapshots of other documents are ignored.
+    pub fn mark_saved_snapshot(&mut self, snapshot: Arc<Document>) {
+        if snapshot.id == self.document.id {
+            self.saved = snapshot;
+        }
+    }
     fn guard(&self, revision: u64) -> Result<()> {
         if revision != self.revision {
             return Err(Error::Conflict(format!(

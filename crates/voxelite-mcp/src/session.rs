@@ -11,7 +11,10 @@ use rmcp::model::{CallToolResult, ContentBlock};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf};
 use voxelite_core::*;
-use voxelite_format::Project;
+use voxelite_format::{
+    Project,
+    session::{DocumentSession, SavePolicy},
+};
 
 const MAX_RECEIPTS: usize = 4096;
 const MAX_RECEIPT_BYTES: usize = 8 * 1024 * 1024;
@@ -57,21 +60,11 @@ impl RenderTask {
     }
 }
 
-pub(crate) struct OpenDocument {
-    pub(crate) engine: Engine,
-    project: Project,
-    files: BTreeMap<PathBuf, String>,
-}
-impl OpenDocument {
-    fn dirty(&self) -> bool {
-        self.engine.is_dirty() || self.files.is_empty()
-    }
-}
 pub(crate) struct Session {
     pub id: Uuid,
     pub epoch: Uuid,
     root: PathBuf,
-    pub(crate) documents: BTreeMap<Uuid, OpenDocument>,
+    pub(crate) documents: BTreeMap<Uuid, DocumentSession>,
     receipts: BTreeMap<Uuid, (String, CallToolResult)>,
     receipt_bytes: usize,
 }
@@ -88,21 +81,15 @@ impl Session {
         }
     }
     pub(crate) fn attach(&mut self, project: Project) -> crate::error::Result<()> {
-        // Attachment swaps in the editor's live engine before serving requests.
+        // Attachment swaps in the editor's live document before serving requests.
         // Its idle shadow needs content only, not a second copy of build history.
-        let engine = Engine::new(project.document.clone())?;
+        let id = project.document.id;
+        let document = DocumentSession::placeholder(project)?;
         self.documents.clear();
         self.receipts.clear();
         self.receipt_bytes = 0;
         self.epoch = Uuid::new_v4();
-        self.documents.insert(
-            project.document.id,
-            OpenDocument {
-                engine,
-                project,
-                files: BTreeMap::new(),
-            },
-        );
+        self.documents.insert(id, document);
         Ok(())
     }
     /// Validate and pin only read-only rendering; no history or authority is cloned.
@@ -217,7 +204,7 @@ impl Session {
         }
         let (data, images) = match name {
             "capabilities_get" => (
-                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":["voxl","png","glb","hex","gpl"],"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(|d|info(&d.engine, !d.files.is_empty())).collect::<Vec<_>>()}),
+                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":["voxl","png","glb","hex","gpl"],"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(info).collect::<Vec<_>>()}),
                 vec![],
             ),
             "document_create" | "document_open" => (self.open(name, &a)?, vec![]),
@@ -275,7 +262,7 @@ impl Session {
             let target: Uuid = a.get("model_id")?;
             self.documents
                 .iter()
-                .filter(|(id, doc)| **id != target && doc.dirty())
+                .filter(|(id, doc)| **id != target && doc.needs_save())
                 .count()
         } else {
             self.documents.len() + usize::from(matches!(name, "document_create" | "document_open"))
@@ -299,13 +286,13 @@ impl Session {
                 "at most eight documents per session",
             ));
         }
-        let mut tracked = BTreeMap::new();
-        let project = if name == "document_open" {
+        let limits = Limits {
+            history_bytes: 16 * 1024 * 1024,
+            ..Default::default()
+        };
+        let document = if name == "document_open" {
             let path = files::path(&self.root, &a.get::<String>("path")?)?;
-            let bytes = files::read(&path)?;
-            let project = voxelite_format::from_bytes(&bytes)?;
-            tracked.insert(path, files::hash(&bytes));
-            project
+            DocumentSession::open(&path, limits)?
         } else {
             let mut document = Document::new(
                 a.default("model_id", Uuid::new_v4())?,
@@ -315,37 +302,27 @@ impl Session {
             // edits can only pass through Transaction/Command.
             document.content.name = a.get("name")?;
             document.content.bounds = a.default("bounds", Region::default())?;
-            Project::new(document)?
+            DocumentSession::new(Project::new(document)?, None, limits)?
         };
-        let id = project.document.id;
+        let id = document.engine.document().id;
         if self.documents.contains_key(&id) {
             return Err(Failure::new(
                 "model_already_open",
                 "document ID is already open; use its model_id",
             ));
         }
-        let engine = project.open_engine(Limits {
-            history_bytes: 16 * 1024 * 1024,
-            ..Default::default()
-        })?;
-        let data = info(&engine, !tracked.is_empty());
-        self.documents.insert(
-            id,
-            OpenDocument {
-                engine,
-                project,
-                files: tracked,
-            },
-        );
+        let data = info(&document);
+        self.documents.insert(id, document);
         Ok(data)
     }
 }
 fn layers(engine: &Engine) -> Vec<Value> {
     engine.document().content.layers.iter().map(|l|json!({"id":l.id,"name":l.name,"visible":l.visible,"locked":l.locked,"voxel_count":l.voxels.len()})).collect()
 }
-fn info(engine: &Engine, has_saved_path: bool) -> Value {
+fn info(session: &DocumentSession) -> Value {
+    let engine = &session.engine;
     let d = engine.document();
-    json!({"model_id":d.id,"revision":engine.revision().to_string(),"name":d.content.name,"bounds":d.content.bounds,"dirty":engine.is_dirty() || !has_saved_path,"layers":layers(engine),"voxel_count":d.content.layers.iter().map(|l|l.voxels.len()).sum::<usize>(),"palette_slots":d.content.palette.slots.len(),"comments":d.content.comments.len(),"versions":d.versions.len(),"head_id":engine.head(),"redo_id":engine.redo_head()})
+    json!({"model_id":d.id,"revision":engine.revision().to_string(),"name":d.content.name,"bounds":d.content.bounds,"dirty":session.needs_save(),"layers":layers(engine),"voxel_count":d.content.layers.iter().map(|l|l.voxels.len()).sum::<usize>(),"palette_slots":d.content.palette.slots.len(),"comments":d.content.comments.len(),"versions":d.versions.len(),"head_id":engine.head(),"redo_id":engine.redo_head()})
 }
 fn change(receipt: &Receipt) -> Value {
     json!({"revision":receipt.revision.to_string(),"undo_entry_id":receipt.entry,"changed_voxels":receipt.changes.voxel_count(),"added":receipt.changes.added,"removed":receipt.changes.removed,"recolored":receipt.changes.recolored,"changed_bounds":receipt.changes.bounds,"changed_layers":receipt.changes.layers,"palette_changed":receipt.changes.palette_changed,"metadata_changed":receipt.changes.metadata_changed,"work_units":receipt.work_units,"durability":"memory"})
@@ -353,10 +330,22 @@ fn change(receipt: &Receipt) -> Value {
 fn dispatch(
     root: &std::path::Path,
     client_id: Uuid,
-    doc: &mut OpenDocument,
+    doc: &mut DocumentSession,
     name: &str,
     a: &Args<'_>,
 ) -> Result<(Value, Vec<ContentBlock>)> {
+    if name == "document_info" {
+        return Ok((info(doc), vec![]));
+    }
+    if name == "document_save" {
+        let path = files::path(root, &a.get::<String>("path")?)?;
+        let saved = doc
+            .prepare_save(&path, SavePolicy::CreateOrTracked)
+            .write()?;
+        let data = json!({"model_id":doc.engine.document().id,"revision":doc.engine.revision().to_string(),"path":a.get::<String>("path")?,"sha256":saved.fingerprint(),"bytes":saved.bytes(),"dirty":false});
+        doc.finish_save(saved);
+        return Ok((data, vec![]));
+    }
     let engine = &mut doc.engine;
     let s = &engine.document().content;
     if matches!(name, "comments_add" | "comments_reply") && a.get::<String>("text")?.len() > 4096 {
@@ -364,20 +353,6 @@ fn dispatch(
     }
     let mut extras = json!({});
     let command = match name {
-        "document_info" => return Ok((info(engine, !doc.files.is_empty()), vec![])),
-        "document_save" => {
-            let path = files::path(root, &a.get::<String>("path")?)?;
-            let mut project = doc.project.clone();
-            project.document = engine.document().clone();
-            let bytes = project.to_bytes()?;
-            files::write(&path, &bytes, doc.files.get(&path).map(String::as_str))?;
-            doc.files.insert(path, files::hash(&bytes));
-            engine.mark_saved();
-            return Ok((
-                json!({"model_id":engine.document().id,"revision":engine.revision().to_string(),"path":a.get::<String>("path")?,"sha256":files::hash(&bytes),"bytes":bytes.len(),"dirty":false}),
-                vec![],
-            ));
-        }
         "layers_list" => return read(engine, json!({"layers":layers(engine)})),
         "palette_list" => {
             return read(
@@ -615,7 +590,7 @@ fn dispatch(
                 }
                 let path = files::path(root, &a.get::<String>("path")?)?;
                 let bytes = &images.pngs[0];
-                files::write(&path, bytes, None)?;
+                files::write(&path, bytes)?;
                 let mut data = images.metadata;
                 data["path"] = a.0["path"].clone();
                 data["sha256"] = json!(files::hash(bytes));
@@ -637,7 +612,7 @@ fn dispatch(
         "export_glb" => {
             let path = files::path(root, &a.get::<String>("path")?)?;
             let bytes = voxelite_export::glb(s)?;
-            files::write(&path, &bytes, None)?;
+            files::write(&path, &bytes)?;
             return read(
                 engine,
                 json!({"path":a.0["path"],"sha256":files::hash(&bytes),"bytes":bytes.len(),"mime_type":"model/gltf-binary"}),
@@ -815,7 +790,7 @@ mod tests {
                 true
             );
             assert_eq!(call(&mut session, "voxelite_document_save", args), saved);
-            assert!(session.documents.values().all(|d| !d.dirty()));
+            assert!(session.documents.values().all(|d| !d.needs_save()));
             assert!(session.receipts.len() <= MAX_RECEIPTS);
             assert!(session.receipt_bytes <= MAX_RECEIPT_BYTES);
             for path in ["first.voxl", "second.voxl"] {
