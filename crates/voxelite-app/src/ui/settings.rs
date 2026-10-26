@@ -205,17 +205,27 @@ impl SettingsView {
     }
     fn editor_action(&self, op: Op, cx: &mut Context<Self>) {
         let owner = self.owner.clone();
-        if self
-            .owner_window
-            .update(cx, move |_, window, cx| {
-                window.activate_window();
-                let _ = owner.update(cx, |this, cx| this.invoke(op, window, cx));
-            })
-            .is_err()
-            && op == Op::Quit
-        {
-            cx.quit();
-        }
+        let owner_window = self.owner_window;
+        // On the web, Settings and the editor occupy the window currently
+        // handling this click. Wait until it is available for update again.
+        cx.defer(move |cx| {
+            if owner_window
+                .update(cx, move |_, window, cx| {
+                    window.activate_window();
+                    let _ = owner.update(cx, |this, cx| {
+                        #[cfg(target_family = "wasm")]
+                        {
+                            this.settings_modal = None;
+                        }
+                        this.invoke(op, window, cx);
+                    });
+                })
+                .is_err()
+                && op == Op::Quit
+            {
+                cx.quit();
+            }
+        });
     }
     fn tile(section: Section, size: f32) -> Div {
         row()
