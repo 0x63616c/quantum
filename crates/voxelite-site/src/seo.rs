@@ -36,7 +36,9 @@ pub fn metadata(path: &str, title: &str, description: &str) -> String {
 <meta name="twitter:description" content="{description}">
 <meta name="twitter:image" content="{image}">
 <meta name="twitter:image:alt" content="{IMAGE_ALT}">
-<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">"#
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/GeistMono.woff2" as="font" type="font/woff2" crossorigin>"#
     )
 }
 

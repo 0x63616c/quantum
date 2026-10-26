@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "voxelite": {
-      "type": "stdio",
-      "command": "${workspaceFolder}/target/release/voxelite-mcp",
-      "args": ["--root", "${workspaceFolder}"]
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+      "args": [
+        "--root",
+        "${workspaceFolder}"
+      ]
     }
   }
 }

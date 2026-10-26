@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::{error::Error, fmt::Write as _, fs, path::Path};
 use voxelite_mcp::VoxeliteServer;
 
+mod install;
 mod markdown;
 mod seo;
 
@@ -236,6 +237,19 @@ fn copy_appcast(source: &Path, root: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+fn article_body(page: &DocPage, tools: &[Value]) -> Result<String, Box<dyn Error>> {
+    let mut body = page
+        .content
+        .replace("<!-- install-block -->", &install::block());
+    if page.slug == "skills" {
+        body = body.replace("<!-- skill-list -->", &install::skill_list()?);
+    }
+    if page.slug == "mcp" {
+        body.push_str(&catalog(tools)?);
+    }
+    Ok(body)
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);
@@ -244,6 +258,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(serde_json::to_value)
         .collect::<Result<_, _>>()?;
     fs::create_dir_all(root.join("assets"))?;
+    install::write_integrations(&root.join("assets/integrations"))?;
+    if std::env::args().nth(2).as_deref() == Some("--write-integrations") {
+        install::write_integrations(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations"),
+        )?;
+    }
     copy_appcast(
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site/appcast.xml"),
         root,
@@ -278,11 +298,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for page in PAGES {
         let directory = root.join("docs").join(page.slug);
         fs::create_dir_all(&directory)?;
-        let body = if page.slug == "mcp" {
-            format!("{}{}", page.content, catalog(&tools)?)
-        } else {
-            page.content.to_owned()
-        };
+        let body = article_body(page, &tools)?;
         let metadata = seo::metadata(
             &page.path(),
             &format!("{}: Voxelite docs", page.title),

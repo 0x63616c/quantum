@@ -6051,8 +6051,11 @@ dependencies = [
 name = "voxelite-site"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "htmd",
+ "percent-encoding",
  "same-file",
+ "serde",
  "serde_json",
  "tempfile",
  "url",

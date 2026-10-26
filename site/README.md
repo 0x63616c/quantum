@@ -15,8 +15,10 @@ python3 -m http.server 8090 --directory site --bind 127.0.0.1
 
 Open `http://127.0.0.1:8090`. The browser editor is at `/app/`. Site-only iterations
 can reuse the verified `web/dist/` with `scripts/build-site.sh --skip-web`.
-`site/app/` and `web/dist/` are generated and ignored by Git. Nothing in these
-scripts deploys, pushes, or configures hosting.
+`site/app/` and `web/dist/` are generated and ignored by Git. If the bundle is
+missing, run `scripts/build-web.sh` first. Nothing in these scripts deploys or
+pushes. `site/vercel.json` is published at the root of `site-dist` and adds
+immutable font cache headers.
 
 Edit page markup in `crates/voxelite-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
@@ -28,6 +30,24 @@ download page, docs and editor; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
 from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
+
+The MCP and skills pages share `templates/install.html`. All MCP deeplinks,
+commands and downloadable examples come from one server configuration in
+`src/install.rs`: the Mac bundle's `Contents/MacOS/voxelite-mcp` executable.
+Cursor and VS Code use `${workspaceFolder}`; Claude/Codex CLI commands use
+`"$PWD"` and must run from the project directory. The same build refreshes
+`integrations/` (including its README from `templates/integrations.md`), their
+downloadable copies and the skills ZIP. Edit the Rust definition/templates,
+not the generated examples. Per-skill install commands use the metadata from
+`skills/*/SKILL.md`. Tabs enhance static panels; every host's instructions and
+deeplinks remain available without JavaScript. Copy buttons use `assets/site.js`.
+
+Site fonts are variable WOFF2 subsets, preloaded by the shared metadata generator
+in every site template, including the 404. `font-display: optional` prevents late
+font swaps, with metric-matched local fallbacks for cold/slow loads. The browser
+editor's canvas still embeds the app's own TTF assets; its HTML loading screen uses
+system fonts and needs no WOFF2 preload. See [font build notes](assets/fonts/README.md)
+to regenerate subsets after adding new characters.
 
 The same build converts those article bodies (including every MCP schema) to
 Markdown. `/docs/` publishes `/docs.md` and `/docs/index.md`; each
@@ -57,6 +77,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cargo test --locked -p voxelite-site
 python3 scripts/check-site.py
 node scripts/capture-site.mjs screenshots/site/final
+node scripts/check-site-install.mjs
 ```
 
 The site checks verify both Markdown aliases, discovery links, local links and

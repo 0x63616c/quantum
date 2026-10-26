@@ -102,11 +102,19 @@ impl EditorView {
             .child(mono("voxelite-mcp --connect")).child(mono(path).text_size(px(12.0)).overflow_hidden())
             .child(self.control("copy-mcp-config","copy","Copy MCP configuration",cx,|this,_,cx|{
                 if let Some(s)=&this.agent.session{
-                    let config=serde_json::json!({"mcpServers":{"voxelite":{"command":"voxelite-mcp","args":["--connect",s.path()]}}});
+                    let command = std::env::current_exe().ok()
+                        .filter(|exe| exe.parent().is_some_and(|dir| {
+                            dir.ends_with("Contents/MacOS") && dir.parent().and_then(|contents| contents.parent())
+                                .is_some_and(|bundle| bundle.extension().is_some_and(|ext| ext == "app"))
+                        }))
+                        .map(|exe| exe.with_file_name("voxelite-mcp"))
+                        .filter(|path| path.is_file())
+                        .unwrap_or_else(|| PathBuf::from("voxelite-mcp"));
+                    let config=serde_json::json!({"mcpServers":{"voxelite":{"command":command,"args":["--connect",s.path()]}}});
                     cx.write_to_clipboard(ClipboardItem::new_string(serde_json::to_string_pretty(&config).unwrap()));this.status="MCP configuration copied".into();cx.notify();
                 }
             }))
-            .child(div().text_size(px(12.0)).text_color(t.muted()).child("Requires voxelite-mcp on PATH. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
+            .child(div().text_size(px(12.0)).text_color(t.muted()).child("Uses the bundled MCP server, or voxelite-mcp on PATH for source builds. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
             .into_any_element()
     }
     pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
