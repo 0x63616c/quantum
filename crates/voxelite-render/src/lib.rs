@@ -8,3 +8,8 @@ pub use raster::*;
 
 /// Opt-in browser benchmark instrumentation (compiled out of ordinary builds).
 pub mod perf;
+
+mod chunk_mesh;
+pub use chunk_mesh::*;
+#[cfg(feature = "gpu")]
+pub mod gpu;

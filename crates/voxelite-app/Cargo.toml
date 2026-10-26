@@ -8,8 +8,8 @@ license.workspace = true
 [features]
 default = ["native"]
 perf = ["voxelite-render/perf"]
-native = ["dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger"]
-web = ["dep:gpui", "dep:gpui_web", "dep:image", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:js-sys", "dep:futures-channel"]
+native = ["voxelite-render/gpu", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger"]
+web = ["voxelite-render/gpu", "dep:gpui", "dep:gpui_web", "dep:image", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:js-sys", "dep:futures-channel"]
 
 [lib]
 crate-type = ["rlib", "cdylib"]

@@ -64,7 +64,12 @@ pub struct EditorView {
     camera_view: Option<Op>,
     camera_fitted: bool,
     navigation_epoch: u64,
+    use_gpu: bool,
     interactive_render: bool,
+    painted_frame: Rc<Cell<Option<FrameIdentity>>>,
+    gpu: Option<voxelite_render::gpu::Viewport>,
+    gpu_content: Option<(u64, u64)>,
+    gpu_failed: bool,
     viewport: Rc<Cell<Bounds<Pixels>>>,
     hover: Option<Pos>,
     cursor: Pos,
@@ -253,7 +258,12 @@ impl EditorView {
             camera_view: Some(Op::Frame),
             camera_fitted: true,
             navigation_epoch: 0,
+            use_gpu: gpu_viewport_enabled(),
             interactive_render: false,
+            painted_frame: Rc::new(Cell::new(None)),
+            gpu: None,
+            gpu_content: None,
+            gpu_failed: false,
             editor,
             theme,
             focus,
@@ -311,6 +321,164 @@ impl EditorView {
         cx.notify();
     }
     fn request_render(&mut self, cx: &mut Context<Self>) {
+        if !self.use_gpu {
+            self.request_cpu_render(cx);
+            return;
+        }
+        // GPUI schedules one render on the next display tick. Input only updates
+        // camera state and this bit; no raster jobs or per-event idle timers.
+        self.render_pending = true;
+        cx.notify();
+    }
+    fn start_render(&mut self, cx: &mut Context<Self>) {
+        if !self.use_gpu || self.render_size[0] == 0 || self.rendering || !self.render_pending {
+            return;
+        }
+        self.rendering = true;
+        self.render_pending = false;
+        perf::event(
+            "render_start",
+            self.editor.engine.revision() as f64,
+            self.navigation_epoch as f64,
+        );
+        let snapshot = {
+            let _span = perf::Span::new("snapshot");
+            self.editor.display_snapshot().clone()
+        };
+        let camera = self.editor.camera;
+        let identity = self.frame_identity();
+        let key = (identity.generation, identity.revision);
+        let changed = self.gpu_content != Some(key);
+        let mut gpu = self.gpu.take();
+        let cpu = self.gpu_failed;
+        #[cfg(target_family = "wasm")]
+        let backend = {
+            let query = web_sys::window()
+                .unwrap()
+                .location()
+                .search()
+                .unwrap_or_default();
+            if query.contains("backend=webgl") {
+                voxelite_render::gpu::Backend::WebGl
+            } else if query.contains("backend=webgpu") {
+                voxelite_render::gpu::Backend::WebGpu
+            } else {
+                voxelite_render::gpu::Backend::Auto
+            }
+        };
+        #[cfg(not(target_family = "wasm"))]
+        let backend = voxelite_render::gpu::Backend::Auto;
+        let work = async move {
+            let mut fallback = None;
+            if gpu.is_none() && !cpu {
+                match voxelite_render::gpu::Viewport::new(backend).await {
+                    Ok(viewport) => gpu = Some(viewport),
+                    Err(e) => fallback = Some(e.to_string()),
+                }
+            }
+            let rendered = if let Some(renderer) = &mut gpu {
+                match renderer
+                    .render(&snapshot, camera.camera(), identity.size, changed, false)
+                    .await
+                {
+                    Ok(frame) => Some(frame),
+                    Err(e) => {
+                        fallback = Some(e.to_string());
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+            let result = if let Some(frame) = rendered {
+                Ok(frame)
+            } else {
+                gpu = None;
+                // Keep the last good image if even the deterministic fallback
+                // exceeds its admission budget. No partial GPU mesh is displayed.
+                let scale = (1024.0 / identity.size[0].max(identity.size[1]) as f64).min(1.0);
+                voxelite_render::render(
+                    &snapshot,
+                    &RenderOptions {
+                        width: (identity.size[0] as f64 * scale).round().max(1.0) as u32,
+                        height: (identity.size[1] as f64 * scale).round().max(1.0) as u32,
+                        supersampling: 2,
+                        view: View::Camera(camera.camera()),
+                        background: [0; 4],
+                        ..Default::default()
+                    },
+                )
+            };
+            (gpu, result, fallback)
+        };
+        // Browser GPU futures live on its event loop. Native GPU waits/readbacks
+        // run on the background executor, including Metal on macOS.
+        #[cfg(not(target_family = "wasm"))]
+        let task = cx.background_executor().spawn(work);
+        #[cfg(target_family = "wasm")]
+        let task = work;
+        cx.spawn(async move |this, cx| {
+            let (gpu, result, fallback) = task.await;
+            let _ = this.update(cx, |this, cx| {
+                this.rendering = false;
+                if let Some(reason) = fallback {
+                    perf::event("gpu_fallback", 1.0, 0.0);
+                    this.gpu_failed = true;
+                    this.error = true;
+                    this.status = format!("{reason}; using CPU rendering");
+                }
+                this.gpu = gpu;
+                if result.is_ok() {
+                    this.gpu_content = Some(key);
+                }
+                // Reject replaced documents, preview states and sizes. A completed
+                // earlier edit may be displayed while a newer one is pending, so
+                // rapid input cannot starve the viewport of all completed images.
+                if this.document_generation == identity.generation
+                    && this.render_size == identity.size
+                {
+                    match result {
+                        Ok(mut frame) => {
+                            let _span = perf::Span::new("image_convert");
+                            this.perf_frame += 1;
+                            perf::event(
+                                "image_ready",
+                                this.perf_frame as f64,
+                                identity.revision as f64,
+                            );
+                            for pixel in frame.rgba.as_chunks_mut::<4>().0 {
+                                pixel.swap(0, 2);
+                            }
+                            this.display_size = [frame.width, frame.height];
+                            let buffer =
+                                image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
+                                    .expect("renderer dimensions");
+                            this.display_camera = camera;
+                            this.displayed = Some(identity);
+                            this.image =
+                                Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
+                        }
+                        Err(e) => {
+                            this.error = true;
+                            this.status = e.to_string();
+                        }
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+    fn request_navigation(&mut self, cx: &mut Context<Self>) {
+        if !self.use_gpu {
+            self.request_cpu_navigation(cx);
+            return;
+        }
+        perf::event("navigation", 0.0, 0.0);
+        self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
+        self.request_render(cx);
+    }
+    fn request_cpu_render(&mut self, cx: &mut Context<Self>) {
         if self.render_size[0] == 0 {
             return;
         }
@@ -320,7 +488,11 @@ impl EditorView {
         }
         self.rendering = true;
         self.render_pending = false;
-        perf::event("render_start", self.editor.engine.revision() as f64, self.navigation_epoch as f64);
+        perf::event(
+            "render_start",
+            self.editor.engine.revision() as f64,
+            self.navigation_epoch as f64,
+        );
         let snapshot = {
             let _span = perf::Span::new("snapshot");
             self.editor.display_snapshot().clone()
@@ -360,7 +532,11 @@ impl EditorView {
                         Ok(mut frame) => {
                             let _span = perf::Span::new("image_convert");
                             this.perf_frame += 1;
-                            perf::event("image_ready", this.perf_frame as f64, identity.revision as f64);
+                            perf::event(
+                                "image_ready",
+                                this.perf_frame as f64,
+                                identity.revision as f64,
+                            );
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
@@ -380,19 +556,19 @@ impl EditorView {
                     }
                 }
                 if this.render_pending {
-                    this.request_render(cx);
+                    this.request_cpu_render(cx);
                 }
                 cx.notify();
             });
         })
         .detach();
     }
-    fn request_navigation(&mut self, cx: &mut Context<Self>) {
+    fn request_cpu_navigation(&mut self, cx: &mut Context<Self>) {
         perf::event("navigation", 0.0, 0.0);
         self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
         let epoch = self.navigation_epoch;
         self.interactive_render = true;
-        self.request_render(cx);
+        self.request_cpu_render(cx);
         let timer = cx
             .background_executor()
             .timer(std::time::Duration::from_millis(180));
@@ -401,7 +577,7 @@ impl EditorView {
             let _ = this.update(cx, |this, cx| {
                 if this.navigation_epoch == epoch {
                     this.interactive_render = false;
-                    this.request_render(cx);
+                    this.request_cpu_render(cx);
                 }
             });
         })
@@ -799,17 +975,32 @@ impl EditorView {
     }
     fn ray(&self, p: Point<Pixels>) -> Option<voxelite_app::editor::Ray> {
         // Pointer edits must use the exact camera of the image the user can see.
-        if self.rendering
-            || self.interactive_render
-            || self.image.is_none()
-            || self.displayed != Some(self.frame_identity())
+        if !self.use_gpu {
+            if self.rendering
+                || self.interactive_render
+                || self.image.is_none()
+                || self.displayed != Some(self.frame_identity())
+            {
+                return None;
+            }
+        } else if self.painted_frame.get().is_none_or(|frame| {
+            frame.generation != self.document_generation
+                || frame.camera != self.editor.camera
+                || frame.size != self.render_size
+        }) || (self.gpu_failed
+            && (self.rendering || self.displayed != Some(self.frame_identity())))
         {
             return None;
         }
         let b = self.viewport.get();
         let w = f64::from(f32::from(b.size.width));
         let h = f64::from(f32::from(b.size.height));
-        self.display_camera.ray(
+        let camera = if self.use_gpu {
+            self.painted_frame.get()?.camera
+        } else {
+            self.display_camera
+        };
+        camera.ray(
             [
                 f64::from(f32::from(p.x - b.origin.x)) / w,
                 f64::from(f32::from(p.y - b.origin.y)) / h,
@@ -1452,6 +1643,8 @@ impl EditorView {
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
         let perf_frame = self.perf_frame;
+        let painted_frame = self.painted_frame.clone();
+        let frame_identity = self.displayed;
         let revision = self.displayed.map_or(0, |f| f.revision);
         let camera = self.display_camera;
         let frame_size = self.displayed.map(|_| self.display_size);
@@ -1510,8 +1703,13 @@ impl EditorView {
                 }
                 if let Some(image) = image {
                     let _span = perf::Span::new("image_upload");
-                    let _ = window.paint_image(bounds, bounds, Corners::default(), image, 0, false);
-                    perf::event("paint", perf_frame as f64, revision as f64);
+                    if window
+                        .paint_image(bounds, bounds, Corners::default(), image, 0, false)
+                        .is_ok()
+                    {
+                        painted_frame.set(frame_identity);
+                        perf::event("paint", perf_frame as f64, revision as f64);
+                    }
                 }
                 if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
@@ -1721,7 +1919,11 @@ impl EditorView {
                             return;
                         }
                         let r = this.editor.click(ray, e.modifiers.alt);
-                        perf::event("edit_result", this.editor.engine.revision() as f64, f64::from(r.as_ref().is_ok_and(|changed| *changed)));
+                        perf::event(
+                            "edit_result",
+                            this.editor.engine.revision() as f64,
+                            f64::from(r.as_ref().is_ok_and(|changed| *changed)),
+                        );
                         this.report(
                             r,
                             if this.editor.box_start.is_some() {
@@ -2723,7 +2925,11 @@ impl Render for EditorView {
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
             (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
-        let scale = (1024.0 / width.max(height)).min(1.0);
+        let scale = if self.use_gpu {
+            window.scale_factor()
+        } else {
+            (1024.0 / width.max(height)).min(1.0)
+        };
         let dimensions = [
             (width * scale).round() as u32,
             (height * scale).round() as u32,
@@ -2747,6 +2953,7 @@ impl Render for EditorView {
             self.render_size = dimensions;
             self.request_render(cx);
         }
+        self.start_render(cx);
         let title = format!(
             "{}{} — Voxelite",
             self.editor.display_snapshot().name,
@@ -2851,5 +3058,24 @@ impl Render for EditorView {
                     )
                     .child(overlay)
             }))
+    }
+}
+
+// Opt-in until the portable compositor transfer and hardware quality/performance
+// gates are complete. The existing viewport remains the default without regressions.
+fn gpu_viewport_enabled() -> bool {
+    #[cfg(target_family = "wasm")]
+    {
+        web_sys::window()
+            .and_then(|w| w.location().search().ok())
+            .is_some_and(|q| {
+                q.trim_start_matches('?')
+                    .split('&')
+                    .any(|p| p == "viewport=gpu")
+            })
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+        std::env::var("VOXELITE_GPU_VIEWPORT").is_ok_and(|v| v == "1")
     }
 }

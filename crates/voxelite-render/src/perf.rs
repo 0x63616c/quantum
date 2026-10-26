@@ -2,7 +2,9 @@
 #[cfg(all(feature = "perf", target_family = "wasm"))]
 mod browser {
     use wasm_bindgen::prelude::*;
-    #[wasm_bindgen(inline_js = "export function voxelite_perf_now() { return globalThis.__voxelitePerf ? performance.now() : 0; } export function voxelite_perf_event(name, a, b) { globalThis.__voxelitePerf?.event(name, a, b); }")]
+    #[wasm_bindgen(
+        inline_js = "export function voxelite_perf_now() { return globalThis.__voxelitePerf ? performance.now() : 0; } export function voxelite_perf_event(name, a, b) { globalThis.__voxelitePerf?.event(name, a, b); }"
+    )]
     extern "C" {
         pub fn voxelite_perf_now() -> f64;
         pub fn voxelite_perf_event(name: &str, a: f64, b: f64);
