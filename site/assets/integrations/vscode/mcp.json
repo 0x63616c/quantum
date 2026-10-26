@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "voxelite": {
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+      "args": [
+        "--root",
+        "${workspaceFolder}"
+      ]
+    }
+  }
+}

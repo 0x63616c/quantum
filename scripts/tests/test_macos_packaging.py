@@ -48,7 +48,8 @@ if os.environ.get('FAIL_TOOL') in (name, operation):
 if name == 'uname': print('Darwin')
 elif name == 'cargo':
     pathlib.Path('target/release').mkdir(parents=True, exist_ok=True)
-    pathlib.Path('target/release/voxelite').write_text('fixture app')
+    binary = 'voxelite-mcp' if 'voxelite-mcp' in args else 'voxelite'
+    pathlib.Path('target/release', binary).write_text('fixture ' + binary)
 elif name == 'security':
     if args[0] == 'create-keychain': pathlib.Path(args[-1]).touch()
     elif args[0] == 'delete-keychain': pathlib.Path(args[-1]).unlink()
@@ -168,8 +169,32 @@ class PackagingTests(unittest.TestCase):
         binary = self.root / "target/release/voxelite"
         binary.parent.mkdir(parents=True)
         binary.write_text("fixture app")
+        binary.with_name('voxelite-mcp').write_text('fixture server')
         self.run_script(overrides=CERT, args=["--skip-build"])
         self.assertNotIn("cargo", [e[0] for e in self.events()])
+
+    def test_bundled_executables_signed_before_bundle(self):
+        self.run_script(overrides=CERT)
+        builds = [args for name, args, _ in self.events() if name == 'cargo']
+        self.assertIn(['build', '--release', '--locked', '-p', 'voxelite-mcp'], builds)
+        signatures = [args for name, args, _ in self.events()
+                      if name == 'codesign' and '--verify' not in args]
+        self.assertEqual([Path(args[-1]).name for args in signatures[:3]],
+                         ['voxelite-mcp', 'Voxelite', 'Voxelite.app'])
+        for args in signatures[:3]:
+            self.assertEqual(args[args.index('--sign') + 1], 'A' * 40)
+            self.assertEqual(args[args.index('--options') + 1], 'runtime')
+        for binary in ('voxelite-mcp', 'Voxelite'):
+            source = 'voxelite' if binary == 'Voxelite' else binary
+            self.assertEqual((self.root / f'dist/Voxelite.app/Contents/MacOS/{binary}').read_bytes(),
+                             (self.root / f'target/release/{source}').read_bytes())
+
+    def test_skip_build_requires_mcp_executable(self):
+        binary = self.root / 'target/release/voxelite'
+        binary.parent.mkdir(parents=True)
+        binary.write_text('fixture app')
+        self.run_script(args=['--skip-build'], success=False)
+        self.assertNotIn('codesign', [e[0] for e in self.events()])
 
     def test_adhoc_and_partial_credentials(self):
         for credentials in [{}, {"MACOS_CERTIFICATE_P12_BASE64": CERT["MACOS_CERTIFICATE_P12_BASE64"]},
@@ -223,7 +248,7 @@ class PackagingTests(unittest.TestCase):
         signatures = [Path(args[-1]).name for name, args, _ in self.events()
                       if name == "codesign" and "--verify" not in args]
         self.assertEqual(signatures, ["Installer.xpc", "Downloader.xpc", "Autoupdate",
-                                      "Updater.app", "Sparkle.framework", "Voxelite.app", "Voxelite.dmg"])
+                                      "Updater.app", "Sparkle.framework", "voxelite-mcp", "Voxelite", "Voxelite.app", "Voxelite.dmg"])
         generator = self.root / "dist/sparkle/bin/generate_appcast"
         generator.write_text(GENERATOR)
         generator.chmod(0o755)
