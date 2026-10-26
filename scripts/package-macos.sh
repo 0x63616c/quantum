@@ -205,7 +205,8 @@ if [[ "$NOTARIZE" == true ]]; then
   notarize "$WORK_DIR/Voxelite.zip"
   xcrun stapler staple "$APP"
   xcrun stapler validate "$APP"
-  spctl --assess --type execute --verbose=2 "$APP"
+  # Avoid verbose spctl output: it includes the certificate owner's identity.
+  spctl --assess --type execute "$APP"
 fi
 
 # Package the stapled app so offline installs receive its ticket too.
@@ -222,7 +223,7 @@ if [[ "$NOTARIZE" == true ]]; then
   notarize "$DMG"
   xcrun stapler staple "$DMG"
   xcrun stapler validate "$DMG"
-  spctl --assess --type open --context context:primary-signature --verbose=2 "$DMG"
+  spctl --assess --type open --context context:primary-signature "$DMG"
   # Only a fully notarized result is eligible for the public update feed.
   touch dist/.notarized
 fi
