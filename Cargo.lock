@@ -5921,11 +5921,18 @@ dependencies = [
 name = "voxelite-render"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
+ "futures-channel",
  "glam",
+ "js-sys",
  "proptest",
+ "raw-window-handle",
  "thiserror 2.0.21",
  "voxelite-core",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "wgpu",
 ]
 
 [[package]]

@@ -1,0 +1,34 @@
+[
+  {
+    "backend": "webgl",
+    "checks": [
+      "GPU initialized",
+      "visible placement pixel change",
+      "save voxel count",
+      "undo identical pixels and voxels",
+      "redo identical pixels and voxels",
+      "camera retains meshes/buffers",
+      "resize"
+    ],
+    "errors": [],
+    "messages": [
+      "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+    ]
+  },
+  {
+    "backend": "webgpu",
+    "checks": [
+      "GPU initialized",
+      "visible placement pixel change",
+      "save voxel count",
+      "undo identical pixels and voxels",
+      "redo identical pixels and voxels",
+      "camera retains meshes/buffers",
+      "resize"
+    ],
+    "errors": [],
+    "messages": [
+      "Voxelite GPU viewport: BrowserWebGpu /  / full resolution / 4x MSAA / 2048 shadows"
+    ]
+  }
+]

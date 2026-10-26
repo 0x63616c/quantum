@@ -42,3 +42,24 @@ and exercises repeated clicks along a grid. Raw traces allow alternate analysis.
 Per-scene `median` takes the coordinate-wise median across three runs; all runs
 are retained. Empty distributions are null. CPU times and frame pacing depend on
 host scheduling; compare distributions and accepted edits as well as averages.
+
+The new viewport is deliberately **opt-in** while the compositor transfer is
+unfinished. It always uses device-resolution 4× MSAA, baked vertex AO and a 2048²
+shadow map. Its outline shader is available to renderer callers; outlines remain
+off in the editor, matching the CPU renderer's existing default. No moving/idle
+quality transition exists in this GPU path. The legacy CPU viewport remains the
+ordinary default to avoid shipping the measured software-GPU regression.
+
+```sh
+node scripts/bench-camera.mjs --query viewport=gpu --out docs/perf/camera-after.json --runs 3
+node scripts/bench-camera.mjs --out docs/perf/camera-default-after.json --runs 3
+node scripts/check-gpu-viewport.mjs
+VOXELITE_GPU_VIEWPORT=1 cargo run -p voxelite-app --bin voxelite
+```
+
+The browser checker tests WebGL2 and WebGPU, requires actual GPU initialization,
+compares viewport pixels and saved voxel data across place/undo/redo, checks that
+camera changes perform no mesh rebuild or vertex upload, and exercises resize.
+The benchmark rejects silent CPU fallback when `--query viewport=gpu` is used.
+Standalone-click settling includes the successful edit's revision, preventing a
+queued render from being mistaken for an already completed frame.
