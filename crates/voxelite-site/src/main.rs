@@ -207,6 +207,20 @@ fn catalog(tools: &[Value]) -> Result<String, Box<dyn Error>> {
     Ok(html)
 }
 
+/// Preserve a real feed when supplied, including builds into a separate folder.
+/// The normal in-place site build must not copy the file onto itself.
+fn copy_appcast(source: &Path, root: &Path) -> std::io::Result<()> {
+    if !source.try_exists()? {
+        return Ok(());
+    }
+    let destination = root.join("appcast.xml");
+    if destination.try_exists()? && source.canonicalize()? == destination.canonicalize()? {
+        return Ok(());
+    }
+    fs::copy(source, destination)?;
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);
@@ -215,6 +229,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(serde_json::to_value)
         .collect::<Result<_, _>>()?;
     fs::create_dir_all(root.join("assets"))?;
+    copy_appcast(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site/appcast.xml"),
+        root,
+    )?;
     fs::write(
         root.join("index.html"),
         format!(
@@ -290,4 +308,34 @@ fn main() -> Result<(), Box<dyn Error>> {
         tools.len()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_appcast_does_not_create_a_placeholder() {
+        let source = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        copy_appcast(&source.path().join("appcast.xml"), output.path()).unwrap();
+        assert!(!output.path().join("appcast.xml").exists());
+    }
+
+    #[test]
+    fn supplied_appcast_is_copied_verbatim_and_preserved_in_place() {
+        let source = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let feed = source.path().join("appcast.xml");
+        // Temporary test bytes only; no release metadata or repository feed.
+        let contents = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"/>\n";
+        fs::write(&feed, contents).unwrap();
+        copy_appcast(&feed, output.path()).unwrap();
+        assert_eq!(
+            fs::read(output.path().join("appcast.xml")).unwrap(),
+            contents
+        );
+        copy_appcast(&feed, &source.path().join(".")).unwrap();
+        assert_eq!(fs::read(&feed).unwrap(), contents);
+    }
 }

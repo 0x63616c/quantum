@@ -45,6 +45,11 @@ available without JavaScript or clipboard access. The sitemap includes the LLM
 indexes and one canonical Markdown URL per page; robots.txt allows crawling and
 advertises the indexes in comments.
 
+An optional `site/appcast.xml` is passed through unchanged by the Rust generator
+when building to another output directory, and preserved by the normal in-place
+site build. If it is absent, no feed is created. Supply a real release feed when
+available; the build does not invent update metadata.
+
 Verification:
 
 ```sh
