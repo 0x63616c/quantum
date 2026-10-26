@@ -283,8 +283,8 @@ assert '.ttf' not in css and 'font-display:swap' not in css, 'Site fonts must no
 for name in ('Geist', 'GeistMono'):
     assert (SITE / f'assets/fonts/{name}.woff2').read_bytes()[:4] == b'wOF2'
     assert (SITE / f'assets/fonts/OFL-{name}.txt').is_file()
-hosting = json.loads((ROOT / 'vercel.json').read_text())
-assert hosting['outputDirectory'] == 'site'
+hosting = json.loads((SITE / 'vercel.json').read_text())
+assert 'outputDirectory' not in hosting, 'site/ is published as the site-dist root'
 assert any(rule['source'] == '/assets/fonts/(.*)' and
            {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
            for rule in hosting['headers']), 'Missing immutable font cache headers'

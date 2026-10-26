@@ -17,9 +17,8 @@ Open `http://127.0.0.1:8090`. The browser editor is at `/app/`. Site-only iterat
 can reuse the verified `web/dist/` with `scripts/build-site.sh --skip-web`.
 `site/app/` and `web/dist/` are generated and ignored by Git. If the bundle is
 missing, run `scripts/build-web.sh` first. Nothing in these scripts deploys or
-pushes. The repository-root `vercel.json` declares `site/` as the output directory
-and adds immutable font cache headers. There is no site deployment workflow in
-`.github/workflows/`; the workflows there build and release the Mac app.
+pushes. `site/vercel.json` is published at the root of `site-dist` and adds
+immutable font cache headers.
 
 Edit page markup in `crates/voxelite-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
