@@ -13,6 +13,7 @@ mod palettes;
 mod settings;
 mod share;
 mod shortcut_hint;
+mod status;
 use crate::{
     actions::{MENUS, Op},
     shortcuts::{ShortcutPlatform, navigation_key},
@@ -31,7 +32,7 @@ const SIDEBAR_WIDTH: f32 = 352.0;
 const TOOL_RAIL_WIDTH: f32 = 56.0;
 const MENUBAR_HEIGHT: f32 = if cfg!(target_os = "macos") { 0.0 } else { 32.0 };
 const TOOLBAR_HEIGHT: f32 = 64.0;
-const STATUSBAR_HEIGHT: f32 = 32.0;
+const STATUSBAR_HEIGHT: f32 = 28.0;
 const PANEL_GUTTER: f32 = 24.0;
 
 /// Image identity includes the editor incarnation, since reopening the same ID
@@ -65,6 +66,8 @@ pub struct EditorView {
     painted_image: Option<Arc<RenderImage>>,
     last_title: String,
     rendering: bool,
+    render_ms: Option<f64>,
+    zoom_reference_span: f64,
     render_pending: bool,
     render_size: [u32; 2],
     display_camera: OrbitCamera,
@@ -327,6 +330,7 @@ impl EditorView {
             camera_fitted: true,
             navigation_epoch: 0,
             interactive_render: false,
+            zoom_reference_span: editor.camera.span,
             editor,
             grid: preferences.grid,
             preferences,
@@ -342,6 +346,7 @@ impl EditorView {
             painted_image: None,
             last_title: String::new(),
             rendering: false,
+            render_ms: None,
             render_pending: false,
             render_size: [0, 0],
             viewport: Rc::new(Cell::new(Bounds::default())),
@@ -429,11 +434,14 @@ impl EditorView {
             background: [0; 4],
             ..Default::default()
         };
-        let task = cx
-            .background_executor()
-            .spawn(async move { voxelite_render::render(&snapshot, &options) });
+        let clock = cx.background_executor().clone();
+        let task = cx.background_executor().spawn(async move {
+            let started = clock.now();
+            let result = voxelite_render::render(&snapshot, &options);
+            (result, (clock.now() - started).as_secs_f64() * 1000.0)
+        });
         cx.spawn(async move |this, cx| {
-            let result = task.await;
+            let (result, elapsed_ms) = task.await;
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
                 // Never install a render from a replaced document or an older edit.
@@ -443,6 +451,7 @@ impl EditorView {
                 {
                     match result {
                         Ok(mut frame) => {
+                            this.render_ms = Some(elapsed_ms);
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
@@ -497,6 +506,8 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        self.zoom_reference_span = editor.camera.span;
+        self.render_ms = None;
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
@@ -714,6 +725,7 @@ impl EditorView {
                 };
                 self.editor.camera =
                     OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
+                self.zoom_reference_span = self.editor.camera.span;
                 self.camera_view = Some(op);
                 self.camera_fitted = true;
                 self.request_render(cx);
@@ -2397,39 +2409,6 @@ impl EditorView {
                     .child(self.palette_panel(compact || self.agent.capture.is_some(), cx))
             })
     }
-    fn statusbar(&self) -> Div {
-        let t = self.theme;
-        let s = self.editor.display_snapshot();
-        let size: [i32; 3] = std::array::from_fn(|a| s.bounds.max[a] - s.bounds.min[a]);
-        row()
-            .h(px(STATUSBAR_HEIGHT))
-            .flex_shrink_0()
-            .border_t_1()
-            .border_color(t.line())
-            .px(px(24.0))
-            .gap(px(16.0))
-            .text_size(px(12.0))
-            .text_color(t.muted())
-            .child(mono(format!(
-                "{} voxels",
-                s.layers.iter().map(|l| l.voxels.len()).sum::<usize>()
-            )))
-            .child(mono(format!("{} × {} × {}", size[0], size[1], size[2])))
-            .child(div().h(px(12.0)).w(px(1.0)).bg(t.line()))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .text_color(if self.error { t.danger() } else { t.muted() })
-                    .child(self.status.clone()),
-            )
-            .when_some(self.hover, |d, p| {
-                d.child(mono(format!("X {}   Y {}   Z {}", p[0], p[1], p[2])))
-            })
-            .when(self.rendering, |d| d.child("Rendering…"))
-    }
     fn action_row(
         &self,
         op: Op,
@@ -2951,6 +2930,7 @@ impl Render for EditorView {
                         _ => PresetView::Iso,
                     },
                 );
+                self.zoom_reference_span = self.editor.camera.span;
                 if self.image.is_none() {
                     self.display_camera = self.editor.camera;
                 }
@@ -3040,7 +3020,7 @@ impl Render for EditorView {
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
-            .child(self.statusbar())
+            .child(self.statusbar(f32::from(size.width) < 1200.0))
             .children(overlay.map(|overlay| {
                 div()
                     .id("overlay")
