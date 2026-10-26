@@ -526,6 +526,7 @@ impl EditorView {
                                 Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
                         }
                         Err(e) => {
+                            this.pause_history(cx);
                             this.error = true;
                             this.status = e.to_string().into();
                         }
@@ -572,6 +573,8 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        self.pause_history(cx);
+        self.timeline.dragging = false;
         self.zoom_reference_span = editor.camera.span;
         self.frame_meter = FrameMeter::new(if self.gpu.enabled {
             RendererKind::Gpu
@@ -672,8 +675,14 @@ impl EditorView {
             return false;
         }
         match op {
-            Op::Undo => self.editor.preview.is_none() && self.editor.engine.head().is_some(),
-            Op::Redo => self.editor.preview.is_none() && self.editor.engine.redo_head().is_some(),
+            Op::Undo => {
+                self.editor.history_playing()
+                    || (self.editor.preview.is_none() && self.editor.engine.head().is_some())
+            }
+            Op::Redo => {
+                self.editor.history_playing()
+                    || (self.editor.preview.is_none() && self.editor.engine.redo_head().is_some())
+            }
             Op::CheckUpdates => updates_available(),
             _ => true,
         }
@@ -702,7 +711,30 @@ impl EditorView {
         }
     }
     fn invoke(&mut self, op: Op, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.enabled(op) {
+        let enabled = self.enabled(op);
+        if matches!(
+            op,
+            Op::Undo
+                | Op::Redo
+                | Op::Place
+                | Op::Erase
+                | Op::Paint
+                | Op::Fill
+                | Op::Box
+                | Op::Picker
+                | Op::MirrorX
+                | Op::MirrorY
+                | Op::MirrorZ
+                | Op::AddLayer
+                | Op::Comment
+                | Op::ToolPicker
+                | Op::New
+                | Op::Open
+                | Op::Quit
+        ) {
+            self.pause_history(cx);
+        }
+        if !enabled {
             return;
         }
         self.menu = None;
@@ -1261,30 +1293,21 @@ impl EditorView {
             cx.stop_propagation();
             return;
         }
+        if self.panel == Panel::History && key == "space" {
+            if !e.is_held {
+                self.toggle_history(cx);
+            }
+            cx.stop_propagation();
+            return;
+        }
         if self.panel == Panel::History && matches!(key, "left" | "right") {
-            let ids: Vec<_> = std::iter::once(None)
-                .filter(|_| self.editor.engine.initial_retained())
-                .chain(self.editor.engine.timeline().map(|e| Some(e.id)))
-                .collect();
-            let index = self
-                .editor
-                .preview
-                .as_ref()
-                .and_then(|p| {
-                    ids.iter().position(|id| {
-                        p.source == voxelite_app::history::PreviewSource::History(*id)
-                    })
-                })
-                .unwrap_or_else(|| {
-                    ids.iter()
-                        .position(|id| *id == self.editor.engine.head())
-                        .unwrap_or(0)
-                });
+            let count = self.editor.timeline_entries().count();
+            let index = self.editor.timeline_index();
             self.scrub(
                 if key == "left" {
                     index.saturating_sub(1)
                 } else {
-                    (index + 1).min(ids.len().saturating_sub(1))
+                    (index + 1).min(count.saturating_sub(1))
                 },
                 cx,
             );
@@ -1420,9 +1443,7 @@ impl EditorView {
             .when(!label.is_empty(), |d| d.child(label))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
-                if enabled {
-                    this.invoke(op, window, cx);
-                }
+                this.invoke(op, window, cx);
             }))
     }
     fn menubar(&self, cx: &Context<Self>) -> Div {
@@ -1783,7 +1804,7 @@ impl EditorView {
                         .child(
                             self.control(
                                 "preview-exit",
-                                "play",
+                                "log-out",
                                 "Return to live",
                                 cx,
                                 |this, window, cx| {
@@ -1875,6 +1896,7 @@ impl EditorView {
                         return;
                     }
                     if this.editor.preview.is_some() {
+                        this.pause_history(cx);
                         this.status =
                             "History preview is read-only · Return to live to edit".into();
                         cx.notify();
@@ -2437,9 +2459,7 @@ impl EditorView {
             )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
-                if enabled {
-                    this.invoke(op, window, cx);
-                }
+                this.invoke(op, window, cx);
             }))
     }
     fn floating(&self) -> Stateful<Div> {
