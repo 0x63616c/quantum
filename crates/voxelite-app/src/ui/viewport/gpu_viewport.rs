@@ -13,7 +13,7 @@ pub(super) struct State {
     #[cfg(target_os = "macos")]
     pub frame_serial: usize,
     #[cfg(target_os = "macos")]
-    content: Option<(u64, u64, Option<voxelite_app::history::PreviewSource>)>,
+    pub(super) content: Option<(u64, u64, Option<voxelite_app::history::PreviewSource>)>,
 }
 impl State {
     pub fn new() -> Self {
@@ -53,7 +53,7 @@ impl State {
 
 #[cfg(target_os = "macos")]
 impl EditorView {
-    pub(super) fn monitor_gpu(cx: &mut Context<Self>) {
+    pub(in crate::ui) fn monitor_gpu(cx: &mut Context<Self>) {
         cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor()
@@ -63,12 +63,12 @@ impl EditorView {
                     if let Some(error) = gpui_apple::metal_renderer::take_surface_error() {
                         this.gpu_fallback(voxelite_render::RenderError::Invalid(error), cx);
                     }
-                    if let Some(renderer) = &this.gpu.renderer
+                    if let Some(renderer) = &this.viewport.gpu.renderer
                         && let Err(error) = renderer.check_health()
                     {
                         this.gpu_fallback(error, cx);
                     }
-                    this.gpu.enabled
+                    this.viewport.gpu.enabled
                 });
                 if !matches!(keep_running, Ok(true)) {
                     break;
@@ -78,39 +78,24 @@ impl EditorView {
         .detach();
     }
     fn gpu_fallback(&mut self, error: voxelite_render::RenderError, cx: &mut Context<Self>) {
-        self.gpu.enabled = false;
-        self.frame_meter = FrameMeter::new(RendererKind::Cpu);
-        self.gpu.clear_frame();
-        self.gpu.renderer = None;
-        self.gpu.content = None;
-        self.displayed = None;
-        self.painted_frame.set(None);
-        self.interactive_render = false;
-        self.render_size = [0, 0]; // Recompute the CPU budget at next layout.
+        self.viewport.fallback_to_cpu();
         self.status = format!("GPU viewport unavailable; using CPU: {error}").into();
-        self.render_pending = true;
         cx.notify();
     }
 
     pub(super) fn request_gpu_render(&mut self, cx: &mut Context<Self>) {
-        if self.render_size.contains(&0) {
+        if self.viewport.render_size.contains(&0) {
             return;
         }
-        if self.rendering {
-            self.render_pending = true;
+        if !self.viewport.begin_render(cx.background_executor().now()) {
             return;
         }
-        if !self.render_pending {
-            self.frame_meter.begin_frame(cx.background_executor().now());
-        }
-        self.rendering = true;
-        self.render_pending = false;
         let identity = self.frame_identity();
         let content = (identity.generation, identity.revision, identity.preview);
-        let changed = self.gpu.content != Some(content);
+        let changed = self.viewport.gpu.content != Some(content);
         let bounds = self.editor.display_snapshot().bounds;
         let snapshot = changed.then(|| self.editor.display_snapshot().clone());
-        let mut renderer = self.gpu.renderer.take();
+        let mut renderer = self.viewport.gpu.renderer.take();
         let background = if self.theme == Theme::Light { 1. } else { 0. };
         let grid_color: Rgba = self.theme.line().into();
         let style = voxelite_render::gpu::Style {
@@ -144,30 +129,27 @@ impl EditorView {
             }
             .await;
             let _ = this.update(cx, |this, cx| {
-                this.rendering = false;
+                this.viewport.rendering = false;
                 // Consumer import failure can disable the GPU while a producer
                 // request is outstanding. Never reinstall that worker or frame.
-                if !this.gpu.enabled {
+                if !this.viewport.gpu.enabled {
                     cx.notify();
                     return;
                 }
                 match result {
                     Ok(frame) => {
-                        this.gpu.renderer = renderer;
-                        this.gpu.content = Some(content);
+                        this.viewport.gpu.renderer = renderer;
+                        this.viewport.gpu.content = Some(content);
                         // Camera motion may queue a newer frame; keep completed frames
                         // flowing, but never install a different document/preview.
-                        if identity.generation == this.document_generation
-                            && identity.revision == this.editor.engine.revision()
-                            && identity.preview == this.frame_identity().preview
-                            && identity.size == this.render_size
-                        {
-                            this.display_camera = identity.camera;
-                            this.display_size = identity.size;
-                            this.displayed = Some(identity);
-                            this.image = None;
-                            this.gpu.frame_serial = this.gpu.frame_serial.wrapping_add(1);
-                            this.gpu.frame = Some(frame);
+                        if this.viewport.accepts(identity, &this.editor) {
+                            this.viewport.display_camera = identity.camera;
+                            this.viewport.display_size = identity.size;
+                            this.viewport.displayed = Some(identity);
+                            this.viewport.image = None;
+                            this.viewport.gpu.frame_serial =
+                                this.viewport.gpu.frame_serial.wrapping_add(1);
+                            this.viewport.gpu.frame = Some(frame);
                         }
                     }
                     Err(error) => {

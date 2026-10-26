@@ -10,7 +10,7 @@ impl EditorView {
                     return;
                 }
             };
-        self.dialog_open = true;
+        self.save_flow.begin_dialog();
         self.drag = None;
         cx.spawn(async move |this, cx| {
             let result = upload.await.and_then(|selection| {
@@ -19,7 +19,7 @@ impl EditorView {
                     .transpose()
             });
             let _ = this.update(cx, |this, cx| {
-                this.dialog_open = false;
+                this.save_flow.finish_dialog();
                 match result {
                     Ok(Some(editor)) => {
                         this.replace_editor(editor, cx);
@@ -55,7 +55,7 @@ impl EditorView {
         if success && !copy {
             self.editor.engine.mark_saved();
         }
-        let next = self.after_save.take();
+        let next = self.save_flow.complete_save(success);
         if success && let Some(op) = next {
             self.run(op, cx);
         }
