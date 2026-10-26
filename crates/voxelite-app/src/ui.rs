@@ -9,6 +9,8 @@ mod browser;
 mod comments;
 mod gpu_viewport;
 mod history;
+mod keyboard_guide;
+use keyboard_guide::keyboard_guide;
 mod orientation;
 use comments::Panel;
 mod palettes;
@@ -129,7 +131,7 @@ pub struct EditorView {
     command_index: usize,
     command_scroll: ScrollHandle,
     dialog_open: bool,
-    info: Option<(&'static str, HintText)>,
+    info: Option<(&'static str, InfoContent)>,
     pending: Option<Op>,
     status: HintText,
     error: bool,
@@ -146,7 +148,9 @@ struct Hint {
 }
 impl Render for Hint {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        div()
+        row()
+            .flex_none()
+            .whitespace_nowrap()
             .px(px(10.0))
             .py(px(7.0))
             .rounded(px(6.0))
@@ -156,6 +160,7 @@ impl Render for Hint {
             .text_color(self.theme.text())
             .font(gpui::font("Geist"))
             .text_size(px(12.0))
+            .line_height(px(16.0))
             .shadow_lg()
             .child(self.text.clone())
     }
@@ -189,58 +194,9 @@ fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut Ap
     }
 }
 
-fn keyboard_guide() -> HintText {
-    HintText::default()
-        .action(Op::Place)
-        .text(" Place · ")
-        .action(Op::Erase)
-        .text(" Erase · ")
-        .action(Op::Paint)
-        .text(" Paint · ")
-        .action(Op::Fill)
-        .text(" Fill · ")
-        .action(Op::Box)
-        .text(" Box · ")
-        .action(Op::Picker)
-        .text(" Picker\nClick to apply · ")
-        .key("alt-click")
-        .text(" to sample a color\nRight-drag to orbit · Middle-drag or ")
-        .key("shift-rightdrag")
-        .text(" to pan\nScroll to zoom · ")
-        .action(Op::Frame)
-        .text(" to frame the model\nBox: click two corners · ")
-        .key("escape")
-        .text(" cancels\n")
-        .key("left")
-        .text("/")
-        .key("right")
-        .text("/")
-        .key("up")
-        .text("/")
-        .key("down")
-        .text(" move X/Z · ")
-        .key("pageup")
-        .text("/")
-        .key("pagedown")
-        .text(" move Y · ")
-        .key("enter")
-        .text(" applies\n")
-        .key("[")
-        .text(" / ")
-        .key("]")
-        .text(" cycle colors · ")
-        .action(Op::Commands)
-        .text(" searches commands\n")
-        .action(Op::Undo)
-        .text(" undoes · ")
-        .action(Op::Redo)
-        .text(" redoes\n")
-        .action(Op::Open)
-        .text(" opens · ")
-        .action(Op::Save)
-        .text(" saves · ")
-        .action(Op::SaveAs)
-        .text(" saves as")
+enum InfoContent {
+    Text(String),
+    Guide,
 }
 
 fn section_title(text: &'static str) -> Div {
@@ -779,7 +735,7 @@ impl EditorView {
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
-            Op::About => self.info = Some(("About Voxelite", format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION")).into())),
+            Op::About => self.info = Some(("About Voxelite", InfoContent::Text(format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION"))))),
             Op::CheckUpdates => {
                 let message = check_for_updates();
                 self.error = message.is_some();
@@ -880,13 +836,13 @@ impl EditorView {
             Op::Extensions => {
                 self.info = Some((
                     "Extensions",
-                    "Place, Erase, Paint, Fill, Box and Picker are included. Custom extensions are not available in this build.".into(),
+                    InfoContent::Text("Place, Erase, Paint, Fill, Box and Picker are included. Custom extensions are not available in this build.".into()),
                 ))
             }
             Op::Help => {
                 self.info = Some((
                     "Make yourself at home",
-                    keyboard_guide(),
+                    InfoContent::Guide,
                 ))
             }
         }
@@ -1090,6 +1046,29 @@ impl EditorView {
         if self.settings_modal.is_some() {
             return;
         }
+        if self.pending.is_some() {
+            let key = navigation_key(&e.keystroke).unwrap_or_default();
+            if e.keystroke.key == "d"
+                && ShortcutPlatform::current().is_primary(e.keystroke.modifiers)
+            {
+                self.resolve_pending(0, cx);
+            } else {
+                match key {
+                    "escape" => self.resolve_pending(1, cx),
+                    "left" => self.pending_choice = (self.pending_choice + 2) % 3,
+                    "right" | "tab" => {
+                        self.pending_choice = (self.pending_choice
+                            + if e.keystroke.modifiers.shift { 2 } else { 1 })
+                            % 3
+                    }
+                    "enter" => self.resolve_pending(self.pending_choice, cx),
+                    _ => {}
+                }
+            }
+            cx.stop_propagation();
+            cx.notify();
+            return;
+        }
         if self.palette_focus.is_focused(window) {
             let delta = match e.keystroke.key.as_str() {
                 "left" => Some(-1),
@@ -1202,20 +1181,6 @@ impl EditorView {
         }
         if self.palettes.open || self.agent.open {
             cx.stop_propagation();
-            return;
-        }
-        if self.pending.is_some() {
-            match key {
-                "left" => self.pending_choice = (self.pending_choice + 2) % 3,
-                "right" | "tab" => {
-                    self.pending_choice =
-                        (self.pending_choice + if e.keystroke.modifiers.shift { 2 } else { 1 }) % 3
-                }
-                "enter" => self.resolve_pending(self.pending_choice, cx),
-                _ => {}
-            }
-            cx.stop_propagation();
-            cx.notify();
             return;
         }
         if self.palette_open {
@@ -1390,7 +1355,7 @@ impl EditorView {
             .active(move |d| d.bg(theme.selected()).text_color(theme.accent()))
             .anchored_hint(
                 if enabled {
-                    HintText::from(op.label()).text("  ").action(op)
+                    HintText::from(op.label()).action(op)
                 } else {
                     format!("{} · {}", op.label(), disabled_reason).into()
                 },
@@ -2537,21 +2502,38 @@ impl EditorView {
                                 div()
                                     .text_size(px(18.0))
                                     .font_weight(FontWeight::SEMIBOLD)
-                                    .child("Save your changes?"),
+                                    .child(format!(
+                                        "Do you want to save the changes you made to “{}”?",
+                                        self.editor.snapshot().name
+                                    )),
                             )
-                            .child(div().my(px(16.0)).text_color(t.muted()).child(
-                                "Save this project before continuing. Discarding cannot be undone.",
-                            ))
                             .child(
-                                row().justify_end().gap(px(8.0)).children(
-                                    ["Discard", "Cancel", "Save & continue"]
+                                div()
+                                    .my(px(16.0))
+                                    .text_color(t.muted())
+                                    .child("Your changes will be lost if you don’t save them."),
+                            )
+                            .child(
+                                row().mt(px(24.0)).gap(px(8.0)).children(
+                                    ["Don’t Save", "Cancel", "Save"]
                                         .into_iter()
                                         .enumerate()
                                         .map(|(i, label)| {
                                             row()
                                                 .id(("pending-choice", i))
-                                                .h(px(36.0))
+                                                .role(Role::Button)
+                                                .aria_label(label)
+                                                .aria_keyshortcuts(
+                                                    crate::shortcuts::format_shortcut(
+                                                        ["secondary-d", "escape", "enter"][i],
+                                                        ShortcutPlatform::current(),
+                                                    ),
+                                                )
+                                                .h(px(32.0))
+                                                .min_w(px(80.0))
+                                                .justify_center()
                                                 .px(px(12.0))
+                                                .when(i == 0, |d| d.mr_auto())
                                                 .rounded(px(6.0))
                                                 .border_1()
                                                 .border_color(if self.pending_choice == i {
@@ -2559,45 +2541,33 @@ impl EditorView {
                                                 } else {
                                                     t.line()
                                                 })
-                                                .text_color(if i == 0 {
-                                                    t.danger()
-                                                } else {
-                                                    t.text()
+                                                .bg(t.background())
+                                                .when(i == 2, |d| {
+                                                    d.bg(t.accent()).text_color(t.background())
+                                                })
+                                                .when(self.pending_choice == i, |d| {
+                                                    d.shadow(focus_ring(t))
                                                 })
                                                 .cursor_pointer()
-                                                .hover(move |d| d.bg(t.hover()))
-                                                .gap(px(8.0))
-                                                .child(
-                                                    icon(["trash-2", "close", "save"][i])
-                                                        .text_color(t.muted()),
-                                                )
+                                                .hover(move |d| {
+                                                    d.bg(if i == 2 {
+                                                        t.accent().opacity(0.88)
+                                                    } else {
+                                                        t.hover()
+                                                    })
+                                                })
                                                 .child(label)
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     this.resolve_pending(i, cx)
                                                 }))
                                         }),
                                 ),
-                            )
-                            .child(
-                                div()
-                                    .mt(px(16.0))
-                                    .text_size(px(12.0))
-                                    .text_color(t.muted())
-                                    .child(
-                                        HintText::default()
-                                            .key("tab")
-                                            .text(" to choose · ")
-                                            .key("enter")
-                                            .text(" to confirm · ")
-                                            .key("escape")
-                                            .text(" to cancel"),
-                                    ),
                             ),
                     )
                     .into_any_element(),
             );
         }
-        if let Some((title, text)) = &self.info {
+        if let Some((title, content)) = &self.info {
             return Some(
                 div()
                     .absolute()
@@ -2608,7 +2578,11 @@ impl EditorView {
                     .bg(rgba(0x00000070))
                     .child(
                         self.floating()
-                            .w(px(560.0))
+                            .w(px(if matches!(content, InfoContent::Guide) {
+                                720.0
+                            } else {
+                                560.0
+                            }))
                             .p(px(24.0))
                             .child(
                                 row()
@@ -2633,12 +2607,13 @@ impl EditorView {
                                             })),
                                     ),
                             )
-                            .child(
-                                div()
+                            .child(match content {
+                                InfoContent::Text(text) => div()
                                     .text_color(t.muted())
                                     .line_height(px(26.0))
                                     .child(text.clone()),
-                            ),
+                                InfoContent::Guide => keyboard_guide(t),
+                            }),
                     )
                     .into_any_element(),
             );
@@ -2668,21 +2643,33 @@ impl EditorView {
                                     .border_color(t.line())
                                     .child(icon("search").text_color(t.muted()))
                                     .child(
-                                        div()
+                                        row()
                                             .flex_1()
                                             .min_w(px(0.0))
                                             .overflow_hidden()
-                                            .text_ellipsis()
                                             .text_size(px(16.0))
-                                            .child(if self.query.is_empty() {
-                                                if self.tools_only {
+                                            .when(self.query.is_empty(), |d| {
+                                                d.text_color(t.muted()).child(if self.tools_only {
                                                     "Search tools…"
                                                 } else {
                                                     "Type a command…"
-                                                }
-                                                .to_string()
-                                            } else {
-                                                format!("{}│", self.query)
+                                                })
+                                            })
+                                            .when(!self.query.is_empty(), |d| {
+                                                d.child(
+                                                    div()
+                                                        .min_w(px(0.0))
+                                                        .overflow_hidden()
+                                                        .text_ellipsis()
+                                                        .child(self.query.clone()),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .flex_shrink_0()
+                                                        .w(px(1.5))
+                                                        .h(px(18.0))
+                                                        .bg(t.text()),
+                                                )
                                             }),
                                     )
                                     .child(shortcut("escape").text_color(t.muted())),
