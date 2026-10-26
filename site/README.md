@@ -88,3 +88,18 @@ at repository root. `python3 scripts/scan-pii.py` scans source/assets and reacha
 Git history, writing redacted locations to `docs/reviews/pii-scan.md`; it takes a
 few minutes and does not rewrite history. Host application loading and macOS
 packaging remain untested here; guides disclose those boundaries.
+
+## Deployment
+
+`.github/workflows/deploy-site.yml` builds the complete site and wasm editor on
+GitHub-hosted Ubuntu runners for pushes to `main`, pull requests, and manual runs.
+It includes the latest release's `appcast.xml` when available and runs the local
+site checks. Pull requests only build and verify. Pushes and manual runs on `main`
+publish only when triggered by `0x63616c` in `0x63616c/voxelite`.
+
+The workflow publishes the built files at the root of `site-dist`, excluding this
+README, `PROGRESS.md`, and `content/` sources. It preserves deployment history and
+skips unchanged output. Set Vercel's production branch to `site-dist`, framework
+preset to **Other**, Build Command override to empty, and output directory to `.`
+([static build settings](https://vercel.com/docs/builds/configure-a-build#skip-build-step)).
+Vercel deploys that branch; GitHub needs no Vercel secrets.

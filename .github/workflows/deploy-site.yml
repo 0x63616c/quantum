@@ -1,0 +1,130 @@
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-site-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            build-essential clang cmake pkg-config libssl-dev \
+            libfontconfig-dev libfreetype-dev libvulkan-dev libwayland-dev \
+            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev rsync
+
+      - name: Install pinned Rust toolchain and wasm target
+        run: |
+          # rustup reads the version and components from rust-toolchain.toml.
+          rustup show
+          rustup target add wasm32-unknown-unknown
+
+      - name: Download optional release appcast
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release download --pattern appcast.xml --dir site --clobber \
+            2> "$RUNNER_TEMP/appcast-error"; then
+            test -s site/appcast.xml
+          else
+            # Only a missing release or asset is optional; other errors fail.
+            case "$(cat "$RUNNER_TEMP/appcast-error")" in
+              'release not found'|'no assets to download'|'no assets match the file pattern')
+                echo 'No release appcast available; continuing without a download.'
+                ;;
+              *)
+                cat "$RUNNER_TEMP/appcast-error" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Build site and wasm editor
+        run: scripts/build-site.sh
+
+      - name: Verify site
+        run: |
+          python3 scripts/check-site.py
+          test -s site/index.html
+          test -s site/llms.txt
+          test -s site/app/voxelite_app_bg.wasm
+
+      - name: Stage public files
+        run: |
+          # Keep public Markdown exports and downloadable skill/integration docs.
+          mkdir -p "$RUNNER_TEMP/site-dist"
+          rsync -a --exclude=/README.md --exclude=/PROGRESS.md --exclude=/content/ \
+            site/ "$RUNNER_TEMP/site-dist/"
+
+      - name: Upload built site
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}/site-dist/
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == '0x63616c/voxelite' && github.actor == '0x63616c'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download built site
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: site-dist
+          path: site-dist
+
+      - name: Publish site-dist branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/site-publish"
+          cd "$RUNNER_TEMP/site-publish"
+          git init --initial-branch=site-dist
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898299+github-actions[bot]@users.noreply.github.com'
+          # Read the job token via gh, keeping it out of remote URLs and logs.
+          git config credential.helper '!gh auth git-credential'
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
+          # Preserve deploy history if present; otherwise start a new root commit.
+          existing_branch=$(git ls-remote --heads origin refs/heads/site-dist)
+          if [[ -n "$existing_branch" ]]; then
+            git fetch --depth=1 origin refs/heads/site-dist
+            git checkout -B site-dist FETCH_HEAD
+          fi
+          rsync -a --delete --exclude=/.git/ "$GITHUB_WORKSPACE/site-dist/" ./
+          git add --all
+          if git diff --cached --quiet; then
+            echo 'Published site is unchanged.'
+            exit 0
+          fi
+          git commit -m "Deploy site from ${GITHUB_SHA}"
+          git push origin HEAD:site-dist
