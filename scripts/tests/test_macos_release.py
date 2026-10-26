@@ -4,6 +4,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -36,6 +37,7 @@ class ReleaseTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode == 0, tag in ["v0.1.0", "v12.34.56"])
         self.assertIn("ref: refs/tags/${{ env.TAG }}", WORKFLOW.read_text())
+        self.assertIn("          fetch-depth: 0", WORKFLOW.read_text())
 
     def test_self_hosted_guards_and_pins(self):
         guard = ("    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || "
@@ -58,6 +60,10 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn('cargo build --release --locked -p voxelite-mcp',
                       workflow_step('Build app without signing credentials'))
         self.assertIn("scripts/package-macos.sh --skip-build", workflow_step("Sign and package"))
+        notes = workflow.index("      - name: Generate release notes")
+        appcast = workflow.index("      - name: Generate signed update feed")
+        self.assertLess(package, notes)  # Packaging clears dist/.
+        self.assertLess(notes, appcast)
 
     def test_publication_is_staged_and_immutable(self):
         for generated, failure in [(True, ""), (False, ""), (True, "create"), (True, "upload")]:
@@ -84,6 +90,8 @@ if sys.argv[2] == os.environ["FAIL_AT"]:
                 self.assertEqual(result.returncode == 0, not failure)
                 self.assertIn("--draft", calls[0])
                 self.assertIn("--verify-tag", calls[0])
+                self.assertEqual(calls[0][calls[0].index("--notes-file") + 1],
+                                 "dist/RELEASE_NOTES.md")
                 if failure == "create":
                     self.assertEqual(len(calls), 1)
                 else:
@@ -96,6 +104,97 @@ if sys.argv[2] == os.environ["FAIL_AT"]:
                         self.assertEqual(len(calls), 2)
                     else:
                         self.assertEqual(calls[2], ["release", "edit", "v1.2.3", "--draft=false"])
+
+
+class ReleaseNotesTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix="voxelite-release-test-")
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        for name in ("scripts/generate-macos-release-notes.py", "packaging/macos/RELEASE_NOTES.md"):
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, path)
+        self.env = os.environ | {
+            "GIT_AUTHOR_NAME": "Private Author", "GIT_COMMITTER_NAME": "Private Committer",
+            "GIT_AUTHOR_EMAIL": "author@example.invalid", "GIT_COMMITTER_EMAIL": "committer@example.invalid",
+        }
+        self.git("init", "--initial-branch=main")
+        self.git("config", "commit.gpgsign", "false")
+        self.git("config", "tag.gpgsign", "false")
+        self.initial = self.commit("Initial version")
+
+    def git(self, *args):
+        return subprocess.check_output(["git", *args], cwd=self.root, env=self.env,
+                                       stderr=subprocess.PIPE, text=True).strip()
+
+    def commit(self, subject):
+        self.git("commit", "--allow-empty", "-m", subject, "-m", "Private commit body")
+        return self.git("rev-parse", "--short", "HEAD")
+
+    def notes(self, tag):
+        result = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", workflow_step("Generate release notes")],
+            cwd=self.root, env=self.env | {"TAG": tag}, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        notes = (self.root / "dist/RELEASE_NOTES.md").read_text()
+        self.assertTrue(notes.startswith((ROOT / "packaging/macos/RELEASE_NOTES.md").read_text().rstrip() + "\n\n"))
+        for private in ("Private Author", "Private Committer", "@example.invalid", "Private commit body"):
+            self.assertNotIn(private, notes)
+        return notes
+
+    def test_previous_stable_tag_and_release_boundary(self):
+        self.git("tag", "-a", "v0.1.0", "-m", "First release")
+        self.commit("Previous stable version")
+        self.git("tag", "v0.2.0")
+        first = self.commit('Fix <script>alert("x")</script> & café')
+        for name in ("v0.3.0-rc.1", "v0.3.0+build", "v0.3.0.1", "v00.3.0", "nightly"):
+            self.git("tag", name)
+        last = self.commit("Prepare release")
+        self.git("tag", "-a", "v0.3.0", "-m", "Release")
+        self.git("tag", "v0.2.1")  # Same-commit tags are not previous releases.
+        self.commit("Future change")
+        self.git("tag", "v0.4.0")
+        self.git("branch", "v0.3.0")  # A colliding branch must not supply commits.
+        self.git("checkout", "-b", "unmerged", self.initial)
+        self.commit("Unmerged change")
+        self.git("tag", "v9.0.0")
+        notes = self.notes("v0.3.0")
+        self.assertEqual(notes.split("## Changes since ")[1],
+                         f'v0.2.0\n\n- Prepare release ({last})\n'
+                         f'- Fix <script>alert("x")</script> & café ({first})\n')
+
+    def test_first_release_on_root_commit(self):
+        self.git("tag", "v1.0.0")
+        self.git("tag", "v0.9.0")
+        notes = self.notes("v1.0.0")
+        self.assertIn(f"## Changes since the beginning\n\n- Initial version ({self.initial})\n", notes)
+
+    def test_no_previous_stable_tag_includes_all_commits(self):
+        self.git("tag", "v0.1.0-rc.1")
+        last = self.commit("First stable version")
+        self.git("tag", "v0.1.0")
+        notes = self.notes("v0.1.0")
+        self.assertIn(f"## Changes since the beginning\n\n- First stable version ({last})\n"
+                      f"- Initial version ({self.initial})\n", notes)
+
+    def test_merged_history_and_annotated_previous_tag(self):
+        self.git("checkout", "-b", "feature")
+        self.commit("Previous release on merged branch")
+        self.git("tag", "-a", "v0.1.0", "-m", "Previous release")
+        feature = self.commit("Feature change")
+        self.git("checkout", "main")
+        main = self.commit("Main change")
+        self.git("merge", "--no-ff", "feature", "-m", "Merge subject must be omitted")
+        self.git("tag", "v0.2.0")
+        notes = self.notes("v0.2.0")
+        self.assertIn("## Changes since v0.1.0", notes)
+        self.assertIn(f"- Feature change ({feature})", notes)
+        self.assertIn(f"- Main change ({main})", notes)
+        self.assertNotIn("Merge subject", notes)
+        self.assertNotIn("Previous release on merged branch", notes)
+        self.assertNotIn("Initial version", notes)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 
 import base64
 import hashlib
+from html.parser import HTMLParser
 import io
 import json
 import os
@@ -14,6 +15,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 SECRETS = (
@@ -79,9 +81,13 @@ import base64, os, pathlib, plistlib, sys, xml.etree.ElementTree as ET
 assert 'SPARKLE_ED_PRIVATE_KEY' not in os.environ
 assert sys.stdin.read().strip() == 'fixture private key'
 args = sys.argv[1:]
+assert '--embed-release-notes' in args
+notes = (pathlib.Path(args[-1]) / 'Voxelite.html').read_text(encoding='utf-8')
 ns = '{http://www.andymatuschak.org/xml-namespaces/sparkle}'
 root = ET.Element('rss', version='2.0')
 item = ET.SubElement(ET.SubElement(root, 'channel'), 'item')
+if not os.environ.get('MISSING_NOTES'):
+    ET.SubElement(item, 'description').text = 'Wrong notes' if os.environ.get('WRONG_NOTES') else notes
 info = plistlib.load(open('dist/Voxelite.app/Contents/Info.plist', 'rb'))
 ET.SubElement(item, ns+'version').text = info['CFBundleVersion']
 attrs = {'url':args[args.index('--download-url-prefix')+1]+'Voxelite.dmg',
@@ -257,14 +263,33 @@ class PackagingTests(unittest.TestCase):
         verifier.chmod(0o755)
         output = self.root / "outputs"
         credentials = {"SPARKLE_ED_PRIVATE_KEY": "fixture private key", "GITHUB_OUTPUT": str(output)}
+        notes = self.root / "dist/RELEASE_NOTES.md"
+        notes.write_text('Install **Voxelite.dmg**.\n\n## Changes since v1.2.2\n\n'
+                         '- Fix <script>alert("x")</script> & café </pre> ]]> (abc1234)\n',
+                         encoding="utf-8")
         for overrides, success in [({}, True), ({"TAG": "v9.9.9"}, False),
                                    ({"UNSIGNED_FEED": "1"}, False), ({"WRONG_URL": "1"}, False),
-                                   ({"UNSIGNED_METADATA": "1"}, False)]:
+                                   ({"UNSIGNED_METADATA": "1"}, False),
+                                   ({"MISSING_NOTES": "1"}, False), ({"WRONG_NOTES": "1"}, False)]:
             with self.subTest(overrides=overrides):
                 output.unlink(missing_ok=True)
                 result = self.run_script("generate-macos-appcast.sh", credentials | overrides, success=success)
                 self.assertEqual("generated=true" in output.read_text(), success)
                 self.assertNotIn("PRIVATE-DIAGNOSTIC-SENTINEL", result.stdout + result.stderr)
+                if success:
+                    description = ET.parse(self.root / "site/appcast.xml").findtext("channel/item/description")
+                    self.assertIn("&lt;script&gt;", description)
+                    self.assertIn("&amp;", description)
+                    parser = HTMLParser()
+                    text = []
+                    tags = []
+                    parser.handle_data = text.append
+                    parser.handle_starttag = lambda tag, attrs: tags.append(tag)
+                    parser.feed(description)
+                    self.assertEqual("".join(text).strip(), notes.read_text(encoding="utf-8").strip())
+                    self.assertEqual(tags, ["html", "head", "meta", "body", "pre"])
+        notes.unlink()
+        self.run_script("generate-macos-appcast.sh", credentials, success=False)
         dmg = self.root / "dist/Voxelite.dmg"
         dmg.write_text("corrupt dmg")
         self.run_script("generate-macos-appcast.sh", credentials, success=False)

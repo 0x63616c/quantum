@@ -193,6 +193,14 @@ denies unsafe code, and other crates retain the workspace forbid lint.
 
 ## Appcast and site deployment
 
+After packaging, with full Git history and tags available, run
+`TAG=v0.2.0 python3 scripts/generate-macos-release-notes.py` (using the release's
+actual tag). This writes `dist/RELEASE_NOTES.md`: the installation notes plus
+non-merge commit subjects and short hashes since the nearest reachable stable
+tag before the release, or all commits if there is no previous stable tag.
+Author identities and commit bodies are omitted. The release workflow runs this
+step after packaging clears `dist/` and uses the result for the GitHub release.
+
 After a notarized build, `scripts/generate-macos-appcast.sh` passes
 `SPARKLE_ED_PRIVATE_KEY` to Sparkle's `generate_appcast --ed-key-file -` through
 stdin, without exporting it to the tool or its children. It first checks the
@@ -205,6 +213,9 @@ https://github.com/0x63616c/voxelite/releases/download/<tag>/Voxelite.dmg
 
 The script rejects an unsigned enclosure, wrong URL, incorrect size, or stale
 bundle version, and requires the release tag to equal `v` plus the bundle version.
+It converts `dist/RELEASE_NOTES.md` to escaped `Voxelite.html` beside the archived
+DMG, embeds it with `--embed-release-notes`, and checks the item contains those
+same notes before publishing. See [Sparkle's embedded release notes](https://sparkle-project.org/documentation/publishing/#embedded-release-notes).
 Sparkle compares the signing key with the bundled public key;
 a mismatch cannot be published as an unsigned update. The feed itself is also
 signed because the bundle opts into `SURequireSignedFeed`; enclosure signing alone
