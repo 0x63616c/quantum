@@ -4,6 +4,94 @@ Coordinates in. Models out. Real visual feedback.
 
 This reference is generated from the Rust server's live discovery catalog, API `voxelite.v1`. Download the [complete JSON catalog](https://voxelite.worldwidewebb.co/assets/mcp-tools.json). Run `voxelite-mcp --schema` to inspect the catalog for your own build.
 
+## Install MCP
+
+[Install Voxelite for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
+
+### Cursor
+
+[Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=voxelite&config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9Wb3hlbGl0ZS5hcHAvQ29udGVudHMvTWFjT1Mvdm94ZWxpdGUtbWNwIiwiYXJncyI6WyItLXJvb3QiLCIke3dvcmtzcGFjZUZvbGRlcn0iXX0=)
+
+Review and confirm the server in Cursor. The file root is `${workspaceFolder}`, your open project folder. [View mcp.json](https://voxelite.worldwidewebb.co/assets/integrations/cursor/mcp.json) for manual setup.
+
+### Claude Code
+
+Run from your project directory; `"$PWD"` sets the file root to that directory.
+
+```sh
+claude mcp add voxelite -- '/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp' --root "$PWD"
+```
+
+To make the server available across projects, add `--scope user` after `claude mcp add`. Its file root still points to the directory where you ran the command.
+
+### Codex
+
+Run from your project directory; `"$PWD"` sets the file root to that directory.
+
+```sh
+codex mcp add voxelite -- '/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp' --root "$PWD"
+```
+
+Or merge this into `~/.codex/config.toml` (or your trusted project's `.codex/config.toml`). Replace `<project dir>` with an existing absolute path.
+
+```toml
+[mcp_servers.voxelite]
+command = "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp"
+args = ["--root","<project dir>"]
+```
+
+### VS Code
+
+[Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22voxelite%22%2C%22command%22%3A%22%2FApplications%2FVoxelite.app%2FContents%2FMacOS%2Fvoxelite-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D)
+
+Review and confirm the server in VS Code, or run this CLI command. Both use `${workspaceFolder}` for the file root, resolved by VS Code in your open project.
+
+```sh
+code --add-mcp '{"name":"voxelite","command":"/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp","args":["--root","${workspaceFolder}"]}'
+```
+
+[View .vscode/mcp.json](https://voxelite.worldwidewebb.co/assets/integrations/vscode/mcp.json) for manual setup.
+
+### Other
+
+For Claude Desktop, Windsurf and other MCP hosts, merge this entry into the host's MCP settings. Preserve existing servers and replace `<project dir>` with an existing absolute path.
+
+```json
+{
+  "mcpServers": {
+    "voxelite": {
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+      "args": [
+        "--root",
+        "<project dir>"
+      ]
+    }
+  }
+}
+```
+
+## Install skills
+
+Install all skills from the repository's `skills/` directory with the open Agent Skills CLI. This installs workflow instructions; configure MCP above to give them tools.
+
+```sh
+npx skills add 0x63616c/voxelite
+```
+
+Add `--skill <name>` for one skill, `-g` for a global install, or `-a claude-code`, `-a cursor` or `-a codex` to pick an agent. [Choose an individual skill](https://voxelite.worldwidewebb.co/docs/skills/#available-skills).
+
+For a manual install, [download the skill folders](https://voxelite.worldwidewebb.co/assets/voxelite-skills.zip) or use a repository checkout. Copy each `skills/<name>/` folder into `.cursor/skills/`, `.claude/skills/`, or `~/.codex/skills/`. [Install, update and removal notes](https://voxelite.worldwidewebb.co/assets/skills/README.md).
+
+## What you get
+
+MCP gives your agent voxel editing tools, palettes, real PNG renders, and project save/export. Skills teach it to compose, inspect and refine a model. Each standalone server owns its own session; save `.voxl` files before disconnecting. To edit the live native canvas, [copy the connection configuration from the app](https://voxelite.worldwidewebb.co/docs/getting-started/#connect).
+
+## Verify it works
+
+1.  Restart or reconnect your host and list its MCP tools.
+2.  Call `voxelite_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+3.  Confirm the installed skills appear in your host, then ask it to use `voxelite-workflow` for your first model.
+
 ## Shared contract
 
 *   Stdio uses one JSON-RPC message per line. Stdout contains protocol messages only; diagnostics go to stderr.
@@ -94,11 +182,11 @@ Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {},
   "required": [],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -106,128 +194,180 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
         "api_version": {
           "const": "voxelite.v1"
         },
-        "documents": {
+        "protocol_versions": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "string",
+            "enum": [
+              "2025-11-25",
+              "2026-07-28"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "open_documents": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "request_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "result_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "batch_operations": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "explicit_voxels": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "read_voxels": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "work_units": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "operation_receipts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "receipt_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            }
+          },
+          "required": [
+            "open_documents",
+            "request_bytes",
+            "result_bytes",
+            "batch_operations",
+            "explicit_voxels",
+            "read_voxels",
+            "work_units",
+            "operation_receipts",
+            "receipt_bytes"
+          ],
+          "additionalProperties": true
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
             "properties": {
+              "model_id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$",
+                "description": "Captured monotonic revision, encoded as a decimal u64 string."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+              },
               "bounds": {
-                "additionalProperties": true,
-                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                "type": "object",
                 "properties": {
-                  "max": {
-                    "items": {
-                      "maximum": 32768,
-                      "minimum": -32767,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  },
                   "min": {
+                    "type": "array",
                     "items": {
-                      "maximum": 32767,
+                      "type": "integer",
                       "minimum": -32768,
-                      "type": "integer"
+                      "maximum": 32767
                     },
-                    "maxItems": 3,
                     "minItems": 3,
-                    "type": "array"
+                    "maxItems": 3
+                  },
+                  "max": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -32767,
+                      "maximum": 32768
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 },
                 "required": [
                   "min",
                   "max"
                 ],
-                "type": "object"
-              },
-              "comments": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "dirty": {
-                "type": "boolean"
-              },
-              "head_id": {
-                "anyOf": [
-                  {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "additionalProperties": true,
+                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
               },
               "layers": {
+                "type": "array",
                 "items": {
-                  "additionalProperties": true,
+                  "type": "object",
                   "properties": {
                     "id": {
-                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                      "type": "string"
-                    },
-                    "locked": {
-                      "type": "boolean"
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                     },
                     "name": {
-                      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                      "maxLength": 128,
+                      "type": "string",
                       "minLength": 1,
+                      "maxLength": 128,
                       "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                      "type": "string"
+                      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
                     },
                     "visible": {
                       "type": "boolean"
                     },
+                    "locked": {
+                      "type": "boolean"
+                    },
                     "voxel_count": {
-                      "maximum": 9223372036854775807,
+                      "type": "integer",
                       "minimum": 0,
-                      "type": "integer"
+                      "maximum": 9223372036854775807
                     }
                   },
                   "required": [
@@ -237,53 +377,55 @@ Complete output schema
                     "locked",
                     "voxel_count"
                   ],
-                  "type": "object"
+                  "additionalProperties": true
                 },
-                "maxItems": 64,
                 "minItems": 1,
-                "type": "array"
+                "maxItems": 64
               },
-              "model_id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
+              "dirty": {
+                "type": "boolean"
               },
-              "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
-                "minLength": 1,
-                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+              "voxel_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
               },
               "palette_slots": {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
+                "maximum": 256
               },
-              "redo_id": {
+              "comments": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "versions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 64
+              },
+              "head_id": {
                 "anyOf": [
                   {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                   },
                   {
                     "type": "null"
                   }
                 ]
               },
-              "revision": {
-                "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-                "pattern": "^(0|[1-9][0-9]{0,19})$",
-                "type": "string"
-              },
-              "versions": {
-                "maximum": 64,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "voxel_count": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
+              "redo_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -300,111 +442,36 @@ Complete output schema
               "head_id",
               "redo_id"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 8,
           "minItems": 0,
-          "type": "array"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "formats": {
-          "items": {
-            "maxLength": 16,
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxItems": 5,
-          "minItems": 1,
-          "type": "array"
-        },
-        "limits": {
-          "additionalProperties": true,
-          "properties": {
-            "batch_operations": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "explicit_voxels": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "open_documents": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "operation_receipts": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "read_voxels": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "receipt_bytes": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "request_bytes": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "result_bytes": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "work_units": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
-            }
-          },
-          "required": [
-            "open_documents",
-            "request_bytes",
-            "result_bytes",
-            "batch_operations",
-            "explicit_voxels",
-            "read_voxels",
-            "work_units",
-            "operation_receipts",
-            "receipt_bytes"
-          ],
-          "type": "object"
-        },
-        "presets": {
-          "items": {
-            "maxLength": 32,
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxItems": 7,
-          "minItems": 1,
-          "type": "array"
-        },
-        "protocol_versions": {
-          "items": {
-            "enum": [
-              "2025-11-25",
-              "2026-07-28"
-            ],
-            "type": "string"
-          },
-          "maxItems": 2,
-          "minItems": 2,
-          "type": "array"
+          "maxItems": 8
         },
         "renderer": {
           "const": "cpu"
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "minItems": 1,
+          "maxItems": 5
+        },
+        "presets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "minItems": 1,
+          "maxItems": 7
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -417,45 +484,41 @@ Complete output schema
         "presets",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -464,14 +527,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -480,7 +536,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -490,74 +578,97 @@ Create a persistent voxel/region anchored thread. Author is always agent, never 
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `anchor`            | Yes      | See schema                                                                                                                           |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
+| `anchor`            | Yes      | See schema                                                                                                                           |
 | `layer`             | Optional | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `message_id`        | Optional | string                                                                                                                               |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `text`              | Yes      | string; maxLength: 4096                                                                                                              |
 | `thread_id`         | Optional | string                                                                                                                               |
+| `message_id`        | Optional | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
+    "expected_epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
     "anchor": {
       "oneOf": [
         {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
-            "at": {
-              "items": {
-                "maximum": 32767,
-                "minimum": -32768,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "kind": {
               "const": "voxel"
+            },
+            "at": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "kind",
             "at"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
         {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "kind": {
               "const": "region"
             },
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
@@ -565,53 +676,29 @@ Complete input schema
             "min",
             "max"
           ],
-          "type": "object"
+          "additionalProperties": false
         }
       ]
     },
-    "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
     "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
+      "type": "string",
       "minLength": 1,
+      "maxLength": 128,
       "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "message_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "text": {
-      "maxLength": 4096,
+      "type": "string",
       "minLength": 1,
-      "type": "string"
+      "maxLength": 4096
     },
     "thread_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "message_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -622,7 +709,8 @@ Complete input schema
     "anchor",
     "text"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -630,83 +718,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -714,85 +831,35 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "message_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "thread_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
+        },
+        "thread_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "message_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
       },
       "required": [
@@ -814,45 +881,41 @@ Complete output schema
         "thread_id",
         "message_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -861,14 +924,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -877,7 +933,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -887,63 +975,63 @@ List anchored threads including messages, agent/human roles, resolved state and 
 
 | Argument         | Required | Type / constraints                                                    |
 | ---------------- | -------- | --------------------------------------------------------------------- |
-| `limit`          | Optional | integer; minimum: 1; maximum: 200                                     |
-| `message_limit`  | Optional | integer; minimum: 1; maximum: 200                                     |
-| `message_offset` | Optional | integer; minimum: 0; maximum: 10000                                   |
 | `model_id`       | Yes      | string                                                                |
-| `offset`         | Optional | integer; minimum: 0; maximum: 1024                                    |
 | `revision`       | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
 | `state`          | Optional | string; enum: \["open","resolved","all"\]                             |
+| `offset`         | Optional | integer; minimum: 0; maximum: 1024                                    |
+| `limit`          | Optional | integer; minimum: 1; maximum: 200                                     |
+| `message_offset` | Optional | integer; minimum: 0; maximum: 10000                                   |
+| `message_limit`  | Optional | integer; minimum: 1; maximum: 200                                     |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "limit": {
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "message_limit": {
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "message_offset": {
-      "maximum": 10000,
-      "minimum": 0,
-      "type": "integer"
-    },
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "offset": {
-      "maximum": 1024,
-      "minimum": 0,
-      "type": "integer"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     },
     "state": {
+      "type": "string",
       "enum": [
         "open",
         "resolved",
         "all"
-      ],
-      "type": "string"
+      ]
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1024
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "message_offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "message_limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -951,128 +1039,96 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
         "comments": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "anchor_state": {
-                "enum": [
-                  "visible",
-                  "hidden",
-                  "orphaned"
-                ],
-                "type": "string"
-              },
-              "message_count": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "next_message_offset": {
-                "anyOf": [
-                  {
-                    "maximum": 9223372036854775807,
-                    "minimum": 0,
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
               "thread": {
-                "additionalProperties": true,
+                "type": "object",
                 "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
                   "anchor": {
                     "oneOf": [
                       {
-                        "additionalProperties": true,
+                        "type": "object",
                         "properties": {
-                          "at": {
-                            "items": {
-                              "maximum": 32767,
-                              "minimum": -32768,
-                              "type": "integer"
-                            },
-                            "maxItems": 3,
-                            "minItems": 3,
-                            "type": "array"
-                          },
                           "kind": {
                             "const": "voxel"
+                          },
+                          "at": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": -32768,
+                              "maximum": 32767
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
                           }
                         },
                         "required": [
                           "kind",
                           "at"
                         ],
-                        "type": "object"
+                        "additionalProperties": true
                       },
                       {
-                        "additionalProperties": true,
+                        "type": "object",
                         "properties": {
                           "kind": {
                             "const": "region"
                           },
-                          "max": {
-                            "items": {
-                              "maximum": 32768,
-                              "minimum": -32767,
-                              "type": "integer"
-                            },
-                            "maxItems": 3,
-                            "minItems": 3,
-                            "type": "array"
-                          },
                           "min": {
+                            "type": "array",
                             "items": {
-                              "maximum": 32767,
+                              "type": "integer",
                               "minimum": -32768,
-                              "type": "integer"
+                              "maximum": 32767
                             },
-                            "maxItems": 3,
                             "minItems": 3,
-                            "type": "array"
+                            "maxItems": 3
+                          },
+                          "max": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": -32767,
+                              "maximum": 32768
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
                           }
                         },
                         "required": [
@@ -1080,53 +1136,53 @@ Complete output schema
                           "min",
                           "max"
                         ],
-                        "type": "object"
+                        "additionalProperties": true
                       }
                     ]
-                  },
-                  "id": {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                    "type": "string"
                   },
                   "layer": {
                     "anyOf": [
                       {
-                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                       },
                       {
                         "type": "null"
                       }
                     ]
                   },
+                  "resolved": {
+                    "type": "boolean"
+                  },
                   "messages": {
+                    "type": "array",
                     "items": {
-                      "additionalProperties": true,
+                      "type": "object",
                       "properties": {
                         "id": {
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                         },
                         "origin": {
+                          "type": "string",
                           "enum": [
                             "agent",
                             "human"
-                          ],
-                          "type": "string"
+                          ]
                         },
                         "text": {
-                          "maxLength": 8192,
+                          "type": "string",
                           "minLength": 1,
-                          "type": "string"
+                          "maxLength": 8192
                         },
                         "tool": {
                           "anyOf": [
                             {
-                              "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                              "maxLength": 128,
+                              "type": "string",
                               "minLength": 1,
+                              "maxLength": 128,
                               "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                              "type": "string"
+                              "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
                             },
                             {
                               "type": "null"
@@ -1140,14 +1196,10 @@ Complete output schema
                         "text",
                         "tool"
                       ],
-                      "type": "object"
+                      "additionalProperties": true
                     },
-                    "maxItems": 200,
                     "minItems": 0,
-                    "type": "array"
-                  },
-                  "resolved": {
-                    "type": "boolean"
+                    "maxItems": 200
                   }
                 },
                 "required": [
@@ -1157,7 +1209,32 @@ Complete output schema
                   "resolved",
                   "messages"
                 ],
-                "type": "object"
+                "additionalProperties": true
+              },
+              "message_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "next_message_offset": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9223372036854775807
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "anchor_state": {
+                "type": "string",
+                "enum": [
+                  "visible",
+                  "hidden",
+                  "orphaned"
+                ]
               }
             },
             "required": [
@@ -1166,37 +1243,27 @@ Complete output schema
               "next_message_offset",
               "anchor_state"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 200,
           "minItems": 0,
-          "type": "array"
+          "maxItems": 200
         },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "next_offset": {
           "anyOf": [
             {
-              "maximum": 9223372036854775807,
+              "type": "integer",
               "minimum": 0,
-              "type": "integer"
+              "maximum": 9223372036854775807
             },
             {
               "type": "null"
             }
           ]
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "total": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
         }
       },
       "required": [
@@ -1206,45 +1273,41 @@ Complete output schema
         "total",
         "next_offset"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -1253,14 +1316,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -1269,7 +1325,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -1280,46 +1368,45 @@ Reopen a resolved discussion; idempotent if already open. Preserves messages and
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `thread_id`         | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "thread_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -1329,7 +1416,8 @@ Complete input schema
     "expected_revision",
     "thread_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -1337,83 +1425,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -1421,77 +1538,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -1511,45 +1578,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -1558,14 +1621,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -1574,7 +1630,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -1585,57 +1673,56 @@ Append an agent-attributed plain-text reply to a thread, resolved or open. One u
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `message_id`        | Optional | string                                                                                                                               |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
-| `text`              | Yes      | string; maxLength: 4096                                                                                                              |
 | `thread_id`         | Yes      | string                                                                                                                               |
+| `text`              | Yes      | string; maxLength: 4096                                                                                                              |
+| `message_id`        | Optional | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "message_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
-    "text": {
-      "maxLength": 4096,
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
       "minLength": 1,
-      "type": "string"
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "thread_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "message_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -1646,7 +1733,8 @@ Complete input schema
     "thread_id",
     "text"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -1654,83 +1742,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -1738,85 +1855,35 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "message_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "thread_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
+        },
+        "thread_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "message_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
       },
       "required": [
@@ -1838,45 +1905,41 @@ Complete output schema
         "thread_id",
         "message_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -1885,14 +1948,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -1901,7 +1957,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -1912,46 +2000,45 @@ Resolve an anchored discussion; idempotent if already resolved. Preserves messag
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `thread_id`         | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "thread_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -1961,7 +2048,8 @@ Complete input schema
     "expected_revision",
     "thread_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -1969,83 +2057,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -2053,77 +2170,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -2143,45 +2210,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -2190,14 +2253,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -2206,7 +2262,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -2216,81 +2304,80 @@ Create a revision-zero document and visible unlocked Base layer. Default bounds 
 
 | Argument         | Required | Type / constraints                                                                                                                     |
 | ---------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `bounds`         | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.          |
 | `expected_epoch` | Yes      | string                                                                                                                                 |
-| `label`          | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
-| `layer_id`       | Optional | string                                                                                                                                 |
-| `model_id`       | Optional | string                                                                                                                                 |
-| `name`           | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `operation_id`   | Yes      | string                                                                                                                                 |
+| `label`          | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
+| `name`           | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
+| `bounds`         | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.          |
+| `model_id`       | Optional | string                                                                                                                                 |
+| `layer_id`       | Optional | string                                                                                                                                 |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
+    "expected_epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
     "bounds": {
-      "additionalProperties": false,
-      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+      "type": "object",
       "properties": {
-        "max": {
-          "items": {
-            "maximum": 32768,
-            "minimum": -32767,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
         "min": {
+          "type": "array",
           "items": {
-            "maximum": 32767,
+            "type": "integer",
             "minimum": -32768,
-            "type": "integer"
+            "maximum": 32767
           },
-          "maxItems": 3,
           "minItems": 3,
-          "type": "array"
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32767,
+            "maximum": 32768
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
       },
       "required": [
         "min",
         "max"
       ],
-      "type": "object"
-    },
-    "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false,
+      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
     },
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
-    "name": {
-      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+    "layer_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -2298,7 +2385,8 @@ Complete input schema
     "operation_id",
     "name"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -2306,121 +2394,98 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+        },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
-        },
-        "comments": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "dirty": {
-          "type": "boolean"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
         "layers": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
               "id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
-              },
-              "locked": {
-                "type": "boolean"
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "visible": {
                 "type": "boolean"
               },
+              "locked": {
+                "type": "boolean"
+              },
               "voxel_count": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               }
             },
             "required": [
@@ -2430,53 +2495,55 @@ Complete output schema
               "locked",
               "voxel_count"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 64,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 64
         },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+        "dirty": {
+          "type": "boolean"
         },
-        "name": {
-          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-          "type": "string"
+        "voxel_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "palette_slots": {
-          "maximum": 256,
+          "type": "integer",
           "minimum": 1,
-          "type": "integer"
+          "maximum": 256
         },
-        "redo_id": {
+        "comments": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "versions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "head_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "versions": {
-          "maximum": 64,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "voxel_count": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "redo_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -2493,45 +2560,41 @@ Complete output schema
         "head_id",
         "redo_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -2540,14 +2603,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -2556,7 +2612,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -2573,23 +2661,23 @@ Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -2597,121 +2685,98 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+        },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
-        },
-        "comments": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "dirty": {
-          "type": "boolean"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
         "layers": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
               "id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
-              },
-              "locked": {
-                "type": "boolean"
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "visible": {
                 "type": "boolean"
               },
+              "locked": {
+                "type": "boolean"
+              },
               "voxel_count": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               }
             },
             "required": [
@@ -2721,53 +2786,55 @@ Complete output schema
               "locked",
               "voxel_count"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 64,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 64
         },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+        "dirty": {
+          "type": "boolean"
         },
-        "name": {
-          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-          "type": "string"
+        "voxel_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "palette_slots": {
-          "maximum": 256,
+          "type": "integer",
           "minimum": 1,
-          "type": "integer"
+          "maximum": 256
         },
-        "redo_id": {
+        "comments": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "versions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "head_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "versions": {
-          "maximum": 64,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "voxel_count": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "redo_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -2784,45 +2851,41 @@ Complete output schema
         "head_id",
         "redo_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -2831,14 +2894,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -2847,7 +2903,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -2858,36 +2946,35 @@ Open a canonical .voxl file relative to the configured project root, preserving 
 | Argument         | Required | Type / constraints                                                                                                                   |
 | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch` | Yes      | string                                                                                                                               |
-| `label`          | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `operation_id`   | Yes      | string                                                                                                                               |
+| `label`          | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `path`           | Yes      | string; maxLength: 1024                                                                                                              |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "path": {
-      "maxLength": 1024,
+      "type": "string",
       "minLength": 1,
-      "type": "string"
+      "maxLength": 1024
     }
   },
   "required": [
@@ -2895,7 +2982,8 @@ Complete input schema
     "operation_id",
     "path"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -2903,121 +2991,98 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+        },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
-        },
-        "comments": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "dirty": {
-          "type": "boolean"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
         "layers": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
               "id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
-              },
-              "locked": {
-                "type": "boolean"
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "visible": {
                 "type": "boolean"
               },
+              "locked": {
+                "type": "boolean"
+              },
               "voxel_count": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               }
             },
             "required": [
@@ -3027,53 +3092,55 @@ Complete output schema
               "locked",
               "voxel_count"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 64,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 64
         },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+        "dirty": {
+          "type": "boolean"
         },
-        "name": {
-          "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-          "maxLength": 128,
-          "minLength": 1,
-          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-          "type": "string"
+        "voxel_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "palette_slots": {
-          "maximum": 256,
+          "type": "integer",
           "minimum": 1,
-          "type": "integer"
+          "maximum": 256
         },
-        "redo_id": {
+        "comments": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "versions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "head_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "versions": {
-          "maximum": 64,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "voxel_count": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "redo_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -3090,45 +3157,41 @@ Complete output schema
         "head_id",
         "redo_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -3137,14 +3200,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -3153,7 +3209,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -3164,47 +3252,46 @@ Atomically save .voxl under the project root. New paths must not exist; overwrit
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `path`              | Yes      | string; maxLength: 1024                                                                                                              |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "path": {
-      "maxLength": 1024,
+      "type": "string",
       "minLength": 1,
-      "type": "string"
+      "maxLength": 1024
     }
   },
   "required": [
@@ -3214,7 +3301,8 @@ Complete input schema
     "expected_revision",
     "path"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -3222,71 +3310,50 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
         "bytes": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         },
         "dirty": {
           "const": false
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "path": {
-          "maxLength": 1024,
-          "minLength": 1,
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "type": "string"
         }
       },
       "required": [
@@ -3297,45 +3364,41 @@ Complete output schema
         "sha256",
         "dirty"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -3344,14 +3407,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -3360,7 +3416,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -3371,36 +3459,36 @@ Export deterministic GLB of the highest visible layer at each occupied coordinat
 | Argument   | Required | Type / constraints                                                    |
 | ---------- | -------- | --------------------------------------------------------------------- |
 | `model_id` | Yes      | string                                                                |
-| `path`     | Yes      | string; maxLength: 1024                                               |
 | `revision` | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
+| `path`     | Yes      | string; maxLength: 1024                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "path": {
-      "maxLength": 1024,
-      "minLength": 1,
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
     }
   },
   "required": [
     "model_id",
     "path"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -3408,71 +3496,50 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
         "bytes": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         },
         "mime_type": {
           "const": "model/gltf-binary"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "path": {
-          "maxLength": 1024,
-          "minLength": 1,
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "type": "string"
         }
       },
       "required": [
@@ -3483,45 +3550,41 @@ Complete output schema
         "sha256",
         "mime_type"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -3530,14 +3593,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -3546,7 +3602,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -3556,34 +3644,184 @@ Render and atomically write one PNG under project root. Default contact sheet; f
 
 | Argument      | Required | Type / constraints                                                    |
 | ------------- | -------- | --------------------------------------------------------------------- |
-| `background`  | Optional | array; minItems: 4; maxItems: 4                                       |
-| `camera`      | Optional | object                                                                |
-| `height`      | Optional | integer; minimum: 1; maximum: 1024                                    |
-| `image_mode`  | Optional | string; enum: \["contact\_sheet","individual"\]                       |
 | `model_id`    | Yes      | string                                                                |
-| `path`        | Yes      | string; maxLength: 1024                                               |
-| `perspective` | Optional | boolean                                                               |
 | `revision`    | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
 | `views`       | Optional | array; minItems: 1; maxItems: 6                                       |
+| `camera`      | Optional | object                                                                |
 | `width`       | Optional | integer; minimum: 1; maximum: 1024                                    |
+| `height`      | Optional | integer; minimum: 1; maximum: 1024                                    |
+| `perspective` | Optional | boolean                                                               |
+| `background`  | Optional | array; minItems: 4; maxItems: 4                                       |
+| `image_mode`  | Optional | string; enum: \["contact\_sheet","individual"\]                       |
+| `path`        | Yes      | string; maxLength: 1024                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
-  "if": {
-    "properties": {
-      "image_mode": {
-        "const": "individual"
-      }
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
-    "required": [
-      "image_mode"
-    ]
+    "revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "iso",
+          "front",
+          "back",
+          "left",
+          "right",
+          "top"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 6
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "eye": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "up": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "projection": {
+          "type": "string",
+          "enum": [
+            "orthographic",
+            "perspective"
+          ]
+        },
+        "ortho_height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000000.0
+        },
+        "fov_y_degrees": {
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "exclusiveMaximum": 179
+        }
+      },
+      "required": [
+        "eye",
+        "target",
+        "up",
+        "projection"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "projection": {
+              "const": "orthographic"
+            }
+          },
+          "required": [
+            "ortho_height"
+          ],
+          "not": {
+            "required": [
+              "fov_y_degrees"
+            ]
+          }
+        },
+        {
+          "properties": {
+            "projection": {
+              "const": "perspective"
+            }
+          },
+          "required": [
+            "fov_y_degrees"
+          ],
+          "not": {
+            "required": [
+              "ortho_height"
+            ]
+          }
+        }
+      ]
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "perspective": {
+      "type": "boolean"
+    },
+    "background": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "image_mode": {
+      "type": "string",
+      "enum": [
+        "contact_sheet",
+        "individual"
+      ]
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    }
   },
+  "required": [
+    "model_id",
+    "path"
+  ],
+  "additionalProperties": false,
   "not": {
+    "required": [
+      "camera"
+    ],
     "anyOf": [
       {
         "required": [
@@ -3595,168 +3833,18 @@ Complete input schema
           "perspective"
         ]
       }
-    ],
-    "required": [
-      "camera"
     ]
   },
-  "properties": {
-    "background": {
-      "items": {
-        "maximum": 255,
-        "minimum": 0,
-        "type": "integer"
-      },
-      "maxItems": 4,
-      "minItems": 4,
-      "type": "array"
+  "if": {
+    "properties": {
+      "image_mode": {
+        "const": "individual"
+      }
     },
-    "camera": {
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "not": {
-            "required": [
-              "fov_y_degrees"
-            ]
-          },
-          "properties": {
-            "projection": {
-              "const": "orthographic"
-            }
-          },
-          "required": [
-            "ortho_height"
-          ]
-        },
-        {
-          "not": {
-            "required": [
-              "ortho_height"
-            ]
-          },
-          "properties": {
-            "projection": {
-              "const": "perspective"
-            }
-          },
-          "required": [
-            "fov_y_degrees"
-          ]
-        }
-      ],
-      "properties": {
-        "eye": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
-        "fov_y_degrees": {
-          "exclusiveMaximum": 179,
-          "exclusiveMinimum": 1,
-          "type": "number"
-        },
-        "ortho_height": {
-          "exclusiveMinimum": 0,
-          "maximum": 1000000000.0,
-          "type": "number"
-        },
-        "projection": {
-          "enum": [
-            "orthographic",
-            "perspective"
-          ],
-          "type": "string"
-        },
-        "target": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
-        "up": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "eye",
-        "target",
-        "up",
-        "projection"
-      ],
-      "type": "object"
-    },
-    "height": {
-      "maximum": 1024,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "image_mode": {
-      "enum": [
-        "contact_sheet",
-        "individual"
-      ],
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "path": {
-      "maxLength": 1024,
-      "minLength": 1,
-      "type": "string"
-    },
-    "perspective": {
-      "type": "boolean"
-    },
-    "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "views": {
-      "items": {
-        "enum": [
-          "iso",
-          "front",
-          "back",
-          "left",
-          "right",
-          "top"
-        ],
-        "type": "string"
-      },
-      "maxItems": 6,
-      "minItems": 1,
-      "type": "array"
-    },
-    "width": {
-      "maximum": 1024,
-      "minimum": 1,
-      "type": "integer"
-    }
+    "required": [
+      "image_mode"
+    ]
   },
-  "required": [
-    "model_id",
-    "path"
-  ],
   "then": {
     "anyOf": [
       {
@@ -3765,18 +3853,18 @@ Complete input schema
         ]
       },
       {
+        "required": [
+          "views"
+        ],
         "properties": {
           "views": {
             "maxItems": 1
           }
-        },
-        "required": [
-          "views"
-        ]
+        }
       }
     ]
   },
-  "type": "object"
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -3784,112 +3872,89 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
         "backend": {
           "const": "cpu"
         },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
-        "bytes": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "image_mode": {
-          "enum": [
-            "contact_sheet",
-            "individual",
-            "both"
-          ],
-          "type": "string"
-        },
-        "images": {
+        "views": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "bytes": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "height": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "sha256": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
               "view": {
+                "type": "string",
                 "enum": [
                   "iso",
                   "front",
@@ -3899,136 +3964,76 @@ Complete output schema
                   "top",
                   "camera",
                   "contact_sheet"
-                ],
-                "type": "string"
+                ]
               },
               "width": {
-                "maximum": 2048,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
-              }
-            },
-            "required": [
-              "view",
-              "width",
-              "height",
-              "sha256",
-              "bytes"
-            ],
-            "type": "object"
-          },
-          "maxItems": 7,
-          "minItems": 1,
-          "type": "array"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "path": {
-          "maxLength": 1024,
-          "minLength": 1,
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "type": "string"
-        },
-        "views": {
-          "items": {
-            "additionalProperties": true,
-            "properties": {
+                "maximum": 2048
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
               "bytes": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               },
               "camera": {
-                "additionalProperties": true,
-                "oneOf": [
-                  {
-                    "not": {
-                      "required": [
-                        "fov_y_degrees"
-                      ]
-                    },
-                    "properties": {
-                      "projection": {
-                        "const": "orthographic"
-                      }
-                    },
-                    "required": [
-                      "ortho_height"
-                    ]
-                  },
-                  {
-                    "not": {
-                      "required": [
-                        "ortho_height"
-                      ]
-                    },
-                    "properties": {
-                      "projection": {
-                        "const": "perspective"
-                      }
-                    },
-                    "required": [
-                      "fov_y_degrees"
-                    ]
-                  }
-                ],
+                "type": "object",
                 "properties": {
                   "eye": {
+                    "type": "array",
                     "items": {
-                      "maximum": 1000000000.0,
+                      "type": "number",
                       "minimum": -1000000000.0,
-                      "type": "number"
+                      "maximum": 1000000000.0
                     },
-                    "maxItems": 3,
                     "minItems": 3,
-                    "type": "array"
+                    "maxItems": 3
                   },
-                  "fov_y_degrees": {
-                    "exclusiveMaximum": 179,
-                    "exclusiveMinimum": 1,
-                    "type": "number"
+                  "target": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1000000000.0,
+                      "maximum": 1000000000.0
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   },
-                  "ortho_height": {
-                    "exclusiveMinimum": 0,
-                    "maximum": 1000000000.0,
-                    "type": "number"
+                  "up": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1000000000.0,
+                      "maximum": 1000000000.0
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   "projection": {
+                    "type": "string",
                     "enum": [
                       "orthographic",
                       "perspective"
-                    ],
-                    "type": "string"
+                    ]
                   },
-                  "target": {
-                    "items": {
-                      "maximum": 1000000000.0,
-                      "minimum": -1000000000.0,
-                      "type": "number"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
+                  "ortho_height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 1000000000.0
                   },
-                  "up": {
-                    "items": {
-                      "maximum": 1000000000.0,
-                      "minimum": -1000000000.0,
-                      "type": "number"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
+                  "fov_y_degrees": {
+                    "type": "number",
+                    "exclusiveMinimum": 1,
+                    "exclusiveMaximum": 179
                   }
                 },
                 "required": [
@@ -4037,34 +4042,39 @@ Complete output schema
                   "up",
                   "projection"
                 ],
-                "type": "object"
-              },
-              "height": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "sha256": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
-              "view": {
-                "enum": [
-                  "iso",
-                  "front",
-                  "back",
-                  "left",
-                  "right",
-                  "top",
-                  "camera",
-                  "contact_sheet"
-                ],
-                "type": "string"
-              },
-              "width": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
+                "additionalProperties": true,
+                "oneOf": [
+                  {
+                    "properties": {
+                      "projection": {
+                        "const": "orthographic"
+                      }
+                    },
+                    "required": [
+                      "ortho_height"
+                    ],
+                    "not": {
+                      "required": [
+                        "fov_y_degrees"
+                      ]
+                    }
+                  },
+                  {
+                    "properties": {
+                      "projection": {
+                        "const": "perspective"
+                      }
+                    },
+                    "required": [
+                      "fov_y_degrees"
+                    ],
+                    "not": {
+                      "required": [
+                        "ortho_height"
+                      ]
+                    }
+                  }
+                ]
               }
             },
             "required": [
@@ -4075,11 +4085,68 @@ Complete output schema
               "bytes",
               "camera"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 6,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 6
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "view": {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "front",
+                  "back",
+                  "left",
+                  "right",
+                  "top",
+                  "camera",
+                  "contact_sheet"
+                ]
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              }
+            },
+            "required": [
+              "view",
+              "width",
+              "height",
+              "sha256",
+              "bytes"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 1,
+          "maxItems": 7
+        },
+        "image_mode": {
+          "type": "string",
+          "enum": [
+            "contact_sheet",
+            "individual",
+            "both"
+          ]
         }
       },
       "required": [
@@ -4094,45 +4161,41 @@ Complete output schema
         "images",
         "image_mode"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -4141,14 +4204,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -4157,7 +4213,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -4167,42 +4255,42 @@ Read chronological applied history with agent origins, tool names, labels and ch
 
 | Argument   | Required | Type / constraints                                                    |
 | ---------- | -------- | --------------------------------------------------------------------- |
-| `limit`    | Optional | integer; minimum: 1; maximum: 200                                     |
 | `model_id` | Yes      | string                                                                |
-| `offset`   | Optional | integer; minimum: 0; maximum: 1048576                                 |
 | `revision` | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
+| `offset`   | Optional | integer; minimum: 0; maximum: 1048576                                 |
+| `limit`    | Optional | integer; minimum: 1; maximum: 200                                     |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "limit": {
-      "maximum": 200,
-      "minimum": 1,
-      "type": "integer"
-    },
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "offset": {
-      "maximum": 1048576,
-      "minimum": 0,
-      "type": "integer"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1048576
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -4210,137 +4298,126 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
         "entries": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "added": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
+              "entry_id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "agent",
+                  "human"
+                ]
+              },
+              "tool": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "base_revision": {
-                "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+                "type": "string",
                 "pattern": "^(0|[1-9][0-9]{0,19})$",
-                "type": "string"
+                "description": "Captured monotonic revision, encoded as a decimal u64 string."
+              },
+              "result_revision": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$",
+                "description": "Captured monotonic revision, encoded as a decimal u64 string."
+              },
+              "added": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "removed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "recolored": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
               },
               "changed_bounds": {
                 "anyOf": [
                   {
-                    "additionalProperties": true,
-                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                    "type": "object",
                     "properties": {
-                      "max": {
-                        "items": {
-                          "maximum": 32768,
-                          "minimum": -32767,
-                          "type": "integer"
-                        },
-                        "maxItems": 3,
-                        "minItems": 3,
-                        "type": "array"
-                      },
                       "min": {
+                        "type": "array",
                         "items": {
-                          "maximum": 32767,
+                          "type": "integer",
                           "minimum": -32768,
-                          "type": "integer"
+                          "maximum": 32767
                         },
-                        "maxItems": 3,
                         "minItems": 3,
-                        "type": "array"
+                        "maxItems": 3
+                      },
+                      "max": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": -32767,
+                          "maximum": 32768
+                        },
+                        "minItems": 3,
+                        "maxItems": 3
                       }
                     },
                     "required": [
                       "min",
                       "max"
                     ],
-                    "type": "object"
+                    "additionalProperties": true,
+                    "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
                   },
                   {
                     "type": "null"
                   }
                 ]
-              },
-              "entry_id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
-              },
-              "label": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
-                "minLength": 1,
-                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
-              },
-              "origin": {
-                "enum": [
-                  "agent",
-                  "human"
-                ],
-                "type": "string"
-              },
-              "recolored": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "removed": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "result_revision": {
-                "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-                "pattern": "^(0|[1-9][0-9]{0,19})$",
-                "type": "string"
-              },
-              "tool": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
-                "minLength": 1,
-                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
               }
             },
             "required": [
@@ -4355,41 +4432,33 @@ Complete output schema
               "recolored",
               "changed_bounds"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 200,
           "minItems": 0,
-          "type": "array"
+          "maxItems": 200
         },
-        "head_id": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "next_offset": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
             },
             {
               "type": "null"
             }
           ]
         },
-        "history_bytes": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "initial_retained": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "next_offset": {
+        "head_id": {
           "anyOf": [
             {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
@@ -4399,23 +4468,21 @@ Complete output schema
         "redo_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+        "initial_retained": {
+          "type": "boolean"
         },
-        "total": {
-          "maximum": 9223372036854775807,
+        "history_bytes": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
         }
       },
       "required": [
@@ -4429,45 +4496,41 @@ Complete output schema
         "initial_retained",
         "history_bytes"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -4476,14 +4539,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -4492,7 +4548,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -4502,47 +4590,46 @@ Redo exactly the expected redo entry. Requires captured epoch/revision/entry\_id
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `entry_id`          | Yes      | string                                                                                                                               |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
+| `entry_id`          | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "entry_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "entry_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -4552,7 +4639,8 @@ Complete input schema
     "expected_revision",
     "entry_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -4560,83 +4648,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -4644,88 +4761,38 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
+        "metadata_changed": {
+          "type": "boolean"
+        },
+        "work_units": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         },
         "redo_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "work_units": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
         }
       },
       "required": [
@@ -4746,45 +4813,41 @@ Complete output schema
         "durability",
         "redo_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -4793,14 +4856,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -4809,7 +4865,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -4819,47 +4907,46 @@ Undo exactly the expected top entry. Requires captured epoch/revision/entry\_id;
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `entry_id`          | Yes      | string                                                                                                                               |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
+| `entry_id`          | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "entry_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "entry_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -4869,7 +4956,8 @@ Complete input schema
     "expected_revision",
     "entry_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -4877,83 +4965,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -4961,88 +5078,38 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
+        "metadata_changed": {
+          "type": "boolean"
+        },
+        "work_units": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         },
         "redo_id": {
           "anyOf": [
             {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
             },
             {
               "type": "null"
             }
           ]
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "work_units": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
         }
       },
       "required": [
@@ -5063,45 +5130,41 @@ Complete output schema
         "durability",
         "redo_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -5110,14 +5173,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -5126,7 +5182,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -5137,60 +5225,59 @@ Insert an empty layer at bottom-to-top index (default append). Optional layer\_i
 | Argument            | Required | Type / constraints                                                                                                                     |
 | ------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `expected_epoch`    | Yes      | string                                                                                                                                 |
-| `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                  |
-| `index`             | Optional | integer; minimum: 0; maximum: 64                                                                                                       |
-| `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
-| `layer_id`          | Optional | string                                                                                                                                 |
-| `model_id`          | Yes      | string                                                                                                                                 |
-| `name`              | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `operation_id`      | Yes      | string                                                                                                                                 |
+| `model_id`          | Yes      | string                                                                                                                                 |
+| `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                  |
+| `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
+| `name`              | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
+| `layer_id`          | Optional | string                                                                                                                                 |
+| `index`             | Optional | integer; minimum: 0; maximum: 64                                                                                                       |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "index": {
-      "maximum": 64,
-      "minimum": 0,
-      "type": "integer"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "name": {
-      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 64
     }
   },
   "required": [
@@ -5200,7 +5287,8 @@ Complete input schema
     "expected_revision",
     "name"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -5208,83 +5296,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -5292,81 +5409,31 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "layer_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
+        },
+        "layer_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
       },
       "required": [
@@ -5387,45 +5454,41 @@ Complete output schema
         "durability",
         "layer_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -5434,14 +5497,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -5450,7 +5506,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -5467,23 +5555,23 @@ Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -5491,71 +5579,60 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
         "layers": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
               "id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
-              },
-              "locked": {
-                "type": "boolean"
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "visible": {
                 "type": "boolean"
               },
+              "locked": {
+                "type": "boolean"
+              },
               "voxel_count": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               }
             },
             "required": [
@@ -5565,20 +5642,10 @@ Complete output schema
               "locked",
               "voxel_count"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 64,
           "minItems": 1,
-          "type": "array"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxItems": 64
         }
       },
       "required": [
@@ -5586,45 +5653,41 @@ Complete output schema
         "revision",
         "layers"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -5633,14 +5696,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -5649,7 +5705,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -5660,53 +5748,52 @@ Set lock explicitly. Clear the lock in a separate operation before voxel editing
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
 | `locked`            | Yes      | boolean                                                                                                                              |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     },
     "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
+      "type": "string",
       "minLength": 1,
+      "maxLength": 80,
       "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
+      "type": "string",
       "minLength": 1,
+      "maxLength": 128,
       "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "locked": {
       "type": "boolean"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
     }
   },
   "required": [
@@ -5717,7 +5804,8 @@ Complete input schema
     "layer",
     "locked"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -5725,83 +5813,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -5809,77 +5926,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -5899,45 +5966,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -5946,14 +6009,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -5962,7 +6018,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -5973,49 +6061,48 @@ Delete one unlocked layer and its voxels as one undoable edit. Final-layer delet
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     }
   },
   "required": [
@@ -6025,7 +6112,8 @@ Complete input schema
     "expected_revision",
     "layer"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -6033,83 +6121,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -6117,77 +6234,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -6207,45 +6274,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -6254,14 +6317,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -6270,7 +6326,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -6281,57 +6369,56 @@ Rename a layer without changing its stable ID. Duplicate names are allowed, but 
 | Argument            | Required | Type / constraints                                                                                                                     |
 | ------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `expected_epoch`    | Yes      | string                                                                                                                                 |
+| `operation_id`      | Yes      | string                                                                                                                                 |
+| `model_id`          | Yes      | string                                                                                                                                 |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                  |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                             |
-| `model_id`          | Yes      | string                                                                                                                                 |
 | `name`              | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `operation_id`      | Yes      | string                                                                                                                                 |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "name": {
-      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     }
   },
   "required": [
@@ -6342,7 +6429,8 @@ Complete input schema
     "layer",
     "name"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -6350,83 +6438,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -6434,77 +6551,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -6524,45 +6591,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -6571,14 +6634,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -6587,7 +6643,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -6598,54 +6686,53 @@ Set an exact bottom-to-top permutation of all layer IDs/names. The highest visib
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `order`             | Yes      | array; minItems: 1; maxItems: 64                                                                                                     |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "order": {
+      "type": "array",
       "items": {
-        "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-        "maxLength": 128,
+        "type": "string",
         "minLength": 1,
+        "maxLength": 128,
         "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-        "type": "string"
+        "description": "Layer UUID or unique exact name. Never inferred from UI selection."
       },
-      "maxItems": 64,
       "minItems": 1,
-      "type": "array"
+      "maxItems": 64
     }
   },
   "required": [
@@ -6655,7 +6742,8 @@ Complete input schema
     "expected_revision",
     "order"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -6663,83 +6751,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -6747,77 +6864,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -6837,45 +6904,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -6884,14 +6947,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -6900,7 +6956,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -6911,50 +6999,49 @@ Set visibility explicitly. Hidden cells stay stored and cannot be edited until m
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `visible`           | Yes      | boolean                                                                                                                              |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "visible": {
       "type": "boolean"
@@ -6968,7 +7055,8 @@ Complete input schema
     "layer",
     "visible"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -6976,83 +7064,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -7060,77 +7177,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -7150,45 +7217,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -7197,14 +7260,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -7213,7 +7269,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -7224,44 +7312,44 @@ Append exact preset colors into unused slots without recoloring existing voxels.
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `preset`            | Yes      | string; enum: \["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"\]                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "preset": {
+      "type": "string",
       "enum": [
         "pico8",
         "endesga32",
@@ -7270,8 +7358,7 @@ Complete input schema
         "neutral",
         "warm",
         "vivid"
-      ],
-      "type": "string"
+      ]
     }
   },
   "required": [
@@ -7281,7 +7368,8 @@ Complete input schema
     "expected_revision",
     "preset"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -7289,83 +7377,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -7373,102 +7490,52 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "metadata_changed": {
+          "type": "boolean"
         },
-        "removed": {
-          "maximum": 9223372036854775807,
+        "work_units": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+        "durability": {
+          "const": "memory"
         },
         "slot_mapping": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "slot": {
-                "maximum": 256,
-                "minimum": 1,
-                "type": "integer"
-              },
               "source": {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
+                "maximum": 256
+              },
+              "slot": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 256
               }
             },
             "required": [
               "source",
               "slot"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 256,
           "minItems": 1,
-          "type": "array"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "work_units": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+          "maxItems": 256
         }
       },
       "required": [
@@ -7489,45 +7556,41 @@ Complete output schema
         "durability",
         "slot_mapping"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -7536,14 +7599,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -7552,7 +7608,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -7562,39 +7650,39 @@ Return palette as .hex or .gpl text in display order; GPL preserves representabl
 
 | Argument   | Required | Type / constraints                                                    |
 | ---------- | -------- | --------------------------------------------------------------------- |
-| `format`   | Yes      | string; enum: \["hex","gpl"\]                                         |
 | `model_id` | Yes      | string                                                                |
 | `revision` | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
+| `format`   | Yes      | string; enum: \["hex","gpl"\]                                         |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
     "format": {
+      "type": "string",
       "enum": [
         "hex",
         "gpl"
-      ],
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      ]
     }
   },
   "required": [
     "model_id",
     "format"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -7602,66 +7690,45 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
         "format": {
+          "type": "string",
           "enum": [
             "hex",
             "gpl"
-          ],
-          "type": "string"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "text": {
-          "maxLength": 65536,
-          "minLength": 1,
-          "type": "string"
+          ]
         }
       },
       "required": [
@@ -7670,45 +7737,41 @@ Complete output schema
         "text",
         "format"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -7717,14 +7780,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -7733,7 +7789,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -7744,55 +7832,54 @@ Append colors from bounded .hex or .gpl text into unused slots; no implicit geom
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
-| `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
-| `format`            | Yes      | string; enum: \["hex","gpl"\]                                                                                                        |
-| `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
 | `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
+| `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
+| `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
+| `format`            | Yes      | string; enum: \["hex","gpl"\]                                                                                                        |
 | `text`              | Yes      | string; maxLength: 65536                                                                                                             |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "format": {
+      "type": "string",
       "enum": [
         "hex",
         "gpl"
-      ],
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      ]
     },
     "text": {
-      "maxLength": 65536,
+      "type": "string",
       "minLength": 1,
-      "type": "string"
+      "maxLength": 65536
     }
   },
   "required": [
@@ -7803,7 +7890,8 @@ Complete input schema
     "format",
     "text"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -7811,83 +7899,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -7895,102 +8012,52 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "metadata_changed": {
+          "type": "boolean"
         },
-        "removed": {
-          "maximum": 9223372036854775807,
+        "work_units": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
         },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+        "durability": {
+          "const": "memory"
         },
         "slot_mapping": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "slot": {
-                "maximum": 256,
-                "minimum": 1,
-                "type": "integer"
-              },
               "source": {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
+                "maximum": 256
+              },
+              "slot": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 256
               }
             },
             "required": [
               "source",
               "slot"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 256,
           "minItems": 1,
-          "type": "array"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "work_units": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+          "maxItems": 256
         }
       },
       "required": [
@@ -8011,45 +8078,41 @@ Complete output schema
         "durability",
         "slot_mapping"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -8058,14 +8121,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -8074,7 +8130,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -8091,23 +8179,23 @@ Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -8115,138 +8203,117 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
         "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         },
         "palette": {
-          "additionalProperties": true,
+          "type": "object",
           "properties": {
-            "order": {
-              "items": {
-                "maximum": 256,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "maxItems": 256,
-              "minItems": 1,
-              "type": "array"
-            },
             "slots": {
+              "type": "array",
               "items": {
-                "additionalProperties": true,
+                "type": "object",
                 "properties": {
                   "index": {
-                    "maximum": 256,
+                    "type": "integer",
                     "minimum": 1,
-                    "type": "integer"
-                  },
-                  "name": {
-                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                    "maxLength": 128,
-                    "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                    "type": "string"
+                    "maximum": 256
                   },
                   "rgba": {
-                    "description": "Opaque sRGB RGBA8; alpha must equal 255.",
-                    "items": false,
-                    "maxItems": 4,
-                    "minItems": 4,
+                    "type": "array",
                     "prefixItems": [
                       {
-                        "maximum": 255,
+                        "type": "integer",
                         "minimum": 0,
-                        "type": "integer"
+                        "maximum": 255
                       },
                       {
-                        "maximum": 255,
+                        "type": "integer",
                         "minimum": 0,
-                        "type": "integer"
+                        "maximum": 255
                       },
                       {
-                        "maximum": 255,
+                        "type": "integer",
                         "minimum": 0,
-                        "type": "integer"
+                        "maximum": 255
                       },
                       {
                         "const": 255
                       }
                     ],
-                    "type": "array"
+                    "items": false,
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "Opaque sRGB RGBA8; alpha must equal 255."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                    "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
                   }
                 },
                 "required": [
                   "index",
                   "rgba"
                 ],
-                "type": "object"
+                "additionalProperties": true
               },
-              "maxItems": 256,
               "minItems": 1,
-              "type": "array"
+              "maxItems": 256
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 256
+              },
+              "minItems": 1,
+              "maxItems": 256
             }
           },
           "required": [
             "slots",
             "order"
           ],
-          "type": "object"
+          "additionalProperties": true
         },
         "presets": {
+          "type": "array",
           "items": {
-            "maxLength": 32,
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "maxLength": 32
           },
-          "maxItems": 7,
           "minItems": 1,
-          "type": "array"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxItems": 7
         }
       },
       "required": [
@@ -8255,45 +8322,41 @@ Complete output schema
         "palette",
         "presets"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -8302,14 +8365,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -8318,7 +8374,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -8329,83 +8417,82 @@ Add or replace stable slot 1..256 with opaque RGBA. Existing references change a
 | Argument            | Required | Type / constraints                                                                                                                     |
 | ------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `expected_epoch`    | Yes      | string                                                                                                                                 |
+| `operation_id`      | Yes      | string                                                                                                                                 |
+| `model_id`          | Yes      | string                                                                                                                                 |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                  |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
-| `model_id`          | Yes      | string                                                                                                                                 |
-| `name`              | Optional | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `operation_id`      | Yes      | string                                                                                                                                 |
-| `rgba`              | Yes      | array; minItems: 4; maxItems: 4. Opaque sRGB RGBA8; alpha must equal 255.                                                              |
 | `slot`              | Yes      | integer; minimum: 1; maximum: 256                                                                                                      |
+| `rgba`              | Yes      | array; minItems: 4; maxItems: 4. Opaque sRGB RGBA8; alpha must equal 255.                                                              |
+| `name`              | Optional | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "name": {
-      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
     },
     "rgba": {
-      "description": "Opaque sRGB RGBA8; alpha must equal 255.",
-      "items": false,
-      "maxItems": 4,
-      "minItems": 4,
+      "type": "array",
       "prefixItems": [
         {
-          "maximum": 255,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 255
         },
         {
-          "maximum": 255,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 255
         },
         {
-          "maximum": 255,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 255
         },
         {
           "const": 255
         }
       ],
-      "type": "array"
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "Opaque sRGB RGBA8; alpha must equal 255."
     },
-    "slot": {
-      "maximum": 256,
-      "minimum": 1,
-      "type": "integer"
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     }
   },
   "required": [
@@ -8416,7 +8503,8 @@ Complete input schema
     "slot",
     "rgba"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -8424,83 +8512,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -8508,77 +8625,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -8598,45 +8665,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -8645,14 +8708,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -8661,7 +8717,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -8671,111 +8759,111 @@ Query bounds, counts or paged occupied voxels within a half-open region. view=la
 
 | Argument   | Required | Type / constraints                                                                                                            |
 | ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `kind`     | Yes      | string; enum: \["bounds","counts","voxels"\]                                                                                  |
-| `layer`    | Optional | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                    |
-| `limit`    | Optional | integer; minimum: 1; maximum: 10000                                                                                           |
 | `model_id` | Yes      | string                                                                                                                        |
-| `offset`   | Optional | integer; minimum: 0; maximum: 1048576                                                                                         |
-| `region`   | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime. |
 | `revision` | Optional | string. Captured monotonic revision, encoded as a decimal u64 string.                                                         |
+| `kind`     | Yes      | string; enum: \["bounds","counts","voxels"\]                                                                                  |
+| `region`   | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime. |
+| `layer`    | Optional | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                    |
 | `view`     | Optional | string; enum: \["layers","composite"\]                                                                                        |
+| `offset`   | Optional | integer; minimum: 0; maximum: 1048576                                                                                         |
+| `limit`    | Optional | integer; minimum: 1; maximum: 10000                                                                                           |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
-  "not": {
-    "properties": {
-      "view": {
-        "const": "composite"
-      }
-    },
-    "required": [
-      "view",
-      "layer"
-    ]
-  },
+  "type": "object",
   "properties": {
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
     "kind": {
+      "type": "string",
       "enum": [
         "bounds",
         "counts",
         "voxels"
-      ],
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "limit": {
-      "maximum": 10000,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "offset": {
-      "maximum": 1048576,
-      "minimum": 0,
-      "type": "integer"
+      ]
     },
     "region": {
-      "additionalProperties": false,
-      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+      "type": "object",
       "properties": {
-        "max": {
-          "items": {
-            "maximum": 32768,
-            "minimum": -32767,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
         "min": {
+          "type": "array",
           "items": {
-            "maximum": 32767,
+            "type": "integer",
             "minimum": -32768,
-            "type": "integer"
+            "maximum": 32767
           },
-          "maxItems": 3,
           "minItems": 3,
-          "type": "array"
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32767,
+            "maximum": 32768
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
       },
       "required": [
         "min",
         "max"
       ],
-      "type": "object"
+      "additionalProperties": false,
+      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
     },
-    "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "view": {
+      "type": "string",
       "enum": [
         "layers",
         "composite"
-      ],
-      "type": "string"
+      ]
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1048576
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
     }
   },
   "required": [
     "model_id",
     "kind"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "not": {
+    "required": [
+      "view",
+      "layer"
+    ],
+    "properties": {
+      "view": {
+        "const": "composite"
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -8783,219 +8871,199 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "next_offset": {
-          "anyOf": [
-            {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
+        "region": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32768,
+                "maximum": 32767
+              },
+              "minItems": 3,
+              "maxItems": 3
             },
-            {
-              "type": "null"
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
-          ]
+          },
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
         "occupied_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
             }
           ]
         },
-        "region": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
-          "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
-            "min": {
-              "items": {
-                "maximum": 32767,
-                "minimum": -32768,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            }
-          },
-          "required": [
-            "min",
-            "max"
-          ],
-          "type": "object"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "slots": {
-          "additionalProperties": {
-            "maximum": 9223372036854775807,
-            "minimum": 0,
-            "type": "integer"
-          },
-          "propertyNames": {
-            "pattern": "^[0-9]{1,3}$"
-          },
-          "type": "object"
+        "voxel_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "view": {
+          "type": "string",
           "enum": [
             "layers",
             "composite"
-          ],
-          "type": "string"
+          ]
         },
-        "voxel_count": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
+        "slots": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9]{1,3}$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "voxels": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "at": {
-                "items": {
-                  "maximum": 32767,
-                  "minimum": -32768,
-                  "type": "integer"
-                },
-                "maxItems": 3,
-                "minItems": 3,
-                "type": "array"
-              },
               "layer_id": {
                 "anyOf": [
                   {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                   },
                   {
                     "type": "null"
                   }
                 ]
               },
+              "at": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -32768,
+                  "maximum": 32767
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
               "slot": {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
+                "maximum": 256
               }
             },
             "required": [
@@ -9003,11 +9071,10 @@ Complete output schema
               "at",
               "slot"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 10000,
           "minItems": 0,
-          "type": "array"
+          "maxItems": 10000
         }
       },
       "required": [
@@ -9019,45 +9086,41 @@ Complete output schema
         "voxel_count",
         "view"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -9066,14 +9129,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -9082,7 +9138,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -9092,23 +9180,178 @@ Render CPU PNG image content from one immutable revision. Default four views \[i
 
 | Argument      | Required | Type / constraints                                                    |
 | ------------- | -------- | --------------------------------------------------------------------- |
-| `background`  | Optional | array; minItems: 4; maxItems: 4                                       |
-| `camera`      | Optional | object                                                                |
-| `height`      | Optional | integer; minimum: 1; maximum: 1024                                    |
-| `image_mode`  | Optional | string; enum: \["contact\_sheet","individual","both"\]                |
 | `model_id`    | Yes      | string                                                                |
-| `perspective` | Optional | boolean                                                               |
 | `revision`    | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
 | `views`       | Optional | array; minItems: 1; maxItems: 6                                       |
+| `camera`      | Optional | object                                                                |
 | `width`       | Optional | integer; minimum: 1; maximum: 1024                                    |
+| `height`      | Optional | integer; minimum: 1; maximum: 1024                                    |
+| `perspective` | Optional | boolean                                                               |
+| `background`  | Optional | array; minItems: 4; maxItems: 4                                       |
+| `image_mode`  | Optional | string; enum: \["contact\_sheet","individual","both"\]                |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "iso",
+          "front",
+          "back",
+          "left",
+          "right",
+          "top"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 6
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "eye": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "up": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": -1000000000.0,
+            "maximum": 1000000000.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "projection": {
+          "type": "string",
+          "enum": [
+            "orthographic",
+            "perspective"
+          ]
+        },
+        "ortho_height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000000.0
+        },
+        "fov_y_degrees": {
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "exclusiveMaximum": 179
+        }
+      },
+      "required": [
+        "eye",
+        "target",
+        "up",
+        "projection"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "projection": {
+              "const": "orthographic"
+            }
+          },
+          "required": [
+            "ortho_height"
+          ],
+          "not": {
+            "required": [
+              "fov_y_degrees"
+            ]
+          }
+        },
+        {
+          "properties": {
+            "projection": {
+              "const": "perspective"
+            }
+          },
+          "required": [
+            "fov_y_degrees"
+          ],
+          "not": {
+            "required": [
+              "ortho_height"
+            ]
+          }
+        }
+      ]
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "perspective": {
+      "type": "boolean"
+    },
+    "background": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "image_mode": {
+      "type": "string",
+      "enum": [
+        "contact_sheet",
+        "individual",
+        "both"
+      ]
+    }
+  },
+  "required": [
+    "model_id"
+  ],
   "additionalProperties": false,
   "not": {
+    "required": [
+      "camera"
+    ],
     "anyOf": [
       {
         "required": [
@@ -9120,164 +9363,9 @@ Complete input schema
           "perspective"
         ]
       }
-    ],
-    "required": [
-      "camera"
     ]
   },
-  "properties": {
-    "background": {
-      "items": {
-        "maximum": 255,
-        "minimum": 0,
-        "type": "integer"
-      },
-      "maxItems": 4,
-      "minItems": 4,
-      "type": "array"
-    },
-    "camera": {
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "not": {
-            "required": [
-              "fov_y_degrees"
-            ]
-          },
-          "properties": {
-            "projection": {
-              "const": "orthographic"
-            }
-          },
-          "required": [
-            "ortho_height"
-          ]
-        },
-        {
-          "not": {
-            "required": [
-              "ortho_height"
-            ]
-          },
-          "properties": {
-            "projection": {
-              "const": "perspective"
-            }
-          },
-          "required": [
-            "fov_y_degrees"
-          ]
-        }
-      ],
-      "properties": {
-        "eye": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
-        "fov_y_degrees": {
-          "exclusiveMaximum": 179,
-          "exclusiveMinimum": 1,
-          "type": "number"
-        },
-        "ortho_height": {
-          "exclusiveMinimum": 0,
-          "maximum": 1000000000.0,
-          "type": "number"
-        },
-        "projection": {
-          "enum": [
-            "orthographic",
-            "perspective"
-          ],
-          "type": "string"
-        },
-        "target": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
-        "up": {
-          "items": {
-            "maximum": 1000000000.0,
-            "minimum": -1000000000.0,
-            "type": "number"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "eye",
-        "target",
-        "up",
-        "projection"
-      ],
-      "type": "object"
-    },
-    "height": {
-      "maximum": 1024,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "image_mode": {
-      "enum": [
-        "contact_sheet",
-        "individual",
-        "both"
-      ],
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "perspective": {
-      "type": "boolean"
-    },
-    "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "views": {
-      "items": {
-        "enum": [
-          "iso",
-          "front",
-          "back",
-          "left",
-          "right",
-          "top"
-        ],
-        "type": "string"
-      },
-      "maxItems": 6,
-      "minItems": 1,
-      "type": "array"
-    },
-    "width": {
-      "maximum": 1024,
-      "minimum": 1,
-      "type": "integer"
-    }
-  },
-  "required": [
-    "model_id"
-  ],
-  "type": "object"
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -9285,107 +9373,75 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
         "backend": {
           "const": "cpu"
         },
         "bounds": {
-          "additionalProperties": true,
-          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+          "type": "object",
           "properties": {
-            "max": {
-              "items": {
-                "maximum": 32768,
-                "minimum": -32767,
-                "type": "integer"
-              },
-              "maxItems": 3,
-              "minItems": 3,
-              "type": "array"
-            },
             "min": {
+              "type": "array",
               "items": {
-                "maximum": 32767,
+                "type": "integer",
                 "minimum": -32768,
-                "type": "integer"
+                "maximum": 32767
               },
-              "maxItems": 3,
               "minItems": 3,
-              "type": "array"
+              "maxItems": 3
+            },
+            "max": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -32767,
+                "maximum": 32768
+              },
+              "minItems": 3,
+              "maxItems": 3
             }
           },
           "required": [
             "min",
             "max"
           ],
-          "type": "object"
+          "additionalProperties": true,
+          "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
         },
-        "image_mode": {
-          "enum": [
-            "contact_sheet",
-            "individual",
-            "both"
-          ],
-          "type": "string"
-        },
-        "images": {
+        "views": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "bytes": {
-                "maximum": 9223372036854775807,
-                "minimum": 0,
-                "type": "integer"
-              },
-              "height": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "sha256": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
               "view": {
+                "type": "string",
                 "enum": [
                   "iso",
                   "front",
@@ -9395,127 +9451,76 @@ Complete output schema
                   "top",
                   "camera",
                   "contact_sheet"
-                ],
-                "type": "string"
+                ]
               },
               "width": {
-                "maximum": 2048,
+                "type": "integer",
                 "minimum": 1,
-                "type": "integer"
-              }
-            },
-            "required": [
-              "view",
-              "width",
-              "height",
-              "sha256",
-              "bytes"
-            ],
-            "type": "object"
-          },
-          "maxItems": 7,
-          "minItems": 1,
-          "type": "array"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "views": {
-          "items": {
-            "additionalProperties": true,
-            "properties": {
+                "maximum": 2048
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
               "bytes": {
-                "maximum": 9223372036854775807,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 9223372036854775807
               },
               "camera": {
-                "additionalProperties": true,
-                "oneOf": [
-                  {
-                    "not": {
-                      "required": [
-                        "fov_y_degrees"
-                      ]
-                    },
-                    "properties": {
-                      "projection": {
-                        "const": "orthographic"
-                      }
-                    },
-                    "required": [
-                      "ortho_height"
-                    ]
-                  },
-                  {
-                    "not": {
-                      "required": [
-                        "ortho_height"
-                      ]
-                    },
-                    "properties": {
-                      "projection": {
-                        "const": "perspective"
-                      }
-                    },
-                    "required": [
-                      "fov_y_degrees"
-                    ]
-                  }
-                ],
+                "type": "object",
                 "properties": {
                   "eye": {
+                    "type": "array",
                     "items": {
-                      "maximum": 1000000000.0,
+                      "type": "number",
                       "minimum": -1000000000.0,
-                      "type": "number"
+                      "maximum": 1000000000.0
                     },
-                    "maxItems": 3,
                     "minItems": 3,
-                    "type": "array"
+                    "maxItems": 3
                   },
-                  "fov_y_degrees": {
-                    "exclusiveMaximum": 179,
-                    "exclusiveMinimum": 1,
-                    "type": "number"
+                  "target": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1000000000.0,
+                      "maximum": 1000000000.0
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   },
-                  "ortho_height": {
-                    "exclusiveMinimum": 0,
-                    "maximum": 1000000000.0,
-                    "type": "number"
+                  "up": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1000000000.0,
+                      "maximum": 1000000000.0
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   },
                   "projection": {
+                    "type": "string",
                     "enum": [
                       "orthographic",
                       "perspective"
-                    ],
-                    "type": "string"
+                    ]
                   },
-                  "target": {
-                    "items": {
-                      "maximum": 1000000000.0,
-                      "minimum": -1000000000.0,
-                      "type": "number"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
+                  "ortho_height": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 1000000000.0
                   },
-                  "up": {
-                    "items": {
-                      "maximum": 1000000000.0,
-                      "minimum": -1000000000.0,
-                      "type": "number"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
+                  "fov_y_degrees": {
+                    "type": "number",
+                    "exclusiveMinimum": 1,
+                    "exclusiveMaximum": 179
                   }
                 },
                 "required": [
@@ -9524,34 +9529,39 @@ Complete output schema
                   "up",
                   "projection"
                 ],
-                "type": "object"
-              },
-              "height": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "sha256": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
-              "view": {
-                "enum": [
-                  "iso",
-                  "front",
-                  "back",
-                  "left",
-                  "right",
-                  "top",
-                  "camera",
-                  "contact_sheet"
-                ],
-                "type": "string"
-              },
-              "width": {
-                "maximum": 2048,
-                "minimum": 1,
-                "type": "integer"
+                "additionalProperties": true,
+                "oneOf": [
+                  {
+                    "properties": {
+                      "projection": {
+                        "const": "orthographic"
+                      }
+                    },
+                    "required": [
+                      "ortho_height"
+                    ],
+                    "not": {
+                      "required": [
+                        "fov_y_degrees"
+                      ]
+                    }
+                  },
+                  {
+                    "properties": {
+                      "projection": {
+                        "const": "perspective"
+                      }
+                    },
+                    "required": [
+                      "fov_y_degrees"
+                    ],
+                    "not": {
+                      "required": [
+                        "ortho_height"
+                      ]
+                    }
+                  }
+                ]
               }
             },
             "required": [
@@ -9562,11 +9572,68 @@ Complete output schema
               "bytes",
               "camera"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 6,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 6
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "view": {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "front",
+                  "back",
+                  "left",
+                  "right",
+                  "top",
+                  "camera",
+                  "contact_sheet"
+                ]
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              }
+            },
+            "required": [
+              "view",
+              "width",
+              "height",
+              "sha256",
+              "bytes"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 1,
+          "maxItems": 7
+        },
+        "image_mode": {
+          "type": "string",
+          "enum": [
+            "contact_sheet",
+            "individual",
+            "both"
+          ]
         }
       },
       "required": [
@@ -9578,45 +9645,41 @@ Complete output schema
         "images",
         "image_mode"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -9625,14 +9688,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -9641,7 +9697,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -9658,23 +9746,23 @@ Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
     }
   },
   "required": [
     "model_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -9682,91 +9770,71 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
         "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         },
         "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+          "type": "string",
           "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         },
         "versions": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
-              "content_hash": {
-                "pattern": "^[0-9a-f]{64}$",
-                "type": "string"
-              },
               "id": {
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                "type": "string"
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
               },
               "name": {
-                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
-              },
-              "origin": {
-                "enum": [
-                  "agent",
-                  "human"
-                ],
-                "type": "string"
+                "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
               },
               "parent_id": {
                 "anyOf": [
                   {
-                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
                   },
                   {
                     "type": "null"
                   }
                 ]
+              },
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "agent",
+                  "human"
+                ]
+              },
+              "content_hash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
               }
             },
             "required": [
@@ -9776,11 +9844,10 @@ Complete output schema
               "origin",
               "content_hash"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
+          "maxItems": 64
         }
       },
       "required": [
@@ -9788,45 +9855,41 @@ Complete output schema
         "revision",
         "versions"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -9835,14 +9898,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -9851,7 +9907,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -9862,58 +9950,57 @@ Restore named content as a new undoable edit, keeping the version library. Requi
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
-| `expected_head_id`  | Yes      | See schema                                                                                                                           |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `version_id`        | Yes      | string                                                                                                                               |
+| `expected_head_id`  | Yes      | See schema                                                                                                                           |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "version_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "expected_head_id": {
       "anyOf": [
         {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         },
         {
           "type": "null"
         }
       ]
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "version_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
     }
   },
   "required": [
@@ -9924,7 +10011,8 @@ Complete input schema
     "version_id",
     "expected_head_id"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -9932,83 +10020,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -10016,77 +10133,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -10106,45 +10173,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -10153,14 +10216,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -10169,7 +10225,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -10180,59 +10268,58 @@ Persist current content as a named immutable snapshot with agent attribution and
 | Argument            | Required | Type / constraints                                                                                                                     |
 | ------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `expected_epoch`    | Yes      | string                                                                                                                                 |
+| `operation_id`      | Yes      | string                                                                                                                                 |
+| `model_id`          | Yes      | string                                                                                                                                 |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                  |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.   |
-| `model_id`          | Yes      | string                                                                                                                                 |
 | `name`              | Yes      | string; maxLength: 128. Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `operation_id`      | Yes      | string                                                                                                                                 |
-| `parent_id`         | Optional | string                                                                                                                                 |
 | `version_id`        | Optional | string                                                                                                                                 |
+| `parent_id`         | Optional | string                                                                                                                                 |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "name": {
-      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
-    "parent_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 128 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "version_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "parent_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     }
   },
   "required": [
@@ -10242,7 +10329,8 @@ Complete input schema
     "expected_revision",
     "name"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -10250,83 +10338,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -10334,81 +10451,31 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "version_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
+        },
+        "version_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
       },
       "required": [
@@ -10429,45 +10496,41 @@ Complete output schema
         "durability",
         "version_id"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -10476,14 +10539,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -10492,7 +10548,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -10503,125 +10591,82 @@ Apply 1..256 ordered voxel operations atomically to one model: set, erase\_regio
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `operations`        | Yes      | array; minItems: 1; maxItems: 256                                                                                                    |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
     },
     "operations": {
+      "type": "array",
       "items": {
         "oneOf": [
           {
-            "additionalProperties": false,
+            "type": "object",
             "properties": {
-              "kind": {
-                "const": "set"
-              },
               "layer": {
-                "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
-              },
-              "mirror": {
-                "additionalProperties": false,
-                "properties": {
-                  "axes": {
-                    "items": {
-                      "enum": [
-                        "x",
-                        "y",
-                        "z"
-                      ],
-                      "type": "string"
-                    },
-                    "maxItems": 3,
-                    "minItems": 0,
-                    "type": "array",
-                    "uniqueItems": true
-                  },
-                  "plane2": {
-                    "items": {
-                      "maximum": 65536,
-                      "minimum": -65536,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "axes",
-                  "plane2"
-                ],
-                "type": "object"
-              },
-              "mode": {
-                "enum": [
-                  "place",
-                  "paint"
-                ],
-                "type": "string"
+                "description": "Layer UUID or unique exact name. Never inferred from UI selection."
               },
               "voxels": {
+                "type": "array",
                 "items": {
-                  "additionalProperties": false,
+                  "type": "object",
                   "properties": {
                     "at": {
+                      "type": "array",
                       "items": {
-                        "maximum": 32767,
+                        "type": "integer",
                         "minimum": -32768,
-                        "type": "integer"
+                        "maximum": 32767
                       },
-                      "maxItems": 3,
                       "minItems": 3,
-                      "type": "array"
+                      "maxItems": 3
                     },
                     "slot": {
                       "anyOf": [
                         {
-                          "maximum": 256,
+                          "type": "integer",
                           "minimum": 0,
-                          "type": "integer"
+                          "maximum": 256
                         },
                         {
-                          "maxLength": 128,
+                          "type": "string",
                           "minLength": 1,
-                          "type": "string"
+                          "maxLength": 128
                         }
                       ],
                       "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
@@ -10631,11 +10676,54 @@ Complete input schema
                     "at",
                     "slot"
                   ],
-                  "type": "object"
+                  "additionalProperties": false
                 },
-                "maxItems": 65536,
                 "minItems": 1,
-                "type": "array"
+                "maxItems": 65536
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "place",
+                  "paint"
+                ]
+              },
+              "mirror": {
+                "type": "object",
+                "properties": {
+                  "axes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 3,
+                    "uniqueItems": true
+                  },
+                  "plane2": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -65536,
+                      "maximum": 65536
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "axes",
+                  "plane2"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "set"
               }
             },
             "required": [
@@ -10643,85 +10731,85 @@ Complete input schema
               "voxels",
               "kind"
             ],
-            "type": "object"
+            "additionalProperties": false
           },
           {
-            "additionalProperties": false,
+            "type": "object",
             "properties": {
-              "kind": {
-                "const": "erase_region"
-              },
               "layer": {
-                "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
-              },
-              "mirror": {
-                "additionalProperties": false,
-                "properties": {
-                  "axes": {
-                    "items": {
-                      "enum": [
-                        "x",
-                        "y",
-                        "z"
-                      ],
-                      "type": "string"
-                    },
-                    "maxItems": 3,
-                    "minItems": 0,
-                    "type": "array",
-                    "uniqueItems": true
-                  },
-                  "plane2": {
-                    "items": {
-                      "maximum": 65536,
-                      "minimum": -65536,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "axes",
-                  "plane2"
-                ],
-                "type": "object"
+                "description": "Layer UUID or unique exact name. Never inferred from UI selection."
               },
               "region": {
-                "additionalProperties": false,
-                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                "type": "object",
                 "properties": {
-                  "max": {
-                    "items": {
-                      "maximum": 32768,
-                      "minimum": -32767,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  },
                   "min": {
+                    "type": "array",
                     "items": {
-                      "maximum": 32767,
+                      "type": "integer",
                       "minimum": -32768,
-                      "type": "integer"
+                      "maximum": 32767
                     },
-                    "maxItems": 3,
                     "minItems": 3,
-                    "type": "array"
+                    "maxItems": 3
+                  },
+                  "max": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -32767,
+                      "maximum": 32768
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 },
                 "required": [
                   "min",
                   "max"
                 ],
-                "type": "object"
+                "additionalProperties": false,
+                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
+              },
+              "mirror": {
+                "type": "object",
+                "properties": {
+                  "axes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 3,
+                    "uniqueItems": true
+                  },
+                  "plane2": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -65536,
+                      "maximum": 65536
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "axes",
+                  "plane2"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "erase_region"
               }
             },
             "required": [
@@ -10729,115 +10817,115 @@ Complete input schema
               "region",
               "kind"
             ],
-            "type": "object"
+            "additionalProperties": false
           },
           {
-            "additionalProperties": false,
+            "type": "object",
             "properties": {
-              "cap": {
-                "maximum": 1048576,
-                "minimum": 1,
-                "type": "integer"
-              },
-              "kind": {
-                "const": "fill"
-              },
               "layer": {
-                "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
+                "maxLength": 128,
                 "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
+                "description": "Layer UUID or unique exact name. Never inferred from UI selection."
               },
-              "mirror": {
-                "additionalProperties": false,
-                "properties": {
-                  "axes": {
-                    "items": {
-                      "enum": [
-                        "x",
-                        "y",
-                        "z"
-                      ],
-                      "type": "string"
-                    },
-                    "maxItems": 3,
-                    "minItems": 0,
-                    "type": "array",
-                    "uniqueItems": true
-                  },
-                  "plane2": {
-                    "items": {
-                      "maximum": 65536,
-                      "minimum": -65536,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  }
+              "seed": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -32768,
+                  "maximum": 32767
                 },
-                "required": [
-                  "axes",
-                  "plane2"
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
                 ],
-                "type": "object"
+                "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
               },
               "region": {
-                "additionalProperties": false,
-                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+                "type": "object",
                 "properties": {
-                  "max": {
-                    "items": {
-                      "maximum": 32768,
-                      "minimum": -32767,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  },
                   "min": {
+                    "type": "array",
                     "items": {
-                      "maximum": 32767,
+                      "type": "integer",
                       "minimum": -32768,
-                      "type": "integer"
+                      "maximum": 32767
                     },
-                    "maxItems": 3,
                     "minItems": 3,
-                    "type": "array"
+                    "maxItems": 3
+                  },
+                  "max": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -32767,
+                      "maximum": 32768
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 },
                 "required": [
                   "min",
                   "max"
                 ],
-                "type": "object"
+                "additionalProperties": false,
+                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
               },
-              "seed": {
-                "items": {
-                  "maximum": 32767,
-                  "minimum": -32768,
-                  "type": "integer"
-                },
-                "maxItems": 3,
-                "minItems": 3,
-                "type": "array"
+              "cap": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1048576
               },
-              "slot": {
-                "anyOf": [
-                  {
-                    "maximum": 256,
-                    "minimum": 1,
-                    "type": "integer"
+              "mirror": {
+                "type": "object",
+                "properties": {
+                  "axes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 3,
+                    "uniqueItems": true
                   },
-                  {
-                    "maxLength": 128,
-                    "minLength": 1,
-                    "type": "string"
+                  "plane2": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -65536,
+                      "maximum": 65536
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   }
+                },
+                "required": [
+                  "axes",
+                  "plane2"
                 ],
-                "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "fill"
               }
             },
             "required": [
@@ -10846,15 +10934,119 @@ Complete input schema
               "slot",
               "kind"
             ],
-            "type": "object"
+            "additionalProperties": false
           },
           {
-            "additionalProperties": false,
-            "else": {
-              "required": [
-                "slot"
-              ]
+            "type": "object",
+            "properties": {
+              "layer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+                "description": "Layer UUID or unique exact name. Never inferred from UI selection."
+              },
+              "region": {
+                "type": "object",
+                "properties": {
+                  "min": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -32768,
+                      "maximum": 32767
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "max": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -32767,
+                      "maximum": 32768
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "min",
+                  "max"
+                ],
+                "additionalProperties": false,
+                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
+              },
+              "slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                ],
+                "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
+              },
+              "hollow": {
+                "type": "boolean"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "place",
+                  "paint",
+                  "erase"
+                ]
+              },
+              "mirror": {
+                "type": "object",
+                "properties": {
+                  "axes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 3,
+                    "uniqueItems": true
+                  },
+                  "plane2": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": -65536,
+                      "maximum": 65536
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                },
+                "required": [
+                  "axes",
+                  "plane2"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "box"
+              }
             },
+            "required": [
+              "layer",
+              "region",
+              "kind"
+            ],
+            "additionalProperties": false,
             "if": {
               "properties": {
                 "mode": {
@@ -10865,114 +11057,6 @@ Complete input schema
                 "mode"
               ]
             },
-            "properties": {
-              "hollow": {
-                "type": "boolean"
-              },
-              "kind": {
-                "const": "box"
-              },
-              "layer": {
-                "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-                "maxLength": 128,
-                "minLength": 1,
-                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-                "type": "string"
-              },
-              "mirror": {
-                "additionalProperties": false,
-                "properties": {
-                  "axes": {
-                    "items": {
-                      "enum": [
-                        "x",
-                        "y",
-                        "z"
-                      ],
-                      "type": "string"
-                    },
-                    "maxItems": 3,
-                    "minItems": 0,
-                    "type": "array",
-                    "uniqueItems": true
-                  },
-                  "plane2": {
-                    "items": {
-                      "maximum": 65536,
-                      "minimum": -65536,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "axes",
-                  "plane2"
-                ],
-                "type": "object"
-              },
-              "mode": {
-                "enum": [
-                  "place",
-                  "paint",
-                  "erase"
-                ],
-                "type": "string"
-              },
-              "region": {
-                "additionalProperties": false,
-                "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
-                "properties": {
-                  "max": {
-                    "items": {
-                      "maximum": 32768,
-                      "minimum": -32767,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  },
-                  "min": {
-                    "items": {
-                      "maximum": 32767,
-                      "minimum": -32768,
-                      "type": "integer"
-                    },
-                    "maxItems": 3,
-                    "minItems": 3,
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "min",
-                  "max"
-                ],
-                "type": "object"
-              },
-              "slot": {
-                "anyOf": [
-                  {
-                    "maximum": 256,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  {
-                    "maxLength": 128,
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                ],
-                "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
-              }
-            },
-            "required": [
-              "layer",
-              "region",
-              "kind"
-            ],
             "then": {
               "not": {
                 "required": [
@@ -10980,13 +11064,16 @@ Complete input schema
                 ]
               }
             },
-            "type": "object"
+            "else": {
+              "required": [
+                "slot"
+              ]
+            }
           }
         ]
       },
-      "maxItems": 256,
       "minItems": 1,
-      "type": "array"
+      "maxItems": 256
     }
   },
   "required": [
@@ -10996,7 +11083,8 @@ Complete input schema
     "expected_revision",
     "operations"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -11004,83 +11092,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -11088,77 +11205,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -11178,45 +11245,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -11225,14 +11288,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -11241,7 +11297,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -11252,28 +11340,155 @@ Build an integer half-open solid box or one-cell shell (hollow=true). Default mo
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
-| `hollow`            | Optional | boolean                                                                                                                              |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `mirror`            | Optional | object                                                                                                                               |
-| `mode`              | Optional | string; enum: \["place","paint","erase"\]                                                                                            |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `region`            | Yes      | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.        |
 | `slot`              | Optional | See schema. Stable slot number or unique swatch name; zero is air for explicit writes only.                                          |
+| `hollow`            | Optional | boolean                                                                                                                              |
+| `mode`              | Optional | string; enum: \["place","paint","erase"\]                                                                                            |
+| `mirror`            | Optional | object                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
-  "else": {
-    "required": [
-      "slot"
-    ]
+  "type": "object",
+  "properties": {
+    "expected_epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
+    },
+    "region": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32768,
+            "maximum": 32767
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32767,
+            "maximum": 32768
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false,
+      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
+    },
+    "slot": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ],
+      "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
+    },
+    "hollow": {
+      "type": "boolean"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "place",
+        "paint",
+        "erase"
+      ]
+    },
+    "mirror": {
+      "type": "object",
+      "properties": {
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "plane2": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -65536,
+            "maximum": 65536
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "axes",
+        "plane2"
+      ],
+      "additionalProperties": false
+    }
   },
+  "required": [
+    "expected_epoch",
+    "operation_id",
+    "model_id",
+    "expected_revision",
+    "layer",
+    "region"
+  ],
+  "additionalProperties": false,
   "if": {
     "properties": {
       "mode": {
@@ -11284,138 +11499,6 @@ Complete input schema
       "mode"
     ]
   },
-  "properties": {
-    "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "hollow": {
-      "type": "boolean"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "mirror": {
-      "additionalProperties": false,
-      "properties": {
-        "axes": {
-          "items": {
-            "enum": [
-              "x",
-              "y",
-              "z"
-            ],
-            "type": "string"
-          },
-          "maxItems": 3,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "plane2": {
-          "items": {
-            "maximum": 65536,
-            "minimum": -65536,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "axes",
-        "plane2"
-      ],
-      "type": "object"
-    },
-    "mode": {
-      "enum": [
-        "place",
-        "paint",
-        "erase"
-      ],
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "region": {
-      "additionalProperties": false,
-      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
-      "properties": {
-        "max": {
-          "items": {
-            "maximum": 32768,
-            "minimum": -32767,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
-        "min": {
-          "items": {
-            "maximum": 32767,
-            "minimum": -32768,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "min",
-        "max"
-      ],
-      "type": "object"
-    },
-    "slot": {
-      "anyOf": [
-        {
-          "maximum": 256,
-          "minimum": 1,
-          "type": "integer"
-        },
-        {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
-        }
-      ],
-      "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
-    }
-  },
-  "required": [
-    "expected_epoch",
-    "operation_id",
-    "model_id",
-    "expected_revision",
-    "layer",
-    "region"
-  ],
   "then": {
     "not": {
       "required": [
@@ -11423,7 +11506,12 @@ Complete input schema
       ]
     }
   },
-  "type": "object"
+  "else": {
+    "required": [
+      "slot"
+    ]
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -11431,83 +11519,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -11515,77 +11632,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -11605,45 +11672,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -11652,14 +11715,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -11668,7 +11724,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -11679,116 +11767,115 @@ Erase occupied cells in min-inclusive/max-exclusive region. Mirror is explicit p
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `mirror`            | Optional | object                                                                                                                               |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `region`            | Yes      | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.        |
+| `mirror`            | Optional | object                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "mirror": {
-      "additionalProperties": false,
-      "properties": {
-        "axes": {
-          "items": {
-            "enum": [
-              "x",
-              "y",
-              "z"
-            ],
-            "type": "string"
-          },
-          "maxItems": 3,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "plane2": {
-          "items": {
-            "maximum": 65536,
-            "minimum": -65536,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "axes",
-        "plane2"
-      ],
-      "type": "object"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "region": {
-      "additionalProperties": false,
-      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+      "type": "object",
       "properties": {
-        "max": {
-          "items": {
-            "maximum": 32768,
-            "minimum": -32767,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
         "min": {
+          "type": "array",
           "items": {
-            "maximum": 32767,
+            "type": "integer",
             "minimum": -32768,
-            "type": "integer"
+            "maximum": 32767
           },
-          "maxItems": 3,
           "minItems": 3,
-          "type": "array"
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32767,
+            "maximum": 32768
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
       },
       "required": [
         "min",
         "max"
       ],
-      "type": "object"
+      "additionalProperties": false,
+      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
+    },
+    "mirror": {
+      "type": "object",
+      "properties": {
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "plane2": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -65536,
+            "maximum": 65536
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "axes",
+        "plane2"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -11799,7 +11886,8 @@ Complete input schema
     "layer",
     "region"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -11807,83 +11895,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -11891,77 +12008,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -11981,45 +12048,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -12028,14 +12091,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -12044,7 +12100,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -12054,150 +12142,149 @@ Six-connected flood fill of the seed's slot, including air. Region defaults to d
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `cap`               | Optional | integer; minimum: 1; maximum: 1048576                                                                                                |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `mirror`            | Optional | object                                                                                                                               |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
-| `region`            | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.        |
 | `seed`              | Yes      | array; minItems: 3; maxItems: 3                                                                                                      |
 | `slot`              | Yes      | See schema. Stable slot number or unique swatch name; zero is air for explicit writes only.                                          |
+| `region`            | Optional | object. Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.        |
+| `cap`               | Optional | integer; minimum: 1; maximum: 1048576                                                                                                |
+| `mirror`            | Optional | object                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "cap": {
-      "maximum": 1048576,
-      "minimum": 1,
-      "type": "integer"
-    },
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "mirror": {
-      "additionalProperties": false,
-      "properties": {
-        "axes": {
-          "items": {
-            "enum": [
-              "x",
-              "y",
-              "z"
-            ],
-            "type": "string"
-          },
-          "maxItems": 3,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "plane2": {
-          "items": {
-            "maximum": 65536,
-            "minimum": -65536,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "axes",
-        "plane2"
-      ],
-      "type": "object"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
+    },
+    "seed": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -32768,
+        "maximum": 32767
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "slot": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ],
+      "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
     },
     "region": {
-      "additionalProperties": false,
-      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+      "type": "object",
       "properties": {
-        "max": {
-          "items": {
-            "maximum": 32768,
-            "minimum": -32767,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        },
         "min": {
+          "type": "array",
           "items": {
-            "maximum": 32767,
+            "type": "integer",
             "minimum": -32768,
-            "type": "integer"
+            "maximum": 32767
           },
-          "maxItems": 3,
           "minItems": 3,
-          "type": "array"
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -32767,
+            "maximum": 32768
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
       },
       "required": [
         "min",
         "max"
       ],
-      "type": "object"
+      "additionalProperties": false,
+      "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
     },
-    "seed": {
-      "items": {
-        "maximum": 32767,
-        "minimum": -32768,
-        "type": "integer"
-      },
-      "maxItems": 3,
-      "minItems": 3,
-      "type": "array"
+    "cap": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1048576
     },
-    "slot": {
-      "anyOf": [
-        {
-          "maximum": 256,
-          "minimum": 1,
-          "type": "integer"
+    "mirror": {
+      "type": "object",
+      "properties": {
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
         },
-        {
-          "maxLength": 128,
-          "minLength": 1,
-          "type": "string"
+        "plane2": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -65536,
+            "maximum": 65536
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
+      },
+      "required": [
+        "axes",
+        "plane2"
       ],
-      "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
+      "additionalProperties": false
     }
   },
   "required": [
@@ -12209,7 +12296,8 @@ Complete input schema
     "seed",
     "slot"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -12217,83 +12305,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -12301,77 +12418,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -12391,45 +12458,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -12438,14 +12501,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -12454,7 +12510,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -12464,48 +12552,47 @@ Read explicit integer coordinates on one layer, including air as slot 0. Returns
 
 | Argument    | Required | Type / constraints                                                                         |
 | ----------- | -------- | ------------------------------------------------------------------------------------------ |
-| `layer`     | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection. |
 | `model_id`  | Yes      | string                                                                                     |
-| `positions` | Yes      | array; minItems: 1; maxItems: 10000                                                        |
 | `revision`  | Optional | string. Captured monotonic revision, encoded as a decimal u64 string.                      |
+| `layer`     | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection. |
+| `positions` | Yes      | array; minItems: 1; maxItems: 10000                                                        |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
     "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "positions": {
-      "items": {
-        "items": {
-          "maximum": 32767,
-          "minimum": -32768,
-          "type": "integer"
-        },
-        "maxItems": 3,
-        "minItems": 3,
-        "type": "array"
-      },
-      "maxItems": 10000,
-      "minItems": 1,
-      "type": "array"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+      "type": "string",
       "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767
+        },
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "minItems": 1,
+      "maxItems": 10000
     }
   },
   "required": [
@@ -12513,7 +12600,8 @@ Complete input schema
     "layer",
     "positions"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -12521,88 +12609,67 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "layer_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
         "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         },
         "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
+          "type": "string",
           "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "layer_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         },
         "voxels": {
+          "type": "array",
           "items": {
-            "additionalProperties": true,
+            "type": "object",
             "properties": {
               "at": {
+                "type": "array",
                 "items": {
-                  "maximum": 32767,
+                  "type": "integer",
                   "minimum": -32768,
-                  "type": "integer"
+                  "maximum": 32767
                 },
-                "maxItems": 3,
                 "minItems": 3,
-                "type": "array"
+                "maxItems": 3
               },
               "slot": {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 256
               }
             },
             "required": [
               "at",
               "slot"
             ],
-            "type": "object"
+            "additionalProperties": true
           },
-          "maxItems": 10000,
           "minItems": 1,
-          "type": "array"
+          "maxItems": 10000
         }
       },
       "required": [
@@ -12611,45 +12678,41 @@ Complete output schema
         "layer_id",
         "voxels"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -12658,14 +12721,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -12674,7 +12730,39 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```
 
@@ -12685,119 +12773,78 @@ Atomically place or paint explicit cells, at most 65,536. Slot 0 erases; paint a
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `expected_epoch`    | Yes      | string                                                                                                                               |
+| `operation_id`      | Yes      | string                                                                                                                               |
+| `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
 | `layer`             | Yes      | string; maxLength: 128. Layer UUID or unique exact name. Never inferred from UI selection.                                           |
-| `mirror`            | Optional | object                                                                                                                               |
-| `mode`              | Optional | string; enum: \["place","paint"\]                                                                                                    |
-| `model_id`          | Yes      | string                                                                                                                               |
-| `operation_id`      | Yes      | string                                                                                                                               |
 | `voxels`            | Yes      | array; minItems: 1; maxItems: 65536                                                                                                  |
+| `mode`              | Optional | string; enum: \["place","paint"\]                                                                                                    |
+| `mirror`            | Optional | object                                                                                                                               |
 
 Complete input schema
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
+  "type": "object",
   "properties": {
     "expected_epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
-    },
-    "expected_revision": {
-      "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-      "pattern": "^(0|[1-9][0-9]{0,19})$",
-      "type": "string"
-    },
-    "label": {
-      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.",
-      "maxLength": 80,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "layer": {
-      "description": "Layer UUID or unique exact name. Never inferred from UI selection.",
-      "maxLength": 128,
-      "minLength": 1,
-      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
-      "type": "string"
-    },
-    "mirror": {
-      "additionalProperties": false,
-      "properties": {
-        "axes": {
-          "items": {
-            "enum": [
-              "x",
-              "y",
-              "z"
-            ],
-            "type": "string"
-          },
-          "maxItems": 3,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "plane2": {
-          "items": {
-            "maximum": 65536,
-            "minimum": -65536,
-            "type": "integer"
-          },
-          "maxItems": 3,
-          "minItems": 3,
-          "type": "array"
-        }
-      },
-      "required": [
-        "axes",
-        "plane2"
-      ],
-      "type": "object"
-    },
-    "mode": {
-      "enum": [
-        "place",
-        "paint"
-      ],
-      "type": "string"
-    },
-    "model_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     },
     "operation_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "description": "Captured monotonic revision, encoded as a decimal u64 string."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime."
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Layer UUID or unique exact name. Never inferred from UI selection."
     },
     "voxels": {
+      "type": "array",
       "items": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "at": {
+            "type": "array",
             "items": {
-              "maximum": 32767,
+              "type": "integer",
               "minimum": -32768,
-              "type": "integer"
+              "maximum": 32767
             },
-            "maxItems": 3,
             "minItems": 3,
-            "type": "array"
+            "maxItems": 3
           },
           "slot": {
             "anyOf": [
               {
-                "maximum": 256,
+                "type": "integer",
                 "minimum": 0,
-                "type": "integer"
+                "maximum": 256
               },
               {
-                "maxLength": 128,
+                "type": "string",
                 "minLength": 1,
-                "type": "string"
+                "maxLength": 128
               }
             ],
             "description": "Stable slot number or unique swatch name; zero is air for explicit writes only."
@@ -12807,11 +12854,51 @@ Complete input schema
           "at",
           "slot"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "maxItems": 65536,
       "minItems": 1,
-      "type": "array"
+      "maxItems": 65536
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "place",
+        "paint"
+      ]
+    },
+    "mirror": {
+      "type": "object",
+      "properties": {
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "plane2": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -65536,
+            "maximum": 65536
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "axes",
+        "plane2"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -12822,7 +12909,8 @@ Complete input schema
     "layer",
     "voxels"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 ```
 
@@ -12830,83 +12918,112 @@ Complete output schema
 
 ```json
 {
-  "additionalProperties": false,
-  "oneOf": [
-    {
-      "not": {
-        "required": [
-          "error"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": true
-        }
-      },
-      "required": [
-        "data"
-      ]
-    },
-    {
-      "not": {
-        "required": [
-          "data"
-        ]
-      },
-      "properties": {
-        "ok": {
-          "const": false
-        }
-      },
-      "required": [
-        "error"
-      ]
-    }
-  ],
+  "type": "object",
   "properties": {
     "api_version": {
       "const": "voxelite.v1"
     },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
     "data": {
-      "additionalProperties": true,
+      "type": "object",
       "properties": {
-        "added": {
-          "maximum": 9223372036854775807,
+        "model_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "undo_entry_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed_voxels": {
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "recolored": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
         },
         "changed_bounds": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime.",
+              "type": "object",
               "properties": {
-                "max": {
-                  "items": {
-                    "maximum": 32768,
-                    "minimum": -32767,
-                    "type": "integer"
-                  },
-                  "maxItems": 3,
-                  "minItems": 3,
-                  "type": "array"
-                },
                 "min": {
+                  "type": "array",
                   "items": {
-                    "maximum": 32767,
+                    "type": "integer",
                     "minimum": -32768,
-                    "type": "integer"
+                    "maximum": 32767
                   },
-                  "maxItems": 3,
                   "minItems": 3,
-                  "type": "array"
+                  "maxItems": 3
+                },
+                "max": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -32767,
+                    "maximum": 32768
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
                 }
               },
               "required": [
                 "min",
                 "max"
               ],
-              "type": "object"
+              "additionalProperties": true,
+              "description": "Integer region: min inclusive, max exclusive. Each extent must be positive and at most 256 cells; checked at runtime."
             },
             {
               "type": "null"
@@ -12914,77 +13031,27 @@ Complete output schema
           ]
         },
         "changed_layers": {
+          "type": "array",
           "items": {
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
-          "maxItems": 64,
           "minItems": 0,
-          "type": "array"
-        },
-        "changed_voxels": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "durability": {
-          "const": "memory"
-        },
-        "head_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata_changed": {
-          "type": "boolean"
-        },
-        "model_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "operation_id": {
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-          "type": "string"
+          "maxItems": 64
         },
         "palette_changed": {
           "type": "boolean"
         },
-        "recolored": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "removed": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
-        },
-        "undo_entry_id": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "metadata_changed": {
+          "type": "boolean"
         },
         "work_units": {
-          "maximum": 9223372036854775807,
+          "type": "integer",
           "minimum": 0,
-          "type": "integer"
+          "maximum": 9223372036854775807
+        },
+        "durability": {
+          "const": "memory"
         }
       },
       "required": [
@@ -13004,45 +13071,41 @@ Complete output schema
         "work_units",
         "durability"
       ],
-      "type": "object"
-    },
-    "epoch": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": true
     },
     "error": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "code": {
-          "maxLength": 80,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
-        },
-        "command_index": {
-          "maximum": 255,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "current_revision": {
-          "description": "Captured monotonic revision, encoded as a decimal u64 string.",
-          "pattern": "^(0|[1-9][0-9]{0,19})$",
-          "type": "string"
+          "maxLength": 80
         },
         "message": {
-          "maxLength": 4096,
+          "type": "string",
           "minLength": 1,
-          "type": "string"
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "recovery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         },
         "path": {
           "type": "string"
         },
-        "recovery": {
-          "maxLength": 4096,
-          "minLength": 1,
-          "type": "string"
+        "command_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
         },
-        "retryable": {
-          "type": "boolean"
+        "current_revision": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "description": "Captured monotonic revision, encoded as a decimal u64 string."
         }
       },
       "required": [
@@ -13051,14 +13114,7 @@ Complete output schema
         "retryable",
         "recovery"
       ],
-      "type": "object"
-    },
-    "ok": {
-      "type": "boolean"
-    },
-    "session_id": {
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "type": "string"
+      "additionalProperties": false
     }
   },
   "required": [
@@ -13067,6 +13123,38 @@ Complete output schema
     "epoch",
     "ok"
   ],
-  "type": "object"
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "data"
+        ]
+      }
+    }
+  ]
 }
 ```

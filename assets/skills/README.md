@@ -14,52 +14,45 @@ Installing instructions does not install or start the server. Browser editing
 currently has no live MCP attachment. These skills do not grant permissions or
 change host settings. No host plugin package is shipped in this stage.
 
-## Claude Code
+## Agent Skills CLI
 
-Copy a skill folder to `~/.claude/skills/` (personal) or `.claude/skills/` (project).
-For example, from this repository:
+Install all skills from this repository's `skills/` directory:
 
 ```sh
-mkdir -p ~/.claude/skills
-cp -R skills/voxelite-workflow ~/.claude/skills/
+npx skills add 0x63616c/voxelite
 ```
 
-Repeat for the other chosen folders. Invoke `/voxelite-workflow` or ask Claude
-to use it. A plugin can bundle these folders under `skills/`, but requires its
-own manifest and installation; copying files here does not install a plugin.
-[Official Claude Code skill documentation](https://code.claude.com/docs/en/skills).
+Use `--skill <name>` to select one, `-g` for a global install, and
+`-a claude-code`, `-a cursor` or `-a codex` to pick an agent. For example:
 
-## Cursor
+```sh
+npx skills add 0x63616c/voxelite --skill voxelite-workflow -a cursor
+```
 
-Copy chosen folders into `.cursor/skills/` in the project, or `~/.cursor/skills/`
-for local personal use. Confirm them in Customize → Skills. For installations
-using rules instead, add a scoped `.cursor/rules/voxelite.mdc` that instructs the
-agent to read the relevant `skills/.../SKILL.md` from this repository for voxel
-work. A rule file and an automatically discovered skill are different mechanisms;
-do not simply rename SKILL.md to a rule file.
-[Official Cursor skills](https://cursor.com/docs/skills).
+## Manual installation
 
-## Codex
+From a repository checkout or the extracted skills download, copy each complete
+`skills/<name>/` folder into your host's skills directory:
 
-For current Codex, use `.agents/skills/` in the repository or `~/.agents/skills/`
-for personal skills, as specified by the current official documentation. Some
-Codex environments (including this build environment) expose skills under
-`~/.codex/skills/`; use that path only if your installed client discovers it.
-Confirm the skill appears after restarting; don't install duplicate copies in
-multiple search roots. [Official skill locations](https://learn.chatgpt.com/docs/build-skills).
+| Host | Destination |
+| --- | --- |
+| Cursor | `.cursor/skills/` |
+| Claude Code | `.claude/skills/` |
+| Codex | `~/.codex/skills/` |
 
-Alternatively, keep `skills/` in the repository and add a scoped instruction to
-the project's existing `AGENTS.md` without replacing its other instructions:
+For example, from the repository root:
 
-> For Voxelite art tasks, read skills/voxelite-workflow/SKILL.md. Read the palette,
-> primitive, or render-review skill when that workflow is needed.
+```sh
+mkdir -p .cursor/skills
+cp -R skills/voxelite-workflow .cursor/skills/
+```
 
-[Official AGENTS.md guidance](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+Repeat for the other chosen folders and restart your host to discover the skills.
 
 ## Verify, update, remove
 
 Ask the host to use the workflow, list MCP tools, and call
-`voxelite_capabilities_get`. Verify API, epoch and CPU render availability.
+`voxelite_capabilities_get`. Expect API `voxelite.v1`, an epoch and CPU render availability.
 Try the included example request in a new 32³ project, inspect four real PNGs,
 and save. Host UI loading is not tested on this headless machine; stdio execution
 and the tutorial are independently verified by repository tests/scripts.

@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "voxelite": {
-      "type": "stdio",
-      "command": "/absolute/path/to/voxelite-build/target/release/voxelite-mcp",
-      "args": ["--root", "/absolute/path/to/project"]
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+      "args": [
+        "--root",
+        "<project dir>"
+      ]
     }
   }
 }
