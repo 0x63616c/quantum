@@ -1,6 +1,6 @@
 //! Typography shared by every visual shortcut hint.
 use crate::{
-    actions::Op,
+    actions::{Op, shortcut_sheet},
     shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
 };
 use gpui::{prelude::*, *};
@@ -114,6 +114,55 @@ pub(super) fn shortcut(binding: &str) -> Div {
 
 pub(super) fn action_shortcut(op: Op) -> Div {
     div().when_some(op.key(), |d, key| d.child(shortcut(key)))
+}
+
+pub(super) fn sheet_shortcut(op: Op) -> Div {
+    if op.key().is_some() {
+        action_shortcut(op)
+    } else {
+        div().child("—")
+    }
+}
+
+/// Command hints share the sheet's registry; pointer and cursor gestures are
+/// handled directly by the viewport rather than dispatched as operations.
+pub(super) fn keyboard_guide() -> HintText {
+    let mut guide = HintText::default();
+    for (index, op) in shortcut_sheet(ShortcutPlatform::current())
+        .filter(|op| op.key().is_some())
+        .enumerate()
+    {
+        if index > 0 {
+            guide = guide.text(if index % 2 == 0 { "\n" } else { " · " });
+        }
+        guide = guide.action(op).text(" ").text(op.label());
+    }
+    guide
+        .text("\nClick to apply · ")
+        .key("alt-click")
+        .text(" to sample a color\nRight-drag to orbit · Middle-drag or ")
+        .key("shift-rightdrag")
+        .text(" to pan\nScroll to zoom\nBox: click two corners · ")
+        .key("escape")
+        .text(" cancels\n")
+        .key("left")
+        .text("/")
+        .key("right")
+        .text("/")
+        .key("up")
+        .text("/")
+        .key("down")
+        .text(" move X/Z · ")
+        .key("pageup")
+        .text("/")
+        .key("pagedown")
+        .text(" move Y · ")
+        .key("enter")
+        .text(" applies\n")
+        .key("[")
+        .text(" / ")
+        .key("]")
+        .text(" cycle colors")
 }
 
 #[derive(Clone)]

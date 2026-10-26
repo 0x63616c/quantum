@@ -1,186 +1,190 @@
-//! Shared action registry for native menus, the Linux menubar and command search.
+//! Command metadata and availability shared by menus, search, help and documentation.
 use crate::shortcuts::{ShortcutPlatform, format_shortcut};
 use gpui::{Action, App, KeyBinding, Menu, MenuItem, OsAction};
+use std::sync::LazyLock;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
-#[action(no_json)]
-pub enum Op {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ApplicationSection {
     About,
     Settings,
-    CheckUpdates,
-    Hide,
-    HideOthers,
-    ShowAll,
-    #[cfg_attr(target_family = "wasm", allow(dead_code))]
-    Minimize,
-    #[cfg_attr(target_family = "wasm", allow(dead_code))]
-    ZoomWindow,
-    ShowPalette,
-    New,
-    Open,
-    Save,
-    SaveAs,
-    #[cfg(target_family = "wasm")]
-    ExportGlb,
-    #[cfg(target_family = "wasm")]
-    ExportPng,
-    Comment,
+    Visibility,
     Quit,
-    Undo,
-    Redo,
-    Frame,
-    Front,
-    Right,
-    Top,
-    Grid,
-    Theme,
-    Place,
-    Erase,
-    Paint,
-    Fill,
-    Box,
-    Picker,
-    MirrorX,
-    MirrorY,
-    MirrorZ,
-    AddLayer,
-    Palette,
-    ManagePalettes,
-    Commands,
-    ToolPicker,
-    Agent,
-    Extensions,
-    Help,
 }
+
+struct Command {
+    label: &'static str,
+    shortcut: Option<Shortcut>,
+    icon: &'static str,
+    menu: &'static str,
+    application_section: Option<ApplicationSection>,
+}
+
+enum Shortcut {
+    Editor(&'static str),
+    Global(&'static str),
+}
+
+impl Shortcut {
+    fn key(&self) -> &'static str {
+        match self {
+            Self::Editor(key) | Self::Global(key) => key,
+        }
+    }
+
+    fn context(&self) -> Option<&'static str> {
+        match self {
+            Self::Editor(_) => Some("Editor"),
+            Self::Global(_) => None,
+        }
+    }
+}
+
+// Declaring an operation also registers it everywhere. Group and declaration
+// order are the menu/search order; macOS relocates application commands below.
+macro_rules! commands {
+    ($($menu:literal { $($(#[$attr:meta])* $op:ident =>
+        ($label:literal, $key:expr, $icon:literal, $application:expr)),+ $(,)? }),+ $(,)?) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
+        #[action(no_json)]
+        pub enum Op { $($($(#[$attr])* $op),+),+ }
+
+        impl Op {
+            pub const ALL: &[Self] = &[$($($(#[$attr])* Self::$op),+),+];
+
+            fn command(self) -> &'static Command {
+                match self {
+                    $($($(#[$attr])* Self::$op => &Command {
+                        label: $label, shortcut: $key, icon: $icon, menu: $menu,
+                        application_section: $application,
+                    }),+),+
+                }
+            }
+        }
+
+        const MENU_NAMES: &[&str] = &[$($menu),+];
+    };
+}
+
+commands! {
+    "File" {
+        New => ("New project", Some(Shortcut::Editor("secondary-n")), "file-plus", None),
+        Open => ("Open project…", Some(Shortcut::Editor("secondary-o")), "folder-open", None),
+        Save => ("Save", Some(Shortcut::Editor("secondary-s")), "save", None),
+        SaveAs => ("Save as…", Some(Shortcut::Editor("secondary-shift-s")), "file-output", None),
+        #[cfg(target_family = "wasm")]
+        ExportGlb => ("Export GLB…", None, "download", None),
+        #[cfg(target_family = "wasm")]
+        ExportPng => ("Export PNG…", None, "download", None),
+        Quit => ("Quit Voxelite", Some(Shortcut::Global("secondary-q")), "log-out", Some(ApplicationSection::Quit)),
+    },
+    "Edit" {
+        Undo => ("Undo", Some(Shortcut::Editor("secondary-z")), "undo", None),
+        Redo => ("Redo", Some(Shortcut::Editor("secondary-shift-z")), "redo", None),
+        Commands => ("Search commands…", Some(Shortcut::Editor("secondary-k")), "search", None),
+        Settings => ("Settings…", Some(Shortcut::Global("secondary-,")), "sliders-horizontal", Some(ApplicationSection::Settings)),
+    },
+    "View" {
+        Frame => ("Frame model", Some(Shortcut::Editor("f")), "cube", None),
+        Front => ("Front view", None, "panel-top", None),
+        Right => ("Right view", None, "panel-left", None),
+        Top => ("Top view", None, "square", None),
+        Grid => ("Toggle grid", None, "grid", None),
+        Theme => ("Appearance…", None, "sun", None),
+    },
+    "Tools" {
+        Place => ("Place", Some(Shortcut::Editor("b")), "place", None),
+        Erase => ("Erase", Some(Shortcut::Editor("e")), "erase", None),
+        Paint => ("Paint", Some(Shortcut::Editor("p")), "paint", None),
+        Fill => ("Fill", Some(Shortcut::Editor("g")), "fill", None),
+        Box => ("Box", Some(Shortcut::Editor("u")), "box", None),
+        Picker => ("Color picker", Some(Shortcut::Editor("i")), "picker", None),
+        MirrorX => ("Mirror X", Some(Shortcut::Editor("shift-x")), "flip-horizontal-2", None),
+        MirrorY => ("Mirror Y", Some(Shortcut::Editor("shift-y")), "flip-vertical-2", None),
+        MirrorZ => ("Mirror Z", Some(Shortcut::Editor("shift-z")), "flip-horizontal-2", None),
+        ToolPicker => ("Choose tool…", None, "wrench", None),
+        Comment => ("Add comment pin", Some(Shortcut::Editor("c")), "comment", None),
+    },
+    "Layers" {
+        AddLayer => ("Add layer", None, "layer", None),
+    },
+    "Palette" {
+        ShowPalette => ("Show Palette", None, "palette", None),
+        Palette => ("Choose palette…", None, "palette", None),
+        ManagePalettes => ("Manage palettes…", None, "sliders-horizontal", None),
+    },
+    "Agent" {
+        Agent => ("Agent connection", None, "spark", None),
+    },
+    "Extensions" {
+        Extensions => ("Extensions", None, "puzzle", None),
+    },
+    "Window" {
+        Minimize => ("Minimize", Some(Shortcut::Editor("secondary-m")), "square", None),
+        ZoomWindow => ("Zoom", None, "square", None),
+    },
+    "Help" {
+        Help => ("Keyboard & mouse guide", None, "keyboard", None),
+        About => ("About Voxelite", None, "cube", Some(ApplicationSection::About)),
+    },
+    "Voxelite" {
+        CheckUpdates => ("Check for Updates…", None, "download", Some(ApplicationSection::About)),
+        Hide => ("Hide Voxelite", Some(Shortcut::Global("secondary-h")), "eye-off", Some(ApplicationSection::Visibility)),
+        HideOthers => ("Hide Others", Some(Shortcut::Global("secondary-alt-h")), "eye-off", Some(ApplicationSection::Visibility)),
+        ShowAll => ("Show All", None, "eye", Some(ApplicationSection::Visibility)),
+    },
+}
+
+/// Only the state needed to decide command availability; no view or GPUI context.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct EditorState {
+    pub dialog_open: bool,
+    pub pending_confirmation: bool,
+    pub modal_open: bool,
+    pub preview: bool,
+    pub history_playing: bool,
+    pub can_undo: bool,
+    pub can_redo: bool,
+    pub updates_available: bool,
+}
+
+#[derive(Clone, Copy)]
+pub enum CommandContext {
+    Editor(EditorState),
+    Settings { updates_available: bool },
+}
+
 impl Op {
+    pub fn label(self) -> &'static str {
+        self.command().label
+    }
+
     /// Bundled Lucide asset shared by menus, search and toolbar controls.
     pub fn icon(self) -> &'static str {
-        match self {
-            Self::About => "cube",
-            Self::Settings => "sliders-horizontal",
-            Self::CheckUpdates => "download",
-            Self::Hide | Self::HideOthers => "eye-off",
-            Self::ShowAll => "eye",
-            Self::Minimize | Self::ZoomWindow => "square",
-            Self::ShowPalette => "palette",
-            Self::New => "file-plus",
-            Self::Open => "folder-open",
-            Self::Save => "save",
-            Self::SaveAs => "file-output",
-            #[cfg(target_family = "wasm")]
-            Self::ExportGlb | Self::ExportPng => "download",
-            Self::Comment => "comment",
-            Self::Quit => "log-out",
-            Self::Undo => "undo",
-            Self::Redo => "redo",
-            Self::Frame => "cube",
-            Self::Front => "panel-top",
-            Self::Right => "panel-left",
-            Self::Top => "square",
-            Self::Grid => "grid",
-            Self::Theme => "sun",
-            Self::Place => "place",
-            Self::Erase => "erase",
-            Self::Paint => "paint",
-            Self::Fill => "fill",
-            Self::Box => "box",
-            Self::Picker => "picker",
-            Self::MirrorX => "flip-horizontal-2",
-            Self::MirrorY => "flip-vertical-2",
-            Self::MirrorZ => "flip-horizontal-2",
-            Self::AddLayer => "layer",
-            Self::Palette => "palette",
-            Self::ManagePalettes => "sliders-horizontal",
-            Self::Commands => "search",
-            Self::ToolPicker => "wrench",
-            Self::Agent => "spark",
-            Self::Extensions => "puzzle",
-            Self::Help => "keyboard",
-        }
+        self.command().icon
     }
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::About => "About Voxelite",
-            Self::Settings => "Settings…",
-            Self::CheckUpdates => "Check for Updates…",
-            Self::Hide => "Hide Voxelite",
-            Self::HideOthers => "Hide Others",
-            Self::ShowAll => "Show All",
-            Self::Minimize => "Minimize",
-            Self::ZoomWindow => "Zoom",
-            Self::ShowPalette => "Show Palette",
-            Self::New => "New project",
-            Self::Open => "Open project…",
-            Self::Save => "Save",
-            Self::SaveAs => "Save as…",
-            #[cfg(target_family = "wasm")]
-            Self::ExportGlb => "Export GLB…",
-            #[cfg(target_family = "wasm")]
-            Self::ExportPng => "Export PNG…",
-            Self::Comment => "Add comment pin",
-            Self::Quit => "Quit Voxelite",
-            Self::Undo => "Undo",
-            Self::Redo => "Redo",
-            Self::Frame => "Frame model",
-            Self::Front => "Front view",
-            Self::Right => "Right view",
-            Self::Top => "Top view",
-            Self::Grid => "Toggle grid",
-            Self::Theme => "Appearance…",
-            Self::Place => "Place",
-            Self::Erase => "Erase",
-            Self::Paint => "Paint",
-            Self::Fill => "Fill",
-            Self::Box => "Box",
-            Self::Picker => "Color picker",
-            Self::MirrorX => "Mirror X",
-            Self::MirrorY => "Mirror Y",
-            Self::MirrorZ => "Mirror Z",
-            Self::AddLayer => "Add layer",
-            Self::Palette => "Choose palette…",
-            Self::ManagePalettes => "Manage palettes…",
-            Self::Commands => "Search commands…",
-            Self::ToolPicker => "Choose tool…",
-            Self::Agent => "Agent connection",
-            Self::Extensions => "Extensions",
-            Self::Help => "Keyboard & mouse guide",
-        }
-    }
+
     pub fn key(self) -> Option<&'static str> {
-        match self {
-            Self::Settings => Some("secondary-,"),
-            Self::Hide => Some("secondary-h"),
-            Self::HideOthers => Some("secondary-alt-h"),
-            Self::Minimize => Some("secondary-m"),
-            Self::New => Some("secondary-n"),
-            Self::Open => Some("secondary-o"),
-            Self::Save => Some("secondary-s"),
-            Self::SaveAs => Some("secondary-shift-s"),
-            Self::Quit => Some("secondary-q"),
-            Self::Undo => Some("secondary-z"),
-            Self::Redo => Some("secondary-shift-z"),
-            Self::Commands => Some("secondary-k"),
-            Self::Frame => Some("f"),
-            Self::Place => Some("b"),
-            Self::Erase => Some("e"),
-            Self::Paint => Some("p"),
-            Self::Fill => Some("g"),
-            Self::Box => Some("u"),
-            Self::Comment => Some("c"),
-            Self::Picker => Some("i"),
-            Self::MirrorX => Some("shift-x"),
-            Self::MirrorY => Some("shift-y"),
-            Self::MirrorZ => Some("shift-z"),
-            _ => None,
+        self.command().shortcut.as_ref().map(Shortcut::key)
+    }
+
+    pub fn menu(self, apple: bool) -> &'static str {
+        if apple && self.command().application_section.is_some() {
+            "Voxelite"
+        } else {
+            self.command().menu
         }
     }
-    pub fn disabled_reason(self) -> &'static str {
+
+    fn available_on(self, platform: ShortcutPlatform) -> bool {
         match self {
-            Self::Undo => "Nothing to undo",
-            Self::Redo => "Nothing to redo",
-            _ => "File operation in progress",
+            Self::Quit | Self::Minimize | Self::ZoomWindow => !cfg!(target_family = "wasm"),
+            _ if self.command().menu == "Voxelite" => {
+                !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
+            }
+            _ => true,
         }
     }
+
     pub fn shortcut(self) -> String {
         self.key()
             .map(|key| format_shortcut(key, ShortcutPlatform::current()))
@@ -188,65 +192,126 @@ impl Op {
     }
 
     fn binding(self, platform: ShortcutPlatform) -> Option<KeyBinding> {
-        self.key()
-            .map(|key| KeyBinding::new(&platform.binding_key(key), self, Some("Editor")))
+        self.command().shortcut.as_ref().map(|shortcut| {
+            KeyBinding::new(
+                &platform.binding_key(shortcut.key()),
+                self,
+                shortcut.context(),
+            )
+        })
+    }
+
+    fn is_tool(self) -> bool {
+        matches!(
+            self,
+            Self::Place | Self::Erase | Self::Paint | Self::Fill | Self::Box | Self::Picker
+        )
+    }
+
+    /// Enabled commands return Ok; disabled commands carry their presentation reason.
+    pub fn availability(self, context: CommandContext) -> Result<(), &'static str> {
+        let state = match context {
+            CommandContext::Editor(state) => state,
+            CommandContext::Settings { updates_available } => {
+                return match self {
+                    Self::CheckUpdates if !updates_available => {
+                        Err("Automatic updates are not available in this build.")
+                    }
+                    Self::About
+                    | Self::Settings
+                    | Self::CheckUpdates
+                    | Self::Quit
+                    | Self::Hide
+                    | Self::HideOthers
+                    | Self::ShowAll
+                    | Self::Minimize
+                    | Self::ZoomWindow
+                    | Self::Help => Ok(()),
+                    _ => Err("Return to the editor to use this command"),
+                };
+            }
+        };
+        let edits_preview = self.is_tool()
+            || matches!(
+                self,
+                Self::MirrorX
+                    | Self::MirrorY
+                    | Self::MirrorZ
+                    | Self::AddLayer
+                    | Self::Comment
+                    | Self::ToolPicker
+            );
+        if state.dialog_open {
+            return Err("File operation in progress");
+        }
+        if state.pending_confirmation {
+            return Err("Finish saving or discarding changes first");
+        }
+        if state.modal_open
+            && !matches!(
+                self,
+                Self::Settings | Self::Quit | Self::Hide | Self::HideOthers | Self::ShowAll
+            )
+        {
+            return Err("Close the dialog to use this command");
+        }
+        if state.preview
+            && (edits_preview
+                || (!state.history_playing && matches!(self, Self::Undo | Self::Redo)))
+        {
+            return Err("Return to live to edit");
+        }
+        match self {
+            Self::Undo if !state.history_playing && !state.can_undo => Err("Nothing to undo"),
+            Self::Redo if !state.history_playing && !state.can_redo => Err("Nothing to redo"),
+            Self::CheckUpdates if !state.updates_available => {
+                Err("Automatic updates are not available in this build.")
+            }
+            _ => Ok(()),
+        }
     }
 }
-pub const MENUS: &[(&str, &[Op])] = &[
-    (
-        "File",
-        &[
-            Op::New,
-            Op::Open,
-            Op::Save,
-            Op::SaveAs,
-            #[cfg(target_family = "wasm")]
-            Op::ExportGlb,
-            #[cfg(target_family = "wasm")]
-            Op::ExportPng,
-            #[cfg(not(target_family = "wasm"))]
-            Op::Quit,
-        ],
-    ),
-    ("Edit", &[Op::Undo, Op::Redo, Op::Commands, Op::Settings]),
-    (
-        "View",
-        &[
-            Op::Frame,
-            Op::Front,
-            Op::Right,
-            Op::Top,
-            Op::Grid,
-            Op::Theme,
-        ],
-    ),
-    (
-        "Tools",
-        &[
-            Op::Place,
-            Op::Erase,
-            Op::Paint,
-            Op::Fill,
-            Op::Box,
-            Op::Picker,
-            Op::MirrorX,
-            Op::MirrorY,
-            Op::MirrorZ,
-            Op::ToolPicker,
-            Op::Comment,
-        ],
-    ),
-    ("Layers", &[Op::AddLayer]),
-    (
-        "Palette",
-        &[Op::ShowPalette, Op::Palette, Op::ManagePalettes],
-    ),
-    ("Agent", &[Op::Agent]),
-    ("Extensions", &[Op::Extensions]),
-    #[cfg(not(target_family = "wasm"))]
-    ("Window", &[Op::Minimize, Op::ZoomWindow]),
-    ("Help", &[Op::Help, Op::About]),
-];
+
+/// In-window menus use the same placement on every host, including Apple browsers.
+pub static MENUS: LazyLock<Vec<(&str, Vec<Op>)>> = LazyLock::new(|| {
+    MENU_NAMES
+        .iter()
+        .filter_map(|name| {
+            let ops: Vec<_> = Op::ALL
+                .iter()
+                .copied()
+                .filter(|op| {
+                    op.available_on(ShortcutPlatform::WindowsLinux) && op.menu(false) == *name
+                })
+                .collect();
+            (!ops.is_empty()).then_some((*name, ops))
+        })
+        .collect()
+});
+
+pub fn search(query: &str, tools_only: bool) -> Vec<Op> {
+    search_on(query, tools_only, ShortcutPlatform::current())
+}
+
+fn search_on(query: &str, tools_only: bool, platform: ShortcutPlatform) -> Vec<Op> {
+    let query = query.to_lowercase();
+    shortcut_sheet(platform)
+        .filter(|op| {
+            *op != Op::Commands
+                && (!tools_only || op.is_tool())
+                && op.label().to_lowercase().contains(&query)
+        })
+        .collect()
+}
+
+/// Every available command appears, including commands without a keyboard binding.
+pub fn shortcut_sheet(platform: ShortcutPlatform) -> impl Iterator<Item = Op> {
+    Op::ALL
+        .iter()
+        .copied()
+        .filter(move |op| op.available_on(platform))
+}
+
 /// Clipboard commands are handled by the focused text editor, never by a hidden view.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
 #[action(no_json)]
@@ -277,26 +342,41 @@ fn menus_for_platform(
     };
     let mut menus = Vec::new();
     if apple {
-        menus.push(Menu::new("Voxelite").items([
-            item(Op::About),
-            item(Op::CheckUpdates),
-            MenuItem::separator(),
-            item(Op::Settings),
-            MenuItem::separator(),
-            MenuItem::os_submenu("Services", gpui::SystemMenuType::Services),
-            MenuItem::separator(),
-            item(Op::Hide),
-            item(Op::HideOthers),
-            item(Op::ShowAll),
-            MenuItem::separator(),
-            item(Op::Quit),
-        ]));
+        let mut items = Vec::new();
+        for section in [
+            ApplicationSection::About,
+            ApplicationSection::Settings,
+            ApplicationSection::Visibility,
+            ApplicationSection::Quit,
+        ] {
+            if !items.is_empty() {
+                items.push(MenuItem::separator());
+            }
+            items.extend(
+                Op::ALL
+                    .iter()
+                    .copied()
+                    .filter(|op| {
+                        op.available_on(ShortcutPlatform::Apple)
+                            && op.command().application_section == Some(section)
+                    })
+                    .map(item),
+            );
+            if section == ApplicationSection::Settings {
+                items.push(MenuItem::separator());
+                items.push(MenuItem::os_submenu(
+                    "Services",
+                    gpui::SystemMenuType::Services,
+                ));
+            }
+        }
+        menus.push(Menu::new("Voxelite").items(items));
     }
-    for (name, ops) in MENUS {
+    for (name, ops) in MENUS.iter() {
         let mut items: Vec<_> = ops
             .iter()
             .copied()
-            .filter(|op| !apple || !matches!(op, Op::Quit | Op::Settings | Op::About))
+            .filter(|op| op.menu(apple) == *name)
             .map(item)
             .collect();
         if *name == "Edit" {
@@ -322,48 +402,356 @@ pub fn install(cx: &mut App) {
     if cfg!(target_os = "macos") {
         cx.set_menus(menus(|_| false, |_| true));
     }
-    cx.bind_keys(
-        MENUS
-            .iter()
-            .flat_map(|(_, items)| items.iter())
-            .filter(|op| !matches!(op, Op::Settings | Op::Quit))
-            .filter_map(|op| op.binding(platform)),
-    );
-    #[cfg(not(target_family = "wasm"))]
-    cx.bind_keys([KeyBinding::new(
-        &platform.binding_key("secondary-q"),
-        Op::Quit,
-        None,
-    )]);
-    // Settings remains available while an input or modal has focus.
-    cx.bind_keys([KeyBinding::new(
-        &platform.binding_key("secondary-,"),
-        Op::Settings,
-        None,
-    )]);
-    #[cfg(target_os = "macos")]
-    cx.bind_keys([Op::Hide, Op::HideOthers].into_iter().filter_map(|op| {
-        op.key()
-            .map(|key| KeyBinding::new(&platform.binding_key(key), op, None))
-    }));
-    cx.bind_keys(
-        [
-            ("secondary-x", ClipboardOp::Cut),
-            ("secondary-c", ClipboardOp::Copy),
-            ("secondary-v", ClipboardOp::Paste),
-            ("secondary-a", ClipboardOp::SelectAll),
-        ]
-        .into_iter()
-        .map(|(key, op)| KeyBinding::new(&platform.binding_key(key), op, Some("TextField"))),
-    );
+    cx.bind_keys(key_bindings(platform));
+}
+
+fn key_bindings(platform: ShortcutPlatform) -> Vec<KeyBinding> {
+    shortcut_sheet(platform)
+        .filter_map(|op| op.binding(platform))
+        .chain(
+            [
+                ("secondary-x", ClipboardOp::Cut),
+                ("secondary-c", ClipboardOp::Copy),
+                ("secondary-v", ClipboardOp::Paste),
+                ("secondary-a", ClipboardOp::SelectAll),
+            ]
+            .into_iter()
+            .map(|(key, op)| KeyBinding::new(&platform.binding_key(key), op, Some("TextField"))),
+        )
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{KeyContext, Keymap, Keystroke};
+    use gpui::{AssetSource, KeyContext, Keymap, Keystroke};
+    use std::collections::HashSet;
 
     #[test]
+    fn every_command_has_unique_metadata_and_appears_in_the_sheet() {
+        let mut labels = HashSet::new();
+        for op in Op::ALL {
+            assert!(!op.label().is_empty(), "{op:?}");
+            assert!(
+                labels.insert(op.label().to_lowercase()),
+                "duplicate label: {op:?}"
+            );
+            assert!(!op.icon().is_empty(), "{op:?}");
+            assert!(
+                crate::assets::Assets
+                    .load(&format!("icons/{}.svg", op.icon()))
+                    .unwrap()
+                    .is_some(),
+                "icon is not bundled: {op:?}"
+            );
+        }
+        for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
+            let mut keys = HashSet::new();
+            let sheet: Vec<_> = shortcut_sheet(platform).collect();
+            for op in Op::ALL {
+                assert_eq!(
+                    sheet.iter().filter(|entry| *entry == op).count(),
+                    usize::from(op.available_on(platform)),
+                    "{op:?}"
+                );
+                if let Some(binding) = op.binding(platform) {
+                    assert!(
+                        keys.insert(binding.keystrokes().to_vec()),
+                        "duplicate shortcut: {op:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn sheet_includes_comment_and_all_mirror_shortcuts() {
+        for (op, apple, other) in [
+            (Op::Comment, "C", "C"),
+            (Op::MirrorX, "⇧X", "Shift+X"),
+            (Op::MirrorY, "⇧Y", "Shift+Y"),
+            (Op::MirrorZ, "⇧Z", "Shift+Z"),
+        ] {
+            for (platform, expected) in [
+                (ShortcutPlatform::Apple, apple),
+                (ShortcutPlatform::WindowsLinux, other),
+            ] {
+                assert!(shortcut_sheet(platform).any(|entry| entry == op));
+                assert_eq!(format_shortcut(op.key().unwrap(), platform), expected);
+            }
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn readme_shortcuts() -> String {
+        use std::fmt::Write;
+        let mut table = String::from("| Action | Apple | Windows / Linux |\n| --- | --- | --- |\n");
+        for op in shortcut_sheet(ShortcutPlatform::Apple).filter(|op| op.key().is_some()) {
+            let key = op.key().unwrap();
+            let other = if op.available_on(ShortcutPlatform::WindowsLinux) {
+                format_shortcut(key, ShortcutPlatform::WindowsLinux)
+            } else {
+                "—".into()
+            };
+            writeln!(
+                table,
+                "| {} | {} | {} |",
+                op.label(),
+                format_shortcut(key, ShortcutPlatform::Apple),
+                other
+            )
+            .unwrap();
+        }
+        table
+    }
+
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
+    fn readme_shortcuts_match_registry() {
+        const START: &str = "<!-- BEGIN GENERATED COMMAND SHORTCUTS -->\n";
+        const END: &str = "<!-- END GENERATED COMMAND SHORTCUTS -->";
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
+        let readme = std::fs::read_to_string(&path)
+            .unwrap()
+            .replace("\r\n", "\n");
+        assert_eq!(
+            readme.matches(START).count(),
+            1,
+            "missing or duplicate start marker"
+        );
+        assert_eq!(
+            readme.matches(END).count(),
+            1,
+            "missing or duplicate end marker"
+        );
+        let (prefix, rest) = readme.split_once(START).unwrap();
+        let (table, suffix) = rest.split_once(END).unwrap();
+        let expected = readme_shortcuts();
+        if std::env::var("UPDATE_README").as_deref() == Ok("1") {
+            std::fs::write(path, format!("{prefix}{START}{expected}{END}{suffix}")).unwrap();
+        } else {
+            assert_eq!(
+                table, expected,
+                "README shortcuts drifted. Regenerate with: UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match_registry"
+            );
+        }
+    }
+
+    #[test]
+    fn editor_availability_preserves_live_preview_and_playback_rules() {
+        let ready = EditorState {
+            can_undo: true,
+            can_redo: true,
+            updates_available: true,
+            ..EditorState::default()
+        };
+        let preview_blocked = [
+            Op::Undo,
+            Op::Redo,
+            Op::Place,
+            Op::Erase,
+            Op::Paint,
+            Op::Fill,
+            Op::Box,
+            Op::Picker,
+            Op::MirrorX,
+            Op::MirrorY,
+            Op::MirrorZ,
+            Op::AddLayer,
+            Op::Comment,
+            Op::ToolPicker,
+        ];
+        for op in Op::ALL {
+            assert_eq!(
+                op.availability(CommandContext::Editor(ready)),
+                Ok(()),
+                "{op:?}"
+            );
+            let preview = EditorState {
+                preview: true,
+                ..ready
+            };
+            assert_eq!(
+                op.availability(CommandContext::Editor(preview)),
+                if preview_blocked.contains(op) {
+                    Err("Return to live to edit")
+                } else {
+                    Ok(())
+                },
+                "{op:?}"
+            );
+            let playing = EditorState {
+                history_playing: true,
+                can_undo: false,
+                can_redo: false,
+                ..preview
+            };
+            assert_eq!(
+                op.availability(CommandContext::Editor(playing)).is_ok(),
+                !preview_blocked.contains(op) || [Op::Undo, Op::Redo].contains(op),
+                "{op:?}"
+            );
+            for state in [ready, preview, playing] {
+                assert!(
+                    op.availability(CommandContext::Editor(EditorState {
+                        dialog_open: true,
+                        ..state
+                    }))
+                    .is_err(),
+                    "{op:?}"
+                );
+            }
+        }
+        let empty = CommandContext::Editor(EditorState::default());
+        assert_eq!(Op::Undo.availability(empty), Err("Nothing to undo"));
+        assert_eq!(Op::Redo.availability(empty), Err("Nothing to redo"));
+        assert!(Op::CheckUpdates.availability(empty).is_err());
+        let undo_only = CommandContext::Editor(EditorState {
+            can_redo: false,
+            ..ready
+        });
+        assert_eq!(Op::Undo.availability(undo_only), Ok(()));
+        assert_eq!(Op::Redo.availability(undo_only), Err("Nothing to redo"));
+        let redo_only = CommandContext::Editor(EditorState {
+            can_undo: false,
+            ..ready
+        });
+        assert_eq!(Op::Undo.availability(redo_only), Err("Nothing to undo"));
+        assert_eq!(Op::Redo.availability(redo_only), Ok(()));
+    }
+
+    #[test]
+    fn settings_availability_keeps_editor_commands_disabled() {
+        let available = [
+            Op::About,
+            Op::Settings,
+            Op::CheckUpdates,
+            Op::Quit,
+            Op::Hide,
+            Op::HideOthers,
+            Op::ShowAll,
+            Op::Minimize,
+            Op::ZoomWindow,
+            Op::Help,
+        ];
+        for op in Op::ALL {
+            for updates_available in [false, true] {
+                assert_eq!(
+                    op.availability(CommandContext::Settings { updates_available })
+                        .is_ok(),
+                    available.contains(op) && (*op != Op::CheckUpdates || updates_available),
+                    "{op:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_reasons_identify_the_actual_blocker() {
+        for preview in [false, true] {
+            let state = EditorState {
+                preview,
+                ..EditorState::default()
+            };
+            assert_eq!(
+                Op::CheckUpdates.availability(CommandContext::Editor(state)),
+                Err("Automatic updates are not available in this build.")
+            );
+            for op in Op::ALL {
+                assert_eq!(
+                    op.availability(CommandContext::Editor(EditorState {
+                        dialog_open: true,
+                        ..state
+                    })),
+                    Err("File operation in progress"),
+                    "{op:?}"
+                );
+                assert_eq!(
+                    op.availability(CommandContext::Editor(EditorState {
+                        pending_confirmation: true,
+                        ..state
+                    })),
+                    Err("Finish saving or discarding changes first"),
+                    "{op:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn modal_availability_matches_dispatch_restrictions() {
+        let state = CommandContext::Editor(EditorState {
+            modal_open: true,
+            can_undo: true,
+            can_redo: true,
+            updates_available: true,
+            ..EditorState::default()
+        });
+        for op in Op::ALL {
+            let expected = if [
+                Op::Settings,
+                Op::Quit,
+                Op::Hide,
+                Op::HideOthers,
+                Op::ShowAll,
+            ]
+            .contains(op)
+            {
+                Ok(())
+            } else {
+                Err("Close the dialog to use this command")
+            };
+            assert_eq!(op.availability(state), expected, "{op:?}");
+        }
+    }
+
+    #[test]
+    fn search_includes_every_supported_command_except_itself() {
+        for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
+            let search = search_on("", false, platform);
+            for op in Op::ALL {
+                assert_eq!(
+                    search.iter().filter(|entry| *entry == op).count(),
+                    usize::from(op.available_on(platform) && *op != Op::Commands),
+                    "{platform:?}: {op:?}"
+                );
+            }
+        }
+        assert_eq!(
+            search_on("updates", false, ShortcutPlatform::Apple),
+            if cfg!(target_family = "wasm") {
+                vec![]
+            } else {
+                vec![Op::CheckUpdates]
+            }
+        );
+        assert!(search_on("updates", false, ShortcutPlatform::WindowsLinux).is_empty());
+    }
+
+    #[test]
+    fn search_preserves_tool_order_and_matches_labels_case_insensitively() {
+        assert_eq!(
+            search("", true),
+            [
+                Op::Place,
+                Op::Erase,
+                Op::Paint,
+                Op::Fill,
+                Op::Box,
+                Op::Picker
+            ]
+        );
+        assert_eq!(
+            search("mIRroR", false),
+            [Op::MirrorX, Op::MirrorY, Op::MirrorZ]
+        );
+        assert_eq!(search("comment", false), [Op::Comment]);
+        assert!(search("comment", true).is_empty());
+        assert!(!search("", false).contains(&Op::Commands));
+    }
+
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
     fn mac_menus_preserve_editor_commands_and_system_entries() {
         let menus = menus_for_platform(true, |op| op == Op::Grid, |op| op != Op::Undo);
         assert_eq!(
@@ -387,8 +775,13 @@ mod tests {
         );
         assert!(menus[0].items.iter().any(|item| matches!(item, MenuItem::SystemMenu(menu) if menu.menu_type == gpui::SystemMenuType::Services)));
         let items: Vec<_> = menus.iter().flat_map(|menu| &menu.items).collect();
-        for op in MENUS.iter().flat_map(|(_, ops)| *ops) {
-            assert!(items.iter().any(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(op))), "missing {op:?}");
+        for op in shortcut_sheet(ShortcutPlatform::Apple) {
+            assert_eq!(items.iter().filter(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(&op))).count(), 1, "missing or duplicated {op:?}");
+            let menu = menus
+                .iter()
+                .find(|menu| menu.name.as_ref() == op.menu(true))
+                .unwrap();
+            assert!(menu.items.iter().any(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(&op))), "wrong menu: {op:?}");
         }
         assert!(items.iter().any(|item| matches!(item, MenuItem::Action { action, disabled: true, os_action: Some(OsAction::Undo), .. } if action.as_any().downcast_ref::<Op>() == Some(&Op::Undo))));
         assert!(items.iter().any(|item| matches!(item, MenuItem::Action { action, checked: true, .. } if action.as_any().downcast_ref::<Op>() == Some(&Op::Grid))));
@@ -430,7 +823,7 @@ mod tests {
 
     #[test]
     fn tool_and_mirror_bindings_are_platform_independent() {
-        for op in MENUS.iter().flat_map(|(_, items)| *items) {
+        for op in MENUS.iter().flat_map(|(_, items)| items) {
             let Some(key) = op.key().filter(|key| !key.contains("secondary")) else {
                 continue;
             };
@@ -448,28 +841,48 @@ mod tests {
     }
 
     #[test]
-    fn editor_shortcuts_are_inactive_while_typing_or_in_modals() {
+    fn installed_shortcuts_respect_editor_global_and_text_field_contexts() {
         for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
-            let bindings: Vec<_> = MENUS
-                .iter()
-                .flat_map(|(_, items)| *items)
-                .filter_map(|op| op.binding(platform))
-                .collect();
+            let bindings = key_bindings(platform);
             let keymap = Keymap::new(bindings.clone());
-            for binding in bindings {
-                let (matches, _) = keymap.bindings_for_input(
-                    binding.keystrokes(),
-                    &[KeyContext::parse("Editor").unwrap()],
-                );
-                assert_eq!(matches.len(), 1);
-                for context in ["TextField", "CommandPalette", "Modal"] {
+            for binding in &bindings {
+                for context in [
+                    "Editor",
+                    "TextField",
+                    "CommandPalette",
+                    "Modal",
+                    "Settings",
+                    "Palette",
+                ] {
+                    let expected = match binding.action().as_any().downcast_ref::<Op>() {
+                        Some(Op::Settings | Op::Quit | Op::Hide | Op::HideOthers) => true,
+                        Some(_) => context == "Editor",
+                        None => context == "TextField",
+                    };
                     let (matches, pending) = keymap.bindings_for_input(
                         binding.keystrokes(),
                         &[KeyContext::parse(context).unwrap()],
                     );
-                    assert!(matches.is_empty(), "{context}: {binding:?}");
+                    assert_eq!(
+                        matches.len(),
+                        usize::from(expected),
+                        "{context}: {binding:?}"
+                    );
+                    if expected {
+                        assert!(
+                            matches[0].action().partial_eq(binding.action()),
+                            "{context}: {binding:?}"
+                        );
+                    }
                     assert!(!pending);
                 }
+            }
+            for op in Op::ALL {
+                assert_eq!(
+                    bindings.iter().filter(|binding| binding.action().as_any().downcast_ref::<Op>() == Some(op)).count(),
+                    usize::from(op.available_on(platform) && op.key().is_some()),
+                    "{platform:?}: {op:?}"
+                );
             }
         }
     }
