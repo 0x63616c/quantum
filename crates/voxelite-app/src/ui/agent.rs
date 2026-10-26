@@ -80,7 +80,8 @@ impl EditorView {
             self.status = format!(
                 "Agent updated document · r{}",
                 self.editor.engine.revision()
-            );
+            )
+            .into();
             self.error = false;
         }
         if notify {
@@ -401,7 +402,7 @@ impl EditorView {
                         });
                     }
                     Err(e) => {
-                        this.status = format!("Could not capture views: {e}");
+                        this.status = format!("Could not capture views: {e}").into();
                         this.error = true;
                     }
                 }

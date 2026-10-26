@@ -162,7 +162,7 @@ impl EditorView {
                                 })
                                 .border_0()
                                 .px(px(6.0))
-                                .tooltip(hint("Close sharing · Esc", t)),
+                                .tooltip(hint(HintText::from("Close sharing · ").key("escape"), t)),
                             ),
                     )
                     .child(
