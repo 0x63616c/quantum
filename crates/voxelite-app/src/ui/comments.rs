@@ -302,7 +302,7 @@ impl EditorView {
             return Vec::new();
         }
         let t = self.theme;
-        let b = self.viewport.get();
+        let b = self.viewport.bounds();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
         self.editor
             .display_snapshot()
@@ -318,7 +318,7 @@ impl EditorView {
                 let (uv, occluded) = voxelite_app::comments::project_pin(
                     self.editor.display_snapshot(),
                     c,
-                    self.display_camera,
+                    self.viewport.display_camera(),
                     aspect,
                 )?;
                 let id = c.id;

@@ -50,7 +50,7 @@ impl EditorView {
                     }
                     // Slow renders must finish before advancing, or every
                     // intermediate frame could be discarded as stale.
-                    if this.displayed != Some(this.frame_identity()) {
+                    if !this.viewport.is_current(&this.editor) {
                         return true;
                     }
                     match this.editor.tick_history(web_time::Instant::now()) {
@@ -77,7 +77,7 @@ impl EditorView {
     }
 
     pub(super) fn refresh_preview(&mut self, cx: &mut Context<Self>) {
-        self.document_generation = self.document_generation.wrapping_add(1);
+        self.viewport.invalidate_preview();
         self.hover = None;
         self.drag = None;
         self.request_render(cx);

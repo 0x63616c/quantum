@@ -909,7 +909,8 @@ impl EditorView {
         let next = cx.global::<SettingsState>().values.clone();
         let next_theme = theme(next.appearance, window);
         let rerender = self.preferences.antialiasing != next.antialiasing
-            || (self.gpu.enabled && (self.theme != next_theme || self.grid != next.grid));
+            || (self.viewport.gpu_enabled()
+                && (self.theme != next_theme || self.grid != next.grid));
         self.theme = next_theme;
         self.grid = next.grid;
         self.preferences = next;
