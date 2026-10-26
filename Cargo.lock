@@ -5938,7 +5938,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "voxelite-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -5970,7 +5970,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "serde",
@@ -5982,7 +5982,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-export"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gltf",
  "png 0.18.1",
@@ -5996,7 +5996,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-format"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "serde",
@@ -6009,7 +6009,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-mcp"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64",
  "jsonschema",
@@ -6027,7 +6027,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "futures-channel",
@@ -6048,7 +6048,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-site"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64",
  "htmd",
