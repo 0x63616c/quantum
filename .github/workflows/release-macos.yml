@@ -33,7 +33,9 @@ jobs:
         run: |
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
-      - name: Build and package
+      - name: Build app without signing credentials
+        run: cargo build --release --locked -p voxelite-app --bin voxelite
+      - name: Sign and package
         env:
           MACOS_SIGNING_MODE: auto
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
@@ -44,7 +46,7 @@ jobs:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
         run: |
-          VERSION="${TAG#v}" scripts/package-macos.sh
+          VERSION="${TAG#v}" scripts/package-macos.sh --skip-build
       - name: Generate signed update feed
         id: appcast
         env:

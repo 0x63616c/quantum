@@ -49,6 +49,14 @@ class ReleaseTests(unittest.TestCase):
                 if "uses: actions/" in line:
                     self.assertRegex(line, r"uses: actions/[a-z-]+@[0-9a-f]{40}(?: |$)")
 
+    def test_release_build_precedes_credentials(self):
+        workflow = WORKFLOW.read_text()
+        build = workflow.index("      - name: Build app without signing credentials")
+        package = workflow.index("      - name: Sign and package")
+        self.assertLess(build, package)
+        self.assertNotIn("secrets.", workflow[:package])
+        self.assertIn("scripts/package-macos.sh --skip-build", workflow_step("Sign and package"))
+
     def test_publication_is_staged_and_immutable(self):
         for generated, failure in [(True, ""), (False, ""), (True, "create"), (True, "upload")]:
             with self.subTest(generated=generated, failure=failure), tempfile.TemporaryDirectory() as directory:

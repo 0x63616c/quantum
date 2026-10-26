@@ -66,7 +66,12 @@ Keep the downloaded key and certificate export in secure storage outside the
 checkout. The packaging script decodes them into a private temporary directory,
 imports the certificate into a temporary keychain, grants noninteractive
 `codesign` access, and restores the runner's keychain search list on exit. Cleanup
-also runs on failures, `INT`, and `TERM`. Do not run packaging with shell tracing.
+also runs on failures, `INT`, and `TERM`, including when the original keychain
+search list is empty. A forced kill or machine outage cannot run shell traps;
+inspect the runner for leftover temporary keychains before resuming releases
+after such an interruption. Do not run packaging with shell tracing. Raw signing
+and authentication diagnostics are suppressed on failure because they can expose
+certificate identities; reproduce locally to inspect Apple tool errors.
 
 ### Sparkle update keys
 
@@ -118,7 +123,8 @@ Python 3, curl, and GitHub CLI for releases. The runner must support
 the v4 checkout and artifact actions, pinned to reviewed commit SHAs in the
 workflows.
 
-CI checks formatting, runs `cargo clippy --workspace --locked -- -D warnings`,
+CI checks formatting, runs the mocked packaging/release regression tests,
+runs `cargo clippy --workspace --locked -- -D warnings`,
 runs `cargo test --workspace --locked`, builds the release app, and packages a
 DMG. Strict Clippy passed on Linux when this workflow was added; the first macOS
 run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
@@ -143,6 +149,10 @@ that unpublished draft manually before retrying, or use a new version tag.
 The packager:
 
 1. Builds `voxelite-app` with the locked dependencies and assembles the app/icon.
+   Release CI builds in a separate step without signing credentials, then invokes
+   the packager with `--skip-build` and an explicit `VERSION`. Local packaging
+   still builds by default. The script removes credential variables from child
+   environments and exposes each encoded key only to its decoder.
 2. If a public Sparkle key exists, downloads the pinned archive, verifies SHA-256,
    preserves framework symlinks, and embeds Sparkle plus its license. It sets
    `SUFeedURL=https://voxelite.worldwidewebb.co/appcast.xml`, `SUPublicEDKey`, and
@@ -158,7 +168,9 @@ The packager:
    `Accepted` result, staples and validates the app, and checks it with `spctl`.
 5. Builds the DMG containing that stapled app and the Applications shortcut, signs
    and notarizes the DMG, staples/validates it, and runs the DMG Gatekeeper
-   assessment. It computes SHA-256 **after** the final staple.
+   assessment. It computes SHA-256 **after** the final staple. The checksum names
+   `Voxelite.dmg` without a directory prefix, so both downloaded assets can be
+   checked together with `shasum -a 256 --check Voxelite.dmg.sha256`.
 6. Deletes its temporary keychain and working files on exit.
 
 Without the certificate/password pair, the build succeeds with ad-hoc app signing
@@ -181,15 +193,17 @@ denies unsafe code, and other crates retain the workspace forbid lint.
 
 After a notarized build, `scripts/generate-macos-appcast.sh` passes
 `SPARKLE_ED_PRIVATE_KEY` to Sparkle's `generate_appcast --ed-key-file -` through
-stdin. It creates a single-version `site/appcast.xml`, with no delta updates,
-pointing at:
+stdin, without exporting it to the tool or its children. It first checks the
+DMG checksum and stapled ticket. It creates a single-version `site/appcast.xml`,
+with no delta updates, pointing at:
 
 ```text
 https://github.com/0x63616c/voxelite/releases/download/<tag>/Voxelite.dmg
 ```
 
 The script rejects an unsigned enclosure, wrong URL, incorrect size, or stale
-bundle version. Sparkle compares the signing key with the bundled public key;
+bundle version, and requires the release tag to equal `v` plus the bundle version.
+Sparkle compares the signing key with the bundled public key;
 a mismatch cannot be published as an unsigned update. The feed itself is also
 signed by the pinned Sparkle tool. Missing private key, missing framework, or
 non-notarized output skips generation with a notice.
@@ -222,6 +236,7 @@ Local static checks:
 bash -n scripts/package-macos.sh scripts/generate-macos-appcast.sh
 shellcheck scripts/package-macos.sh scripts/generate-macos-appcast.sh
 actionlint
+python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo check --workspace --locked

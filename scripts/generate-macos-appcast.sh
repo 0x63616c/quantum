@@ -2,6 +2,8 @@
 # Create a feed for the final, stapled DMG. Does not publish, commit, or push.
 set -euo pipefail
 set +x
+# Only stdin should expose the key to generate_appcast, not its child processes.
+export -n SPARKLE_ED_PRIVATE_KEY
 cd "$(dirname "$0")/.."
 if [[ -n ${GITHUB_OUTPUT:-} ]]; then
   echo 'generated=false' >> "$GITHUB_OUTPUT"
@@ -38,6 +40,7 @@ print(f"https://github.com/{repo}/releases/download/{quote(os.environ['TAG'], sa
 PY
 )
 export DOWNLOAD_PREFIX
+(cd dist && shasum -a 256 --check Voxelite.dmg.sha256)
 xcrun stapler validate dist/Voxelite.dmg
 mkdir -p "$WORK_DIR/archives"
 cp dist/Voxelite.dmg "$WORK_DIR/archives/Voxelite.dmg"
@@ -82,6 +85,8 @@ if enclosure.get("length") != str(pathlib.Path("dist/Voxelite.dmg").stat().st_si
     raise SystemExit("Appcast DMG length does not match")
 if item.findtext(sparkle + "version") != info["CFBundleVersion"]:
     raise SystemExit("Appcast version does not match the bundle")
+if os.environ["TAG"] != "v" + info["CFBundleVersion"]:
+    raise SystemExit("Release tag does not match the packaged bundle version")
 PY
 mkdir -p site
 # Preserve the feed's own Sparkle signature; do not reformat generated XML.
