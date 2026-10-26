@@ -28,20 +28,58 @@ cargo test -p voxelite-app --no-default-features
 
 ## Controls
 
+Keyboard shortcuts are generated from `src/actions.rs`, which also supplies the
+menus, command search and Settings → Shortcuts. Commands without a binding appear
+in the settings sheet with “—”. Regenerate this table after editing the registry:
+
+```sh
+UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match_registry
+```
+
+`cargo test --workspace` checks that the table is current. “—” in the Windows /
+Linux column denotes a macOS-only command.
+
+<!-- BEGIN GENERATED COMMAND SHORTCUTS -->
+| Action | Apple | Windows / Linux |
+| --- | --- | --- |
+| New project | ⌘N | Ctrl+N |
+| Open project… | ⌘O | Ctrl+O |
+| Save | ⌘S | Ctrl+S |
+| Save as… | ⇧⌘S | Ctrl+Shift+S |
+| Quit Voxelite | ⌘Q | Ctrl+Q |
+| Undo | ⌘Z | Ctrl+Z |
+| Redo | ⇧⌘Z | Ctrl+Shift+Z |
+| Search commands… | ⌘K | Ctrl+K |
+| Settings… | ⌘, | Ctrl+, |
+| Frame model | F | F |
+| Place | B | B |
+| Erase | E | E |
+| Paint | P | P |
+| Fill | G | G |
+| Box | U | U |
+| Color picker | I | I |
+| Mirror X | ⇧X | Shift+X |
+| Mirror Y | ⇧Y | Shift+Y |
+| Mirror Z | ⇧Z | Shift+Z |
+| Add comment pin | C | C |
+| Minimize | ⌘M | Ctrl+M |
+| Hide Voxelite | ⌘H | — |
+| Hide Others | ⌥⌘H | — |
+<!-- END GENERATED COMMAND SHORTCUTS -->
+
+Viewport and navigation controls:
+
 | Action | Input |
 | --- | --- |
-| Place / erase / paint / fill / box / picker | B / E / P / G / U / I |
 | Apply tool | Left click, or Enter at the keyboard cursor |
 | Sample original voxel color | Alt-click |
 | Orbit | Right-drag |
 | Pan | Middle-drag or Shift + right-drag |
-| Zoom / frame | Wheel / F |
+| Zoom | Wheel |
 | Keyboard cursor | Arrows for X/Z, Page Up/Down for Y |
 | Previous / next palette color | `[` / `]` |
-| Undo / redo | Ctrl+Z / Ctrl+Shift+Z; Apple: ⌘Z / ⇧⌘Z |
-| New / open / save / save as | Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S; Apple: ⌘N / ⌘O / ⌘S / ⇧⌘S |
-| Search commands | Ctrl+K (Apple: ⌘K); type, arrows, Enter, Escape |
-| Settings | Ctrl+, (Apple: ⌘,); Escape or Done closes the settings view |
+| Command search navigation | Type, arrows, Enter, Escape |
+| Close settings | Escape or Done |
 | Focus brush colors | Palette → Show Palette; arrows choose colors, Escape returns to the viewport |
 | Cancel box or dismiss menus | Escape |
 | Choose a preset palette | Palette menu, then Up/Down and Enter |

@@ -18,13 +18,13 @@ mod tooltip;
 use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
 use crate::{
-    actions::{MENUS, Op},
+    actions::{CommandContext, EditorState, MENUS, Op},
     shortcuts::{ShortcutPlatform, navigation_key},
     theme::Theme,
 };
 use glam::DVec3;
 use gpui::{prelude::*, *};
-use shortcut_hint::{HintText, action_shortcut, shortcut};
+use shortcut_hint::{HintText, action_shortcut, keyboard_guide, shortcut};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_app::frame_meter::{FrameMeter, RendererKind};
@@ -187,60 +187,6 @@ fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut Ap
         })
         .into()
     }
-}
-
-fn keyboard_guide() -> HintText {
-    HintText::default()
-        .action(Op::Place)
-        .text(" Place · ")
-        .action(Op::Erase)
-        .text(" Erase · ")
-        .action(Op::Paint)
-        .text(" Paint · ")
-        .action(Op::Fill)
-        .text(" Fill · ")
-        .action(Op::Box)
-        .text(" Box · ")
-        .action(Op::Picker)
-        .text(" Picker\nClick to apply · ")
-        .key("alt-click")
-        .text(" to sample a color\nRight-drag to orbit · Middle-drag or ")
-        .key("shift-rightdrag")
-        .text(" to pan\nScroll to zoom · ")
-        .action(Op::Frame)
-        .text(" to frame the model\nBox: click two corners · ")
-        .key("escape")
-        .text(" cancels\n")
-        .key("left")
-        .text("/")
-        .key("right")
-        .text("/")
-        .key("up")
-        .text("/")
-        .key("down")
-        .text(" move X/Z · ")
-        .key("pageup")
-        .text("/")
-        .key("pagedown")
-        .text(" move Y · ")
-        .key("enter")
-        .text(" applies\n")
-        .key("[")
-        .text(" / ")
-        .key("]")
-        .text(" cycle colors · ")
-        .action(Op::Commands)
-        .text(" searches commands\n")
-        .action(Op::Undo)
-        .text(" undoes · ")
-        .action(Op::Redo)
-        .text(" redoes\n")
-        .action(Op::Open)
-        .text(" opens · ")
-        .action(Op::Save)
-        .text(" saves · ")
-        .action(Op::SaveAs)
-        .text(" saves as")
 }
 
 fn section_title(text: &'static str) -> Div {
@@ -634,65 +580,25 @@ impl EditorView {
             .unwrap_or_else(|| self.editor.display_snapshot().palette.clone())
     }
     fn filtered_actions(&self) -> Vec<Op> {
-        MENUS
-            .iter()
-            .flat_map(|(_, items)| items.iter().copied())
-            .filter(|op| {
-                *op != Op::Commands
-                    && (!self.tools_only
-                        || matches!(
-                            op,
-                            Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker
-                        ))
-                    && op
-                        .label()
-                        .to_lowercase()
-                        .contains(&self.query.to_lowercase())
-            })
-            .collect()
+        crate::actions::search(&self.query, self.tools_only)
+    }
+    fn availability(&self, op: Op) -> Result<(), &'static str> {
+        op.availability(CommandContext::Editor(EditorState {
+            dialog_open: self.dialog_open,
+            pending_confirmation: self.pending.is_some(),
+            modal_open: self.info.is_some() || self.palettes.open,
+            preview: self.editor.preview.is_some(),
+            history_playing: self.editor.history_playing(),
+            can_undo: self.editor.engine.head().is_some(),
+            can_redo: self.editor.engine.redo_head().is_some(),
+            updates_available: updates_available(),
+        }))
     }
     fn enabled(&self, op: Op) -> bool {
-        if self.dialog_open {
-            return false;
-        }
-        if self.editor.preview.is_some()
-            && matches!(
-                op,
-                Op::Place
-                    | Op::Erase
-                    | Op::Paint
-                    | Op::Fill
-                    | Op::Box
-                    | Op::Picker
-                    | Op::MirrorX
-                    | Op::MirrorY
-                    | Op::MirrorZ
-                    | Op::AddLayer
-                    | Op::Comment
-                    | Op::ToolPicker
-            )
-        {
-            return false;
-        }
-        match op {
-            Op::Undo => {
-                self.editor.history_playing()
-                    || (self.editor.preview.is_none() && self.editor.engine.head().is_some())
-            }
-            Op::Redo => {
-                self.editor.history_playing()
-                    || (self.editor.preview.is_none() && self.editor.engine.redo_head().is_some())
-            }
-            Op::CheckUpdates => updates_available(),
-            _ => true,
-        }
+        self.availability(op).is_ok()
     }
     fn disabled_reason(&self, op: Op) -> &'static str {
-        if self.editor.preview.is_some() {
-            "Return to live to edit"
-        } else {
-            op.disabled_reason()
-        }
+        self.availability(op).err().unwrap_or_default()
     }
     fn selected(&self, op: Op) -> bool {
         match op {
@@ -740,9 +646,6 @@ impl EditorView {
         self.menu = None;
         self.command_open = false;
         self.palette_open = false;
-        if self.pending.is_some() || self.dialog_open {
-            return;
-        }
         if matches!(op, Op::New | Op::Open | Op::Quit) && self.editor.engine.is_dirty() {
             self.pending = Some(op);
             self.pending_choice = 2;
@@ -1270,7 +1173,7 @@ impl EditorView {
             return;
         }
         if let Some(menu) = self.menu {
-            let items = MENUS[menu].1;
+            let items = &MENUS[menu].1;
             match key {
                 "down" => self.menu_index = (self.menu_index + 1) % items.len(),
                 "up" => self.menu_index = (self.menu_index + items.len() - 1) % items.len(),
@@ -2609,6 +2512,9 @@ impl EditorView {
                     .child(
                         self.floating()
                             .w(px(560.0))
+                            .max_w_full()
+                            .max_h_full()
+                            .overflow_scroll()
                             .p(px(24.0))
                             .child(
                                 row()
@@ -3046,13 +2952,7 @@ impl Render for EditorView {
                 }),
             )
             .on_action(cx.listener(|this, op: &Op, window, cx| {
-                if matches!(
-                    op,
-                    Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::ShowAll
-                ) || (this.info.is_none() && this.pending.is_none() && !this.palettes.open)
-                {
-                    this.invoke(*op, window, cx);
-                }
+                this.invoke(*op, window, cx);
             }))
             .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))
             .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
