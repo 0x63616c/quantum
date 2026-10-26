@@ -33,8 +33,14 @@ gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = fa
 gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
 image = { version = "0.25", default-features = false, optional = true }
 
-[lints]
-workspace = true
+# Keep unsafe denied everywhere except the audited macOS updater FFI module.
+# `forbid` cannot be locally overridden for the Objective-C runtime bridge.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
 
 [dependencies.env_logger]
 version = "0.11"
@@ -43,6 +49,10 @@ optional = true
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 voxelite-mcp = { path = "../voxelite-mcp" }
 tempfile = "3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.5"
+libloading = "0.8.9"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 gpui_web = { package = "gpui-web-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }

@@ -76,6 +76,7 @@ pub(crate) struct Session {
     receipt_bytes: usize,
 }
 impl Session {
+    /// Create a session with an existing, canonical project directory.
     pub fn new(root: PathBuf) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -761,7 +762,8 @@ mod tests {
     fn exhausted_receipts_preserve_saves_for_every_dirty_document() {
         for byte_limit in [false, true] {
             let root = tempfile::tempdir().unwrap();
-            let mut session = Session::new(root.path().to_owned());
+            // Match the public entry points: temporary paths may contain symlinks.
+            let mut session = Session::new(root.path().canonicalize().unwrap());
             let epoch = session.epoch;
             let mut models = Vec::new();
             for _ in 0..2 {
@@ -833,7 +835,7 @@ mod render_worker_tests {
     #[test]
     fn render_task_pins_revision_and_does_not_borrow_live_authority() {
         let dir = tempfile::tempdir().unwrap();
-        let mut session = Session::new(dir.path().into());
+        let mut session = Session::new(dir.path().canonicalize().unwrap());
         let doc = Document::new(Uuid::new_v4(), Uuid::new_v4());
         let model = doc.id;
         session.attach(Project::new(doc).unwrap()).unwrap();
