@@ -202,3 +202,22 @@
 }
 
 .nav nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.nav nav a[aria-current=page] { color: var(--fg); }
+
+/* Native download uses the shared type, controls and theme tokens. */
+.download-page { max-width: 800px; padding-block: 64px 80px; }
+.download-intro h1 { font-size: clamp(36px, 5vw, 56px); margin-top: 24px; }
+.download-intro .actions { justify-content: flex-start; flex-wrap: wrap; gap: 12px 24px; }
+.download-note { margin-top: 16px; }
+.download-alternatives { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 24px; }
+@media (max-width: 1000px) {
+  .marketing .nav nav a[href^="#"] { display: none; }
+}
+@media (max-width: 700px) {
+  .nav { gap: 8px; }
+  .nav nav { gap: 12px; }
+  .nav nav a[href="/docs/"], .nav nav a[href="/download/"] { display: inline-flex; }
+  .hero .hero-download { display: none; }
+  .download-page { padding-block: 40px 48px; }
+  .download-alternatives { flex-direction: column; gap: 16px; }
+}

@@ -1,10 +1,10 @@
-<p class="lede">Build locally. Connect your agent. Make your first model.</p>
-<nav class="setup-paths" aria-label="Quick start"><a href="#build">Build the app <span aria-hidden="true">↘</span></a><a href="#connect">Connect MCP <span aria-hidden="true">↘</span></a></nav>
+<p class="lede">Install Voxelite. Connect your agent. Make your first model.</p>
+<nav class="setup-paths" aria-label="Quick start"><a href="/download/">Download for Mac <span aria-hidden="true">↘</span></a><a href="#connect">Connect MCP <span aria-hidden="true">↘</span></a></nav>
 <p class="explore-note">Just exploring? <a href="/app/">Try the web editor</a> on desktop.<br>Keyboard &amp; mouse required · 1024 × 640 minimum.</p>
 <h2 id="build">Build from source</h2><p>Install Rust with rustup, then run from a repository checkout. The pinned toolchain is Rust 1.99.1.</p><pre><code class="language-sh">export PATH="$HOME/.cargo/bin:$PATH"
 cargo build --locked --release \
   -p voxelite-app -p voxelite-mcp
-./target/release/voxelite</code></pre><p>Signed macOS downloads and Homebrew packages are not available yet. On macOS, install the Xcode command line tools (<code>xcode-select --install</code>) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.</p><details><summary>Linux build and desktop dependencies (Debian / Ubuntu)</summary><pre><code class="language-sh">sudo apt-get install build-essential pkg-config clang libclang-dev \
+./target/release/voxelite</code></pre><p><a href="/download/">Download the native Mac app</a> for macOS 13+ on Apple silicon, with installation and first-launch instructions. This build isn't notarized yet. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (<code>xcode-select --install</code>) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.</p><details><summary>Linux build and desktop dependencies (Debian / Ubuntu)</summary><pre><code class="language-sh">sudo apt-get install build-essential pkg-config clang libclang-dev \
   libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev \
   libx11-xcb-dev libxcb1-dev libfontconfig-dev libasound2-dev libssl-dev \
   mesa-vulkan-drivers dbus-x11 xdg-desktop-portal xdg-desktop-portal-gtk</code></pre><p>A display server and a desktop portal are needed for native windows and file dialogs. Headless MCP builds need no display or GPU:</p><pre><code class="language-sh">cargo build --locked --release -p voxelite-mcp

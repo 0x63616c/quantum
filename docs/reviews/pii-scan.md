@@ -2,74 +2,30 @@
 
 Scanned on 2026-10-25. Values are deliberately redacted; locations and categories are sufficient for follow-up. No history was rewritten and no Git identity was changed.
 
-Scope: 493 working-tree/generated files; 122 commits and 2863 unique historical blobs reachable through all local refs and reflogs. Includes `design/` read-only, source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.
+Scope: 520 working-tree/generated files; 148 commits and 3527 unique historical blobs reachable through all local refs and reflogs. Includes `design/` read-only, source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.
 
 Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.
 
-Identity rows were triaged against the detected Git names/usernames; generic project and contributor labels were excluded. Historical build-directory paths remain in immutable blobs, even though those directories are now ignored. The scan originally found a personal display-name example in the spec at the location below; it has since been replaced with a neutral role label as explicitly requested.
 ## Git metadata
 
-- 4 distinct author/committer identity pairs are present across 122 commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.
+- 4 distinct author/committer identity pairs are present across 148 commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.
 - `.git:1` is a worktree pointer containing a local machine path. It is untracked Git plumbing, not a distributable source file; changing it would break the checkout.
 
 ## Working tree findings
 
 | File:line | Category | Disposition |
 | --- | --- | --- |
-| `PLAN.md:262` | Git identity name/username | Resolved: replaced with “the project owner”; historical blobs retain the original example. |
 | `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
+| `crates/voxelite-site/templates/download.html:18` | Git identity name/username | Inspect; do not reproduce matched value. |
 | `design/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
 | `design/concepts/history/v2/concept-c-dark.png:815` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
 | `design/concepts/png/concept-a-dark-history.png:2353` | email | Compressed binary byte-pattern match; not a verified address or visible image text. |
 | `design/plan-history/PLAN-v1.md:371` | Git identity name/username | Read-only design ownership; retained and reported. |
-| `site/app/voxelite_app_bg.wasm:130885` | email-shaped binary match | Verified random binary bytes (for example, `A@oS..So`), not anyone’s email address. False positive. |
-| `site/app/voxelite_app_bg.wasm:72619` | absolute machine path | Resolved by the remapped web rebuild below; original line is retained as scan evidence. |
+| `site/PROGRESS.md:68` | absolute machine path | Inspect; do not reproduce matched value. |
+| `site/app/voxelite_app_bg.wasm:130881` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
 | `site/assets/fonts/Geist.ttf:793` | email | Embedded upstream font attribution/contact; retain original licensed font. |
-| `web/dist/voxelite_app_bg.wasm:130885` | email-shaped binary match | Verified random binary bytes (for example, `A@oS..So`), not anyone’s email address. False positive. |
-| `web/dist/voxelite_app_bg.wasm:72619` | absolute machine path | Resolved by the remapped web rebuild below; original line is retained as scan evidence. |
-
-## Web build remediation — 2026-10-25
-
-The email-shaped matches at original byte-scan line 130885 in both Wasm copies
-were verified to be random binary bytes (for example, `A@oS..So`), not anyone’s
-email. This is a false positive, separate from the genuine embedded compiler
-source paths at the original line 72619. Binary line numbers change on rebuild.
-
-`scripts/build-web.sh` now uses stable Rust `--remap-path-prefix` for the home
-prefix (`~`), repository (`/voxelite`), Cargo registry sources (`/cargo`), and
-Rustup (`/rustup`), plus `-C debuginfo=0`. Broad remaps precede specific ones;
-encoded flags preserve paths with spaces and caller flags. `build-site.sh`
-invokes that build by default and copies the result to `site/app/`.
-`--skip-web` deliberately reuses the existing bundle and does not rebuild it.
-No nightly location-detail flags or binary string replacement were used.
-
-Reproduced with:
-
-```sh
-scripts/build-site.sh
-for wasm in web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm; do
-  strings -n 4 "$wasm" | grep -E '/home|/workspace|/root|box'
-  strings -n 4 "$wasm" | grep -E '/home|/workspace|/root'
-done
-cmp web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm
-sha256sum web/dist/voxelite_app_bg.wasm site/app/voxelite_app_bg.wasm
-```
-
-Result: build succeeded; both copies are byte-identical. The path-only grep
-returns no lines (exit 1) for either copy. The broader requested grep matches
-750 strings per copy, all due to legitimate `box` text: Rust `boxed::Box`
-symbols, bounding boxes, flexbox/box-blur source names under `/cargo`, editor
-Box-tool labels, and graphics/mailbox terminology. None identifies the build
-machine or an account; deleting those strings would corrupt code or diagnostics.
-A raw-byte check also confirms zero occurrences of the actual home/repository
-prefixes and `/home/`, `/workspace/`, `/root/` in the rebuilt bundle. There are
-700 `/cargo/` occurrences, demonstrating remapped dependency source locations.
-Toolchain sources already use compiler-owned `/rustc/` paths.
-
-SHA-256 (both copies):
-`b9c963a93a712d81c37ceecb20181429ce2c12ac6d22dbb4c8f2b9285350f38e`.
-This remediation covers current distributable bundles; historical blobs and
-licensed font attribution are unchanged.
+| `site/download/index.html:33` | Git identity name/username | Inspect; do not reproduce matched value. |
+| `web/dist/voxelite_app_bg.wasm:130881` | email | Ignored generated bundle; evaluate reproducible-build path remapping separately. |
 
 ## Historical blob findings
 
@@ -77,11 +33,20 @@ One row per unique blob/category; a blob can occur in many commits. Use `git sho
 
 | Blob · file:line | Category |
 | --- | --- |
-| `0a8274603156` · `PLAN.md:262` | Git identity name/username |
 | `99be836ad05d` · `crates/voxelite-app/assets/fonts/Geist.ttf:793` | email |
 | `78be1e3e9d08` · `design/concepts/history/v2/concept-c-dark.png:815` | email |
 | `4e44bfa3e485` · `design/concepts/png/concept-a-dark-history.png:2353` | email |
 | `d6834508408e` · `design/plan-history/PLAN-v1.md:371` | Git identity name/username |
+| `45cbd548c899` · `docs/reviews/pii-scan.md:25,28,34` | email |
+| `ca9876f4a486` · `site/PROGRESS.md:68` | absolute machine path |
+| `56a22ed40947` · `screenshots/gallery/round-1/remix-editor.png:239` | email |
+| `be2ca2e5271b` · `screenshots/gallery/site-regression/desktop-dark.png:1653` | email |
+| `7c53e12efedc` · `site/gallery/REVIEW.md:91,92` | absolute machine path |
+| `50cfe5fe5d3c` · `site/PROGRESS.md:68` | absolute machine path |
+| `8e6e20b13fe5` · `site/PROGRESS.md:68` | absolute machine path |
+| `430eae86e6fb` · `site/PROGRESS.md:66` | absolute machine path |
+| `0a8274603156` · `PLAN.md:262` | Git identity name/username |
+| `087dfd5d1760` · `docs/reviews/pii-scan.md:25,28,34` | email |
 | `fe7e86da348e` · `target-webdeploy/.rustc_info.json:1` | absolute machine path |
 | `7106f3e7d6ba` · `target-webdeploy/wasm32-unknown-unknown/web/.fingerprint/voxelite-app-a1e0bf24d878e85a/dep-lib-voxelite_app:1` | absolute machine path |
 | `1598c5aa6ac3` · `target-webdeploy/wasm32-unknown-unknown/web/build/anyhow-fe5737645ec3b66a/root-output:1` | absolute machine path |
@@ -1151,4 +1116,4 @@ No pattern matches in commit messages.
 
 ## Outcome
 
-No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. The current generated web bundle’s compiler paths were remapped by rebuilding as documented above. Git plumbing and historical blobs were not edited. This report does not certify the repository as free of personal information.
+No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. No trivially safe authored working-tree path leak was found outside the read-only design boundary; Git plumbing and generated compiler paths must not be blindly replaced. This report does not certify the repository as free of personal information.
