@@ -77,7 +77,9 @@ pub fn write_crawl_files(root: &Path, paths: &[String]) -> Result<(), Box<dyn Er
     fs::write(root.join("sitemap.xml"), sitemap)?;
     fs::write(
         root.join("robots.txt"),
-        format!("User-agent: *\nAllow: /\n\nSitemap: {SITE_BASE_URL}/sitemap.xml\n"),
+        format!(
+            "User-agent: *\nAllow: /\n\nSitemap: {SITE_BASE_URL}/sitemap.xml\n\n# Markdown documentation: {SITE_BASE_URL}/llms.txt\n# Complete documentation: {SITE_BASE_URL}/llms-full.txt\n"
+        ),
     )?;
     Ok(())
 }

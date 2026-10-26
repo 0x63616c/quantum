@@ -29,6 +29,22 @@ canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
 from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
 
+The same build converts those article bodies (including every MCP schema) to
+Markdown. `/docs/` publishes `/docs.md` and `/docs/index.md`; each
+`/docs/topic/` publishes identical `/docs/topic.md` and `/docs/topic/index.md`
+files. Links use absolute URLs so they also work in copied Markdown and the
+combined document. Links to specific sections retain the HTML URL and its
+authored anchor; other documentation links use the Markdown URL.
+
+`llms.txt` follows the [llms.txt format](https://llmstxt.org/) and links to every
+Markdown doc with its description. `llms-full.txt` concatenates all docs in
+navigation order with source links. These files are generated, never maintained
+separately. Doc pages advertise Markdown and the LLM index with alternate and
+describedby links. “Copy page as Markdown” copies the raw file, with “View .md”
+available without JavaScript or clipboard access. The sitemap includes the LLM
+indexes and one canonical Markdown URL per page; robots.txt allows crawling and
+advertises the indexes in comments.
+
 Verification:
 
 ```sh
@@ -37,6 +53,12 @@ cargo test --locked -p voxelite-site
 python3 scripts/check-site.py
 node scripts/capture-site.mjs screenshots/site/final
 ```
+
+The site checks verify both Markdown aliases, discovery links, local links and
+fragments, exact code/schema parity, and inclusion in both LLM indexes. The Rust
+tests also compare a fresh generator run against the published files to catch
+stale prose or metadata. Browser checks cover complete Markdown copying,
+download/clipboard failures, and viewing raw Markdown without JavaScript.
 
 The browser script requires the local server and the repository's Playwright
 installation (`npm ci`, `npx playwright install chromium` when absent). It captures
