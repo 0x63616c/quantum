@@ -918,8 +918,10 @@ impl EditorView {
     }
     pub(super) fn sync_preferences(&mut self, window: &Window, cx: &mut Context<Self>) {
         let next = cx.global::<SettingsState>().values.clone();
-        let rerender = self.preferences.antialiasing != next.antialiasing;
-        self.theme = theme(next.appearance, window);
+        let next_theme = theme(next.appearance, window);
+        let rerender = self.preferences.antialiasing != next.antialiasing
+            || (self.gpu.enabled && (self.theme != next_theme || self.grid != next.grid));
+        self.theme = next_theme;
         self.grid = next.grid;
         self.preferences = next;
         if rerender {
