@@ -553,22 +553,26 @@ impl SettingsView {
                     t,
                 );
                 #[cfg(not(target_family = "wasm"))]
-                let group = group.child(
-                    self.form_row(
-                        "Software updates",
-                        "Update integration is not available in this build.",
-                        self.button("check-updates", "Check for Updates…", t)
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                #[cfg(target_os = "macos")]
-                                crate::updater::check_for_updates();
-                                this.message = Some(
-                                    "Update integration is not available in this build.".into(),
-                                );
-                                cx.notify();
-                            })),
-                        t,
-                    ),
-                );
+                let updates_available = super::updates_available();
+                #[cfg(not(target_family = "wasm"))]
+                let group = group.child(self.form_row(
+                    "Software updates",
+                    if updates_available {
+                        "Check for the latest version of Voxelite."
+                    } else {
+                        "Automatic updates are not available in this build."
+                    },
+                    div().when(updates_available, |d| {
+                        d.child(
+                            self.button("check-updates", "Check for Updates…", t)
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.message = super::check_for_updates().map(str::to_owned);
+                                    cx.notify();
+                                })),
+                        )
+                    }),
+                    t,
+                ));
                 #[cfg(target_family = "wasm")]
                 let group = group.child(self.form_row(
                     "Browser edition",
@@ -631,7 +635,7 @@ impl Render for SettingsView {
                             | Op::Minimize
                             | Op::ZoomWindow
                             | Op::Help
-                    )
+                    ) && (op != Op::CheckUpdates || super::updates_available())
                 },
             ));
         }
@@ -662,8 +666,7 @@ impl Render for SettingsView {
                     Op::Help => this.section = Section::Shortcuts,
                     Op::CheckUpdates => {
                         this.section = Section::Updates;
-                        #[cfg(target_os = "macos")]
-                        crate::updater::check_for_updates();
+                        this.message = super::check_for_updates().map(str::to_owned);
                     }
                     Op::Hide => cx.hide(),
                     Op::HideOthers => cx.hide_other_apps(),

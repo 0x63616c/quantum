@@ -9,9 +9,9 @@ palettes and layer lists scroll within bounded panels.
 
 The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
 current visual assessment, verification and both-theme captures. The sidebar
-switches between Session, Comments and History; the toolbar keeps Save and the
-local Share preview within reach. Static medium and semibold Geist faces
-preserve the intended weight hierarchy on Linux.
+switches between Session, Comments and History; the toolbar keeps Save within
+reach. Sharing is deferred to the hosted edition. Static medium and semibold
+Geist faces preserve the intended weight hierarchy on Linux.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -110,7 +110,9 @@ immediately. A failed save retains the previous preferences and reports the erro
 On macOS, the native Voxelite menu includes Settings, About, Services, application
 visibility and Quit. The native menus share the editor action registry; standard
 clipboard commands act on the focused text field. There is no voxel clipboard
-or persistent voxel-selection tool yet. The updater hook is currently a stub.
+or persistent voxel-selection tool yet. Packaged macOS builds with Sparkle support
+Check for Updates from the Voxelite menu and Settings → Updates. Builds without
+the bundled updater disable the menu action and explain availability in Settings.
 The transparent native titlebar places real traffic lights in the top toolbar.
 Linux and web retain their in-window menus.
 

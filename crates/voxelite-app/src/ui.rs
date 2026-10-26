@@ -37,6 +37,27 @@ const TOOLBAR_HEIGHT: f32 = 64.0;
 const STATUSBAR_HEIGHT: f32 = 28.0;
 const PANEL_GUTTER: f32 = 24.0;
 
+fn updates_available() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        crate::updater::is_available()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
+// Both windows use Sparkle's own progress and result dialogs when available.
+fn check_for_updates() -> Option<&'static str> {
+    #[cfg(target_os = "macos")]
+    if updates_available() {
+        crate::updater::check_for_updates();
+        return None;
+    }
+    Some("Automatic updates are not available in this build.")
+}
+
 /// Image identity includes the editor incarnation, since reopening the same ID
 /// resets its revision. Camera and dimensions bind picking to displayed pixels.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -620,6 +641,7 @@ impl EditorView {
         match op {
             Op::Undo => self.editor.preview.is_none() && self.editor.engine.head().is_some(),
             Op::Redo => self.editor.preview.is_none() && self.editor.engine.redo_head().is_some(),
+            Op::CheckUpdates => updates_available(),
             _ => true,
         }
     }
@@ -694,9 +716,9 @@ impl EditorView {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
             Op::About => self.info = Some(("About Voxelite", format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION")).into())),
             Op::CheckUpdates => {
-                #[cfg(target_os = "macos")]
-                crate::updater::check_for_updates();
-                self.status = "Update integration is not available in this build.".into();
+                let message = check_for_updates();
+                self.error = message.is_some();
+                self.status = message.unwrap_or("Checking for updates…").into();
             }
             Op::Hide => cx.hide(),
             Op::HideOthers => cx.hide_other_apps(),
