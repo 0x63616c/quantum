@@ -171,7 +171,7 @@ impl EditorView {
                                     .aria_label(playback_label)
                                     .aria_keyshortcuts("Space")
                                     .anchored_hint(
-                                        HintText::from(playback_label).text("  ").key("space"),
+                                        HintText::from(playback_label).key("space"),
                                         t,
                                         TooltipSide::Below,
                                     ),
