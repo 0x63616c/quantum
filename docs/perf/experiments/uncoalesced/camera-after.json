@@ -34,7 +34,8 @@
     "cpu": "Inclusive wasm spans; nested intervals must not be added. JS/wasm boundary overhead is not separately measurable and is reported null.",
     "cameraLatency": "Browser capture-phase event to first changed viewport paint after it (next RAF); intermediate coalesced events may not have their own frame.",
     "placementLatency": "Capture-phase left mousedown to first painted revision >= successful edit revision (next RAF). Rejections/no-ops separately counted.",
-    "analysis": "scripts/lib/camera-metrics.mjs; GPU wait/readback is wall time, not CPU time. No changed-image metrics are attributed to overlay-only phases."
+    "analysis": "scripts/lib/camera-metrics.mjs; GPU wait/readback is wall time, not CPU time. No changed-image metrics are attributed to overlay-only phases.",
+    "causalCameraLatency": "inputToCausalFrameMs: injection event timestamp to first painted image whose render began after the associated navigation event; includes dispatch backlog and excludes already-in-flight images. Intermediate coalesced camera states need not appear separately."
   },
   "scenes": [
     {
@@ -71,6 +72,13 @@
                 "p95": 4543.300000011921,
                 "p99": 4632.700000017881,
                 "mean": 2280.135021101448
+              },
+              "inputToCausalFrameMs": {
+                "count": 227,
+                "p50": 6716.600000023842,
+                "p95": 9067.600000023842,
+                "p99": 9267.600000023842,
+                "mean": 6828.964757731045
               },
               "dispatchDelayMs": {
                 "count": 237,
@@ -168,6 +176,13 @@
                 "p99": 4228.5,
                 "mean": 2271.586206897708
               },
+              "inputToCausalFrameMs": {
+                "count": 232,
+                "p50": 5430.9000000059605,
+                "p95": 7743.9000000059605,
+                "p99": 7930.9000000059605,
+                "mean": 5760.274137937046
+              },
               "dispatchDelayMs": {
                 "count": 232,
                 "p50": 15.099999994039536,
@@ -264,6 +279,13 @@
                 "p99": 5019.4000000059605,
                 "mean": 2372.2304761835508
               },
+              "inputToCausalFrameMs": {
+                "count": 97,
+                "p50": 9556.700000017881,
+                "p95": 16665.80000001192,
+                "p99": 16799.70000001788,
+                "mean": 10848.951546400478
+              },
               "dispatchDelayMs": {
                 "count": 105,
                 "p50": 3525.4000000059605,
@@ -354,6 +376,13 @@
                 "mean": 282.9482213389727
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -540,6 +569,13 @@
                 "p99": 4313.5,
                 "mean": 2339.1464730283533
               },
+              "inputToCausalFrameMs": {
+                "count": 241,
+                "p50": 5287.4000000059605,
+                "p95": 7854.5,
+                "p99": 8036.4000000059605,
+                "mean": 5744.379253117993
+              },
               "dispatchDelayMs": {
                 "count": 241,
                 "p50": 14.900000005960464,
@@ -635,6 +671,13 @@
                 "p95": 3641.2999999821186,
                 "p99": 3824.0999999940395,
                 "mean": 2130.298814225574
+              },
+              "inputToCausalFrameMs": {
+                "count": 253,
+                "p50": 5283.4000000059605,
+                "p95": 7299.4000000059605,
+                "p99": 7517.4000000059605,
+                "mean": 5446.504743090967
               },
               "dispatchDelayMs": {
                 "count": 253,
@@ -732,6 +775,13 @@
                 "p99": 4348.5999999940395,
                 "mean": 2098.7233644946714
               },
+              "inputToCausalFrameMs": {
+                "count": 100,
+                "p50": 8665.700000017881,
+                "p95": 15681.40000000596,
+                "p99": 15815.40000000596,
+                "mean": 9745.764000016748
+              },
               "dispatchDelayMs": {
                 "count": 107,
                 "p50": 2684.5,
@@ -822,6 +872,13 @@
                 "mean": 291.66653846710926
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -1008,6 +1065,13 @@
                 "p99": 4180.9000000059605,
                 "mean": 2338.578070178105
               },
+              "inputToCausalFrameMs": {
+                "count": 228,
+                "p50": 5622.5,
+                "p95": 8039.5,
+                "p99": 8272.59999999404,
+                "mean": 5974.362719300546
+              },
               "dispatchDelayMs": {
                 "count": 228,
                 "p50": 13.300000011920929,
@@ -1103,6 +1167,13 @@
                 "p95": 3746.2999999821186,
                 "p99": 3916.199999988079,
                 "mean": 2255.670386263741
+              },
+              "inputToCausalFrameMs": {
+                "count": 233,
+                "p50": 5295.200000017881,
+                "p95": 7529.100000023842,
+                "p99": 7711.100000023842,
+                "mean": 5607.237768255974
               },
               "dispatchDelayMs": {
                 "count": 233,
@@ -1200,6 +1271,13 @@
                 "p99": 4548.199999988079,
                 "mean": 2203.762264151899
               },
+              "inputToCausalFrameMs": {
+                "count": 97,
+                "p50": 9080.40000000596,
+                "p95": 16217.800000011921,
+                "p99": 16351.700000017881,
+                "mean": 10414.478350527816
+              },
               "dispatchDelayMs": {
                 "count": 106,
                 "p50": 3839.600000023842,
@@ -1290,6 +1368,13 @@
                 "mean": 258.6591439636074
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -1477,6 +1562,13 @@
               "p99": 4313.5,
               "mean": 2338.578070178105
             },
+            "inputToCausalFrameMs": {
+              "count": 228,
+              "p50": 5622.5,
+              "p95": 8039.5,
+              "p99": 8272.59999999404,
+              "mean": 5974.362719300546
+            },
             "dispatchDelayMs": {
               "count": 237,
               "p50": 14.900000005960464,
@@ -1572,6 +1664,13 @@
               "p95": 3746.2999999821186,
               "p99": 3916.199999988079,
               "mean": 2255.670386263741
+            },
+            "inputToCausalFrameMs": {
+              "count": 233,
+              "p50": 5295.200000017881,
+              "p95": 7529.100000023842,
+              "p99": 7711.100000023842,
+              "mean": 5607.237768255974
             },
             "dispatchDelayMs": {
               "count": 233,
@@ -1669,6 +1768,13 @@
               "p99": 4548.199999988079,
               "mean": 2203.762264151899
             },
+            "inputToCausalFrameMs": {
+              "count": 97,
+              "p50": 9080.40000000596,
+              "p95": 16217.800000011921,
+              "p99": 16351.700000017881,
+              "mean": 10414.478350527816
+            },
             "dispatchDelayMs": {
               "count": 106,
               "p50": 3525.4000000059605,
@@ -1759,6 +1865,13 @@
               "mean": 282.9482213389727
             },
             "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "inputToCausalFrameMs": {
               "count": 0,
               "p50": null,
               "p95": null,
@@ -1947,6 +2060,13 @@
                 "p99": 4479,
                 "mean": 2243.8091286325603
               },
+              "inputToCausalFrameMs": {
+                "count": 231,
+                "p50": 6426.4000000059605,
+                "p95": 8692.40000000596,
+                "p99": 8842.40000000596,
+                "mean": 6537.583982690201
+              },
               "dispatchDelayMs": {
                 "count": 241,
                 "p50": 16.100000023841858,
@@ -2042,6 +2162,13 @@
                 "p95": 4838,
                 "p99": 5052.4000000059605,
                 "mean": 2590.6539534883445
+              },
+              "inputToCausalFrameMs": {
+                "count": 212,
+                "p50": 7763.5,
+                "p95": 10013.5,
+                "p99": 10212.5,
+                "mean": 7704.65283018941
               },
               "dispatchDelayMs": {
                 "count": 215,
@@ -2139,6 +2266,13 @@
                 "p99": 5970.700000017881,
                 "mean": 2800.117142868042
               },
+              "inputToCausalFrameMs": {
+                "count": 99,
+                "p50": 11896.700000017881,
+                "p95": 21762.70000001788,
+                "p99": 21896.70000001788,
+                "mean": 13916.93939395896
+              },
               "dispatchDelayMs": {
                 "count": 105,
                 "p50": 4714.200000017881,
@@ -2221,6 +2355,13 @@
                 "mean": 318.2161290330025
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -2407,6 +2548,13 @@
                 "p99": 4367.4000000059605,
                 "mean": 2362.3681632605135
               },
+              "inputToCausalFrameMs": {
+                "count": 245,
+                "p50": 5830.4000000059605,
+                "p95": 8200.40000000596,
+                "p99": 8398.5,
+                "mean": 6146.502448986258
+              },
               "dispatchDelayMs": {
                 "count": 245,
                 "p50": 16.100000023841858,
@@ -2502,6 +2650,13 @@
                 "p95": 4197.5999999940395,
                 "p99": 4325.200000017881,
                 "mean": 2110.1830434801786
+              },
+              "inputToCausalFrameMs": {
+                "count": 230,
+                "p50": 6016.9000000059605,
+                "p95": 8412.800000011921,
+                "p99": 8583.90000000596,
+                "mean": 6337.495217403511
               },
               "dispatchDelayMs": {
                 "count": 230,
@@ -2599,6 +2754,13 @@
                 "p99": 4859.399999976158,
                 "mean": 2285.851428567512
               },
+              "inputToCausalFrameMs": {
+                "count": 94,
+                "p50": 9509.700000017881,
+                "p95": 17408.40000000596,
+                "p99": 17537.40000000596,
+                "mean": 11004.435106390018
+              },
               "dispatchDelayMs": {
                 "count": 105,
                 "p50": 4200.800000011921,
@@ -2681,6 +2843,13 @@
                 "mean": 350.2714285717301
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -2867,6 +3036,13 @@
                 "p99": 4522.4000000059605,
                 "mean": 2249.209210521427
               },
+              "inputToCausalFrameMs": {
+                "count": 43,
+                "p50": 5542.9000000059605,
+                "p95": 5857.9000000059605,
+                "p99": 5892.9000000059605,
+                "mean": 5326.458139539458
+              },
               "dispatchDelayMs": {
                 "count": 232,
                 "p50": 15.700000017881393,
@@ -2962,6 +3138,13 @@
                 "p95": 5169,
                 "p99": 5387,
                 "mean": 2924.3452380915483
+              },
+              "inputToCausalFrameMs": {
+                "count": 51,
+                "p50": 6769.9000000059605,
+                "p95": 7302.9000000059605,
+                "p99": 7336.9000000059605,
+                "mean": 6595.531372554162
               },
               "dispatchDelayMs": {
                 "count": 210,
@@ -3059,6 +3242,13 @@
                 "p99": 4841.0999999940395,
                 "mean": 2339.1200000027816
               },
+              "inputToCausalFrameMs": {
+                "count": 92,
+                "p50": 9786.300000011921,
+                "p95": 17388.80000001192,
+                "p99": 17524.70000001788,
+                "mean": 11332.185869580378
+              },
               "dispatchDelayMs": {
                 "count": 105,
                 "p50": 4606.100000023842,
@@ -3141,6 +3331,13 @@
                 "mean": 290.1280769365107
               },
               "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "inputToCausalFrameMs": {
                 "count": 0,
                 "p50": null,
                 "p95": null,
@@ -3328,6 +3525,13 @@
               "p99": 4479,
               "mean": 2249.209210521427
             },
+            "inputToCausalFrameMs": {
+              "count": 231,
+              "p50": 5830.4000000059605,
+              "p95": 8200.40000000596,
+              "p99": 8398.5,
+              "mean": 6146.502448986258
+            },
             "dispatchDelayMs": {
               "count": 241,
               "p50": 16.100000023841858,
@@ -3423,6 +3627,13 @@
               "p95": 4838,
               "p99": 5052.4000000059605,
               "mean": 2590.6539534883445
+            },
+            "inputToCausalFrameMs": {
+              "count": 212,
+              "p50": 6769.9000000059605,
+              "p95": 8412.800000011921,
+              "p99": 8583.90000000596,
+              "mean": 6595.531372554162
             },
             "dispatchDelayMs": {
               "count": 215,
@@ -3520,6 +3731,13 @@
               "p99": 4859.399999976158,
               "mean": 2339.1200000027816
             },
+            "inputToCausalFrameMs": {
+              "count": 94,
+              "p50": 9786.300000011921,
+              "p95": 17408.40000000596,
+              "p99": 17537.40000000596,
+              "mean": 11332.185869580378
+            },
             "dispatchDelayMs": {
               "count": 105,
               "p50": 4606.100000023842,
@@ -3602,6 +3820,13 @@
               "mean": 318.2161290330025
             },
             "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "inputToCausalFrameMs": {
               "count": 0,
               "p50": null,
               "p95": null,

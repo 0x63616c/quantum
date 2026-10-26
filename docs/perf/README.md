@@ -28,9 +28,11 @@ nested spans. Instrumentation is compiled out without Cargo's `perf` feature.
 JS↔wasm boundary overhead is not isolated: it is explicitly null, not zero.
 
 Presentation is a proxy: the first RAF following a viewport paint submission.
-It does not measure physical display photons or GPU timestamps. Input latency
-includes event-to-next-image delay; it does not prove an intermediate coalesced
-camera state was displayed. Dispatch delay uses browser event timestamps.
+It does not measure physical display photons or GPU timestamps. The JSON includes a next-image latency proxy, which may include an already
+in-flight image. The Markdown table instead uses causal latency: injection time
+to the first painted image whose render started after the corresponding
+navigation event. This includes dispatch backlog. Coalesced intermediate camera
+states need not be displayed separately. Dispatch delay is also reported alone.
 
 Ten isolated clicks wait for a completed render before the next click. Fifty
 repeated placements are offered at 30 Hz. Counts of attempted, accepted and
@@ -63,3 +65,12 @@ camera changes perform no mesh rebuild or vertex upload, and exercises resize.
 The benchmark rejects silent CPU fallback when `--query viewport=gpu` is used.
 Standalone-click settling includes the successful edit's revision, preventing a
 queued render from being mistaken for an already completed frame.
+
+To reproduce the **original** CPU baseline, use a separate checkout of `69a620f`
+(the benchmark/instrumentation commit), build it with `VOXELITE_PERF=1`, and run
+the current `bench-camera.mjs` by its absolute path while your working directory
+is that checkout. This uses the original wasm with the corrected current trace
+analysis and installed Playwright. Running the default viewport at current HEAD
+measures the core-optimized control, not the original baseline. JSON wasm hashes
+and commit IDs distinguish these artifacts. `--scene typical` or `--scene large`
+can narrow a diagnostic run; the default runs both.
