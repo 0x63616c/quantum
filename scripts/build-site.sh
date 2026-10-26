@@ -14,7 +14,7 @@ done
 # Refresh the HTML source even when reusing the compiled editor bundle.
 cp web/index.html web/dist/index.html
 # Also exports Markdown/LLM indexes and preserves site/appcast.xml if supplied.
-cargo run --locked -p voxelite-site -- site
+cargo run --locked -p voxelite-site -- site --write-integrations
 mkdir -p site/assets/skills
 cp -R skills/. site/assets/skills/
 mkdir -p site/assets/integrations

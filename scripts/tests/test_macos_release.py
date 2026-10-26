@@ -55,6 +55,8 @@ class ReleaseTests(unittest.TestCase):
         package = workflow.index("      - name: Sign and package")
         self.assertLess(build, package)
         self.assertNotIn("secrets.", workflow[:package])
+        self.assertIn('cargo build --release --locked -p voxelite-mcp',
+                      workflow_step('Build app without signing credentials'))
         self.assertIn("scripts/package-macos.sh --skip-build", workflow_step("Sign and package"))
 
     def test_publication_is_staged_and_immutable(self):

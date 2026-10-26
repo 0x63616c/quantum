@@ -96,9 +96,11 @@ private_tool() {
 rm -rf dist
 if [[ "$BUILD_APP" == true ]]; then
   cargo build --release --locked -p voxelite-app --bin voxelite
+  cargo build --release --locked -p voxelite-mcp
 fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp target/release/voxelite "$APP/Contents/MacOS/Voxelite"
+cp target/release/voxelite-mcp "$APP/Contents/MacOS/voxelite-mcp"
 python3 - "$APP/Contents/Info.plist" <<'PY'
 import os
 import base64
@@ -211,6 +213,10 @@ if [[ -d "$APP/Contents/Frameworks/Sparkle.framework" ]]; then
   private_tool 'Updater signing' codesign "${SIGN_ARGS[@]}" "$FRAMEWORK/Versions/B/Updater.app"
   private_tool 'Framework signing' codesign "${SIGN_ARGS[@]}" "$FRAMEWORK"
 fi
+# Sign nested executables before sealing the bundle, with the same identity and
+# hardened runtime options as the app. The stdio server needs no UI entitlements.
+private_tool 'MCP signing' codesign "${SIGN_ARGS[@]}" "$APP/Contents/MacOS/voxelite-mcp"
+private_tool 'Main executable signing' codesign "${SIGN_ARGS[@]}" --entitlements packaging/macos/Voxelite.entitlements "$APP/Contents/MacOS/Voxelite"
 private_tool 'App signing' codesign "${SIGN_ARGS[@]}" --entitlements packaging/macos/Voxelite.entitlements "$APP"
 private_tool 'App signature verification' codesign --verify --deep --strict "$APP"
 

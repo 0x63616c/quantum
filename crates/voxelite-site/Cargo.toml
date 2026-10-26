@@ -6,9 +6,13 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+base64 = "0.22"
 htmd = "0.5.6"
+percent-encoding = "2"
 same-file = "1"
-serde_json.workspace = true
+serde.workspace = true
+# Keep catalog/example ordering stable in both standalone and workspace builds.
+serde_json = { workspace = true, features = ["preserve_order"] }
 url = "2"
 voxelite-mcp = { path = "../voxelite-mcp" }
 

@@ -158,10 +158,22 @@ def check_analytics(path, page):
         assert queue in text, f'Missing analytics queue {queue}'
 
 
+def check_fonts(page):
+    # The wasm canvas embeds its native TTFs; its loading screen uses system-ui.
+    if not page.tags('link', rel='stylesheet', href='/assets/site.css'):
+        return
+    for name in ('Geist', 'GeistMono'):
+        preload = page.tags('link', rel='preload', href=f'/assets/fonts/{name}.woff2')
+        assert len(preload) == 1, f'Missing or duplicated {name} preload'
+        assert preload[0].get('as') == 'font' and preload[0].get('type') == 'font/woff2'
+        assert 'crossorigin' in preload[0], 'Fonts must preload with CORS'
+
+
 for path, page in pages.items():
     try:
         check_analytics(path, page)
         check_seo(path, page)
+        check_fonts(page)
     except AssertionError as error:
         raise AssertionError(f'{path.relative_to(SITE)}: {error}') from error
     for link in page.links:
@@ -255,7 +267,9 @@ for path in (SITE / 'llms.txt', SITE / 'llms-full.txt'):
 
 catalog = json.loads((SITE / 'assets/mcp-tools.json').read_text())
 mcp = (SITE / 'docs/mcp.md').read_text()
-schemas = [json.loads(block) for block in re.findall(r'^```json\n(.*?)\n```', mcp, flags=re.M | re.S)]
+# Installation now contains JSON too; schemas start at the live tool catalog.
+catalog_markdown = re.split(r'^## All \d+ tools\s*$', mcp, maxsplit=1, flags=re.M)[1]
+schemas = [json.loads(block) for block in re.findall(r'^```json\n(.*?)\n```', catalog_markdown, flags=re.M | re.S)]
 expected_schemas = [tool[key] for tool in catalog for key in ('inputSchema', 'outputSchema') if key in tool]
 assert schemas == expected_schemas, 'Markdown MCP schemas must exactly match the live catalog'
 
@@ -264,6 +278,16 @@ for path in (SITE / 'assets').rglob('*.md'):
         check(path, link)
 for link in re.findall(r'url\([\'"]?([^\)\'\"]+)', (SITE / 'assets/site.css').read_text()):
     check(SITE / 'assets/site.css', link)
+css = (SITE / 'assets/site.css').read_text()
+assert '.ttf' not in css and 'font-display:swap' not in css, 'Site fonts must not swap late'
+for name in ('Geist', 'GeistMono'):
+    assert (SITE / f'assets/fonts/{name}.woff2').read_bytes()[:4] == b'wOF2'
+    assert (SITE / f'assets/fonts/OFL-{name}.txt').is_file()
+hosting = json.loads((ROOT / 'vercel.json').read_text())
+assert hosting['outputDirectory'] == 'site'
+assert any(rule['source'] == '/assets/fonts/(.*)' and
+           {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
+           for rule in hosting['headers']), 'Missing immutable font cache headers'
 with ZipFile(SITE / 'assets/voxelite-skills.zip') as archive:
     expected = {str(p.relative_to(ROOT)): p for folder in ('skills', 'integrations') for p in (ROOT / folder).rglob('*') if p.is_file()}
     assert set(archive.namelist()) == set(expected)

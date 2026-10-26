@@ -57,32 +57,11 @@ Use localhost or HTTPS for browser graphics. WebGPU is preferred and WebGL2 is t
 
 ## Connect your agent
 
-Build `voxelite-mcp` first. Choose one of these modes; each standalone process owns its own in-memory documents.
+The Mac app includes the MCP server. For source builds, build `voxelite-mcp` first. Each standalone process owns its own in-memory documents.
 
 ### Headless: create and save independently
 
-Use an existing directory as the file root. Substitute absolute paths for the placeholders below; they are examples, not commands to run unchanged.
-
-```json
-{
-  "mcpServers": {
-    "voxelite": {
-      "command": "/absolute/path/to/voxelite-mcp",
-      "args": ["--root", "/absolute/path/to/project"]
-    }
-  }
-}
-```
-
-Merge that entry into `.mcp.json` for Claude Code or `.cursor/mcp.json` for Cursor. For Codex, merge this table into your trusted project's `.codex/config.toml` or user `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.voxelite]
-command = "/absolute/path/to/voxelite-mcp"
-args = ["--root", "/absolute/path/to/project"]
-```
-
-Preserve existing settings. Reconnect the host, list tools, then call `voxelite_capabilities_get`. Expect API `voxelite.v1`, an epoch, CPU rendering, and open document IDs. Host launches are not verified in this headless environment. See the official [Claude Code](https://code.claude.com/docs/en/mcp), [Cursor](https://cursor.com/docs/mcp), and [Codex MCP](https://developers.openai.com/codex/mcp) documentation for host-specific setup.
+[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://voxelite.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `voxelite_capabilities_get`; expect API `voxelite.v1`. [Install agent skills](https://voxelite.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
 
 ### Native: work in the same document
 
@@ -90,7 +69,7 @@ Preserve existing settings. Reconnect the host, list tools, then call `voxelite_
 ./target/release/voxelite --session-socket /tmp/voxelite-session.sock
 ```
 
-Configure the host's executable as above, replacing its arguments with `["--connect", "/tmp/voxelite-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.
+Use the MCP executable from the install guide, replacing its arguments with `["--connect", "/tmp/voxelite-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.
 
 Watch committed calls in Session, pause new writes, and undo or edit by hand. The attached catalog excludes document create/open/save: the native editor owns file lifecycle. Save through the app. Browser sessions cannot attach yet.
 

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "voxelite": {
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+      "args": [
+        "--root",
+        "<project dir>"
+      ]
+    }
+  }
+}

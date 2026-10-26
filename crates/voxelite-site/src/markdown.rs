@@ -44,6 +44,21 @@ pub fn render(page: &DocPage, body: &str) -> Result<String, Box<dyn Error>> {
         .add_handler(
             vec!["a", "img"],
             move |handlers: &dyn Handlers, element: Element| {
+                // The self-hosted theme badges share one accessible link label.
+                // Export a plain deeplink, without decorative images.
+                if element.attrs.iter().any(|attr| {
+                    attr.name.local.as_ref() == "class"
+                        && attr
+                            .value
+                            .split_whitespace()
+                            .any(|class| class == "cursor-install")
+                }) && let Some(href) = element
+                    .attrs
+                    .iter()
+                    .find(|attr| attr.name.local.as_ref() == "href")
+                {
+                    return Some(format!("[Add to Cursor]({})", href.value).into());
+                }
                 let mut attrs = element.attrs.to_vec();
                 for attr in &mut attrs {
                     if matches!(attr.name.local.as_ref(), "href" | "src")

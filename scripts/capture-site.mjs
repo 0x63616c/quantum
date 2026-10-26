@@ -97,7 +97,7 @@ try {
             assert.equal(await menus.locator('details[open]').count(), 0);
             assert.equal(await page.locator(':focus').textContent(), 'On this page');
             await page.keyboard.press('Enter');
-            await menus.getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
+            await menus.getByRole('link', { name: 'First model through MCP', exact: true }).click();
             assert.equal(new URL(page.url()).hash, '#first-model');
             assert.equal(await page.locator(':focus').getAttribute('id'), 'first-model');
             assert.equal(await menus.locator('details[open]').count(), 0);
@@ -183,14 +183,14 @@ try {
   await page.goto(base);
   assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'The voxel editorbuilt for AI agents.');
   assert.equal(await page.getByRole('link', { name: 'Open the desktop web editor', exact: false }).count(), 1);
-  await page.getByText('Before', { exact: true }).click();
+  await page.locator('label[for="proof-before"]').click();
   assert.equal(await page.locator('.proof-before').isVisible(), true);
   assert.equal(await page.locator('.proof-after').isVisible(), false);
-  await page.getByText('After +3 voxels', { exact: true }).click();
+  await page.locator('label[for="proof-after"]').click();
   assert.equal(await page.locator('.proof-after').isVisible(), true);
   await page.goto(base + '/docs/getting-started/');
-  await page.getByText('On this page', { exact: true }).click();
-  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
+  await page.locator('.docs-mobile-nav summary').filter({ hasText: 'On this page' }).click();
+  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'First model through MCP', exact: true }).click();
   assert.equal(new URL(page.url()).hash, '#first-model');
   await page.goto(base + '/docs/getting-started/');
   await page.getByText('Browse docs', { exact: true }).click();
