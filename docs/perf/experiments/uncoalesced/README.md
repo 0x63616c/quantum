@@ -1,0 +1,1 @@
+Intermediate GPU results at f62c9bc, before suppressing redundant scene-only UI paints while a GPU image is in flight. These failed camera results are retained as causal evidence; final comparison results live at ../../camera-after.json. Same scenes, browser, backend and protocol; three runs each.
