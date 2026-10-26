@@ -1,7 +1,10 @@
 use crate::*;
 use glam::{DVec2, DVec3};
-use std::collections::HashMap;
-use voxelite_core::{Pos, Region, Snapshot};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+use voxelite_core::{Pos, Snapshot};
 
 /// Named automatic framing or a fully specified camera.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -122,10 +125,50 @@ impl Basis {
         )
     }
 }
+/// Persistent software viewport occupancy. Clones share one cache across worker
+/// threads, so camera motion never rebuilds the grid. Stateless exports use `render`.
+#[derive(Clone, Default)]
+pub struct RasterCache(Arc<Mutex<OccupancyCache>>);
+impl RasterCache {
+    /// Render using incremental occupancy. AO and raster geometry are unchanged.
+    pub fn render(
+        &self,
+        snapshot: &Snapshot,
+        options: &RenderOptions,
+    ) -> RenderResult<RenderedImage> {
+        if !options.shadows {
+            return render(snapshot, options);
+        }
+        let mut cache = self
+            .0
+            .lock()
+            .map_err(|_| RenderError::Invalid("raster occupancy cache poisoned".into()))?;
+        cache.sync(snapshot)?;
+        // This cache has no GPU consumer; do not retain upload bookkeeping.
+        cache.grid_mut().unwrap().clear_dirty();
+        render_with_occupancy(snapshot, options, cache.grid())
+    }
+    /// An owned task for a background executor; the cache survives worker changes.
+    pub fn task(
+        &self,
+        snapshot: Snapshot,
+        options: RenderOptions,
+    ) -> impl std::future::Future<Output = RenderResult<RenderedImage>> + Send + 'static {
+        let cache = self.clone();
+        async move { cache.render(&snapshot, &options) }
+    }
+}
 /// Render an immutable validated snapshot on the CPU, with no window or adapter.
 /// Lighting is evaluated in linear RGB, then supersamples resolve with premultiplied
 /// alpha and one sRGB conversion. Geometry and shadow traversal are deterministic.
 pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<RenderedImage> {
+    render_with_occupancy(snapshot, options, None)
+}
+fn render_with_occupancy(
+    snapshot: &Snapshot,
+    options: &RenderOptions,
+    occupancy: Option<&Occupancy>,
+) -> RenderResult<RenderedImage> {
     let samples = u64::from(options.width)
         * u64::from(options.height)
         * u64::from(options.supersampling).pow(2);
@@ -212,6 +255,10 @@ pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Rend
         }
     }
     let cells: HashMap<_, _> = snapshot.composite().into_iter().collect();
+    let built = (options.shadows && occupancy.is_none())
+        .then(|| Occupancy::from_snapshot(snapshot))
+        .transpose()?;
+    let occupancy = occupancy.or(built.as_ref());
     let light = (-right * 0.55 + up * 0.7 - forward * 0.65 + DVec3::Y * 0.65).normalize();
     let palette: HashMap<_, _> = snapshot
         .palette
@@ -254,7 +301,14 @@ pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Rend
                         let diffuse = normal.dot(light).max(0.0);
                         let shadow = options.shadows
                             && diffuse > 0.0
-                            && occluded(p + normal * 0.01, light, &cells, snapshot.bounds);
+                            && trace_shadow(
+                                occupancy.as_ref().unwrap(),
+                                std::array::from_fn(|a| {
+                                    f.world[a] - snapshot.bounds.min[a] as f32
+                                        + n[a] as f32 * SHADOW_EPSILON
+                                }),
+                                light.as_vec3().to_array(),
+                            );
                         let ao = if options.ambient_occlusion {
                             ambient(p, normal, &cells)
                         } else {
@@ -432,52 +486,6 @@ fn ambient(p: DVec3, n: DVec3, cells: &HashMap<Pos, u16>) -> f64 {
         }
     }
     1.0 - occupied * 0.035
-}
-fn occluded(origin: DVec3, direction: DVec3, cells: &HashMap<Pos, u16>, bounds: Region) -> bool {
-    let o = origin.to_array();
-    let d = direction.to_array();
-    let mut p = o.map(|v| v.floor() as i32);
-    let step = d.map(|v| {
-        if v > 0.0 {
-            1
-        } else if v < 0.0 {
-            -1
-        } else {
-            0
-        }
-    });
-    let delta = d.map(|v| {
-        if v == 0.0 {
-            f64::INFINITY
-        } else {
-            1.0 / v.abs()
-        }
-    });
-    let mut next: [f64; 3] = std::array::from_fn(|a| {
-        if d[a] > 0.0 {
-            (f64::from(p[a] + 1) - o[a]) / d[a]
-        } else if d[a] < 0.0 {
-            (f64::from(p[a]) - o[a]) / d[a]
-        } else {
-            f64::INFINITY
-        }
-    });
-    for _ in 0..768 {
-        if !bounds.contains(p) {
-            return false;
-        }
-        if cells.contains_key(&p) {
-            return true;
-        }
-        let t = next.into_iter().fold(f64::INFINITY, f64::min);
-        for a in 0..3 {
-            if next[a] <= t + 1e-10 {
-                p[a] += step[a];
-                next[a] += delta[a];
-            }
-        }
-    }
-    false
 }
 fn edge(f: &[Fragment], w: usize, h: usize, x: usize, y: usize) -> bool {
     let here = f[y * w + x];

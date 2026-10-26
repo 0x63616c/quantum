@@ -1,5 +1,6 @@
 //! The only unsafe boundary: CoreVideo-owned IOSurface planes imported into wgpu.
 use super::*;
+use crate::OccupancyCache;
 use objc2_core_foundation::{CFBoolean, CFDictionary, CFNumber, CFRetained, CFType};
 use objc2_core_video::*;
 use objc2_metal::{MTLDevice, MTLPixelFormat, MTLTextureType, MTLTextureUsage};
@@ -8,6 +9,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
+use voxelite_core::Region;
 
 /// A completed NV12 frame. GPUI retains the pixel buffer through its consumer fence.
 #[derive(Clone)]
@@ -54,6 +56,8 @@ impl Worker {
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     let mut renderer = None;
                     let mut mesh = ChunkMeshes::default();
+                    let mut occupancy = OccupancyCache::default();
+                    let mut presenter = None;
                     loop {
                         let request = match inbox.recv_timeout(Duration::from_millis(250)) {
                             Ok(request) => request,
@@ -74,22 +78,49 @@ impl Worker {
                         let result = objc2::rc::autoreleasepool(|_| {
                             pollster::block_on(async {
                                 let updates = match request.snapshot {
-                                    Some(snapshot) => mesh.sync_validated(&snapshot)?,
+                                    Some(snapshot) => {
+                                        occupancy.sync(&snapshot)?;
+                                        mesh.sync_validated(&snapshot)?
+                                    }
                                     None => Vec::new(),
                                 };
                                 if renderer.is_none() {
-                                    renderer = Some(Viewport::new(registry_id).await?);
+                                    let mut descriptor =
+                                        wgpu::InstanceDescriptor::new_without_display_handle();
+                                    descriptor.backends = wgpu::Backends::METAL;
+                                    let instance = wgpu::Instance::new(descriptor);
+                                    let adapter = adapter(&instance, registry_id).await?;
+                                    let viewport = Viewport::new(&adapter).await?;
+                                    presenter = Some(Surfaces::new(&viewport.device)?);
+                                    renderer = Some(viewport);
                                 }
-                                renderer
-                                    .as_mut()
-                                    .unwrap()
+                                let occupancy = occupancy
+                                    .grid_mut()
+                                    .ok_or_else(|| error("first frame needs a snapshot"))?;
+                                if occupancy.bounds() != request.bounds {
+                                    return Err(error("snapshot bounds mismatch"));
+                                }
+                                let renderer = renderer.as_mut().unwrap();
+                                let frame = renderer
                                     .render(
-                                        request.bounds,
                                         request.camera,
                                         request.size,
                                         &mesh,
                                         &updates,
+                                        occupancy,
                                         request.style,
+                                    )
+                                    .await?;
+                                presenter
+                                    .as_mut()
+                                    .unwrap()
+                                    .present(
+                                        &renderer.device,
+                                        &renderer.queue,
+                                        frame.encoder,
+                                        frame.size,
+                                        &frame.output,
+                                        &renderer.errors,
                                     )
                                     .await
                             })
@@ -103,7 +134,10 @@ impl Worker {
                             break;
                         }
                     }
-                    objc2::rc::autoreleasepool(|_| drop(renderer));
+                    objc2::rc::autoreleasepool(|_| {
+                        drop(presenter);
+                        drop(renderer);
+                    });
                 }));
                 if result.is_err() {
                     *sink.lock().unwrap() = Some("Metal worker panicked".into());
@@ -519,6 +553,19 @@ impl Surfaces {
 #[cfg(test)]
 mod tests {
     use super::*;
+    async fn present(viewport: &Viewport, surfaces: &mut Surfaces, frame: EncodedFrame) -> Frame {
+        surfaces
+            .present(
+                &viewport.device,
+                &viewport.queue,
+                frame.encoder,
+                frame.size,
+                &frame.output,
+                &viewport.errors,
+            )
+            .await
+            .unwrap()
+    }
 
     // Readback is deliberately confined to this opt-in hardware regression.
     fn first_pixel(frame: &Frame) -> [u8; 3] {
@@ -548,7 +595,12 @@ mod tests {
                 let id = objc2_metal::MTLCreateSystemDefaultDevice()
                     .unwrap()
                     .registryID();
-                let mut viewport = Viewport::new(id).await.unwrap();
+                let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+                descriptor.backends = wgpu::Backends::METAL;
+                let instance = wgpu::Instance::new(descriptor);
+                let adapter = adapter(&instance, id).await.unwrap();
+                let mut viewport = Viewport::new(&adapter).await.unwrap();
+                let mut surfaces = Surfaces::new(&viewport.device).unwrap();
                 let camera = Camera {
                     eye: [3.; 3],
                     target: [0.; 3],
@@ -556,6 +608,7 @@ mod tests {
                     projection: Projection::Orthographic { height: 4. },
                 };
                 let bounds = Region::new([0; 3], [1; 3]).unwrap();
+                let mut occupancy = Occupancy::new(bounds).unwrap();
                 let mesh = ChunkMeshes::default();
                 let style = Style {
                     background: [1., 0., 0., 1.],
@@ -565,31 +618,30 @@ mod tests {
                 };
                 let mut frames = Vec::new();
                 for _ in 0..3 {
-                    frames.push(
-                        viewport
-                            .render(bounds, camera, [17, 11], &mesh, &[], style)
-                            .await
-                            .unwrap(),
-                    );
+                    let encoded = viewport
+                        .render(camera, [17, 11], &mesh, &[], &mut occupancy, style)
+                        .await
+                        .unwrap();
+                    frames.push(present(&viewport, &mut surfaces, encoded).await);
                 }
                 assert_eq!(CVPixelBufferGetWidth(&frames[0].0), 34);
                 assert_eq!(CVPixelBufferGetHeight(&frames[0].0), 22);
                 assert_eq!(CVPixelBufferGetWidthOfPlane(&frames[0].0, 1), 17);
                 assert_eq!(CVPixelBufferGetHeightOfPlane(&frames[0].0, 1), 11);
                 assert_eq!(first_pixel(&frames[0]), [76, 84, 255]);
-                viewport.presenter.cache.flush(0);
-                assert!(viewport.presenter.acquire().unwrap().is_none());
+                surfaces.cache.flush(0);
+                assert!(surfaces.acquire().unwrap().is_none());
 
                 // A scene/consumer clone must prevent reuse even after Frame drops.
                 let lease = frames.remove(0).pixel_buffer();
                 viewport.device.poll(wgpu::PollType::Poll).unwrap();
-                viewport.presenter.cache.flush(0);
-                assert!(viewport.presenter.acquire().unwrap().is_none());
+                surfaces.cache.flush(0);
+                assert!(surfaces.acquire().unwrap().is_none());
                 drop(lease);
                 let deadline = Instant::now() + Duration::from_secs(5);
                 loop {
-                    viewport.presenter.cache.flush(0);
-                    if viewport.presenter.acquire().unwrap().is_some() {
+                    surfaces.cache.flush(0);
+                    if surfaces.acquire().unwrap().is_some() {
                         break;
                     }
                     Surfaces::yield_and_poll(&viewport.device, &viewport.errors, deadline)
@@ -598,11 +650,11 @@ mod tests {
                 }
                 let resized = viewport
                     .render(
-                        bounds,
                         camera,
                         [23, 13],
                         &mesh,
                         &[],
+                        &mut occupancy,
                         Style {
                             background: [0., 0., 1., 1.],
                             ..style
@@ -610,6 +662,7 @@ mod tests {
                     )
                     .await
                     .unwrap();
+                let resized = present(&viewport, &mut surfaces, resized).await;
                 assert_eq!(CVPixelBufferGetWidth(&resized.0), 46);
                 assert_eq!(first_pixel(&resized), [29, 255, 107]);
                 // Old-size allocations stay intact through a pool replacement.

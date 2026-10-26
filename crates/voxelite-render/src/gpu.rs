@@ -1,19 +1,21 @@
-//! Full-resolution wgpu viewport: persistent chunks, vertex AO, fitted shadows,
+//! Full-resolution wgpu viewport: persistent chunks, vertex AO, exact voxel shadows,
 //! four-sample MSAA and shader outlines. CPU rendering remains for exports.
 //!
 //! Presentation stays on the GPU: IOSurface planes consumed by GPUI on macOS.
 use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
-use crate::{Camera, ChunkMeshes, MeshVertex, Projection, RenderError, RenderResult};
+use crate::{Camera, ChunkMeshes, MeshVertex, Occupancy, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
 };
-use voxelite_core::{Pos, Region};
+use voxelite_core::Pos;
 use wgpu::util::DeviceExt;
 
+#[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
 mod mac;
+#[cfg(target_os = "macos")]
 pub use mac::{Frame, Worker};
 
 /// Appearance is composited before presentation (NV12 has no alpha channel).
@@ -65,7 +67,7 @@ struct Targets {
     output: Target,
     resolve: wgpu::BindGroup,
 }
-/// Persistent GPU resources for one editor viewport. Camera updates refit shadows;
+/// Persistent GPU resources for one editor viewport. Camera updates reuse occupancy;
 /// edits replace the buffers returned by the chunk invalidation cache.
 struct Viewport {
     device: wgpu::Device,
@@ -74,23 +76,19 @@ struct Viewport {
     buffers: BTreeMap<Pos, ChunkBuffer>,
     uniform: wgpu::Buffer,
     globals: wgpu::BindGroup,
-    shadow: Target,
-    shadow_cache: ShadowCache,
-    shadow_bind: wgpu::BindGroup,
+    occupancy: Option<wgpu::Buffer>,
+    occupancy_bind: Option<wgpu::BindGroup>,
+    occupancy_layout: wgpu::BindGroupLayout,
+    global_layout: wgpu::BindGroupLayout,
+    fallback: Option<ShadowFallback>,
     main_pipeline: wgpu::RenderPipeline,
-    shadow_pipeline: wgpu::RenderPipeline,
     resolve_pipeline: wgpu::RenderPipeline,
     resolve_layout: wgpu::BindGroupLayout,
     targets: Option<Targets>,
-    presenter: mac::Surfaces,
 }
 impl Viewport {
-    /// Initialize Metal on the viewport worker. Failure permits CPU fallback.
-    async fn new(registry_id: u64) -> RenderResult<Self> {
-        let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
-        descriptor.backends = wgpu::Backends::METAL;
-        let instance = wgpu::Instance::new(descriptor);
-        let adapter = mac::adapter(&instance, registry_id).await?;
+    /// Initialize portable GPU resources; Metal presentation lives in mac.rs.
+    async fn new(adapter: &wgpu::Adapter) -> RenderResult<Self> {
         // These formats/sample counts are required for every frame; never silently
         // lower resolution, disable AO/shadows, or drop AA during interaction.
         for format in [
@@ -126,7 +124,7 @@ impl Viewport {
             *sink.lock().unwrap() = Some(format!("device lost ({reason:?}): {message}"));
         });
         let message = format!(
-            "Voxelite GPU viewport: {:?} / {} / full resolution / 4x MSAA / {SHADOW_SIZE} fitted shadows",
+            "Voxelite GPU viewport: {:?} / {} / full resolution / 4x MSAA / exact voxel shadows",
             adapter.get_info().backend,
             adapter.get_info().name
         );
@@ -159,46 +157,18 @@ impl Viewport {
                 resource: uniform.as_entire_binding(),
             }],
         });
-        let shadow_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("shadow input"),
-            entries: &[
-                texture_entry(0, wgpu::TextureSampleType::Depth),
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
-                    count: None,
+        let occupancy_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("exact voxel occupancy"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
                 },
-            ],
-        });
-        let shadow = target(
-            &device,
-            [SHADOW_SIZE; 2],
-            wgpu::TextureFormat::Depth32Float,
-            1,
-            wgpu::TextureUsages::TEXTURE_BINDING,
-            "shadow",
-        );
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("filtered directional shadow"),
-            compare: Some(wgpu::CompareFunction::LessEqual),
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        });
-        let shadow_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &shadow_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&shadow.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
+                count: None,
+            }],
         });
         let resolve_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("resolve input"),
@@ -223,7 +193,7 @@ impl Viewport {
         let main_pipeline = pipeline(
             &device,
             &shader,
-            &[&global_layout, &shadow_layout],
+            &[&global_layout, &occupancy_layout],
             "vs_main",
             Some("fs_main"),
             std::slice::from_ref(&vertex_layout),
@@ -233,17 +203,6 @@ impl Viewport {
             ],
             Some(wgpu::TextureFormat::Depth24Plus),
             SAMPLES,
-        );
-        let shadow_pipeline = pipeline(
-            &device,
-            &shader,
-            &[&global_layout],
-            "vs_shadow",
-            None,
-            &[vertex_layout],
-            &[],
-            Some(wgpu::TextureFormat::Depth32Float),
-            1,
         );
         let resolve_pipeline = pipeline(
             &device,
@@ -256,7 +215,6 @@ impl Viewport {
             None,
             1,
         );
-        let presenter = mac::Surfaces::new(&device)?;
         if let Some(e) = scope.pop().await {
             return Err(error(e));
         }
@@ -267,15 +225,15 @@ impl Viewport {
             buffers: BTreeMap::new(),
             uniform,
             globals,
-            shadow,
-            shadow_cache: ShadowCache::default(),
-            shadow_bind,
+            occupancy: None,
+            occupancy_bind: None,
+            occupancy_layout,
+            global_layout,
+            fallback: None,
             main_pipeline,
-            shadow_pipeline,
             resolve_pipeline,
             resolve_layout,
             targets: None,
-            presenter,
         })
     }
     /// Check asynchronous validation/device-loss errors even while the view is idle.
@@ -294,15 +252,24 @@ impl Viewport {
     /// Meshing may run on a worker; camera motion supplies an empty update list.
     async fn render(
         &mut self,
-        bounds: Region,
         camera: Camera,
         size: [u32; 2],
         mesh: &ChunkMeshes,
         updates: &[Pos],
+        occupancy: &mut Occupancy,
         style: Style,
-    ) -> RenderResult<Frame> {
+    ) -> RenderResult<EncodedFrame> {
         self.check_error()?;
         camera.validate()?;
+        let bounds = occupancy.bounds();
+        if self.fallback.is_none()
+            && let Err(reason) = self.upload_occupancy(occupancy).await
+        {
+            eprintln!("Voxelite GPU: {reason}; using shadow-map fallback");
+            self.occupancy_bind = None;
+            self.occupancy = None;
+            self.fallback = Some(ShadowFallback::new(&self.device, &self.global_layout));
+        }
         // Render the scene at 2x *device* dimensions, then chroma subsample.
         // Budget the actual MSAA/resolve/pool allocations, never silently reduce
         // moving-frame quality. Oversized viewports use the software fallback.
@@ -363,15 +330,17 @@ impl Viewport {
             }
         };
         let view_projection = projection * Mat4::look_at_rh(eye, center, up);
-        let redraw_shadow = self.shadow_cache.update(
-            ShadowInput {
-                bounds,
-                view_projection,
-                light,
-            },
-            !updates.is_empty(),
-        );
-        let shadow_fit = self.shadow_cache.fit;
+        let redraw_shadow = self.fallback.as_mut().is_some_and(|fallback| {
+            fallback.cache.update(
+                ShadowInput {
+                    bounds,
+                    view_projection,
+                    light,
+                },
+                !updates.is_empty(),
+            )
+        });
+        let shadow_fit = self.fallback.as_ref().and_then(|f| f.cache.fit);
         let globals = Globals {
             view_projection: view_projection.to_cols_array_2d(),
             light_projection: shadow_fit
@@ -411,13 +380,14 @@ impl Viewport {
                 label: Some("voxel viewport"),
             });
         if redraw_shadow {
+            let fallback = self.fallback.as_ref().unwrap();
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("voxel shadow"),
+                label: Some("fallback voxel shadow"),
                 color_attachments: &[],
-                depth_stencil_attachment: Some(depth_attachment(&self.shadow.view)),
+                depth_stencil_attachment: Some(depth_attachment(&fallback.shadow.view)),
                 ..Default::default()
             });
-            pass.set_pipeline(&self.shadow_pipeline);
+            pass.set_pipeline(&fallback.shadow_pipeline);
             pass.set_bind_group(0, &self.globals, &[]);
             for chunk in self.buffers.values() {
                 pass.set_vertex_buffer(0, chunk.buffer.slice(..));
@@ -440,9 +410,13 @@ impl Viewport {
                 depth_stencil_attachment: Some(depth_attachment(&target.depth.view)),
                 ..Default::default()
             });
-            pass.set_pipeline(&self.main_pipeline);
+            let (pipeline, bind) = match &self.fallback {
+                Some(fallback) => (&fallback.main_pipeline, &fallback.shadow_bind),
+                None => (&self.main_pipeline, self.occupancy_bind.as_ref().unwrap()),
+            };
+            pass.set_pipeline(pipeline);
             pass.set_bind_group(0, &self.globals, &[]);
-            pass.set_bind_group(1, &self.shadow_bind, &[]);
+            pass.set_bind_group(1, bind, &[]);
             for chunk in self.buffers.values() {
                 pass.set_vertex_buffer(0, chunk.buffer.slice(..));
                 pass.draw(0..chunk.vertices, 0..1);
@@ -459,20 +433,180 @@ impl Viewport {
             pass.set_bind_group(1, &target.resolve, &[]);
             pass.draw(0..3, 0..1);
         }
-        {
-            self.presenter
-                .present(
-                    &self.device,
-                    &self.queue,
-                    encoder,
-                    size,
-                    &target.output.view,
-                    &self.errors,
-                )
-                .await
+        Ok(EncodedFrame {
+            encoder,
+            size,
+            output: target.output.view.clone(),
+        })
+    }
+    /// Writes only dirty brick words and their mask words. Errors are scoped so
+    /// an occupancy-specific allocation/upload failure can use the map fallback.
+    async fn upload_occupancy(&mut self, occ: &mut Occupancy) -> RenderResult<()> {
+        let bytes = std::mem::size_of_val(occ.words()) as u64;
+        let limits = self.device.limits();
+        if !occupancy_fits(bytes, &limits) {
+            return Err(error(format!(
+                "occupancy requires {bytes} bytes; buffer/binding limits are {}/{}",
+                limits.max_buffer_size, limits.max_storage_buffer_binding_size
+            )));
+        }
+        let allocate = self
+            .occupancy
+            .as_ref()
+            .is_none_or(|buffer| buffer.size() != bytes);
+        let ranges = if allocate {
+            std::iter::once(0..occ.words().len()).collect()
+        } else {
+            occ.dirty_ranges()
+        };
+        if ranges.is_empty() {
+            return Ok(());
+        }
+        let validation = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let memory = self.device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+        let internal = self.device.push_error_scope(wgpu::ErrorFilter::Internal);
+        if allocate {
+            self.occupancy_bind = None;
+            self.occupancy = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("voxel occupancy"),
+                size: bytes,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }));
+            self.occupancy_bind = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("voxel occupancy"),
+                layout: &self.occupancy_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.occupancy.as_ref().unwrap().as_entire_binding(),
+                }],
+            }));
+        }
+        for range in ranges {
+            self.queue.write_buffer(
+                self.occupancy.as_ref().unwrap(),
+                (range.start * 4) as u64,
+                bytemuck::cast_slice(&occ.words()[range]),
+            );
+        }
+        // Flush staging allocations inside these scopes, before acknowledging dirt.
+        self.queue.submit([]);
+        let internal = internal.pop().await;
+        let memory = memory.pop().await;
+        let validation = validation.pop().await;
+        if let Some(failure) = internal.or(memory).or(validation) {
+            return Err(error(failure));
+        }
+        occ.clear_dirty();
+        Ok(())
+    }
+}
+fn occupancy_fits(bytes: u64, limits: &wgpu::Limits) -> bool {
+    bytes <= limits.max_buffer_size && bytes <= limits.max_storage_buffer_binding_size
+}
+struct EncodedFrame {
+    encoder: wgpu::CommandEncoder,
+    size: [u32; 2],
+    output: wgpu::TextureView,
+}
+/// Allocated only when occupancy cannot be created/uploaded. Keeps the old
+/// fitting/filtering path isolated from normal exact-shadow frames.
+struct ShadowFallback {
+    shadow: Target,
+    cache: ShadowCache,
+    shadow_bind: wgpu::BindGroup,
+    main_pipeline: wgpu::RenderPipeline,
+    shadow_pipeline: wgpu::RenderPipeline,
+}
+impl ShadowFallback {
+    fn new(device: &wgpu::Device, global_layout: &wgpu::BindGroupLayout) -> Self {
+        let shadow_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("shadow input"),
+            entries: &[
+                texture_entry(0, wgpu::TextureSampleType::Depth),
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+                    count: None,
+                },
+            ],
+        });
+        let shadow = target(
+            device,
+            [SHADOW_SIZE; 2],
+            wgpu::TextureFormat::Depth32Float,
+            1,
+            wgpu::TextureUsages::TEXTURE_BINDING,
+            "shadow",
+        );
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("filtered directional shadow"),
+            compare: Some(wgpu::CompareFunction::LessEqual),
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+        let shadow_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &shadow_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&shadow.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("shadow-map fallback"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("gpu/shadow_map.wgsl").into()),
+        });
+        let vertex_layout = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<MeshVertex>() as u64,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &wgpu::vertex_attr_array![0=>Float32x3,1=>Float32x3,2=>Float32x4],
+        };
+        let main_pipeline = pipeline(
+            device,
+            &shader,
+            &[global_layout, &shadow_layout],
+            "vs_main",
+            Some("fs_main"),
+            std::slice::from_ref(&vertex_layout),
+            &[
+                wgpu::TextureFormat::Rgba8Unorm,
+                wgpu::TextureFormat::Rgba16Float,
+            ],
+            Some(wgpu::TextureFormat::Depth24Plus),
+            SAMPLES,
+        );
+        let shadow_pipeline = pipeline(
+            device,
+            &shader,
+            &[global_layout],
+            "vs_shadow",
+            None,
+            &[vertex_layout],
+            &[],
+            Some(wgpu::TextureFormat::Depth32Float),
+            1,
+        );
+
+        Self {
+            shadow,
+            cache: ShadowCache::default(),
+            shadow_bind,
+            main_pipeline,
+            shadow_pipeline,
         }
     }
 }
+
 fn texture_entry(binding: u32, sample_type: wgpu::TextureSampleType) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
@@ -678,4 +812,25 @@ fn pipeline(
         multiview_mask: None,
         cache: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn occupancy_respects_both_buffer_and_binding_limits() {
+        let maximum =
+            Occupancy::new(voxelite_core::Region::new([0; 3], [256; 3]).unwrap()).unwrap();
+        let bytes = std::mem::size_of_val(maximum.words()) as u64;
+        let mut limits = wgpu::Limits::default();
+        assert!(occupancy_fits(bytes, &limits));
+        limits.max_buffer_size = bytes;
+        limits.max_storage_buffer_binding_size = bytes;
+        assert!(occupancy_fits(bytes, &limits));
+        limits.max_buffer_size = bytes - 1;
+        assert!(!occupancy_fits(bytes, &limits));
+        limits.max_buffer_size = bytes;
+        limits.max_storage_buffer_binding_size = bytes - 1;
+        assert!(!occupancy_fits(bytes, &limits));
+    }
 }

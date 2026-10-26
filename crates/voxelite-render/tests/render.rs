@@ -207,3 +207,25 @@ fn nearest_surface_wins_and_hidden_back_cells_do_not_bleed() {
     assert!(center[2] > 150);
     assert_eq!(center[3], 255);
 }
+
+#[test]
+fn cached_raster_matches_stateless_through_camera_and_visibility_changes() {
+    let mut snapshot = scene();
+    let cache = RasterCache::default();
+    for direction in [PresetView::Iso, PresetView::Back, PresetView::Top] {
+        let options = RenderOptions {
+            view: View::Preset {
+                direction,
+                perspective: false,
+            },
+            ..options()
+        };
+        for visible in [true, false, true] {
+            snapshot.layers[0].visible = visible;
+            assert_eq!(
+                cache.render(&snapshot, &options).unwrap(),
+                render(&snapshot, &options).unwrap()
+            );
+        }
+    }
+}

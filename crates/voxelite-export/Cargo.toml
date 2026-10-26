@@ -30,3 +30,7 @@ workspace = true
 [[example]]
 name = "cottage"
 path = "../../examples/cottage.rs"
+
+[[example]]
+name = "shadow_bench"
+path = "../../examples/shadow_bench.rs"

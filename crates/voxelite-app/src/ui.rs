@@ -500,7 +500,7 @@ impl EditorView {
         };
         let task = cx
             .background_executor()
-            .spawn(async move { voxelite_render::render(&snapshot, &options) });
+            .spawn(self.editor.raster.task(snapshot, options));
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
