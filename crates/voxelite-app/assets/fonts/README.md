@@ -22,36 +22,8 @@ for weight, name in [(500, "Medium"), (600, "SemiBold")]:
     font.save(f"Geist-{name}.ttf")
 ```
 
-`ShortcutSymbols.ttf` is a 19-glyph subset of
-[DejaVu Sans Mono 2.37](https://dejavu-fonts.github.io/), renamed to
-`Voxelite Shortcut Symbols`. Its copyright and permission notice is in
-`LICENSE-ShortcutSymbols.txt` and retained in the font metadata. It supplies
-⌃⌥⇧⌘⎋↩⇥⌫⌦⇞⇟↖↘␣⇪↑↓←→ through an explicit fallback for Geist and Geist Mono.
-The browser cannot use system fonts for these non-emoji symbols, and Geist
-does not contain all of them. Native and web startup load the same font list.
-
-To reproduce the subset with fontTools from an original `DejaVuSansMono.ttf`:
-
-```python
-from fontTools import subset
-from fontTools.ttLib import TTFont
-
-font = TTFont("DejaVuSansMono.ttf", recalcTimestamp=False)
-options = subset.Options()
-options.name_IDs = ["*"]
-options.name_legacy = True
-options.name_languages = ["*"]
-options.recalc_timestamp = False
-subsetter = subset.Subsetter(options=options)
-subsetter.populate(text="⌃⌥⇧⌘⎋↩⇥⌫⌦⇞⇟↖↘␣⇪↑↓←→")
-subsetter.subset(font)
-names = {
-    1: "Voxelite Shortcut Symbols", 2: "Regular",
-    3: "Voxelite Shortcut Symbols 2.37", 4: "Voxelite Shortcut Symbols",
-    6: "VoxeliteShortcutSymbols", 16: "Voxelite Shortcut Symbols", 17: "Regular",
-}
-for record in font["name"].names:
-    if record.nameID in names:
-        record.string = names[record.nameID].encode(record.getEncoding())
-font.save("ShortcutSymbols.ttf")
-```
+Shortcut modifier and navigation symbols are custom SVG paths in
+`../icons/shortcut-*.svg`, rendered with GPUI's SVG facilities. Their 20-unit
+cap boxes and 2-unit strokes scale to Geist Mono's cap height; the renderer
+uses GPUI's font metrics to align them to the text baseline. No symbol font
+fallback is bundled.

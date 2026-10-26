@@ -11,13 +11,15 @@ mod history;
 use comments::Panel;
 mod palettes;
 mod share;
+mod shortcut_hint;
 use crate::{
     actions::{MENUS, Op},
-    shortcuts::{ShortcutPlatform, format_shortcut, navigation_key},
+    shortcuts::{ShortcutPlatform, navigation_key},
     theme::Theme,
 };
 use glam::DVec3;
 use gpui::{prelude::*, *};
+use shortcut_hint::{HintText, action_shortcut, shortcut};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos, Preset};
@@ -85,9 +87,9 @@ pub struct EditorView {
     command_index: usize,
     command_scroll: ScrollHandle,
     dialog_open: bool,
-    info: Option<(&'static str, SharedString)>,
+    info: Option<(&'static str, HintText)>,
     pending: Option<Op>,
-    status: String,
+    status: HintText,
     error: bool,
 }
 fn icon(name: &'static str) -> Svg {
@@ -97,7 +99,7 @@ fn icon(name: &'static str) -> Svg {
         .flex_shrink_0()
 }
 struct Hint {
-    text: SharedString,
+    text: HintText,
     theme: Theme,
 }
 impl Render for Hint {
@@ -110,7 +112,7 @@ impl Render for Hint {
             .border_color(self.theme.line())
             .bg(self.theme.background())
             .text_color(self.theme.text())
-            .font(crate::assets::font("Geist"))
+            .font(gpui::font("Geist"))
             .text_size(px(12.0))
             .shadow_lg()
             .child(self.text.clone())
@@ -121,11 +123,11 @@ fn row() -> Div {
 }
 fn mono(text: impl Into<SharedString>) -> Div {
     div()
-        .font(crate::assets::font("Geist Mono"))
+        .font(gpui::font("Geist Mono"))
         .text_size(px(12.0))
         .child(text.into())
 }
-fn hint(text: impl Into<SharedString>, theme: Theme) -> impl Fn(&mut Window, &mut App) -> AnyView {
+fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut App) -> AnyView {
     let text = text.into();
     move |_, cx| {
         cx.new(|_| Hint {
@@ -136,47 +138,58 @@ fn hint(text: impl Into<SharedString>, theme: Theme) -> impl Fn(&mut Window, &mu
     }
 }
 
-fn shortcut(binding: &str) -> String {
-    format_shortcut(binding, ShortcutPlatform::current())
-}
-
-fn keyboard_guide() -> String {
-    format!(
-        "{place} Place · {erase} Erase · {paint} Paint · {fill} Fill · {box_tool} Box · {picker} Picker\n\
-         Click to apply · {sample} to sample a color\n\
-         Right-drag to orbit · Middle-drag or {pan} to pan\n\
-         Scroll to zoom · {frame} to frame the model\n\
-         Box: click two corners · {escape} cancels\n\
-         {left}/{right}/{up}/{down} move X/Z · {page_up}/{page_down} move Y · {enter} applies\n\
-         {previous} / {next} cycle colors · {commands} searches commands\n\
-         {undo} undoes · {redo} redoes\n\
-         {open} opens · {save} saves · {save_as} saves as",
-        place = Op::Place.shortcut(),
-        erase = Op::Erase.shortcut(),
-        paint = Op::Paint.shortcut(),
-        fill = Op::Fill.shortcut(),
-        box_tool = Op::Box.shortcut(),
-        picker = Op::Picker.shortcut(),
-        sample = shortcut("alt-click"),
-        pan = shortcut("shift-rightdrag"),
-        frame = Op::Frame.shortcut(),
-        escape = shortcut("escape"),
-        left = shortcut("left"),
-        right = shortcut("right"),
-        up = shortcut("up"),
-        down = shortcut("down"),
-        page_up = shortcut("pageup"),
-        page_down = shortcut("pagedown"),
-        enter = shortcut("enter"),
-        previous = shortcut("["),
-        next = shortcut("]"),
-        commands = Op::Commands.shortcut(),
-        undo = Op::Undo.shortcut(),
-        redo = Op::Redo.shortcut(),
-        open = Op::Open.shortcut(),
-        save = Op::Save.shortcut(),
-        save_as = Op::SaveAs.shortcut(),
-    )
+fn keyboard_guide() -> HintText {
+    HintText::default()
+        .action(Op::Place)
+        .text(" Place · ")
+        .action(Op::Erase)
+        .text(" Erase · ")
+        .action(Op::Paint)
+        .text(" Paint · ")
+        .action(Op::Fill)
+        .text(" Fill · ")
+        .action(Op::Box)
+        .text(" Box · ")
+        .action(Op::Picker)
+        .text(" Picker\nClick to apply · ")
+        .key("alt-click")
+        .text(" to sample a color\nRight-drag to orbit · Middle-drag or ")
+        .key("shift-rightdrag")
+        .text(" to pan\nScroll to zoom · ")
+        .action(Op::Frame)
+        .text(" to frame the model\nBox: click two corners · ")
+        .key("escape")
+        .text(" cancels\n")
+        .key("left")
+        .text("/")
+        .key("right")
+        .text("/")
+        .key("up")
+        .text("/")
+        .key("down")
+        .text(" move X/Z · ")
+        .key("pageup")
+        .text("/")
+        .key("pagedown")
+        .text(" move Y · ")
+        .key("enter")
+        .text(" applies\n")
+        .key("[")
+        .text(" / ")
+        .key("]")
+        .text(" cycle colors · ")
+        .action(Op::Commands)
+        .text(" searches commands\n")
+        .action(Op::Undo)
+        .text(" undoes · ")
+        .action(Op::Redo)
+        .text(" redoes\n")
+        .action(Op::Open)
+        .text(" opens · ")
+        .action(Op::Save)
+        .text(" saves · ")
+        .action(Op::SaveAs)
+        .text(" saves as")
 }
 
 fn section_title(text: &'static str) -> Div {
@@ -330,18 +343,24 @@ impl EditorView {
             status: library_error
                 .clone()
                 .or(agent_error.clone())
-                .unwrap_or_else(|| "Ready".into()),
+                .unwrap_or_else(|| "Ready".into())
+                .into(),
             error: library_error.is_some() || agent_error.is_some(),
         }
     }
-    fn report<T>(&mut self, result: EditorResult<T>, message: &str, cx: &mut Context<Self>) {
+    fn report<T>(
+        &mut self,
+        result: EditorResult<T>,
+        message: impl Into<HintText>,
+        cx: &mut Context<Self>,
+    ) {
         match result {
             Ok(_) => {
                 self.status = message.into();
                 self.error = false;
             }
             Err(e) => {
-                self.status = e.to_string();
+                self.status = e.to_string().into();
                 self.error = true;
             }
         }
@@ -410,7 +429,7 @@ impl EditorView {
                         }
                         Err(e) => {
                             this.error = true;
-                            this.status = e.to_string();
+                            this.status = e.to_string().into();
                         }
                     }
                 }
@@ -454,7 +473,7 @@ impl EditorView {
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
         {
-            self.status = e.to_string();
+            self.status = e.to_string().into();
             self.error = true;
         }
         self.agent.events.clear();
@@ -599,7 +618,7 @@ impl EditorView {
                     self.status = "New project".into();
                 }
                 Err(e) => {
-                    self.status = e.to_string();
+                    self.status = e.to_string().into();
                     self.error = true;
                 }
             },
@@ -649,12 +668,10 @@ impl EditorView {
                 };
                 self.editor.box_start = None;
                 self.status = if op == Op::Box {
-                    format!(
-                        "Box: click the first corner, then the opposite corner. {} cancels.",
-                        shortcut("escape")
-                    )
+                    HintText::from("Box: click the first corner, then the opposite corner. ")
+                        .key("escape").text(" cancels.")
                 } else {
-                    format!("{} tool", self.editor.tool.name())
+                    format!("{} tool", self.editor.tool.name()).into()
                 };
                 self.error = false;
             }
@@ -693,7 +710,7 @@ impl EditorView {
             Op::Help => {
                 self.info = Some((
                     "Make yourself at home",
-                    keyboard_guide().into(),
+                    keyboard_guide(),
                 ))
             }
         }
@@ -724,7 +741,7 @@ impl EditorView {
                                 this.dialog_open = false;
                                 match result {
                                     Ok(editor) => { this.replace_editor(editor, cx); this.status = "Project opened".into(); }
-                                    Err(error) => { this.status = error.to_string(); this.error = true; }
+                                    Err(error) => { this.status = error.to_string().into(); this.error = true; }
                                 }
                                 cx.notify();
                             });
@@ -766,7 +783,7 @@ impl EditorView {
                         }
                     }
                     Err(error) => {
-                        this.status = error.to_string();
+                        this.status = error.to_string().into();
                         this.error = true;
                     }
                 }
@@ -1170,14 +1187,14 @@ impl EditorView {
         let disabled_reason = self.disabled_reason(op);
         row()
             .id(id)
+            .aria_keyshortcuts(op.shortcut())
             .tooltip(move |_, cx| {
                 cx.new(|_| Hint {
                     text: if enabled {
-                        format!("{}  {}", op.label(), op.shortcut())
+                        HintText::from(op.label()).text("  ").action(op)
                     } else {
-                        format!("{} · {}", op.label(), disabled_reason)
-                    }
-                    .into(),
+                        format!("{} · {}", op.label(), disabled_reason).into()
+                    },
                     theme,
                 })
                 .into()
@@ -1378,7 +1395,7 @@ impl EditorView {
                 .h(px(36.0))
                 .gap(px(12.0))
                 .child(
-                    mono(Op::Commands.shortcut())
+                    action_shortcut(Op::Commands)
                         .px(px(5.0))
                         .py(px(2.0))
                         .rounded(px(4.0))
@@ -1648,10 +1665,9 @@ impl EditorView {
                                 .id("pan-hint")
                                 .gap(px(4.0))
                                 .tooltip(hint(
-                                    format!(
-                                        "{} or middle-drag to pan",
-                                        shortcut("shift-rightdrag")
-                                    ),
+                                    HintText::default()
+                                        .key("shift-rightdrag")
+                                        .text(" or middle-drag to pan"),
                                     t,
                                 ))
                                 .child(icon("arrow-up").text_color(t.muted()))
@@ -1665,10 +1681,9 @@ impl EditorView {
                                 .id("zoom-hint")
                                 .gap(px(4.0))
                                 .tooltip(hint(
-                                    format!(
-                                        "Scroll to zoom · {} to frame the model",
-                                        Op::Frame.shortcut()
-                                    ),
+                                    HintText::from("Scroll to zoom · ")
+                                        .action(Op::Frame)
+                                        .text(" to frame the model"),
                                     t,
                                 ))
                                 .child(icon("mouse").text_color(t.muted()))
@@ -1762,14 +1777,13 @@ impl EditorView {
                         }
                         let r = this.editor.click(ray, e.modifiers.alt);
                         let status = if this.editor.box_start.is_some() {
-                            format!(
-                                "First corner set · click opposite corner · {} cancels",
-                                shortcut("escape")
-                            )
+                            HintText::from("First corner set · click opposite corner · ")
+                                .key("escape")
+                                .text(" cancels")
                         } else {
                             "Ready".into()
                         };
-                        this.report(r, &status, cx);
+                        this.report(r, status, cx);
                     }
                 }),
             )
@@ -2308,6 +2322,7 @@ impl EditorView {
         let enabled = self.enabled(op);
         row()
             .id(("action-row", index))
+            .aria_keyshortcuts(op.shortcut())
             .h(px(36.0))
             .px(px(10.0))
             .gap(px(10.0))
@@ -2323,12 +2338,10 @@ impl EditorView {
             .child(op.label())
             .child(div().flex_1())
             .child(
-                mono(if enabled {
-                    op.shortcut()
-                } else {
-                    self.disabled_reason(op).into()
-                })
-                .text_color(t.muted()),
+                div()
+                    .when(enabled, |d| d.child(action_shortcut(op)))
+                    .when(!enabled, |d| d.child(mono(self.disabled_reason(op))))
+                    .text_color(t.muted()),
             )
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -2436,12 +2449,15 @@ impl EditorView {
                                     .mt(px(16.0))
                                     .text_size(px(12.0))
                                     .text_color(t.muted())
-                                    .child(format!(
-                                        "{} to choose · {} to confirm · {} to cancel",
-                                        shortcut("tab"),
-                                        shortcut("enter"),
-                                        shortcut("escape")
-                                    )),
+                                    .child(
+                                        HintText::default()
+                                            .key("tab")
+                                            .text(" to choose · ")
+                                            .key("enter")
+                                            .text(" to confirm · ")
+                                            .key("escape")
+                                            .text(" to cancel"),
+                                    ),
                             ),
                     )
                     .into_any_element(),
@@ -2535,7 +2551,7 @@ impl EditorView {
                                                 format!("{}│", self.query)
                                             }),
                                     )
-                                    .child(mono(shortcut("escape")).text_color(t.muted())),
+                                    .child(shortcut("escape").text_color(t.muted())),
                             )
                             .child(
                                 div()
@@ -2564,13 +2580,17 @@ impl EditorView {
                                     .text_size(px(12.0))
                                     .border_t_1()
                                     .border_color(t.line())
-                                    .child(format!(
-                                        "{} {} to navigate   ·   {} to run   ·   {} to close",
-                                        shortcut("up"),
-                                        shortcut("down"),
-                                        shortcut("enter"),
-                                        shortcut("escape")
-                                    )),
+                                    .child(
+                                        HintText::default()
+                                            .key("up")
+                                            .text(" ")
+                                            .key("down")
+                                            .text(" to navigate   ·   ")
+                                            .key("enter")
+                                            .text(" to run   ·   ")
+                                            .key("escape")
+                                            .text(" to close"),
+                                    ),
                             ),
                     )
                     .into_any_element(),
@@ -2591,7 +2611,7 @@ impl EditorView {
                                     .h(px(40.0))
                                     .justify_between()
                                     .child(section_title("Choose palette"))
-                                    .child(mono(shortcut("escape")).text_color(t.muted())),
+                                    .child(shortcut("escape").text_color(t.muted())),
                             )
                             .child(
                                 div()
@@ -2855,7 +2875,7 @@ impl Render for EditorView {
             .flex_col()
             .bg(self.theme.background())
             .text_color(self.theme.text())
-            .font(crate::assets::font("Geist"))
+            .font(gpui::font("Geist"))
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
             .on_action(cx.listener(|this, op: &Op, window, cx| {

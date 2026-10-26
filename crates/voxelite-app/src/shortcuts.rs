@@ -132,59 +132,153 @@ fn browser_platform() -> ShortcutPlatform {
     )
 }
 
-/// Format a GPUI binding without consulting the environment. The same source
+/// A semantic shortcut token. Symbols have both a vector asset and a text
+/// equivalent, so rendering never needs to reverse-parse a formatted label.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ShortcutToken {
+    Text(String),
+    Symbol(ShortcutSymbol),
+}
+
+impl ShortcutToken {
+    pub fn text(&self) -> &str {
+        match self {
+            Self::Text(text) => text,
+            Self::Symbol(symbol) => symbol.text(),
+        }
+    }
+}
+
+macro_rules! shortcut_symbols {
+    ($($variant:ident => ($text:literal, $name:literal)),+ $(,)?) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        pub enum ShortcutSymbol { $($variant),+ }
+
+        impl ShortcutSymbol {
+            pub const ALL: &[Self] = &[$(Self::$variant),+];
+
+            pub fn text(self) -> &'static str {
+                match self { $(Self::$variant => $text),+ }
+            }
+
+            pub fn path(self) -> &'static str {
+                match self { $(Self::$variant => concat!("icons/shortcut-", $name, ".svg")),+ }
+            }
+
+            pub fn data(self) -> &'static [u8] {
+                match self {
+                    $(Self::$variant => include_bytes!(concat!("../assets/icons/shortcut-", $name, ".svg"))),+
+                }
+            }
+        }
+    };
+}
+
+shortcut_symbols! {
+    Control => ("⌃", "control"),
+    Option => ("⌥", "option"),
+    Shift => ("⇧", "shift"),
+    Command => ("⌘", "command"),
+    Escape => ("⎋", "escape"),
+    Return => ("↩", "return"),
+    Tab => ("⇥", "tab"),
+    Backspace => ("⌫", "backspace"),
+    Delete => ("⌦", "delete"),
+    PageUp => ("⇞", "page-up"),
+    PageDown => ("⇟", "page-down"),
+    Home => ("↖", "home"),
+    End => ("↘", "end"),
+    Space => ("␣", "space"),
+    CapsLock => ("⇪", "caps-lock"),
+    Up => ("↑", "up"),
+    Down => ("↓", "down"),
+    Left => ("←", "left"),
+    Right => ("→", "right"),
+}
+
+/// Tokenize a GPUI binding without consulting the environment. The source
 /// binding supplies both the actual modifiers and every user-facing hint.
-pub fn format_shortcut(binding: &str, platform: ShortcutPlatform) -> String {
+pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<ShortcutToken> {
+    use ShortcutSymbol as S;
+    use ShortcutToken::{Symbol, Text};
+
     let stroke = Keystroke::parse(&platform.binding_key(binding)).expect("valid shortcut");
     let modifiers = stroke.modifiers;
     let apple = platform == ShortcutPlatform::Apple;
     let mut parts = Vec::new();
     for (pressed, symbol, name) in [
-        (modifiers.control, "⌃", "Ctrl"),
-        (modifiers.alt, "⌥", "Alt"),
-        (modifiers.shift, "⇧", "Shift"),
-        (modifiers.platform, "⌘", "Super"),
-        (modifiers.function, "fn", "Fn"),
+        (modifiers.control, S::Control, "Ctrl"),
+        (modifiers.alt, S::Option, "Alt"),
+        (modifiers.shift, S::Shift, "Shift"),
+        (modifiers.platform, S::Command, "Super"),
     ] {
         if pressed {
-            parts.push(if apple { symbol } else { name });
+            parts.push(if apple {
+                Symbol(symbol)
+            } else {
+                Text(name.into())
+            });
         }
     }
+    if modifiers.function {
+        parts.push(Text(if apple { "fn" } else { "Fn" }.into()));
+    }
     let key = match stroke.key.as_str() {
-        "escape" if apple => "⎋".into(),
-        "enter" if apple => "↩".into(),
-        "tab" if apple => "⇥".into(),
+        "escape" if apple => Symbol(S::Escape),
+        "enter" if apple => Symbol(S::Return),
+        "tab" if apple => Symbol(S::Tab),
         // GPUI calls the Mac's Delete key `backspace`; `delete` is forward delete.
-        "backspace" if apple => "⌫".into(),
-        "delete" if apple => "⌦".into(),
-        "pageup" if apple => "⇞".into(),
-        "pagedown" if apple => "⇟".into(),
-        "home" if apple => "↖".into(),
-        "end" if apple => "↘".into(),
-        "space" if apple => "␣".into(),
-        "capslock" if apple => "⇪".into(),
-        "escape" => "Esc".into(),
-        "enter" => "Enter".into(),
-        "tab" => "Tab".into(),
-        "backspace" => "Backspace".into(),
-        "delete" => "Delete".into(),
-        "home" => "Home".into(),
-        "end" => "End".into(),
-        "space" => "Space".into(),
-        "insert" => "Insert".into(),
-        "capslock" => "Caps Lock".into(),
-        "up" => "↑".into(),
-        "down" => "↓".into(),
-        "left" => "←".into(),
-        "right" => "→".into(),
-        "pageup" => "Page Up".into(),
-        "pagedown" => "Page Down".into(),
-        "click" => "Click".into(),
-        "rightdrag" => "Right-drag".into(),
-        key => key.to_uppercase(),
+        "backspace" if apple => Symbol(S::Backspace),
+        "delete" if apple => Symbol(S::Delete),
+        "pageup" if apple => Symbol(S::PageUp),
+        "pagedown" if apple => Symbol(S::PageDown),
+        "home" if apple => Symbol(S::Home),
+        "end" if apple => Symbol(S::End),
+        "space" if apple => Symbol(S::Space),
+        "capslock" if apple => Symbol(S::CapsLock),
+        "up" => Symbol(S::Up),
+        "down" => Symbol(S::Down),
+        "left" => Symbol(S::Left),
+        "right" => Symbol(S::Right),
+        key => Text(match key {
+            "escape" => "Esc".into(),
+            "enter" => "Enter".into(),
+            "tab" => "Tab".into(),
+            "backspace" => "Backspace".into(),
+            "delete" => "Delete".into(),
+            "home" => "Home".into(),
+            "end" => "End".into(),
+            "space" => "Space".into(),
+            "insert" => "Insert".into(),
+            "capslock" => "Caps Lock".into(),
+            "pageup" => "Page Up".into(),
+            "pagedown" => "Page Down".into(),
+            "click" => "Click".into(),
+            "rightdrag" => "Right-drag".into(),
+            key => key.to_uppercase(),
+        }),
     };
-    parts.push(&key);
-    parts.join(if apple { "" } else { "+" })
+    parts.push(key);
+    if apple {
+        parts
+    } else {
+        let mut separated = Vec::new();
+        for part in parts {
+            if !separated.is_empty() {
+                separated.push(Text("+".into()));
+            }
+            separated.push(part);
+        }
+        separated
+    }
+}
+
+/// Plain string API for tests, accessibility and nonvisual clients.
+pub fn format_shortcut(binding: &str, platform: ShortcutPlatform) -> String {
+    shortcut_tokens(binding, platform)
+        .iter()
+        .map(ShortcutToken::text)
+        .collect()
 }
 
 #[cfg(test)]
@@ -246,22 +340,39 @@ mod tests {
     }
 
     #[test]
-    fn bundled_fallback_renders_every_apple_shortcut_symbol() {
-        let fonts = crate::assets::fonts();
-        let family = crate::assets::font("Geist").fallbacks.unwrap();
-        let fallback = fonts
-            .iter()
-            .find_map(|bytes| {
-                let face = ttf_parser::Face::parse(bytes, 0).unwrap();
-                face.names()
-                    .into_iter()
-                    .any(|name| {
-                        name.name_id == ttf_parser::name_id::FAMILY
-                            && name.to_string().as_deref() == Some(&family.fallback_list()[0])
-                    })
-                    .then_some(face)
-            })
-            .expect("registered shortcut fallback family");
+    fn tokens_preserve_symbols_and_text_without_parsing_labels() {
+        use ShortcutSymbol::*;
+        use ShortcutToken::{Symbol, Text};
+        assert_eq!(
+            shortcut_tokens("ctrl-alt-shift-cmd-s", ShortcutPlatform::Apple),
+            vec![
+                Symbol(Control),
+                Symbol(Option),
+                Symbol(Shift),
+                Symbol(Command),
+                Text("S".into())
+            ]
+        );
+        assert_eq!(
+            shortcut_tokens("secondary-left", ShortcutPlatform::WindowsLinux),
+            vec![Text("Ctrl".into()), Text("+".into()), Symbol(Left)]
+        );
+        assert_eq!(
+            shortcut_tokens("fn-secondary-+", ShortcutPlatform::Apple),
+            vec![Symbol(Command), Text("fn".into()), Text("+".into())]
+        );
+    }
+
+    #[test]
+    fn every_shortcut_symbol_has_a_bundled_vector() {
+        use gpui::AssetSource;
+        for symbol in ShortcutSymbol::ALL {
+            let data = crate::assets::Assets.load(symbol.path()).unwrap().unwrap();
+            assert_eq!(data.as_ref(), symbol.data());
+            let svg = std::str::from_utf8(&data).unwrap();
+            assert!(svg.contains("<path"), "{symbol:?}");
+            assert!(!svg.contains("<text"), "{symbol:?}");
+        }
         for key in [
             "escape",
             "enter",
@@ -279,16 +390,13 @@ mod tests {
             "left",
             "right",
         ] {
-            let hint = format_shortcut(
-                &format!("ctrl-alt-shift-cmd-{key}"),
-                ShortcutPlatform::Apple,
+            assert!(
+                matches!(
+                    shortcut_tokens(key, ShortcutPlatform::Apple).as_slice(),
+                    [ShortcutToken::Symbol(_)]
+                ),
+                "{key}"
             );
-            for symbol in hint.chars() {
-                assert!(
-                    fallback.glyph_index(symbol).is_some_and(|id| id.0 != 0),
-                    "missing {symbol}"
-                );
-            }
         }
     }
 

@@ -36,9 +36,6 @@ image = { version = "0.25", default-features = false, optional = true }
 [lints]
 workspace = true
 
-[dev-dependencies]
-ttf-parser = "0.25"
-
 [dependencies.env_logger]
 version = "0.11"
 optional = true

@@ -9,17 +9,7 @@ pub fn fonts() -> Vec<Cow<'static, [u8]>> {
         Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
         Cow::Borrowed(include_bytes!("../assets/fonts/Geist-SemiBold.ttf")),
         Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf")),
-        Cow::Borrowed(include_bytes!("../assets/fonts/ShortcutSymbols.ttf")),
     ]
-}
-
-pub fn font(family: &'static str) -> gpui::Font {
-    gpui::Font {
-        fallbacks: Some(gpui::FontFallbacks::from_fonts(vec![
-            "Voxelite Shortcut Symbols".into(),
-        ])),
-        ..gpui::font(family)
-    }
 }
 
 pub struct Assets;
@@ -160,7 +150,10 @@ impl AssetSource for Assets {
             "icons/zoom-in.svg" => {
                 Some(Cow::Borrowed(include_bytes!("../assets/icons/zoom-in.svg")))
             }
-            _ => None,
+            _ => crate::shortcuts::ShortcutSymbol::ALL
+                .iter()
+                .find(|symbol| symbol.path() == path)
+                .map(|symbol| Cow::Borrowed(symbol.data())),
         })
     }
     fn list(&self, _path: &str) -> anyhow::Result<Vec<SharedString>> {
