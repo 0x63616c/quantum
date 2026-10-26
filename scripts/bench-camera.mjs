@@ -14,8 +14,7 @@ const duration = Number(arg('--duration', '6000'));
 const backend = arg('--backend', 'webgl');
 const extraQuery = arg('--query', '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const quantile = (xs, q) => xs.length ? [...xs].sort((a,b) => a-b)[Math.min(xs.length-1, Math.floor(q*(xs.length-1)))] : null;
-const stats = xs => ({ count: xs.length, p50: quantile(xs,.5), p95: quantile(xs,.95), p99: quantile(xs,.99), mean: xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : null });
+import { summarize, median, markdown } from './lib/camera-metrics.mjs';
 const original = JSON.parse(await readFile('examples/autumn-workshop.voxl', 'utf8'));
 const scenes = [structuredClone(original), structuredClone(original)];
 scenes[1].document.name = 'Camera benchmark gallery';
@@ -46,8 +45,8 @@ for (let si=0;si<scenes.length;si++) {
   console.log(`${result.name} run ${run+1}/${runs}`);
   const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
   const errors=[]; const diagnostics=[];
-  page.on('pageerror',e=>errors.push(String(e)));
-  page.on('console',m=>{if (/successfully with|Voxelite GPU|error/i.test(m.text())) diagnostics.push(m.text().split(', limits=')[0]);});
+  page.on('pageerror',e=>{errors.push(String(e));console.error(String(e));});
+  page.on('console',m=>{if (/successfully with|Voxelite GPU|error/i.test(m.text())) {const text=m.text().split(', limits=')[0];diagnostics.push(text);console.log(text);}});
   await page.addInitScript(() => {
    const p=globalThis.__voxelitePerf={events:[],rafs:[],inputs:[],presented:[],phase:'load',lastFrame:-1,
     event(name,a,b){const t=performance.now();this.events.push({name,a,b,t,phase:this.phase});if(name==='paint'&&a!==this.lastFrame){this.lastFrame=a;const phase=this.phase;requestAnimationFrame(()=>this.presented.push({id:a,revision:b,t:performance.now(),paint:t,phase}));}}};
@@ -55,6 +54,7 @@ for (let si=0;si<scenes.length;si++) {
    const tick=t=>{p.rafs.push({t,phase:p.phase});requestAnimationFrame(tick);};requestAnimationFrame(tick);
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/?theme=dark&backend=${backend}${extraQuery ? '&'+extraQuery : ''}`);
+  if(process.env.BENCH_DEBUG) setTimeout(async()=>{try{console.log(await page.evaluate(()=>__voxelitePerf.events.slice(-20)));await page.screenshot({path:'/tmp/voxelite-debug.png'});}catch{}},10000).unref();
   const idle=async()=>{await page.waitForFunction(()=>{const p=__voxelitePerf;const a=p.events.filter(e=>e.name==='render_start').at(-1);const b=p.events.filter(e=>e.name==='image_ready').at(-1);return b&&(!a||b.t>=a.t)&&p.presented.length&&performance.now()-b.t>400;},{},{timeout:120000});};
   await idle();
   if(si){const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Control+o');await(await chooser).setFiles({name:'gallery.voxl',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(scene))});await page.waitForFunction(()=>document.title.includes('Camera benchmark gallery'),{},{timeout:120000});await idle();}
@@ -89,36 +89,17 @@ for (let si=0;si<scenes.length;si++) {
   await phase('done');
   const raw=await page.evaluate(()=>({events:__voxelitePerf.events,inputs:__voxelitePerf.inputs,presented:__voxelitePerf.presented,rafs:__voxelitePerf.rafs}));
   await writeFile(output.replace('.json',`-${result.name}-${run+1}.trace.json`),JSON.stringify(raw));
-  const item={camera:{},placement:{},errors,diagnostics};
-  for(const kind of ['orbit','pan','zoom','preview']){
-   const frames=raw.presented.filter(f=>f.phase===kind),raf=raw.rafs.filter(f=>f.phase===kind);
-   const intervals=frames.slice(1).map((f,i)=>f.t-frames[i].t);
-   const inputs=raw.inputs.filter(e=>e.phase===kind&&(e.type==='pointermove'||e.type==='wheel'));
-   const latency=inputs.map(e=>raw.presented.find(f=>f.t>=e.t&&f.paint>=e.t)?.t-e.t).filter(Number.isFinite);
-   const cpu={};for(const e of raw.events.filter(e=>e.phase===kind&&e.b===-1))(cpu[e.name]??=[]).push(e.a);
-   const start=raw.events.find(e=>e.name==='phase'&&e.phase===kind).t;
-   const end=raw.events.find(e=>e.name==='phase'&&e.t>start).t;
-   item.camera[kind]={measuredWallMs:end-start,backlogDrainMs:Math.max(0,end-start-duration),avgFps:frames.length/((end-start)/1000),frameMs:stats(intervals),rafFps:raf.length/((end-start)/1000),inputToNextFrameMs:stats(latency),dispatchDelayMs:stats(inputs.map(e=>e.t-e.timestamp)),inputEvents:inputs.length,cpuMs:Object.fromEntries(Object.entries(cpu).map(([k,v])=>[k,{...stats(v),perChangedFrame:v.reduce((a,b)=>a+b,0)/Math.max(1,frames.length)}])),jsWasmBoundaryMs:null};
-  }
-  for(const kind of ['single','series']){
-   const inputs=raw.inputs.filter(e=>e.phase===kind&&e.type==='pointerdown'&&e.button===0);
-   const edits=raw.events.filter(e=>e.phase===kind&&e.name==='edit_result'&&e.b===1);
-   const latencies=edits.map(e=>{const click=inputs.findLast(i=>i.t<=e.t);const frame=raw.presented.find(f=>f.paint>=e.t&&f.revision>=e.a);return frame&&click?frame.t-click.t:null;}).filter(x=>x!==null);
-   item.placement[kind]={attempted:inputs.length,accepted:edits.length,visible:latencies.length,clickToVisibleMs:stats(latencies),editCpuMs:stats(raw.events.filter(e=>e.phase===kind&&e.name==='edit'&&e.b===-1).map(e=>e.a)),totalToLastVisibleMs:edits.length?raw.presented.find(f=>f.revision>=edits.at(-1).a&&f.paint>=edits.at(-1).t)?.t-inputs[0]?.t:null,...(kind==='series'?{wallIncludingIdleWaitMs:seriesWallMs}:{})};
-  }
-  await writeFile(output.replace('.json',`-${result.name}-${run+1}.trace.json`),JSON.stringify(raw));
+  const item={...summarize(raw,duration),errors,diagnostics};
+  item.placement.series.wallIncludingIdleWaitMs=seriesWallMs;
   result.runs.push(item);
   await writeFile(output,JSON.stringify(report,null,2)+'\n');
   if(errors.length) throw Error(errors.join('\n'));
   await page.close();
  }
  // Coordinate-wise median of all numeric measurements; retain raw runs above.
- const median=values=>{if(values.every(v=>typeof v==='number'))return quantile(values,.5);if(values[0]&&typeof values[0]==='object'&&!Array.isArray(values[0]))return Object.fromEntries(Object.keys(values[0]).map(k=>[k,median(values.map(v=>v[k]))]));return values[0];};
  result.median=median(result.runs.map(({camera,placement})=>({camera,placement})));
 }
-const rows=['| Scene | Action | FPS | Frame p50 / p95 / p99 ms | Input or click p50 / p95 ms | Accepted |','|---|---|---:|---|---|---:|'];
-const f=n=>typeof n==='number'?n.toFixed(1):'n/a';
-for(const s of report.scenes){for(const [k,v] of Object.entries(s.median.camera))rows.push(`| ${s.name} | ${k} | ${f(v.avgFps)} | ${f(v.frameMs.p50)} / ${f(v.frameMs.p95)} / ${f(v.frameMs.p99)} | ${f(v.inputToNextFrameMs.p50)} / ${f(v.inputToNextFrameMs.p95)} | |`);for(const [k,v] of Object.entries(s.median.placement))rows.push(`| ${s.name} | ${k} placement | | | ${f(v.clickToVisibleMs.p50)} / ${f(v.clickToVisibleMs.p95)} | ${v.accepted}/${v.attempted} |`);}
+const table=markdown(report);
 await writeFile(output,JSON.stringify(report,null,2)+'\n');
-await writeFile(output.replace('.json','.md'),rows.join('\n')+'\n');console.log(rows.join('\n'));
+await writeFile(output.replace('.json','.md'),table);console.log(table);
 }finally{await browser.close();server.close();}

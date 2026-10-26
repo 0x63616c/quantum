@@ -32,7 +32,8 @@
     "frameMs": "Intervals between changed viewport images; excludes overlay-only/UI paints. RAF FPS is separately reported.",
     "cpu": "Inclusive wasm spans; nested intervals must not be added. JS/wasm boundary overhead is not separately measurable and is reported null.",
     "cameraLatency": "Browser capture-phase event to first changed viewport paint after it (next RAF); intermediate coalesced events may not have their own frame.",
-    "placementLatency": "Capture-phase left mousedown to first painted revision >= successful edit revision (next RAF). Rejections/no-ops separately counted."
+    "placementLatency": "Capture-phase left mousedown to first painted revision >= successful edit revision (next RAF). Rejections/no-ops separately counted.",
+    "analysis": "scripts/lib/camera-metrics.mjs; preview reports overlay latency separately, with no latency attributed to unrelated future 3D images. GPU wait/readback is asynchronous wall time, excluded from CPU spans."
   },
   "scenes": [
     {
@@ -55,6 +56,14 @@
                 "mean": 498.9799999992053
               },
               "rafFps": 4.976082699274564,
+              "overlayPaintFps": 4.815563902523771,
+              "inputToOverlayFrameMs": {
+                "count": 39,
+                "p50": 295.80000001192093,
+                "p95": 799.7000000178814,
+                "p99": 871.6999999999998,
+                "mean": 314.61538462195637
+              },
               "inputToNextFrameMs": {
                 "count": 39,
                 "p50": 426.40000000596046,
@@ -70,6 +79,7 @@
                 "mean": 9.52051282998843
               },
               "inputEvents": 39,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 31,
@@ -144,6 +154,14 @@
                   "perChangedFrame": 0.2750000096857548
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -158,6 +176,14 @@
                 "mean": 562.34166666617
               },
               "rafFps": 1.9869112223258891,
+              "overlayPaintFps": 1.862729270930521,
+              "inputToOverlayFrameMs": {
+                "count": 40,
+                "p50": 669.8000000178799,
+                "p95": 1422.9000000178821,
+                "p99": 1424.1000000119202,
+                "mean": 729.7975000077486
+              },
               "inputToNextFrameMs": {
                 "count": 40,
                 "p50": 854.5,
@@ -173,6 +199,7 @@
                 "mean": 56.33500000908971
               },
               "inputEvents": 40,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 16,
@@ -247,6 +274,14 @@
                   "perChangedFrame": 0.8923076872642224
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -261,6 +296,14 @@
                 "mean": 458.6396226416219
               },
               "rafFps": 3.352130092445043,
+              "overlayPaintFps": 3.2776383126129307,
+              "inputToOverlayFrameMs": {
+                "count": 90,
+                "p50": 17.50000000595901,
+                "p95": 250.6000000059612,
+                "p99": 353.90000000596046,
+                "mean": 94.49666667229604
+              },
               "inputToNextFrameMs": {
                 "count": 90,
                 "p50": 190.09999999403954,
@@ -276,6 +319,7 @@
                 "mean": 13376.72444445557
               },
               "inputEvents": 90,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 81,
@@ -350,6 +394,14 @@
                   "perChangedFrame": 0.4481481495830748
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -364,12 +416,20 @@
                 "mean": null
               },
               "rafFps": 6.6803614075654485,
+              "overlayPaintFps": 5.511298161241495,
+              "inputToOverlayFrameMs": {
+                "count": 250,
+                "p50": 278.89999999404245,
+                "p95": 413.000000011918,
+                "p99": 513.000000011918,
+                "mean": 273.374800007604
+              },
               "inputToNextFrameMs": {
-                "count": 253,
-                "p50": 4365.4000000059605,
-                "p95": 6932.100000023842,
-                "p99": 7186.100000023842,
-                "mean": 4320.0739130570955
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 253,
@@ -379,6 +439,7 @@
                 "mean": 10.735968388705386
               },
               "inputEvents": 253,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 286,
@@ -405,6 +466,14 @@
                   "perChangedFrame": 0.5000000298023224
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -420,12 +489,40 @@
                 "p99": 1279.699999988079,
                 "mean": 1247.5700000047684
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1231.9000000059605,
+                "p95": 1280.300000011921,
+                "p99": 1280.300000011921,
+                "mean": 1248.2500000059604
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 0.6800000011920929
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 21.19999998807907,
                 "p95": 26.30000001192093,
                 "p99": 26.30000001192093,
                 "mean": 22.830000001192094
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 15.900000005960464,
+                "p95": 17.30000001192093,
+                "p99": 17.30000001192093,
+                "mean": 16.460000002384184
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 16088.600000023842
             },
@@ -440,12 +537,40 @@
                 "p99": 1436.7000000178814,
                 "mean": 1448.9500000029802
               },
+              "eventTimestampToVisibleMs": {
+                "count": 2,
+                "p50": 1445.1000000238419,
+                "p95": 1445.1000000238419,
+                "p99": 1445.1000000238419,
+                "mean": 1453.7000000178814
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 701.9000000059605,
+                "p95": 1334.7000000178814,
+                "p99": 1367.2000000178814,
+                "mean": 708.6080000120402
+              },
               "editCpuMs": {
                 "count": 2,
                 "p50": 22.099999994039536,
                 "p95": 22.099999994039536,
                 "p99": 22.099999994039536,
                 "mean": 24.69999998807907
+              },
+              "meshCpuMs": {
+                "count": 2,
+                "p50": 15.799999982118607,
+                "p95": 15.799999982118607,
+                "p99": 15.799999982118607,
+                "mean": 19.44999998807907
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 2911,
               "wallIncludingIdleWaitMs": 3314.4959729999973
@@ -470,6 +595,14 @@
                 "mean": 216.39259259237184
               },
               "rafFps": 7.470243529968642,
+              "overlayPaintFps": 7.138232706414481,
+              "inputToOverlayFrameMs": {
+                "count": 49,
+                "p50": 138.89999999403972,
+                "p95": 371.9999999940392,
+                "p99": 450.90000000596046,
+                "mean": 150.56734694291137
+              },
               "inputToNextFrameMs": {
                 "count": 50,
                 "p50": 179.40000000596046,
@@ -485,6 +618,7 @@
                 "mean": 9.266000012755393
               },
               "inputEvents": 50,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 44,
@@ -559,6 +693,14 @@
                   "perChangedFrame": 0.21428571854318892
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -573,6 +715,14 @@
                 "mean": 274.81052631610316
               },
               "rafFps": 3.9467192895905274,
+              "overlayPaintFps": 3.9467192895905274,
+              "inputToOverlayFrameMs": {
+                "count": 52,
+                "p50": 278.4000000119213,
+                "p95": 587.6000000119202,
+                "p99": 670.7000000178814,
+                "mean": 307.32692308471735
+              },
               "inputToNextFrameMs": {
                 "count": 52,
                 "p50": 343,
@@ -588,6 +738,7 @@
                 "mean": 12.12115385497992
               },
               "inputEvents": 52,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 25,
@@ -662,6 +813,14 @@
                   "perChangedFrame": 0.40499998927116393
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -676,6 +835,14 @@
                 "mean": 422.3500000004257
               },
               "rafFps": 3.887943612276837,
+              "overlayPaintFps": 3.8043319216902387,
+              "inputToOverlayFrameMs": {
+                "count": 95,
+                "p50": 15.399999994042446,
+                "p95": 249.2000000178814,
+                "p99": 350.30000001787994,
+                "mean": 94.47263158622499
+              },
               "inputToNextFrameMs": {
                 "count": 95,
                 "p50": 185.90000000596046,
@@ -691,6 +858,7 @@
                 "mean": 10338.974736851455
               },
               "inputEvents": 95,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 82,
@@ -765,6 +933,14 @@
                   "perChangedFrame": 0.43684210955050956
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -779,12 +955,20 @@
                 "mean": null
               },
               "rafFps": 6.154244809356602,
-              "inputToNextFrameMs": {
+              "overlayPaintFps": 5.506429566266433,
+              "inputToOverlayFrameMs": {
                 "count": 241,
-                "p50": 4557.700000017881,
-                "p95": 7201.800000011921,
-                "p99": 7417.600000023842,
-                "mean": 4546.2219917146
+                "p50": 291.0000000178843,
+                "p95": 455.10000001192384,
+                "p99": 540.1999999940454,
+                "mean": 295.6464730364418
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 241,
@@ -794,6 +978,7 @@
                 "mean": 9.987551876865481
               },
               "inputEvents": 241,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 275,
@@ -820,6 +1005,14 @@
                   "perChangedFrame": 0.4000000059604645
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -835,12 +1028,40 @@
                 "p99": 1265.800000011921,
                 "mean": 1243.5900000035763
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1234.199999988079,
+                "p95": 1266.4000000059605,
+                "p99": 1266.4000000059605,
+                "mean": 1244.2499999970198
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.659999993443489
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 19.69999998807907,
                 "p95": 25.5,
                 "p99": 25.5,
                 "mean": 21.570000001788138
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 15.900000005960464,
+                "p95": 16.5,
+                "p99": 16.5,
+                "mean": 16.309999999403953
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 16034.09999999404
             },
@@ -855,12 +1076,40 @@
                 "p99": 1288.199999988079,
                 "mean": 1328.2499999850988
               },
+              "eventTimestampToVisibleMs": {
+                "count": 2,
+                "p50": 1292.9000000059605,
+                "p95": 1292.9000000059605,
+                "p99": 1292.9000000059605,
+                "mean": 1331.4500000029802
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 711.5,
+                "p95": 1190.9000000059605,
+                "p99": 1239.800000011921,
+                "mean": 674.5960000091791
+              },
               "editCpuMs": {
                 "count": 2,
                 "p50": 18.900000005960464,
                 "p95": 18.900000005960464,
                 "p99": 18.900000005960464,
                 "mean": 23.600000008940697
+              },
+              "meshCpuMs": {
+                "count": 2,
+                "p50": 16.400000005960464,
+                "p95": 16.400000005960464,
+                "p99": 16.400000005960464,
+                "mean": 18.099999994039536
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 2627.199999988079,
               "wallIncludingIdleWaitMs": 3021.138988999999
@@ -885,6 +1134,14 @@
                 "mean": 205.5250000006386
               },
               "rafFps": 7.267681939788914,
+              "overlayPaintFps": 7.102507350248257,
+              "inputToOverlayFrameMs": {
+                "count": 47,
+                "p50": 181.00000000596083,
+                "p95": 324.99999998807925,
+                "p99": 417.10000000000036,
+                "mean": 162.00425531496393
+              },
               "inputToNextFrameMs": {
                 "count": 48,
                 "p50": 240.19999998807907,
@@ -900,6 +1157,7 @@
                 "mean": 9.435416676104069
               },
               "inputEvents": 48,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 44,
@@ -974,6 +1232,14 @@
                   "perChangedFrame": 0.15862069150497174
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -988,6 +1254,14 @@
                 "mean": 264.66153846107994
               },
               "rafFps": 5.141217639362039,
+              "overlayPaintFps": 5.141217639362039,
+              "inputToOverlayFrameMs": {
+                "count": 58,
+                "p50": 217.5999999880787,
+                "p95": 416.29999999404026,
+                "p99": 529.0000000059608,
+                "mean": 241.27241378765686
+              },
               "inputToNextFrameMs": {
                 "count": 58,
                 "p50": 252.30000001192093,
@@ -1003,6 +1277,7 @@
                 "mean": 11.129310355104248
               },
               "inputEvents": 58,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 32,
@@ -1077,6 +1352,14 @@
                   "perChangedFrame": 0.2148148152563307
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -1091,6 +1374,14 @@
                 "mean": 357.5259259260363
               },
               "rafFps": 4.750423962564363,
+              "overlayPaintFps": 4.495024824792086,
+              "inputToOverlayFrameMs": {
+                "count": 94,
+                "p50": 17.5,
+                "p95": 232.000000005959,
+                "p99": 380.89999998807616,
+                "mean": 84.47340424999291
+              },
               "inputToNextFrameMs": {
                 "count": 94,
                 "p50": 154.09999999403954,
@@ -1106,6 +1397,7 @@
                 "mean": 7414.02127660589
               },
               "inputEvents": 94,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 77,
@@ -1180,6 +1472,14 @@
                   "perChangedFrame": 0.3836363602768291
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -1194,12 +1494,20 @@
                 "mean": null
               },
               "rafFps": 5.84394984221917,
+              "overlayPaintFps": 5.6769798467271935,
+              "inputToOverlayFrameMs": {
+                "count": 234,
+                "p50": 272.40000000000146,
+                "p95": 439.000000005959,
+                "p99": 538.9999999821157,
+                "mean": 276.0354700806559
+              },
               "inputToNextFrameMs": {
-                "count": 239,
-                "p50": 4273,
-                "p95": 7039.300000011921,
-                "p99": 7233.5,
-                "mean": 4296.4648535575825
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 239,
@@ -1209,6 +1517,7 @@
                 "mean": 9.430962353321299
               },
               "inputEvents": 239,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 273,
@@ -1235,6 +1544,14 @@
                   "perChangedFrame": 0.30000004172325134
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -1250,12 +1567,40 @@
                 "p99": 1368.0999999940395,
                 "mean": 1350.1200000047684
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1284.300000011921,
+                "p95": 1369.699999988079,
+                "p99": 1369.699999988079,
+                "mean": 1350.8100000023842
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.6899999976158142
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 19.600000023841858,
                 "p95": 28.099999994039536,
                 "p99": 28.099999994039536,
                 "mean": 22.259999999403952
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 16.299999982118607,
+                "p95": 18.69999998807907,
+                "p99": 18.69999998807907,
+                "mean": 16.959999996423722
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 17091.90000000596
             },
@@ -1270,12 +1615,40 @@
                 "p99": 1260.7000000178814,
                 "mean": 1260.75
               },
+              "eventTimestampToVisibleMs": {
+                "count": 2,
+                "p50": 1262.6000000238419,
+                "p95": 1262.6000000238419,
+                "p99": 1262.6000000238419,
+                "mean": 1263.5000000149012
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 738.7000000178814,
+                "p95": 1168.4000000059605,
+                "p99": 1203.9000000059605,
+                "mean": 679.0040000116825
+              },
               "editCpuMs": {
                 "count": 2,
                 "p50": 19.099999994039536,
                 "p95": 19.099999994039536,
                 "p99": 19.099999994039536,
                 "mean": 19.399999991059303
+              },
+              "meshCpuMs": {
+                "count": 2,
+                "p50": 15.099999994039536,
+                "p95": 15.099999994039536,
+                "p99": 15.099999994039536,
+                "mean": 16.049999997019768
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 2527.5,
               "wallIncludingIdleWaitMs": 2931.249681999965
@@ -1301,6 +1674,14 @@
               "mean": 216.39259259237184
             },
             "rafFps": 7.267681939788914,
+            "overlayPaintFps": 7.102507350248257,
+            "inputToOverlayFrameMs": {
+              "count": 47,
+              "p50": 181.00000000596083,
+              "p95": 371.9999999940392,
+              "p99": 450.90000000596046,
+              "mean": 162.00425531496393
+            },
             "inputToNextFrameMs": {
               "count": 48,
               "p50": 240.19999998807907,
@@ -1316,6 +1697,7 @@
               "mean": 9.435416676104069
             },
             "inputEvents": 48,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 44,
@@ -1390,6 +1772,14 @@
                 "perChangedFrame": 0.21428571854318892
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "pan": {
@@ -1404,6 +1794,14 @@
               "mean": 274.81052631610316
             },
             "rafFps": 3.9467192895905274,
+            "overlayPaintFps": 3.9467192895905274,
+            "inputToOverlayFrameMs": {
+              "count": 52,
+              "p50": 278.4000000119213,
+              "p95": 587.6000000119202,
+              "p99": 670.7000000178814,
+              "mean": 307.32692308471735
+            },
             "inputToNextFrameMs": {
               "count": 52,
               "p50": 343,
@@ -1419,6 +1817,7 @@
               "mean": 12.12115385497992
             },
             "inputEvents": 52,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 25,
@@ -1493,6 +1892,14 @@
                 "perChangedFrame": 0.40499998927116393
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "zoom": {
@@ -1507,6 +1914,14 @@
               "mean": 422.3500000004257
             },
             "rafFps": 3.887943612276837,
+            "overlayPaintFps": 3.8043319216902387,
+            "inputToOverlayFrameMs": {
+              "count": 94,
+              "p50": 17.5,
+              "p95": 249.2000000178814,
+              "p99": 353.90000000596046,
+              "mean": 94.47263158622499
+            },
             "inputToNextFrameMs": {
               "count": 94,
               "p50": 185.90000000596046,
@@ -1522,6 +1937,7 @@
               "mean": 10338.974736851455
             },
             "inputEvents": 94,
+            "offeredEvents": 360,
             "cpuMs": {
               "snapshot": {
                 "count": 81,
@@ -1596,6 +2012,14 @@
                 "perChangedFrame": 0.43684210955050956
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "preview": {
@@ -1610,12 +2034,20 @@
               "mean": null
             },
             "rafFps": 6.154244809356602,
-            "inputToNextFrameMs": {
+            "overlayPaintFps": 5.511298161241495,
+            "inputToOverlayFrameMs": {
               "count": 241,
-              "p50": 4365.4000000059605,
-              "p95": 7039.300000011921,
-              "p99": 7233.5,
-              "mean": 4320.0739130570955
+              "p50": 278.89999999404245,
+              "p95": 439.000000005959,
+              "p99": 538.9999999821157,
+              "mean": 276.0354700806559
+            },
+            "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "dispatchDelayMs": {
               "count": 241,
@@ -1625,6 +2057,7 @@
               "mean": 9.987551876865481
             },
             "inputEvents": 241,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 275,
@@ -1651,6 +2084,14 @@
                 "perChangedFrame": 0.4000000059604645
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           }
         },
@@ -1666,12 +2107,40 @@
               "p99": 1279.699999988079,
               "mean": 1247.5700000047684
             },
+            "eventTimestampToVisibleMs": {
+              "count": 10,
+              "p50": 1234.199999988079,
+              "p95": 1280.300000011921,
+              "p99": 1280.300000011921,
+              "mean": 1248.2500000059604
+            },
+            "dispatchDelayMs": {
+              "count": 10,
+              "p50": 0.5999999940395355,
+              "p95": 0.800000011920929,
+              "p99": 0.800000011920929,
+              "mean": 0.6800000011920929
+            },
             "editCpuMs": {
               "count": 10,
               "p50": 19.69999998807907,
               "p95": 26.30000001192093,
               "p99": 26.30000001192093,
               "mean": 22.259999999403952
+            },
+            "meshCpuMs": {
+              "count": 10,
+              "p50": 15.900000005960464,
+              "p95": 17.30000001192093,
+              "p99": 17.30000001192093,
+              "mean": 16.460000002384184
+            },
+            "updatedChunks": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "totalToLastVisibleMs": 16088.600000023842
           },
@@ -1686,12 +2155,40 @@
               "p99": 1288.199999988079,
               "mean": 1328.2499999850988
             },
+            "eventTimestampToVisibleMs": {
+              "count": 2,
+              "p50": 1292.9000000059605,
+              "p95": 1292.9000000059605,
+              "p99": 1292.9000000059605,
+              "mean": 1331.4500000029802
+            },
+            "dispatchDelayMs": {
+              "count": 50,
+              "p50": 711.5,
+              "p95": 1190.9000000059605,
+              "p99": 1239.800000011921,
+              "mean": 679.0040000116825
+            },
             "editCpuMs": {
               "count": 2,
               "p50": 19.099999994039536,
               "p95": 19.099999994039536,
               "p99": 19.099999994039536,
               "mean": 23.600000008940697
+            },
+            "meshCpuMs": {
+              "count": 2,
+              "p50": 15.799999982118607,
+              "p95": 15.799999982118607,
+              "p99": 15.799999982118607,
+              "mean": 18.099999994039536
+            },
+            "updatedChunks": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "totalToLastVisibleMs": 2627.199999988079,
             "wallIncludingIdleWaitMs": 3021.138988999999
@@ -1719,6 +2216,14 @@
                 "mean": 260.9952380955219
               },
               "rafFps": 6.934698258069843,
+              "overlayPaintFps": 6.769586394782466,
+              "inputToOverlayFrameMs": {
+                "count": 37,
+                "p50": 11.899999999999636,
+                "p95": 197.30000001192093,
+                "p99": 333.8000000059601,
+                "mean": 50.52432432448539
+              },
               "inputToNextFrameMs": {
                 "count": 37,
                 "p50": 247.5,
@@ -1734,6 +2239,7 @@
                 "mean": 9.502702713818163
               },
               "inputEvents": 37,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -1808,6 +2314,14 @@
                   "perChangedFrame": 0.1636363620107824
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -1822,6 +2336,14 @@
                 "mean": 261.72173913017565
               },
               "rafFps": 4.675383300807131,
+              "overlayPaintFps": 4.675383300807131,
+              "inputToOverlayFrameMs": {
+                "count": 33,
+                "p50": 159.1999999940399,
+                "p95": 312.80000001192093,
+                "p99": 352.7000000000007,
+                "mean": 171.993939392675
+              },
               "inputToNextFrameMs": {
                 "count": 33,
                 "p50": 258.69999998807907,
@@ -1837,6 +2359,7 @@
                 "mean": 15.15151516325546
               },
               "inputEvents": 33,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -1911,6 +2434,14 @@
                   "perChangedFrame": 0.13333333283662796
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -1925,6 +2456,14 @@
                 "mean": 421.44489795881873
               },
               "rafFps": 4.320392728451591,
+              "overlayPaintFps": 4.177962198942198,
+              "inputToOverlayFrameMs": {
+                "count": 93,
+                "p50": 14.69999999403808,
+                "p95": 236.20000001192238,
+                "p99": 410.500000011918,
+                "mean": 70.98064516129006
+              },
               "inputToNextFrameMs": {
                 "count": 93,
                 "p50": 198.59999999403954,
@@ -1940,6 +2479,7 @@
                 "mean": 8530.741935495087
               },
               "inputEvents": 93,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 64,
@@ -2006,6 +2546,14 @@
                   "perChangedFrame": 0.3020000034570694
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -2020,12 +2568,20 @@
                 "mean": null
               },
               "rafFps": 6.063386975171508,
-              "inputToNextFrameMs": {
+              "overlayPaintFps": 5.244010356905088,
+              "inputToOverlayFrameMs": {
                 "count": 257,
-                "p50": 5060.300000011921,
-                "p95": 7645.100000023842,
-                "p99": 7975.200000017881,
-                "mean": 5013.014396900101
+                "p50": 293.7000000059634,
+                "p95": 477.3999999999942,
+                "p99": 560.3999999880762,
+                "mean": 286.6509727636665
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 257,
@@ -2035,6 +2591,7 @@
                 "mean": 11.66964981539704
               },
               "inputEvents": 257,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 257,
@@ -2061,6 +2618,14 @@
                   "perChangedFrame": 0.20000001788139343
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -2076,12 +2641,40 @@
                 "p99": 1846.699999988079,
                 "mean": 1783.3899999946357
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1765.8999999761581,
+                "p95": 1847.4000000059605,
+                "p99": 1847.4000000059605,
+                "mean": 1784.030000001192
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.6400000065565109
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 3.5,
                 "p95": 5.299999982118607,
                 "p99": 5.299999982118607,
                 "mean": 4.939999994635582
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 78.2999999821186,
+                "p95": 85,
+                "p99": 85,
+                "mean": 80.64000000059605
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 21424.19999998808
             },
@@ -2096,12 +2689,40 @@
                 "p99": 1810.4000000059605,
                 "mean": 1810.4000000059605
               },
+              "eventTimestampToVisibleMs": {
+                "count": 1,
+                "p50": 1811.800000011921,
+                "p95": 1811.800000011921,
+                "p99": 1811.800000011921,
+                "mean": 1811.800000011921
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 919.6000000238419,
+                "p95": 1651.2000000178814,
+                "p99": 1717,
+                "mean": 933.5760000109673
+              },
               "editCpuMs": {
                 "count": 1,
                 "p50": 3.5,
                 "p95": 3.5,
                 "p99": 3.5,
                 "mean": 3.5
+              },
+              "meshCpuMs": {
+                "count": 1,
+                "p50": 78.80000001192093,
+                "p95": 78.80000001192093,
+                "p99": 78.80000001192093,
+                "mean": 78.80000001192093
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 1810.4000000059605,
               "wallIncludingIdleWaitMs": 2198.7552010000218
@@ -2126,6 +2747,14 @@
                 "mean": 281.82857142885524
               },
               "rafFps": 7.068159547610718,
+              "overlayPaintFps": 6.586239578455442,
+              "inputToOverlayFrameMs": {
+                "count": 31,
+                "p50": 16.399999999999636,
+                "p95": 269.10000001788103,
+                "p99": 289.80000001788176,
+                "mean": 70.25806452881903
+              },
               "inputToNextFrameMs": {
                 "count": 31,
                 "p50": 266.80000001192093,
@@ -2141,6 +2770,7 @@
                 "mean": 14.661290332194298
               },
               "inputEvents": 31,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -2215,6 +2845,14 @@
                   "perChangedFrame": 0.12727272104133258
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -2229,6 +2867,14 @@
                 "mean": 249.90416666616997
               },
               "rafFps": 5.00104860695155,
+              "overlayPaintFps": 5.00104860695155,
+              "inputToOverlayFrameMs": {
+                "count": 35,
+                "p50": 145.50000001788067,
+                "p95": 342.40000002384113,
+                "p99": 347.20000000595974,
+                "mean": 151.62000001209117
+              },
               "inputToNextFrameMs": {
                 "count": 35,
                 "p50": 220.09999999403954,
@@ -2244,6 +2890,7 @@
                 "mean": 15.437142867701395
               },
               "inputEvents": 35,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -2318,6 +2965,14 @@
                   "perChangedFrame": 0.10800000071525574
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -2332,6 +2987,14 @@
                 "mean": 407.59298245582664
               },
               "rafFps": 3.930668086779998,
+              "overlayPaintFps": 3.846137590290106,
+              "inputToOverlayFrameMs": {
+                "count": 94,
+                "p50": 16.500000017880666,
+                "p95": 277.00000001788067,
+                "p99": 479.40000002384113,
+                "mean": 88.77340426838113
+              },
               "inputToNextFrameMs": {
                 "count": 94,
                 "p50": 193.5,
@@ -2347,6 +3010,7 @@
                 "mean": 9402.6893617124
               },
               "inputEvents": 94,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 74,
@@ -2413,6 +3077,14 @@
                   "perChangedFrame": 0.2965517254738972
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -2427,12 +3099,20 @@
                 "mean": null
               },
               "rafFps": 6.154045475174912,
-              "inputToNextFrameMs": {
+              "overlayPaintFps": 5.344302649494002,
+              "inputToOverlayFrameMs": {
                 "count": 247,
-                "p50": 4801.700000017881,
-                "p95": 7739.9000000059605,
-                "p99": 7955.700000017881,
-                "mean": 4903.158704460632
+                "p50": 289.8000000000029,
+                "p95": 421.7000000059634,
+                "p99": 502.00000002383604,
+                "mean": 286.24939272570293
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 247,
@@ -2442,6 +3122,7 @@
                 "mean": 11.043319847902305
               },
               "inputEvents": 247,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 247,
@@ -2468,6 +3149,14 @@
                   "perChangedFrame": 0.09999999403953552
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -2483,12 +3172,40 @@
                 "p99": 1846.2999999821186,
                 "mean": 1813.3599999964238
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1813.699999988079,
+                "p95": 1847.199999988079,
+                "p99": 1847.199999988079,
+                "mean": 1814.0499999940396
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 0.6899999976158142
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 3.5999999940395355,
                 "p95": 6.0999999940395355,
                 "p99": 6.0999999940395355,
                 "mean": 4.200000002980232
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 80.80000001192093,
+                "p95": 109.90000000596046,
+                "p99": 109.90000000596046,
+                "mean": 87.86000000238418
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 21731.79999998212
             },
@@ -2503,12 +3220,40 @@
                 "p99": 2063.2000000178814,
                 "mean": 2063.2000000178814
               },
+              "eventTimestampToVisibleMs": {
+                "count": 1,
+                "p50": 2064.7000000178814,
+                "p95": 2064.7000000178814,
+                "p99": 2064.7000000178814,
+                "mean": 2064.7000000178814
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1167.7000000178814,
+                "p95": 1897.4000000059605,
+                "p99": 1964.2000000178814,
+                "mean": 1175.9160000115633
+              },
               "editCpuMs": {
                 "count": 1,
                 "p50": 4.699999988079071,
                 "p95": 4.699999988079071,
                 "p99": 4.699999988079071,
                 "mean": 4.699999988079071
+              },
+              "meshCpuMs": {
+                "count": 1,
+                "p50": 84.5,
+                "p95": 84.5,
+                "p99": 84.5,
+                "mean": 84.5
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 2063.2000000178814,
               "wallIncludingIdleWaitMs": 2451.7093849999947
@@ -2533,6 +3278,14 @@
                 "mean": 252.0636363639073
               },
               "rafFps": 7.080927129365577,
+              "overlayPaintFps": 6.766219256949329,
+              "inputToOverlayFrameMs": {
+                "count": 32,
+                "p50": 15.999999994039172,
+                "p95": 230.90000000596046,
+                "p99": 249.5,
+                "mean": 69.08124999608847
+              },
               "inputToNextFrameMs": {
                 "count": 32,
                 "p50": 237.2999999821186,
@@ -2548,6 +3301,7 @@
                 "mean": 12.168750008568168
               },
               "inputEvents": 32,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -2622,6 +3376,14 @@
                   "perChangedFrame": 0.12173912836157758
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "pan": {
@@ -2636,6 +3398,14 @@
                 "mean": 246.95416666691503
               },
               "rafFps": 4.7438330170870495,
+              "overlayPaintFps": 4.7438330170870495,
+              "inputToOverlayFrameMs": {
+                "count": 34,
+                "p50": 161.70000000595974,
+                "p95": 331,
+                "p99": 341.000000005959,
+                "mean": 169.988235289209
+              },
               "inputToNextFrameMs": {
                 "count": 34,
                 "p50": 217.7999999821186,
@@ -2651,6 +3421,7 @@
                 "mean": 11.52352942175725
               },
               "inputEvents": 34,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 1,
@@ -2725,6 +3496,14 @@
                   "perChangedFrame": 0.1199999988079071
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "zoom": {
@@ -2739,6 +3518,14 @@
                 "mean": 405.85714285714283
               },
               "rafFps": 4.4096735355228995,
+              "overlayPaintFps": 4.261032854550218,
+              "inputToOverlayFrameMs": {
+                "count": 92,
+                "p50": 16.19999998807907,
+                "p95": 345.2999999821186,
+                "p99": 443.19999998212006,
+                "mean": 100.03152173368795
+              },
               "inputToNextFrameMs": {
                 "count": 92,
                 "p50": 200,
@@ -2754,6 +3541,7 @@
                 "mean": 7945.808695662929
               },
               "inputEvents": 92,
+              "offeredEvents": 360,
               "cpuMs": {
                 "snapshot": {
                   "count": 65,
@@ -2820,6 +3608,14 @@
                   "perChangedFrame": 0.28600000143051146
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             },
             "preview": {
@@ -2834,12 +3630,20 @@
                 "mean": null
               },
               "rafFps": 6.499098250130384,
-              "inputToNextFrameMs": {
+              "overlayPaintFps": 5.524233512610826,
+              "inputToOverlayFrameMs": {
                 "count": 250,
-                "p50": 5606.199999988079,
-                "p95": 8222.09999999404,
-                "p99": 8466.5,
-                "mean": 5559.1732000010015
+                "p50": 320.1000000000058,
+                "p95": 588.8000000000029,
+                "p99": 655.4999999821157,
+                "mean": 321.8691999950412
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "dispatchDelayMs": {
                 "count": 250,
@@ -2849,6 +3653,7 @@
                 "mean": 11.160000009894372
               },
               "inputEvents": 250,
+              "offeredEvents": 360,
               "cpuMs": {
                 "picking": {
                   "count": 250,
@@ -2875,6 +3680,14 @@
                   "perChangedFrame": 0.19999998807907104
                 }
               },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
               "jsWasmBoundaryMs": null
             }
           },
@@ -2890,12 +3703,40 @@
                 "p99": 1839.699999988079,
                 "mean": 1804.4399999976158
               },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 1788.5999999940395,
+                "p95": 1840.4000000059605,
+                "p99": 1840.4000000059605,
+                "mean": 1805.1899999976158
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.75
+              },
               "editCpuMs": {
                 "count": 10,
                 "p50": 3.4000000059604645,
                 "p95": 5.9000000059604645,
                 "p99": 5.9000000059604645,
                 "mean": 4.470000004768371
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 80.59999999403954,
+                "p95": 86.40000000596046,
+                "p99": 86.40000000596046,
+                "mean": 83.12000000178814
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 21644.399999976158
             },
@@ -2910,12 +3751,40 @@
                 "p99": 1810.7000000178814,
                 "mean": 1810.7000000178814
               },
+              "eventTimestampToVisibleMs": {
+                "count": 1,
+                "p50": 1812.300000011921,
+                "p95": 1812.300000011921,
+                "p99": 1812.300000011921,
+                "mean": 1812.300000011921
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 907.8000000119209,
+                "p95": 1640.6000000238419,
+                "p99": 1706.300000011921,
+                "mean": 923.0020000112057
+              },
               "editCpuMs": {
                 "count": 1,
                 "p50": 3.9000000059604645,
                 "p95": 3.9000000059604645,
                 "p99": 3.9000000059604645,
                 "mean": 3.9000000059604645
+              },
+              "meshCpuMs": {
+                "count": 1,
+                "p50": 77.30000001192093,
+                "p95": 77.30000001192093,
+                "p99": 77.30000001192093,
+                "mean": 77.30000001192093
+              },
+              "updatedChunks": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
               },
               "totalToLastVisibleMs": 1810.7000000178814,
               "wallIncludingIdleWaitMs": 2197.819014000008
@@ -2941,6 +3810,14 @@
               "mean": 260.9952380955219
             },
             "rafFps": 7.068159547610718,
+            "overlayPaintFps": 6.766219256949329,
+            "inputToOverlayFrameMs": {
+              "count": 32,
+              "p50": 15.999999994039172,
+              "p95": 230.90000000596046,
+              "p99": 289.80000001788176,
+              "mean": 69.08124999608847
+            },
             "inputToNextFrameMs": {
               "count": 32,
               "p50": 247.5,
@@ -2956,6 +3833,7 @@
               "mean": 12.168750008568168
             },
             "inputEvents": 32,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 1,
@@ -3030,6 +3908,14 @@
                 "perChangedFrame": 0.12727272104133258
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "pan": {
@@ -3044,6 +3930,14 @@
               "mean": 249.90416666616997
             },
             "rafFps": 4.7438330170870495,
+            "overlayPaintFps": 4.7438330170870495,
+            "inputToOverlayFrameMs": {
+              "count": 34,
+              "p50": 159.1999999940399,
+              "p95": 331,
+              "p99": 347.20000000595974,
+              "mean": 169.988235289209
+            },
             "inputToNextFrameMs": {
               "count": 34,
               "p50": 220.09999999403954,
@@ -3059,6 +3953,7 @@
               "mean": 15.15151516325546
             },
             "inputEvents": 34,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 1,
@@ -3133,6 +4028,14 @@
                 "perChangedFrame": 0.1199999988079071
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "zoom": {
@@ -3147,6 +4050,14 @@
               "mean": 407.59298245582664
             },
             "rafFps": 4.320392728451591,
+            "overlayPaintFps": 4.177962198942198,
+            "inputToOverlayFrameMs": {
+              "count": 93,
+              "p50": 16.19999998807907,
+              "p95": 277.00000001788067,
+              "p99": 443.19999998212006,
+              "mean": 88.77340426838113
+            },
             "inputToNextFrameMs": {
               "count": 93,
               "p50": 198.59999999403954,
@@ -3162,6 +4073,7 @@
               "mean": 8530.741935495087
             },
             "inputEvents": 93,
+            "offeredEvents": 360,
             "cpuMs": {
               "snapshot": {
                 "count": 65,
@@ -3228,6 +4140,14 @@
                 "perChangedFrame": 0.2965517254738972
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           },
           "preview": {
@@ -3242,12 +4162,20 @@
               "mean": null
             },
             "rafFps": 6.154045475174912,
-            "inputToNextFrameMs": {
+            "overlayPaintFps": 5.344302649494002,
+            "inputToOverlayFrameMs": {
               "count": 250,
-              "p50": 5060.300000011921,
-              "p95": 7739.9000000059605,
-              "p99": 7975.200000017881,
-              "mean": 5013.014396900101
+              "p50": 293.7000000059634,
+              "p95": 477.3999999999942,
+              "p99": 560.3999999880762,
+              "mean": 286.6509727636665
+            },
+            "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "dispatchDelayMs": {
               "count": 250,
@@ -3257,6 +4185,7 @@
               "mean": 11.160000009894372
             },
             "inputEvents": 250,
+            "offeredEvents": 360,
             "cpuMs": {
               "picking": {
                 "count": 250,
@@ -3283,6 +4212,14 @@
                 "perChangedFrame": 0.19999998807907104
               }
             },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
             "jsWasmBoundaryMs": null
           }
         },
@@ -3298,12 +4235,40 @@
               "p99": 1846.2999999821186,
               "mean": 1804.4399999976158
             },
+            "eventTimestampToVisibleMs": {
+              "count": 10,
+              "p50": 1788.5999999940395,
+              "p95": 1847.199999988079,
+              "p99": 1847.199999988079,
+              "mean": 1805.1899999976158
+            },
+            "dispatchDelayMs": {
+              "count": 10,
+              "p50": 0.5999999940395355,
+              "p95": 0.800000011920929,
+              "p99": 0.800000011920929,
+              "mean": 0.6899999976158142
+            },
             "editCpuMs": {
               "count": 10,
               "p50": 3.5,
               "p95": 5.9000000059604645,
               "p99": 5.9000000059604645,
               "mean": 4.470000004768371
+            },
+            "meshCpuMs": {
+              "count": 10,
+              "p50": 80.59999999403954,
+              "p95": 86.40000000596046,
+              "p99": 86.40000000596046,
+              "mean": 83.12000000178814
+            },
+            "updatedChunks": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "totalToLastVisibleMs": 21644.399999976158
           },
@@ -3318,12 +4283,40 @@
               "p99": 1810.7000000178814,
               "mean": 1810.7000000178814
             },
+            "eventTimestampToVisibleMs": {
+              "count": 1,
+              "p50": 1812.300000011921,
+              "p95": 1812.300000011921,
+              "p99": 1812.300000011921,
+              "mean": 1812.300000011921
+            },
+            "dispatchDelayMs": {
+              "count": 50,
+              "p50": 919.6000000238419,
+              "p95": 1651.2000000178814,
+              "p99": 1717,
+              "mean": 933.5760000109673
+            },
             "editCpuMs": {
               "count": 1,
               "p50": 3.9000000059604645,
               "p95": 3.9000000059604645,
               "p99": 3.9000000059604645,
               "mean": 3.9000000059604645
+            },
+            "meshCpuMs": {
+              "count": 1,
+              "p50": 78.80000001192093,
+              "p95": 78.80000001192093,
+              "p99": 78.80000001192093,
+              "mean": 78.80000001192093
+            },
+            "updatedChunks": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
             },
             "totalToLastVisibleMs": 1810.7000000178814,
             "wallIncludingIdleWaitMs": 2198.7552010000218
