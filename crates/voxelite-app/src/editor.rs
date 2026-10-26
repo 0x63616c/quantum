@@ -239,6 +239,7 @@ pub struct Hit {
 }
 /// Bounded voxel DDA, including negative coordinates and axis-aligned rays.
 pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
+    let _span = voxelite_render::perf::Span::new("picking");
     if !ray.origin.is_finite()
         || !ray.direction.is_finite()
         || ray.direction.length_squared() < 1e-16
@@ -574,6 +575,7 @@ impl Editor {
     }
     /// Apply a pointer click, sampling without mutation when the picker is active.
     pub fn click(&mut self, ray: Ray, sample_only: bool) -> EditorResult<bool> {
+        let _span = voxelite_render::perf::Span::new("edit");
         let hit = raycast(self.snapshot(), ray);
         if sample_only || self.tool == Tool::Picker {
             if let Some(hit) = hit {

@@ -5,3 +5,6 @@ mod camera;
 mod raster;
 pub use camera::*;
 pub use raster::*;
+
+/// Opt-in browser benchmark instrumentation (compiled out of ordinary builds).
+pub mod perf;

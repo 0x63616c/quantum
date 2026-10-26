@@ -18,3 +18,9 @@ workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+
+[features]
+perf = ["dep:wasm-bindgen"]
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = { version = "0.2.120", optional = true }

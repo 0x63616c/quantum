@@ -27,7 +27,7 @@ for flag in "${web_flags[@]}"; do
   CARGO_ENCODED_RUSTFLAGS+="${CARGO_ENCODED_RUSTFLAGS:+$'\x1f'}$flag"
 done
 export CARGO_ENCODED_RUSTFLAGS
-cargo build --locked -p voxelite-app --lib --no-default-features --features web --target wasm32-unknown-unknown --profile web
+cargo build --locked -p voxelite-app --lib --no-default-features --features "web${VOXELITE_PERF:+,perf}" --target wasm32-unknown-unknown --profile web
 mkdir -p web/dist
 wasm-bindgen --target web --out-dir web/dist --out-name voxelite_app target/wasm32-unknown-unknown/web/voxelite_app.wasm
 cp web/index.html web/dist/index.html
