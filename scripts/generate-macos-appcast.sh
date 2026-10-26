@@ -44,10 +44,24 @@ export DOWNLOAD_PREFIX
 xcrun stapler validate dist/Voxelite.dmg
 mkdir -p "$WORK_DIR/archives"
 cp dist/Voxelite.dmg "$WORK_DIR/archives/Voxelite.dmg"
+# Sparkle discovers release notes beside the archive using the same basename.
+# Escape all text, including commit subjects, before embedding it as HTML.
+python3 - "$WORK_DIR/archives/Voxelite.html" <<'PY'
+import html
+from pathlib import Path
+import sys
+
+notes = Path("dist/RELEASE_NOTES.md").read_text(encoding="utf-8")
+Path(sys.argv[1]).write_text(
+    '<!doctype html><html><head><meta charset="utf-8"></head><body>\n'
+    '<pre style="white-space: pre-wrap; font-family: system-ui">'
+    + html.escape(notes) + '</pre>\n</body></html>\n', encoding="utf-8",
+)
+PY
 # Pass the key only through stdin; never save it in the checkout or login keychain.
 # The pinned tool compares it with SUPublicEDKey inside the archived app.
 printf '%s\n' "$SPARKLE_ED_PRIVATE_KEY" | dist/sparkle/bin/generate_appcast \
-  --ed-key-file - --maximum-deltas 0 \
+  --ed-key-file - --maximum-deltas 0 --embed-release-notes \
   --download-url-prefix "$DOWNLOAD_PREFIX" \
   --link 'https://voxelite.worldwidewebb.co' \
   -o "$WORK_DIR/appcast.xml" "$WORK_DIR/archives"
@@ -63,7 +77,7 @@ fi
 
 # A mismatched key can produce an unsigned enclosure with only a tool warning.
 # Reject it, wrong asset URLs, stale versions, and incorrect lengths before upload.
-python3 - "$WORK_DIR/appcast.xml" <<'PY'
+python3 - "$WORK_DIR/appcast.xml" "$WORK_DIR/archives/Voxelite.html" <<'PY'
 import base64
 import os
 import pathlib
@@ -79,6 +93,8 @@ with open("dist/Voxelite.app/Contents/Info.plist", "rb") as source:
 if len(items) != 1:
     raise SystemExit("Expected exactly one update in the generated appcast")
 item = items[0]
+if item.findtext("description", "").strip() != pathlib.Path(sys.argv[2]).read_text(encoding="utf-8").strip():
+    raise SystemExit("Appcast does not embed the expected release notes")
 enclosure = item.find("enclosure")
 if enclosure is None:
     raise SystemExit("Missing appcast enclosure")
