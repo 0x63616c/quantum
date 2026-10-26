@@ -1,0 +1,3759 @@
+{
+  "schema": 1,
+  "date": "2026-10-26T06:22:39.738Z",
+  "commit": "f62c9bceb0aefb4472da8b8580419cad1ec3af84",
+  "wasmSha256": "ea80d555ad92e37c61637d12708fa0040593dfca03e6b2dd7cc75dad4b8d7088",
+  "environment": {
+    "browser": "156.0.8078.4",
+    "platform": "linux",
+    "cpu": "Intel(R) Xeon(R) Processor",
+    "cores": 8,
+    "flags": [
+      "--no-sandbox",
+      "--enable-unsafe-webgpu",
+      "--enable-unsafe-swiftshader",
+      "--use-angle=swiftshader"
+    ],
+    "backend": "webgl",
+    "viewportQuery": "viewport=gpu",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1
+  },
+  "protocol": {
+    "durationMs": 6000,
+    "inputHz": 60,
+    "runs": 3,
+    "placementSingle": 10,
+    "placementSeries": 50,
+    "seriesIntervalMs": 33.333,
+    "presentation": "First requestAnimationFrame after unique viewport paint. Submission-to-presentation upper-bound proxy, not a physical display photon measurement.",
+    "frameMs": "Intervals between changed viewport images; excludes overlay-only/UI paints. RAF FPS is separately reported.",
+    "cpu": "Inclusive wasm spans; nested intervals must not be added. JS/wasm boundary overhead is not separately measurable and is reported null.",
+    "cameraLatency": "Browser capture-phase event to first changed viewport paint after it (next RAF); intermediate coalesced events may not have their own frame.",
+    "placementLatency": "Capture-phase left mousedown to first painted revision >= successful edit revision (next RAF). Rejections/no-ops separately counted.",
+    "analysis": "scripts/lib/camera-metrics.mjs; GPU wait/readback is wall time, not CPU time. No changed-image metrics are attributed to overlay-only phases."
+  },
+  "scenes": [
+    {
+      "name": "typical",
+      "title": "Autumn Workshop",
+      "voxels": 27897,
+      "sha256": "de8e9cb5bd168b36bbae63d503db97a94b0677171923c998428c99540229eea5",
+      "runs": [
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6106.9000000059605,
+              "backlogDrainMs": 106.90000000596046,
+              "avgFps": 0.32749840344496356,
+              "frameMs": {
+                "count": 1,
+                "p50": 4639.300000011921,
+                "p95": 4639.300000011921,
+                "p99": 4639.300000011921,
+                "mean": 4639.300000011921
+              },
+              "rafFps": 7.859961682679126,
+              "overlayPaintFps": 7.204964875789199,
+              "inputToOverlayFrameMs": {
+                "count": 237,
+                "p50": 306.0999999821188,
+                "p95": 523.299999988079,
+                "p99": 620.3999999999996,
+                "mean": 295.6827004163834
+              },
+              "inputToNextFrameMs": {
+                "count": 237,
+                "p50": 2108.9000000059605,
+                "p95": 4543.300000011921,
+                "p99": 4632.700000017881,
+                "mean": 2280.135021101448
+              },
+              "dispatchDelayMs": {
+                "count": 237,
+                "p50": 15.400000005960464,
+                "p95": 20.400000005960464,
+                "p99": 21.200000017881393,
+                "mean": 11.472151909447923
+              },
+              "inputEvents": 237,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.01777777804268731,
+                  "perChangedFrame": 0.4000000059604645
+                },
+                "ui_render": {
+                  "count": 44,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.6000000238418579,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.420454547486522,
+                  "perChangedFrame": 9.250000044703484
+                },
+                "image_upload": {
+                  "count": 44,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.13863636350089853,
+                  "perChangedFrame": 3.0499999970197678
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.800000011920929,
+                  "p95": 0.800000011920929,
+                  "p99": 0.800000011920929,
+                  "mean": 1.5,
+                  "perChangedFrame": 2.25
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.4000000059604645,
+                  "perChangedFrame": 0.4000000059604645
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1130.199999988079,
+                "p95": 1130.199999988079,
+                "p99": 1130.199999988079,
+                "mean": 2879.5999999940395
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6113.5999999940395,
+              "backlogDrainMs": 113.59999999403954,
+              "avgFps": 0.3271394922798269,
+              "frameMs": {
+                "count": 1,
+                "p50": 4315.0999999940395,
+                "p95": 4315.0999999940395,
+                "p99": 4315.0999999940395,
+                "mean": 4315.0999999940395
+              },
+              "rafFps": 8.342057053135587,
+              "overlayPaintFps": 7.360638576296106,
+              "inputToOverlayFrameMs": {
+                "count": 232,
+                "p50": 290.89999999999964,
+                "p95": 459.2999999999993,
+                "p99": 557.8999999940388,
+                "mean": 273.7254310295248
+              },
+              "inputToNextFrameMs": {
+                "count": 232,
+                "p50": 2291.9000000059605,
+                "p95": 4026,
+                "p99": 4228.5,
+                "mean": 2271.586206897708
+              },
+              "dispatchDelayMs": {
+                "count": 232,
+                "p50": 15.099999994039536,
+                "p95": 21.30000001192093,
+                "p99": 29.30000001192093,
+                "mean": 12.408620699726303
+              },
+              "inputEvents": 232,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 46,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.017391304606976715,
+                  "perChangedFrame": 0.4000000059604645
+                },
+                "ui_render": {
+                  "count": 45,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5,
+                  "mean": 0.33777777751286825,
+                  "perChangedFrame": 7.5999999940395355
+                },
+                "image_upload": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 1,
+                  "mean": 0.04888888862397936,
+                  "perChangedFrame": 1.0999999940395355
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.03333333134651184,
+                  "perChangedFrame": 0.04999999701976776
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.7000000178813934,
+                  "p95": 0.7000000178813934,
+                  "p99": 0.7000000178813934,
+                  "mean": 1.100000003973643,
+                  "perChangedFrame": 1.6500000059604645
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.29999998211860657,
+                  "p99": 0.29999998211860657,
+                  "mean": 0.34999997913837433,
+                  "perChangedFrame": 0.34999997913837433
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1080.4000000059605,
+                "p95": 1080.4000000059605,
+                "p99": 1080.4000000059605,
+                "mean": 2693.7000000029802
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 15851.700000017881,
+              "backlogDrainMs": 9851.700000017881,
+              "avgFps": 0.2523388658626827,
+              "frameMs": {
+                "count": 3,
+                "p50": 4732.799999982119,
+                "p95": 4732.799999982119,
+                "p99": 4732.799999982119,
+                "mean": 4630.166666666667
+              },
+              "rafFps": 5.866878631307373,
+              "overlayPaintFps": 5.740709198376032,
+              "inputToOverlayFrameMs": {
+                "count": 105,
+                "p50": 199.60000000595755,
+                "p95": 427.69999998807907,
+                "p99": 590.6999999821201,
+                "mean": 199.46571427912934
+              },
+              "inputToNextFrameMs": {
+                "count": 105,
+                "p50": 2412.2999999821186,
+                "p95": 4726.399999976158,
+                "p99": 5019.4000000059605,
+                "mean": 2372.2304761835508
+              },
+              "dispatchDelayMs": {
+                "count": 105,
+                "p50": 3525.4000000059605,
+                "p95": 11747.300000011921,
+                "p99": 12366.40000000596,
+                "mean": 4631.1447619162855
+              },
+              "inputEvents": 105,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "picking": {
+                  "count": 91,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.018681317895323367,
+                  "perChangedFrame": 0.42499998211860657
+                },
+                "ui_render": {
+                  "count": 91,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.800000011920929,
+                  "mean": 0.3472527465322515,
+                  "perChangedFrame": 7.899999983608723
+                },
+                "image_upload": {
+                  "count": 91,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 1,
+                  "mean": 0.07032967006767189,
+                  "perChangedFrame": 1.5999999940395355
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 0.5999999940395355,
+                  "p95": 0.6000000238418579,
+                  "p99": 0.6000000238418579,
+                  "mean": 0.5600000083446502,
+                  "perChangedFrame": 0.7000000104308128
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.3999999985098839,
+                  "perChangedFrame": 0.3999999985098839
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 4119.199999988079,
+                "p95": 4716.600000023842,
+                "p99": 4716.600000023842,
+                "mean": 3638.9250000044703
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 5984.200000017881,
+              "backlogDrainMs": 0,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 8.522442431711442,
+              "overlayPaintFps": 7.854015574322309,
+              "inputToOverlayFrameMs": {
+                "count": 253,
+                "p50": 280,
+                "p95": 511.59999999999854,
+                "p99": 575.0999999940395,
+                "mean": 282.9482213389727
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 257,
+                "p50": 13.900000005960464,
+                "p95": 21,
+                "p99": 25.400000005960464,
+                "mean": 11.058754873878762
+              },
+              "inputEvents": 257,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 304,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.011842105439619013,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 47,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.800000011920929,
+                  "mean": 0.36382978520494824,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 47,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.004255318895299384,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 367.90000000596046,
+                "p95": 379.69999998807907,
+                "p99": 379.69999998807907,
+                "mean": 369.0499999910593
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 368.40000000596046,
+                "p95": 380.19999998807907,
+                "p99": 380.19999998807907,
+                "mean": 369.7499999880791
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.699999988079071,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 0.6999999970197678
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 0.800000011920929,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 1.130000004172325
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 11.5,
+                "p95": 14.099999994039536,
+                "p99": 14.099999994039536,
+                "mean": 11.399999994039536
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3.2
+              },
+              "totalToLastVisibleMs": 7126.299999982119
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 4467.799999982119,
+                "p95": 5200.5,
+                "p99": 5268,
+                "mean": 4158.5759999978545
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 4469.4000000059605,
+                "p95": 5201.4000000059605,
+                "p99": 5269.4000000059605,
+                "mean": 4160.95400000751
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.5,
+                "p95": 6.5,
+                "p99": 8.400000005960464,
+                "mean": 2.3780000096559526
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 0.7999999821186066,
+                "p95": 0.9000000059604645,
+                "p99": 1,
+                "mean": 0.7760000014305115
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 12.299999982118607,
+                "p95": 12.299999982118607,
+                "p99": 12.299999982118607,
+                "mean": 10.43333332737287
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3
+              },
+              "totalToLastVisibleMs": 5698.9000000059605,
+              "wallIncludingIdleWaitMs": 6081.038305000009
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        },
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6103.399999976158,
+              "backlogDrainMs": 103.39999997615814,
+              "avgFps": 0.32768620768879847,
+              "frameMs": {
+                "count": 1,
+                "p50": 4374.5999999940395,
+                "p95": 4374.5999999940395,
+                "p99": 4374.5999999940395,
+                "mean": 4374.5999999940395
+              },
+              "rafFps": 8.192155192219962,
+              "overlayPaintFps": 7.209096569153567,
+              "inputToOverlayFrameMs": {
+                "count": 241,
+                "p50": 285.70000001192057,
+                "p95": 586.5999999999999,
+                "p99": 671.3000000178813,
+                "mean": 272.13485477732445
+              },
+              "inputToNextFrameMs": {
+                "count": 241,
+                "p50": 2571.4000000059605,
+                "p95": 4131.699999988079,
+                "p99": 4313.5,
+                "mean": 2339.1464730283533
+              },
+              "dispatchDelayMs": {
+                "count": 241,
+                "p50": 14.900000005960464,
+                "p95": 21.100000023841858,
+                "p99": 25.5,
+                "mean": 11.225311214869448
+              },
+              "inputEvents": 241,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.013333332538604737,
+                  "perChangedFrame": 0.29999998211860657
+                },
+                "ui_render": {
+                  "count": 44,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.5999999940395355,
+                  "p99": 0.800000011920929,
+                  "mean": 0.3954545469446616,
+                  "perChangedFrame": 8.700000032782555
+                },
+                "image_upload": {
+                  "count": 44,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 1.2000000178813934,
+                  "mean": 0.08409091085195541,
+                  "perChangedFrame": 1.850000038743019
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.699999988079071,
+                  "p95": 0.699999988079071,
+                  "p99": 0.699999988079071,
+                  "mean": 0.6666666766007742,
+                  "perChangedFrame": 1.0000000149011612
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.3999999761581421,
+                  "p95": 0.3999999761581421,
+                  "p99": 0.3999999761581421,
+                  "mean": 0.3999999910593033,
+                  "perChangedFrame": 0.3999999910593033
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 774.6999999880791,
+                "p95": 774.6999999880791,
+                "p99": 774.6999999880791,
+                "mean": 2569.8499999940395
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6193.199999988079,
+              "backlogDrainMs": 193.19999998807907,
+              "avgFps": 0.3229348317515743,
+              "frameMs": {
+                "count": 1,
+                "p50": 3885.7999999821186,
+                "p95": 3885.7999999821186,
+                "p99": 3885.7999999821186,
+                "mean": 3885.7999999821186
+              },
+              "rafFps": 8.719240457292505,
+              "overlayPaintFps": 7.750435962037782,
+              "inputToOverlayFrameMs": {
+                "count": 253,
+                "p50": 277.3999999940388,
+                "p95": 441.9000000119195,
+                "p99": 495.3000000059619,
+                "mean": 258.9094861722744
+              },
+              "inputToNextFrameMs": {
+                "count": 253,
+                "p50": 2372.5,
+                "p95": 3641.2999999821186,
+                "p99": 3824.0999999940395,
+                "mean": 2130.298814225574
+              },
+              "dispatchDelayMs": {
+                "count": 253,
+                "p50": 16,
+                "p95": 22.5,
+                "p99": 27.80000001192093,
+                "mean": 13.346245069984391
+              },
+              "inputEvents": 253,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 49,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.0102040810244424,
+                  "perChangedFrame": 0.2499999850988388
+                },
+                "ui_render": {
+                  "count": 48,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.27291666716337204,
+                  "perChangedFrame": 6.550000011920929
+                },
+                "image_upload": {
+                  "count": 48,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.045833333705862365,
+                  "perChangedFrame": 1.1000000089406967
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.7000000178813934,
+                  "p95": 0.7000000178813934,
+                  "p99": 0.7000000178813934,
+                  "mean": 0.700000007947286,
+                  "perChangedFrame": 1.050000011920929
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.4000000059604645,
+                  "perChangedFrame": 0.4000000059604645
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 890.8000000119209,
+                "p95": 890.8000000119209,
+                "p99": 890.8000000119209,
+                "mean": 2382.4000000059605
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 14802.90000000596,
+              "backlogDrainMs": 8802.90000000596,
+              "avgFps": 0.27021732228133605,
+              "frameMs": {
+                "count": 3,
+                "p50": 4323.9000000059605,
+                "p95": 4323.9000000059605,
+                "p99": 4323.9000000059605,
+                "mean": 4339.9666666686535
+              },
+              "rafFps": 6.282552743041063,
+              "overlayPaintFps": 6.012335420759727,
+              "inputToOverlayFrameMs": {
+                "count": 107,
+                "p50": 194.90000000000146,
+                "p95": 408.40000000596046,
+                "p99": 462.10000001788285,
+                "mean": 188.38130841745408
+              },
+              "inputToNextFrameMs": {
+                "count": 107,
+                "p50": 2072.2000000178814,
+                "p95": 4209.5999999940395,
+                "p99": 4348.5999999940395,
+                "mean": 2098.7233644946714
+              },
+              "dispatchDelayMs": {
+                "count": 107,
+                "p50": 2684.5,
+                "p95": 10642.40000000596,
+                "p99": 11282.5,
+                "mean": 3936.7355140291643
+              },
+              "inputEvents": 107,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.020000004768371583,
+                  "perChangedFrame": 0.025000005960464478
+                },
+                "picking": {
+                  "count": 89,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.012359551164541351,
+                  "perChangedFrame": 0.2750000134110451
+                },
+                "ui_render": {
+                  "count": 89,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.5,
+                  "p99": 0.699999988079071,
+                  "mean": 0.3022471924176377,
+                  "perChangedFrame": 6.7250000312924385
+                },
+                "image_upload": {
+                  "count": 89,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 5,
+                  "mean": 0.14606741606519463,
+                  "perChangedFrame": 3.2500000074505806
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 0.7000000178813934,
+                  "p95": 1.2000000178813934,
+                  "p99": 1.2000000178813934,
+                  "mean": 1.6400000035762787,
+                  "perChangedFrame": 2.0500000044703484
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.30000001192092896,
+                  "p99": 0.30000001192092896,
+                  "mean": 0.29999998956918716,
+                  "perChangedFrame": 0.29999998956918716
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 4297.4000000059605,
+                "p95": 4300.699999988079,
+                "p99": 4300.699999988079,
+                "mean": 3374.2000000029802
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 5988.5,
+              "backlogDrainMs": 0,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 7.848376054103698,
+              "overlayPaintFps": 7.5144026049929025,
+              "inputToOverlayFrameMs": {
+                "count": 260,
+                "p50": 296.2000000119224,
+                "p95": 528.2000000059634,
+                "p99": 611.3999999940424,
+                "mean": 291.66653846710926
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 261,
+                "p50": 13.700000017881393,
+                "p95": 20.5,
+                "p99": 23.80000001192093,
+                "mean": 10.957088133955367
+              },
+              "inputEvents": 261,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 306,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.010130718837376514,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 45,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 2.4000000059604645,
+                  "mean": 0.4266666697131263,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.01111111044883728,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 348.2999999821186,
+                "p95": 356.2999999821186,
+                "p99": 356.2999999821186,
+                "mean": 350.1099999904633
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 349,
+                "p95": 357.09999999403954,
+                "p99": 357.09999999403954,
+                "mean": 350.6899999976158
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.7000000178813934,
+                "p99": 0.7000000178813934,
+                "mean": 0.5800000071525574
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 0.800000011920929,
+                "p95": 3.199999988079071,
+                "p99": 3.199999988079071,
+                "mean": 1.7300000011920929
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 11.099999994039536,
+                "p95": 12.5,
+                "p99": 12.5,
+                "mean": 10.07999999821186
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3.2
+              },
+              "totalToLastVisibleMs": 6948.399999976158
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 4518.299999982119,
+                "p95": 5251.5999999940395,
+                "p99": 5311.799999982119,
+                "mean": 4167.687999991179
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 4519.4000000059605,
+                "p95": 5252.4000000059605,
+                "p99": 5317.4000000059605,
+                "mean": 4169.680000004769
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.2000000178813934,
+                "p95": 5.600000023841858,
+                "p99": 9.600000023841858,
+                "mean": 1.992000013589859
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 0.7999999821186066,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 0.7779999983310699
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 16,
+                "p95": 16,
+                "p99": 16,
+                "mean": 12.200000007947287
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3
+              },
+              "totalToLastVisibleMs": 5715.9000000059605,
+              "wallIncludingIdleWaitMs": 6097.924426000012
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        },
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6189.9000000059605,
+              "backlogDrainMs": 189.90000000596046,
+              "avgFps": 0.32310699688170635,
+              "frameMs": {
+                "count": 1,
+                "p50": 4233.4000000059605,
+                "p95": 4233.4000000059605,
+                "p99": 4233.4000000059605,
+                "mean": 4233.4000000059605
+              },
+              "rafFps": 7.593014426720099,
+              "overlayPaintFps": 7.269907429838393,
+              "inputToOverlayFrameMs": {
+                "count": 228,
+                "p50": 307.7999999821186,
+                "p95": 542.1000000000004,
+                "p99": 624.1999999821182,
+                "mean": 298.3921052575111
+              },
+              "inputToNextFrameMs": {
+                "count": 228,
+                "p50": 2406.5,
+                "p95": 4022.199999988079,
+                "p99": 4180.9000000059605,
+                "mean": 2338.578070178105
+              },
+              "dispatchDelayMs": {
+                "count": 228,
+                "p50": 13.300000011920929,
+                "p95": 21.700000017881393,
+                "p99": 25.5,
+                "mean": 11.6828947475082
+              },
+              "inputEvents": 228,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 46,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.01521739169307377,
+                  "perChangedFrame": 0.3500000089406967
+                },
+                "ui_render": {
+                  "count": 45,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5,
+                  "mean": 0.36222222248713176,
+                  "perChangedFrame": 8.150000005960464
+                },
+                "image_upload": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.05333333412806193,
+                  "perChangedFrame": 1.2000000178813934
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.03333333134651184,
+                  "perChangedFrame": 0.04999999701976776
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.800000011920929,
+                  "p95": 0.800000011920929,
+                  "p99": 0.800000011920929,
+                  "mean": 0.800000011920929,
+                  "perChangedFrame": 1.2000000178813934
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.29999998211860657,
+                  "p99": 0.29999998211860657,
+                  "mean": 0.29999998211860657,
+                  "perChangedFrame": 0.29999998211860657
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 995.4000000059605,
+                "p95": 995.4000000059605,
+                "p99": 995.4000000059605,
+                "mean": 2610.3500000089407
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6050.9000000059605,
+              "backlogDrainMs": 50.900000005960464,
+              "avgFps": 0.3305293427420764,
+              "frameMs": {
+                "count": 1,
+                "p50": 3986.9000000059605,
+                "p95": 3986.9000000059605,
+                "p99": 3986.9000000059605,
+                "mean": 3986.9000000059605
+              },
+              "rafFps": 8.428498239922948,
+              "overlayPaintFps": 7.767439554438795,
+              "inputToOverlayFrameMs": {
+                "count": 233,
+                "p50": 276.09999999403954,
+                "p95": 459.99999998211933,
+                "p99": 560.500000005959,
+                "mean": 263.6476394796063
+              },
+              "inputToNextFrameMs": {
+                "count": 233,
+                "p50": 2501.0999999940395,
+                "p95": 3746.2999999821186,
+                "p99": 3916.199999988079,
+                "mean": 2255.670386263741
+              },
+              "dispatchDelayMs": {
+                "count": 233,
+                "p50": 15.5,
+                "p95": 22,
+                "p99": 25.700000017881393,
+                "mean": 11.670815461055403
+              },
+              "inputEvents": 233,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 48,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.008333333457509676,
+                  "perChangedFrame": 0.20000000298023224
+                },
+                "ui_render": {
+                  "count": 47,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.699999988079071,
+                  "p99": 1.2999999821186066,
+                  "mean": 0.406382976060218,
+                  "perChangedFrame": 9.549999937415123
+                },
+                "image_upload": {
+                  "count": 47,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 1,
+                  "mean": 0.05319148936170213,
+                  "perChangedFrame": 1.25
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.03333333134651184,
+                  "perChangedFrame": 0.04999999701976776
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 0.699999988079071,
+                  "p95": 0.699999988079071,
+                  "p99": 0.699999988079071,
+                  "mean": 0.7333333293596903,
+                  "perChangedFrame": 1.0999999940395355
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.29999998211860657,
+                  "p99": 0.29999998211860657,
+                  "mean": 0.3499999940395355,
+                  "perChangedFrame": 0.3499999940395355
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 915.2000000178814,
+                "p95": 915.2000000178814,
+                "p99": 915.2000000178814,
+                "mean": 2446.2000000178814
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 15647.40000000596,
+              "backlogDrainMs": 9647.40000000596,
+              "avgFps": 0.25563352378021115,
+              "frameMs": {
+                "count": 3,
+                "p50": 4547.5,
+                "p95": 4547.5,
+                "p99": 4547.5,
+                "mean": 4421.76666667064
+              },
+              "rafFps": 6.071296189780015,
+              "overlayPaintFps": 5.943479427889909,
+              "inputToOverlayFrameMs": {
+                "count": 106,
+                "p50": 198.20000000596337,
+                "p95": 399.999999994041,
+                "p99": 413.2999999880776,
+                "mean": 185.6358490516554
+              },
+              "inputToNextFrameMs": {
+                "count": 106,
+                "p50": 2137.4000000059605,
+                "p95": 4335.5999999940395,
+                "p99": 4548.199999988079,
+                "mean": 2203.762264151899
+              },
+              "dispatchDelayMs": {
+                "count": 106,
+                "p50": 3839.600000023842,
+                "p95": 11466.5,
+                "p99": 12154.5,
+                "mean": 4604.242452839917
+              },
+              "inputEvents": 106,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "picking": {
+                  "count": 93,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.0172043010111778,
+                  "perChangedFrame": 0.3999999985098839
+                },
+                "ui_render": {
+                  "count": 93,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.5,
+                  "p99": 0.699999988079071,
+                  "mean": 0.3021505369294074,
+                  "perChangedFrame": 7.024999983608723
+                },
+                "image_upload": {
+                  "count": 93,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 1,
+                  "mean": 0.10537634453465862,
+                  "perChangedFrame": 2.450000010430813
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 0.5,
+                  "p95": 0.5999999940395355,
+                  "p99": 0.5999999940395355,
+                  "mean": 0.5399999976158142,
+                  "perChangedFrame": 0.6749999970197678
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.3500000014901161,
+                  "perChangedFrame": 0.3500000014901161
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 4089.5,
+                "p95": 4522.5,
+                "p99": 4522.5,
+                "mean": 3483
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 6035.0999999940395,
+              "backlogDrainMs": 35.099999994039536,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 8.450564199441661,
+              "overlayPaintFps": 7.787774850465845,
+              "inputToOverlayFrameMs": {
+                "count": 257,
+                "p50": 277.09999998807325,
+                "p95": 410.2999999880849,
+                "p99": 510.5000000059663,
+                "mean": 258.6591439636074
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 257,
+                "p50": 12.5,
+                "p95": 20,
+                "p99": 23,
+                "mean": 10.80661479624329
+              },
+              "inputEvents": 257,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 304,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.010855263491210184,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 47,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.5,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.3085106357615045,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 47,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.010638298506432392,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 370.09999999403954,
+                "p95": 432.59999999403954,
+                "p99": 432.59999999403954,
+                "mean": 396.39000000059605
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 371,
+                "p95": 433.09999999403954,
+                "p99": 433.09999999403954,
+                "mean": 397.05999999940394
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5999999940395355,
+                "p95": 0.9000000059604645,
+                "p99": 0.9000000059604645,
+                "mean": 0.6699999988079071
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 0.8999999761581421,
+                "p95": 1.2000000178813934,
+                "p99": 1.2000000178813934,
+                "mean": 1.2100000023841857
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 11.099999994039536,
+                "p95": 23.099999994039536,
+                "p99": 23.099999994039536,
+                "mean": 14.110000002384187
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3.2
+              },
+              "totalToLastVisibleMs": 7469.9000000059605
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 4979.9000000059605,
+                "p95": 5708,
+                "p99": 5770.9000000059605,
+                "mean": 4693.363999994397
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 4981.4000000059605,
+                "p95": 5714.4000000059605,
+                "p99": 5780.4000000059605,
+                "mean": 4695.890000004172
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.5,
+                "p95": 6.5,
+                "p99": 9.5,
+                "mean": 2.526000009775162
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 0.800000011920929,
+                "p95": 1.199999988079071,
+                "p99": 1.300000011920929,
+                "mean": 0.8820000004768371
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 13.300000011920929,
+                "p95": 13.300000011920929,
+                "p99": 13.300000011920929,
+                "mean": 13.466666658719381
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 4,
+                "p95": 4,
+                "p99": 4,
+                "mean": 3
+              },
+              "totalToLastVisibleMs": 6211.0999999940395,
+              "wallIncludingIdleWaitMs": 6613.2906680000015
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        }
+      ],
+      "median": {
+        "camera": {
+          "orbit": {
+            "measuredWallMs": 6106.9000000059605,
+            "backlogDrainMs": 106.90000000596046,
+            "avgFps": 0.32749840344496356,
+            "frameMs": {
+              "count": 1,
+              "p50": 4374.5999999940395,
+              "p95": 4374.5999999940395,
+              "p99": 4374.5999999940395,
+              "mean": 4374.5999999940395
+            },
+            "rafFps": 7.859961682679126,
+            "overlayPaintFps": 7.209096569153567,
+            "inputToOverlayFrameMs": {
+              "count": 237,
+              "p50": 306.0999999821188,
+              "p95": 542.1000000000004,
+              "p99": 624.1999999821182,
+              "mean": 295.6827004163834
+            },
+            "inputToNextFrameMs": {
+              "count": 237,
+              "p50": 2406.5,
+              "p95": 4131.699999988079,
+              "p99": 4313.5,
+              "mean": 2338.578070178105
+            },
+            "dispatchDelayMs": {
+              "count": 237,
+              "p50": 14.900000005960464,
+              "p95": 21.100000023841858,
+              "p99": 25.5,
+              "mean": 11.472151909447923
+            },
+            "inputEvents": 237,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 45,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.10000002384185791,
+                "mean": 0.01521739169307377,
+                "perChangedFrame": 0.3500000089406967
+              },
+              "ui_render": {
+                "count": 44,
+                "p50": 0.4000000059604645,
+                "p95": 0.5999999940395355,
+                "p99": 0.800000011920929,
+                "mean": 0.3954545469446616,
+                "perChangedFrame": 8.700000032782555
+              },
+              "image_upload": {
+                "count": 44,
+                "p50": 0,
+                "p95": 0.10000002384185791,
+                "p99": 0.9000000059604645,
+                "mean": 0.08409091085195541,
+                "perChangedFrame": 1.850000038743019
+              },
+              "snapshot": {
+                "count": 3,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0,
+                "perChangedFrame": 0
+              },
+              "render_submission": {
+                "count": 3,
+                "p50": 0.800000011920929,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.800000011920929,
+                "perChangedFrame": 1.2000000178813934
+              },
+              "image_convert": {
+                "count": 2,
+                "p50": 0.3999999761581421,
+                "p95": 0.3999999761581421,
+                "p99": 0.3999999761581421,
+                "mean": 0.3999999910593033,
+                "perChangedFrame": 0.3999999910593033
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 2,
+              "p50": 995.4000000059605,
+              "p95": 995.4000000059605,
+              "p99": 995.4000000059605,
+              "mean": 2610.3500000089407
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "pan": {
+            "measuredWallMs": 6113.5999999940395,
+            "backlogDrainMs": 113.59999999403954,
+            "avgFps": 0.3271394922798269,
+            "frameMs": {
+              "count": 1,
+              "p50": 3986.9000000059605,
+              "p95": 3986.9000000059605,
+              "p99": 3986.9000000059605,
+              "mean": 3986.9000000059605
+            },
+            "rafFps": 8.428498239922948,
+            "overlayPaintFps": 7.750435962037782,
+            "inputToOverlayFrameMs": {
+              "count": 233,
+              "p50": 277.3999999940388,
+              "p95": 459.2999999999993,
+              "p99": 557.8999999940388,
+              "mean": 263.6476394796063
+            },
+            "inputToNextFrameMs": {
+              "count": 233,
+              "p50": 2372.5,
+              "p95": 3746.2999999821186,
+              "p99": 3916.199999988079,
+              "mean": 2255.670386263741
+            },
+            "dispatchDelayMs": {
+              "count": 233,
+              "p50": 15.5,
+              "p95": 22,
+              "p99": 27.80000001192093,
+              "mean": 12.408620699726303
+            },
+            "inputEvents": 233,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 48,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.09999999403953552,
+                "mean": 0.0102040810244424,
+                "perChangedFrame": 0.2499999850988388
+              },
+              "ui_render": {
+                "count": 47,
+                "p50": 0.29999998211860657,
+                "p95": 0.5,
+                "p99": 0.5,
+                "mean": 0.33777777751286825,
+                "perChangedFrame": 7.5999999940395355
+              },
+              "image_upload": {
+                "count": 47,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 1,
+                "mean": 0.04888888862397936,
+                "perChangedFrame": 1.1000000089406967
+              },
+              "snapshot": {
+                "count": 3,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0.03333333134651184,
+                "perChangedFrame": 0.04999999701976776
+              },
+              "render_submission": {
+                "count": 3,
+                "p50": 0.7000000178813934,
+                "p95": 0.7000000178813934,
+                "p99": 0.7000000178813934,
+                "mean": 0.7333333293596903,
+                "perChangedFrame": 1.0999999940395355
+              },
+              "image_convert": {
+                "count": 2,
+                "p50": 0.29999998211860657,
+                "p95": 0.29999998211860657,
+                "p99": 0.29999998211860657,
+                "mean": 0.3499999940395355,
+                "perChangedFrame": 0.3499999940395355
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 2,
+              "p50": 915.2000000178814,
+              "p95": 915.2000000178814,
+              "p99": 915.2000000178814,
+              "mean": 2446.2000000178814
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "zoom": {
+            "measuredWallMs": 15647.40000000596,
+            "backlogDrainMs": 9647.40000000596,
+            "avgFps": 0.25563352378021115,
+            "frameMs": {
+              "count": 3,
+              "p50": 4547.5,
+              "p95": 4547.5,
+              "p99": 4547.5,
+              "mean": 4421.76666667064
+            },
+            "rafFps": 6.071296189780015,
+            "overlayPaintFps": 5.943479427889909,
+            "inputToOverlayFrameMs": {
+              "count": 106,
+              "p50": 198.20000000596337,
+              "p95": 408.40000000596046,
+              "p99": 462.10000001788285,
+              "mean": 188.38130841745408
+            },
+            "inputToNextFrameMs": {
+              "count": 106,
+              "p50": 2137.4000000059605,
+              "p95": 4335.5999999940395,
+              "p99": 4548.199999988079,
+              "mean": 2203.762264151899
+            },
+            "dispatchDelayMs": {
+              "count": 106,
+              "p50": 3525.4000000059605,
+              "p95": 11466.5,
+              "p99": 12154.5,
+              "mean": 4604.242452839917
+            },
+            "inputEvents": 106,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "snapshot": {
+                "count": 5,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0,
+                "perChangedFrame": 0
+              },
+              "picking": {
+                "count": 91,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.10000002384185791,
+                "mean": 0.0172043010111778,
+                "perChangedFrame": 0.3999999985098839
+              },
+              "ui_render": {
+                "count": 91,
+                "p50": 0.29999998211860657,
+                "p95": 0.5,
+                "p99": 0.699999988079071,
+                "mean": 0.3022471924176377,
+                "perChangedFrame": 7.024999983608723
+              },
+              "image_upload": {
+                "count": 91,
+                "p50": 0,
+                "p95": 0.10000002384185791,
+                "p99": 1,
+                "mean": 0.10537634453465862,
+                "perChangedFrame": 2.450000010430813
+              },
+              "render_submission": {
+                "count": 5,
+                "p50": 0.5999999940395355,
+                "p95": 0.6000000238418579,
+                "p99": 0.6000000238418579,
+                "mean": 0.5600000083446502,
+                "perChangedFrame": 0.7000000104308128
+              },
+              "image_convert": {
+                "count": 4,
+                "p50": 0.30000001192092896,
+                "p95": 0.4000000059604645,
+                "p99": 0.4000000059604645,
+                "mean": 0.3500000014901161,
+                "perChangedFrame": 0.3500000014901161
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 4,
+              "p50": 4119.199999988079,
+              "p95": 4522.5,
+              "p99": 4522.5,
+              "mean": 3483
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "preview": {
+            "measuredWallMs": 5988.5,
+            "backlogDrainMs": 0,
+            "avgFps": 0,
+            "frameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "rafFps": 8.450564199441661,
+            "overlayPaintFps": 7.787774850465845,
+            "inputToOverlayFrameMs": {
+              "count": 257,
+              "p50": 280,
+              "p95": 511.59999999999854,
+              "p99": 575.0999999940395,
+              "mean": 282.9482213389727
+            },
+            "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "dispatchDelayMs": {
+              "count": 257,
+              "p50": 13.700000017881393,
+              "p95": 20.5,
+              "p99": 23.80000001192093,
+              "mean": 10.957088133955367
+            },
+            "inputEvents": 257,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 304,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.10000002384185791,
+                "mean": 0.010855263491210184,
+                "perChangedFrame": null
+              },
+              "ui_render": {
+                "count": 47,
+                "p50": 0.30000001192092896,
+                "p95": 0.5,
+                "p99": 0.9000000059604645,
+                "mean": 0.36382978520494824,
+                "perChangedFrame": null
+              },
+              "image_upload": {
+                "count": 47,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.09999999403953552,
+                "mean": 0.010638298506432392,
+                "perChangedFrame": null
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          }
+        },
+        "placement": {
+          "single": {
+            "attempted": 10,
+            "accepted": 10,
+            "visible": 10,
+            "clickToVisibleMs": {
+              "count": 10,
+              "p50": 367.90000000596046,
+              "p95": 379.69999998807907,
+              "p99": 379.69999998807907,
+              "mean": 369.0499999910593
+            },
+            "eventTimestampToVisibleMs": {
+              "count": 10,
+              "p50": 368.40000000596046,
+              "p95": 380.19999998807907,
+              "p99": 380.19999998807907,
+              "mean": 369.7499999880791
+            },
+            "dispatchDelayMs": {
+              "count": 10,
+              "p50": 0.5999999940395355,
+              "p95": 0.9000000059604645,
+              "p99": 0.9000000059604645,
+              "mean": 0.6699999988079071
+            },
+            "editCpuMs": {
+              "count": 10,
+              "p50": 0.800000011920929,
+              "p95": 1.2000000178813934,
+              "p99": 1.2000000178813934,
+              "mean": 1.2100000023841857
+            },
+            "meshCpuMs": {
+              "count": 10,
+              "p50": 11.099999994039536,
+              "p95": 14.099999994039536,
+              "p99": 14.099999994039536,
+              "mean": 11.399999994039536
+            },
+            "updatedChunks": {
+              "count": 10,
+              "p50": 4,
+              "p95": 4,
+              "p99": 4,
+              "mean": 3.2
+            },
+            "totalToLastVisibleMs": 7126.299999982119
+          },
+          "series": {
+            "attempted": 50,
+            "accepted": 50,
+            "visible": 50,
+            "clickToVisibleMs": {
+              "count": 50,
+              "p50": 4518.299999982119,
+              "p95": 5251.5999999940395,
+              "p99": 5311.799999982119,
+              "mean": 4167.687999991179
+            },
+            "eventTimestampToVisibleMs": {
+              "count": 50,
+              "p50": 4519.4000000059605,
+              "p95": 5252.4000000059605,
+              "p99": 5317.4000000059605,
+              "mean": 4169.680000004769
+            },
+            "dispatchDelayMs": {
+              "count": 50,
+              "p50": 1.5,
+              "p95": 6.5,
+              "p99": 9.5,
+              "mean": 2.3780000096559526
+            },
+            "editCpuMs": {
+              "count": 50,
+              "p50": 0.7999999821186066,
+              "p95": 0.9000000059604645,
+              "p99": 1,
+              "mean": 0.7779999983310699
+            },
+            "meshCpuMs": {
+              "count": 3,
+              "p50": 13.300000011920929,
+              "p95": 13.300000011920929,
+              "p99": 13.300000011920929,
+              "mean": 12.200000007947287
+            },
+            "updatedChunks": {
+              "count": 3,
+              "p50": 4,
+              "p95": 4,
+              "p99": 4,
+              "mean": 3
+            },
+            "totalToLastVisibleMs": 5715.9000000059605,
+            "wallIncludingIdleWaitMs": 6097.924426000012
+          }
+        }
+      }
+    },
+    {
+      "name": "large",
+      "title": "Camera benchmark gallery",
+      "voxels": 111588,
+      "sha256": "906476849c57c4fa8381f38b0c9ce11ec2be8779cbe5576c664e024be43aea58",
+      "runs": [
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6267.799999982119,
+              "backlogDrainMs": 267.7999999821186,
+              "avgFps": 0.31909122818304764,
+              "frameMs": {
+                "count": 1,
+                "p50": 4584.699999988079,
+                "p95": 4584.699999988079,
+                "p99": 4584.699999988079,
+                "mean": 4584.699999988079
+              },
+              "rafFps": 7.977280704576191,
+              "overlayPaintFps": 6.700915791843999,
+              "inputToOverlayFrameMs": {
+                "count": 241,
+                "p50": 288.79999998807943,
+                "p95": 472.9999999940392,
+                "p99": 555.7000000000007,
+                "mean": 271.0128630703664
+              },
+              "inputToNextFrameMs": {
+                "count": 241,
+                "p50": 2162.699999988079,
+                "p95": 4329.0999999940395,
+                "p99": 4479,
+                "mean": 2243.8091286325603
+              },
+              "dispatchDelayMs": {
+                "count": 241,
+                "p50": 16.100000023841858,
+                "p95": 21.700000017881393,
+                "p99": 25.5,
+                "mean": 12.534024907345593
+              },
+              "inputEvents": 241,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "ui_render": {
+                  "count": 42,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5,
+                  "mean": 0.34999999971616835,
+                  "perChangedFrame": 7.3499999940395355
+                },
+                "image_upload": {
+                  "count": 42,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 1.0999999940395355,
+                  "mean": 0.06190476176284608,
+                  "perChangedFrame": 1.2999999970197678
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 1.0999999940395355,
+                  "p95": 1.0999999940395355,
+                  "p99": 1.0999999940395355,
+                  "mean": 5.133333325386047,
+                  "perChangedFrame": 7.699999988079071
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.29999998211860657,
+                  "p99": 0.29999998211860657,
+                  "mean": 0.3499999940395355,
+                  "perChangedFrame": 0.3499999940395355
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1125,
+                "p95": 1125,
+                "p99": 1125,
+                "mean": 2850.75
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6402.800000011921,
+              "backlogDrainMs": 402.80000001192093,
+              "avgFps": 0.3123633410377142,
+              "frameMs": {
+                "count": 1,
+                "p50": 5059.5,
+                "p95": 5059.5,
+                "p99": 5059.5,
+                "mean": 5059.5
+              },
+              "rafFps": 6.871993502829712,
+              "overlayPaintFps": 6.559630161791998,
+              "inputToOverlayFrameMs": {
+                "count": 215,
+                "p50": 360.8999999940388,
+                "p95": 624.500000005959,
+                "p99": 861.4999999880783,
+                "mean": 354.26372093037156
+              },
+              "inputToNextFrameMs": {
+                "count": 215,
+                "p50": 2582,
+                "p95": 4838,
+                "p99": 5052.4000000059605,
+                "mean": 2590.6539534883445
+              },
+              "dispatchDelayMs": {
+                "count": 215,
+                "p50": 12.5,
+                "p95": 21.700000017881393,
+                "p99": 24,
+                "mean": 11.970232568923818
+              },
+              "inputEvents": 215,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0.09999999403953552,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.09999999403953552,
+                  "perChangedFrame": 0.04999999701976776
+                },
+                "ui_render": {
+                  "count": 42,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.800000011920929,
+                  "p99": 1.7000000178813934,
+                  "mean": 0.43571428386938005,
+                  "perChangedFrame": 9.149999961256981
+                },
+                "image_upload": {
+                  "count": 42,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 1.0999999940395355,
+                  "mean": 0.10238095195520491,
+                  "perChangedFrame": 2.1499999910593033
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.0333333412806193,
+                  "perChangedFrame": 0.050000011920928955
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 1,
+                  "p95": 1,
+                  "p99": 1,
+                  "mean": 1.3333333333333333,
+                  "perChangedFrame": 2
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.6500000059604645,
+                  "perChangedFrame": 0.6500000059604645
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 857,
+                "p95": 857,
+                "p99": 857,
+                "mean": 2947.8500000089407
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 19697.69999998808,
+              "backlogDrainMs": 13697.699999988079,
+              "avgFps": 0.2030693938887495,
+              "frameMs": {
+                "count": 3,
+                "p50": 5970.5,
+                "p95": 5970.5,
+                "p99": 5970.5,
+                "mean": 5876.5
+              },
+              "rafFps": 4.7721307563856135,
+              "overlayPaintFps": 4.721363407913426,
+              "inputToOverlayFrameMs": {
+                "count": 105,
+                "p50": 243.59999998808053,
+                "p95": 564.9000000119195,
+                "p99": 721.6000000119202,
+                "mean": 243.0580952386627
+              },
+              "inputToNextFrameMs": {
+                "count": 105,
+                "p50": 2450.7000000178814,
+                "p95": 5498.700000017881,
+                "p99": 5970.700000017881,
+                "mean": 2800.117142868042
+              },
+              "dispatchDelayMs": {
+                "count": 105,
+                "p50": 4714.200000017881,
+                "p95": 15648.40000000596,
+                "p99": 16084.5,
+                "mean": 6164.977142867588
+              },
+              "inputEvents": 105,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.04000000953674317,
+                  "perChangedFrame": 0.050000011920928955
+                },
+                "ui_render": {
+                  "count": 93,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.5,
+                  "p99": 1.2999999821186066,
+                  "mean": 0.38602150576089017,
+                  "perChangedFrame": 8.975000008940697
+                },
+                "image_upload": {
+                  "count": 93,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 1.300000011920929,
+                  "mean": 0.09892473169552382,
+                  "perChangedFrame": 2.300000011920929
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 1,
+                  "p95": 5.199999988079071,
+                  "p99": 5.199999988079071,
+                  "mean": 2.6599999964237213,
+                  "perChangedFrame": 3.3249999955296516
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.4000000059604645,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.3999999985098839,
+                  "perChangedFrame": 0.3999999985098839
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 5432.699999988079,
+                "p95": 5949.200000017881,
+                "p99": 5949.200000017881,
+                "mean": 4626.14999999851
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 6142.299999982119,
+              "backlogDrainMs": 142.2999999821186,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 8.465884115095546,
+              "overlayPaintFps": 7.326245868832685,
+              "inputToOverlayFrameMs": {
+                "count": 248,
+                "p50": 318.499999988082,
+                "p95": 567.4000000059605,
+                "p99": 684.5999999940395,
+                "mean": 318.2161290330025
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 248,
+                "p50": 6,
+                "p95": 19.400000005960464,
+                "p99": 28.400000005960464,
+                "mean": 9.988709687826134
+              },
+              "inputEvents": 248,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 248,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.015322580332717588,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 45,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.5,
+                  "p99": 1.199999988079071,
+                  "mean": 0.41999999814563327,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 45,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.013333333200878567,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 503.7999999821186,
+                "p95": 724,
+                "p99": 724,
+                "mean": 569.8699999898672
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 504.40000000596046,
+                "p95": 724.9000000059605,
+                "p99": 724.9000000059605,
+                "mean": 570.5599999964237
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.7000000178813934,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.690000006556511
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 2.5999999940395355,
+                "p95": 3.7000000178813934,
+                "p99": 3.7000000178813934,
+                "mean": 3.1900000035762788
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 6.0999999940395355,
+                "p95": 14.800000011920929,
+                "p99": 14.800000011920929,
+                "mean": 8.819999992847443
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 2,
+                "p95": 4,
+                "p99": 4,
+                "mean": 2.8
+              },
+              "totalToLastVisibleMs": 9126.299999982119
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 4852.799999982119,
+                "p95": 5584.299999982119,
+                "p99": 5652.0999999940395,
+                "mean": 4654.677999994159
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 4854.5,
+                "p95": 5585.5999999940395,
+                "p99": 5654.5,
+                "mean": 4657.730000005365
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.5,
+                "p95": 9.5,
+                "p99": 12.400000005960464,
+                "mean": 3.0520000112056733
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 2.699999988079071,
+                "p95": 3.0999999940395355,
+                "p99": 4.200000017881393,
+                "mean": 2.7280000042915344
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 16.399999976158142,
+                "p95": 16.399999976158142,
+                "p99": 16.399999976158142,
+                "mean": 14.833333333333334
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 3,
+                "p95": 3,
+                "p99": 3,
+                "mean": 3.3333333333333335
+              },
+              "totalToLastVisibleMs": 6150.699999988079,
+              "wallIncludingIdleWaitMs": 6547.437601999962
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        },
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6236.5,
+              "backlogDrainMs": 236.5,
+              "avgFps": 0.3206926962238435,
+              "frameMs": {
+                "count": 1,
+                "p50": 4431.5999999940395,
+                "p95": 4431.5999999940395,
+                "p99": 4431.5999999940395,
+                "mean": 4431.5999999940395
+              },
+              "rafFps": 8.017317405596087,
+              "overlayPaintFps": 7.055239316924556,
+              "inputToOverlayFrameMs": {
+                "count": 245,
+                "p50": 285.70000000596065,
+                "p95": 418.3000000000002,
+                "p99": 562.4000000059605,
+                "mean": 276.4853061226192
+              },
+              "inputToNextFrameMs": {
+                "count": 245,
+                "p50": 2384.2999999821186,
+                "p95": 4167.799999982119,
+                "p99": 4367.4000000059605,
+                "mean": 2362.3681632605135
+              },
+              "dispatchDelayMs": {
+                "count": 245,
+                "p50": 16.100000023841858,
+                "p95": 21.400000005960464,
+                "p99": 24.5,
+                "mean": 12.402448990150374
+              },
+              "inputEvents": 245,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "ui_render": {
+                  "count": 44,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.4000000059604645,
+                  "mean": 0.30454545603557065,
+                  "perChangedFrame": 6.700000032782555
+                },
+                "image_upload": {
+                  "count": 44,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.9000000059604645,
+                  "mean": 0.05227272686633197,
+                  "perChangedFrame": 1.1499999910593033
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 1,
+                  "p95": 1,
+                  "p99": 1,
+                  "mean": 2.1666666666666665,
+                  "perChangedFrame": 3.25
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.30000001192092896,
+                  "p99": 0.30000001192092896,
+                  "mean": 0.3500000089406967,
+                  "perChangedFrame": 0.3500000089406967
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1038.5,
+                "p95": 1038.5,
+                "p99": 1038.5,
+                "mean": 2730.75
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6025.700000017881,
+              "backlogDrainMs": 25.700000017881393,
+              "avgFps": 0.3319116451190841,
+              "frameMs": {
+                "count": 1,
+                "p50": 4380.700000017881,
+                "p95": 4380.700000017881,
+                "p99": 4380.700000017881,
+                "mean": 4380.700000017881
+              },
+              "rafFps": 7.136100370060308,
+              "overlayPaintFps": 7.136100370060308,
+              "inputToOverlayFrameMs": {
+                "count": 230,
+                "p50": 294.50000001192166,
+                "p95": 741.9000000059605,
+                "p99": 841.8000000119209,
+                "mean": 331.54782608705983
+              },
+              "inputToNextFrameMs": {
+                "count": 230,
+                "p50": 1797.5999999940395,
+                "p95": 4197.5999999940395,
+                "p99": 4325.200000017881,
+                "mean": 2110.1830434801786
+              },
+              "dispatchDelayMs": {
+                "count": 230,
+                "p50": 15,
+                "p95": 21.80000001192093,
+                "p99": 26.5,
+                "mean": 11.8556521848492
+              },
+              "inputEvents": 230,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0.09999999403953552,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.09999999403953552,
+                  "perChangedFrame": 0.04999999701976776
+                },
+                "ui_render": {
+                  "count": 43,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.5,
+                  "mean": 0.3162790717080582,
+                  "perChangedFrame": 6.800000041723251
+                },
+                "image_upload": {
+                  "count": 43,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.8999999761581421,
+                  "mean": 0.06976744116738785,
+                  "perChangedFrame": 1.4999999850988388
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.0333333412806193,
+                  "perChangedFrame": 0.050000011920928955
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 1,
+                  "p95": 1,
+                  "p99": 1,
+                  "mean": 1,
+                  "perChangedFrame": 1.5
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.3999999761581421,
+                  "p95": 0.3999999761581421,
+                  "p99": 0.3999999761581421,
+                  "mean": 3.3999999910593033,
+                  "perChangedFrame": 3.3999999910593033
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1577.2000000178814,
+                "p95": 1577.2000000178814,
+                "p99": 1577.2000000178814,
+                "mean": 2969.050000011921
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 16886.90000000596,
+              "backlogDrainMs": 10886.90000000596,
+              "avgFps": 0.23686999982226387,
+              "frameMs": {
+                "count": 3,
+                "p50": 4728.800000011921,
+                "p95": 4728.800000011921,
+                "p99": 4728.800000011921,
+                "mean": 4653.566666662693
+              },
+              "rafFps": 5.684879995734333,
+              "overlayPaintFps": 5.625662495778767,
+              "inputToOverlayFrameMs": {
+                "count": 105,
+                "p50": 200.30000001192093,
+                "p95": 406.3000000059619,
+                "p99": 521.999999994041,
+                "mean": 190.72761904693803
+              },
+              "inputToNextFrameMs": {
+                "count": 105,
+                "p50": 2130.5999999940395,
+                "p95": 4665.5999999940395,
+                "p99": 4859.399999976158,
+                "mean": 2285.851428567512
+              },
+              "dispatchDelayMs": {
+                "count": 105,
+                "p50": 4200.800000011921,
+                "p95": 12512.5,
+                "p99": 13383.300000011921,
+                "mean": 5137.161904773542
+              },
+              "inputEvents": 105,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "ui_render": {
+                  "count": 95,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 4.0999999940395355,
+                  "mean": 0.4073684218682741,
+                  "perChangedFrame": 9.67500001937151
+                },
+                "image_upload": {
+                  "count": 95,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 1.100000023841858,
+                  "mean": 0.10210526334611993,
+                  "perChangedFrame": 2.4250000044703484
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 1.199999988079071,
+                  "p95": 1.5,
+                  "p99": 1.5,
+                  "mean": 1.279999989271164,
+                  "perChangedFrame": 1.599999986588955
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.30000001192092896,
+                  "p99": 0.30000001192092896,
+                  "mean": 0.30000000447034836,
+                  "perChangedFrame": 0.30000000447034836
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 4351.4000000059605,
+                "p95": 4713.299999982119,
+                "p99": 4713.299999982119,
+                "mean": 3680.7999999970198
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 5986.800000011921,
+              "backlogDrainMs": 0,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 7.182468096464619,
+              "overlayPaintFps": 7.182468096464619,
+              "inputToOverlayFrameMs": {
+                "count": 238,
+                "p50": 360.2999999880849,
+                "p95": 593.6999999940454,
+                "p99": 677.5999999940395,
+                "mean": 350.2714285717301
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 243,
+                "p50": 9.400000005960464,
+                "p95": 19.5,
+                "p99": 22.599999994039536,
+                "mean": 9.470781903453325
+              },
+              "inputEvents": 243,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 243,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.01687242820429704,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 43,
+                  "p50": 0.29999998211860657,
+                  "p95": 0.4000000059604645,
+                  "p99": 0.5,
+                  "mean": 0.2930232542891835,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 43,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.006976744463277417,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 458.2999999821186,
+                "p95": 500.09999999403954,
+                "p99": 500.09999999403954,
+                "mean": 474.1799999922514
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 458.89999997615814,
+                "p95": 500.59999999403954,
+                "p99": 500.59999999403954,
+                "mean": 474.8199999898672
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.5,
+                "p95": 0.800000011920929,
+                "p99": 0.800000011920929,
+                "mean": 0.6399999976158142
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 2.800000011920929,
+                "p95": 3.7000000178813934,
+                "p99": 3.7000000178813934,
+                "mean": 3.3200000017881393
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 5.4000000059604645,
+                "p95": 10.600000023841858,
+                "p99": 10.600000023841858,
+                "mean": 8.420000007748603
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 2,
+                "p95": 4,
+                "p99": 4,
+                "mean": 2.8
+              },
+              "totalToLastVisibleMs": 8202
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 5227.4000000059605,
+                "p95": 5961.9000000059605,
+                "p99": 6029.4000000059605,
+                "mean": 5095.8939999967815
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 5228.4000000059605,
+                "p95": 5963.4000000059605,
+                "p99": 6030.4000000059605,
+                "mean": 5098.206000008583
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.5,
+                "p95": 8.5,
+                "p99": 10.099999994039536,
+                "mean": 2.31200001180172
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 2.600000023841858,
+                "p95": 3.300000011920929,
+                "p99": 3.7999999821186066,
+                "mean": 2.6759999978542326
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 8.900000005960464,
+                "p95": 8.900000005960464,
+                "p99": 8.900000005960464,
+                "mean": 13.266666660706202
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 3,
+                "p95": 3,
+                "p99": 3,
+                "mean": 3.3333333333333335
+              },
+              "totalToLastVisibleMs": 6594.199999988079,
+              "wallIncludingIdleWaitMs": 6981.774136000022
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        },
+        {
+          "camera": {
+            "orbit": {
+              "measuredWallMs": 6105.9000000059605,
+              "backlogDrainMs": 105.90000000596046,
+              "avgFps": 0.3275520398300083,
+              "frameMs": {
+                "count": 1,
+                "p50": 4575,
+                "p95": 4575,
+                "p99": 4575,
+                "mean": 4575
+              },
+              "rafFps": 7.206144876260182,
+              "overlayPaintFps": 7.206144876260182,
+              "inputToOverlayFrameMs": {
+                "count": 232,
+                "p50": 342.2000000178814,
+                "p95": 662.8000000238417,
+                "p99": 745,
+                "mean": 346.2887931163717
+              },
+              "inputToNextFrameMs": {
+                "count": 228,
+                "p50": 2090.5,
+                "p95": 4324,
+                "p99": 4522.4000000059605,
+                "mean": 2249.209210521427
+              },
+              "dispatchDelayMs": {
+                "count": 232,
+                "p50": 15.700000017881393,
+                "p95": 21.400000005960464,
+                "p99": 23.30000001192093,
+                "mean": 12.08879311344233
+              },
+              "inputEvents": 232,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "ui_render": {
+                  "count": 44,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5,
+                  "mean": 0.3409090902317654,
+                  "perChangedFrame": 7.499999985098839
+                },
+                "image_upload": {
+                  "count": 44,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0.8999999761581421,
+                  "mean": 0.04545454477721995,
+                  "perChangedFrame": 0.9999999850988388
+                },
+                "snapshot": {
+                  "count": 3,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 3,
+                  "p50": 1.0999999940395355,
+                  "p95": 1.0999999940395355,
+                  "p99": 1.0999999940395355,
+                  "mean": 1.1333333253860474,
+                  "perChangedFrame": 1.699999988079071
+                },
+                "image_convert": {
+                  "count": 2,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.30000001192092896,
+                  "p99": 0.30000001192092896,
+                  "mean": 0.3500000089406967,
+                  "perChangedFrame": 0.3500000089406967
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 2,
+                "p50": 1307.2999999821186,
+                "p95": 1307.2999999821186,
+                "p99": 1307.2999999821186,
+                "mean": 2936.499999985099
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "pan": {
+              "measuredWallMs": 6190.799999982119,
+              "backlogDrainMs": 190.7999999821186,
+              "avgFps": 0.1615300122767475,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 5.492020417409415,
+              "overlayPaintFps": 5.330490405132667,
+              "inputToOverlayFrameMs": {
+                "count": 210,
+                "p50": 468.40000002384113,
+                "p95": 802.4000000000015,
+                "p99": 901.9000000059605,
+                "mean": 455.9261904874879
+              },
+              "inputToNextFrameMs": {
+                "count": 210,
+                "p50": 2736.699999988079,
+                "p95": 5169,
+                "p99": 5387,
+                "mean": 2924.3452380915483
+              },
+              "dispatchDelayMs": {
+                "count": 210,
+                "p50": 3.9000000059604645,
+                "p95": 19.700000017881393,
+                "p99": 22.80000001192093,
+                "mean": 9.152857154465856
+              },
+              "inputEvents": 210,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 1,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "ui_render": {
+                  "count": 33,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5999999940395355,
+                  "mean": 0.33333333152713196,
+                  "perChangedFrame": 10.999999940395355
+                },
+                "image_upload": {
+                  "count": 33,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.039393939755179665,
+                  "perChangedFrame": 1.300000011920929
+                },
+                "snapshot": {
+                  "count": 2,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0,
+                  "perChangedFrame": 0
+                },
+                "render_submission": {
+                  "count": 2,
+                  "p50": 1,
+                  "p95": 1,
+                  "p99": 1,
+                  "mean": 2.8999999910593033,
+                  "perChangedFrame": 5.799999982118607
+                },
+                "image_convert": {
+                  "count": 1,
+                  "p50": 0.3999999761581421,
+                  "p95": 0.3999999761581421,
+                  "p99": 0.3999999761581421,
+                  "mean": 0.3999999761581421,
+                  "perChangedFrame": 0.3999999761581421
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 1,
+                "p50": 1897.2000000178814,
+                "p95": 1897.2000000178814,
+                "p99": 1897.2000000178814,
+                "mean": 1897.2000000178814
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "zoom": {
+              "measuredWallMs": 17524.29999998212,
+              "backlogDrainMs": 11524.299999982119,
+              "avgFps": 0.22825448092101147,
+              "frameMs": {
+                "count": 3,
+                "p50": 4853.5999999940395,
+                "p95": 4853.5999999940395,
+                "p99": 4853.5999999940395,
+                "mean": 4750.9666666686535
+              },
+              "rafFps": 5.592234782564781,
+              "overlayPaintFps": 5.478107542104276,
+              "inputToOverlayFrameMs": {
+                "count": 105,
+                "p50": 203.80000001192093,
+                "p95": 418.09999999999854,
+                "p99": 496.40000000596046,
+                "mean": 193.071428583577
+              },
+              "inputToNextFrameMs": {
+                "count": 105,
+                "p50": 2269.4000000059605,
+                "p95": 4650.300000011921,
+                "p99": 4841.0999999940395,
+                "mean": 2339.1200000027816
+              },
+              "dispatchDelayMs": {
+                "count": 105,
+                "p50": 4606.100000023842,
+                "p95": 13275.200000017881,
+                "p99": 14014.700000017881,
+                "mean": 5536.879047629663
+              },
+              "inputEvents": 105,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "snapshot": {
+                  "count": 5,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0,
+                  "mean": 0.019999998807907104,
+                  "perChangedFrame": 0.02499999850988388
+                },
+                "ui_render": {
+                  "count": 96,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5999999940395355,
+                  "mean": 0.34062499770273763,
+                  "perChangedFrame": 8.174999944865704
+                },
+                "image_upload": {
+                  "count": 96,
+                  "p50": 0,
+                  "p95": 0.09999999403953552,
+                  "p99": 5.4000000059604645,
+                  "mean": 0.1885416666045785,
+                  "perChangedFrame": 4.524999998509884
+                },
+                "render_submission": {
+                  "count": 5,
+                  "p50": 1.100000023841858,
+                  "p95": 2.7000000178813934,
+                  "p99": 2.7000000178813934,
+                  "mean": 2.2200000047683717,
+                  "perChangedFrame": 2.7750000059604645
+                },
+                "image_convert": {
+                  "count": 4,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.3999999761581421,
+                  "p99": 0.3999999761581421,
+                  "mean": 0.3749999925494194,
+                  "perChangedFrame": 0.3749999925494194
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 4,
+                "p50": 4443.899999976158,
+                "p95": 4841.0999999940395,
+                "p99": 4841.0999999940395,
+                "mean": 3709.7249999940395
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            },
+            "preview": {
+              "measuredWallMs": 6029,
+              "backlogDrainMs": 29,
+              "avgFps": 0,
+              "frameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "rafFps": 7.961519323270857,
+              "overlayPaintFps": 7.629789351467905,
+              "inputToOverlayFrameMs": {
+                "count": 260,
+                "p50": 296.8000000000029,
+                "p95": 511.60000001192384,
+                "p99": 580.2000000059634,
+                "mean": 290.1280769365107
+              },
+              "inputToNextFrameMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "dispatchDelayMs": {
+                "count": 260,
+                "p50": 14.200000017881393,
+                "p95": 22,
+                "p99": 28.5,
+                "mean": 11.303461547998282
+              },
+              "inputEvents": 260,
+              "offeredEvents": 360,
+              "cpuMs": {
+                "picking": {
+                  "count": 260,
+                  "p50": 0,
+                  "p95": 0.10000002384185791,
+                  "p99": 0.10000002384185791,
+                  "mean": 0.018461538965885455,
+                  "perChangedFrame": null
+                },
+                "ui_render": {
+                  "count": 46,
+                  "p50": 0.30000001192092896,
+                  "p95": 0.5,
+                  "p99": 0.5,
+                  "mean": 0.3239130429599596,
+                  "perChangedFrame": null
+                },
+                "image_upload": {
+                  "count": 46,
+                  "p50": 0,
+                  "p95": 0,
+                  "p99": 0.09999999403953552,
+                  "mean": 0.004347825827805892,
+                  "perChangedFrame": null
+                }
+              },
+              "gpuWaitReadbackMs": {
+                "count": 0,
+                "p50": null,
+                "p95": null,
+                "p99": null,
+                "mean": null
+              },
+              "gpuUploadedBytes": 0,
+              "jsWasmBoundaryMs": null
+            }
+          },
+          "placement": {
+            "single": {
+              "attempted": 10,
+              "accepted": 10,
+              "visible": 10,
+              "clickToVisibleMs": {
+                "count": 10,
+                "p50": 425.19999998807907,
+                "p95": 457.59999999403954,
+                "p99": 457.59999999403954,
+                "mean": 431.1499999970198
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 10,
+                "p50": 425.89999997615814,
+                "p95": 458.2999999821186,
+                "p99": 458.2999999821186,
+                "mean": 432.0499999940395
+              },
+              "dispatchDelayMs": {
+                "count": 10,
+                "p50": 0.7000000178813934,
+                "p95": 1,
+                "p99": 1,
+                "mean": 0.8999999970197677
+              },
+              "editCpuMs": {
+                "count": 10,
+                "p50": 2.800000011920929,
+                "p95": 3.300000011920929,
+                "p99": 3.300000011920929,
+                "mean": 3.26000000834465
+              },
+              "meshCpuMs": {
+                "count": 10,
+                "p50": 5.4000000059604645,
+                "p95": 9.900000005960464,
+                "p99": 9.900000005960464,
+                "mean": 7.030000007152557
+              },
+              "updatedChunks": {
+                "count": 10,
+                "p50": 2,
+                "p95": 4,
+                "p99": 4,
+                "mean": 2.8
+              },
+              "totalToLastVisibleMs": 7795.299999982119
+            },
+            "series": {
+              "attempted": 50,
+              "accepted": 50,
+              "visible": 50,
+              "clickToVisibleMs": {
+                "count": 50,
+                "p50": 5321.699999988079,
+                "p95": 6048.5999999940395,
+                "p99": 6116.5999999940395,
+                "mean": 5003.761999997497
+              },
+              "eventTimestampToVisibleMs": {
+                "count": 50,
+                "p50": 5322.4000000059605,
+                "p95": 6055.4000000059605,
+                "p99": 6121.4000000059605,
+                "mean": 5008.740000008941
+              },
+              "dispatchDelayMs": {
+                "count": 50,
+                "p50": 1.7000000178813934,
+                "p95": 9.400000005960464,
+                "p99": 46.10000002384186,
+                "mean": 4.978000011444092
+              },
+              "editCpuMs": {
+                "count": 50,
+                "p50": 2.5999999940395355,
+                "p95": 4.899999976158142,
+                "p99": 5.9000000059604645,
+                "mean": 2.859999997615814
+              },
+              "meshCpuMs": {
+                "count": 3,
+                "p50": 10.099999994039536,
+                "p95": 10.099999994039536,
+                "p99": 10.099999994039536,
+                "mean": 12.399999996026358
+              },
+              "updatedChunks": {
+                "count": 3,
+                "p50": 3,
+                "p95": 3,
+                "p99": 3,
+                "mean": 3.3333333333333335
+              },
+              "totalToLastVisibleMs": 6686.199999988079,
+              "wallIncludingIdleWaitMs": 7065.136656000046
+            }
+          },
+          "errors": [],
+          "diagnostics": [
+            "[INFO] gpui_web_gpui_unofficial::platform: Browser graphics initialized successfully with Gl",
+            "Voxelite GPU viewport: Gl / ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) / full resolution / 4x MSAA / 2048 shadows"
+          ]
+        }
+      ],
+      "median": {
+        "camera": {
+          "orbit": {
+            "measuredWallMs": 6236.5,
+            "backlogDrainMs": 236.5,
+            "avgFps": 0.3206926962238435,
+            "frameMs": {
+              "count": 1,
+              "p50": 4575,
+              "p95": 4575,
+              "p99": 4575,
+              "mean": 4575
+            },
+            "rafFps": 7.977280704576191,
+            "overlayPaintFps": 7.055239316924556,
+            "inputToOverlayFrameMs": {
+              "count": 241,
+              "p50": 288.79999998807943,
+              "p95": 472.9999999940392,
+              "p99": 562.4000000059605,
+              "mean": 276.4853061226192
+            },
+            "inputToNextFrameMs": {
+              "count": 241,
+              "p50": 2162.699999988079,
+              "p95": 4324,
+              "p99": 4479,
+              "mean": 2249.209210521427
+            },
+            "dispatchDelayMs": {
+              "count": 241,
+              "p50": 16.100000023841858,
+              "p95": 21.400000005960464,
+              "p99": 24.5,
+              "mean": 12.402448990150374
+            },
+            "inputEvents": 241,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 1,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0,
+                "perChangedFrame": 0
+              },
+              "ui_render": {
+                "count": 44,
+                "p50": 0.30000001192092896,
+                "p95": 0.5,
+                "p99": 0.5,
+                "mean": 0.3409090902317654,
+                "perChangedFrame": 7.3499999940395355
+              },
+              "image_upload": {
+                "count": 44,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.9000000059604645,
+                "mean": 0.05227272686633197,
+                "perChangedFrame": 1.1499999910593033
+              },
+              "snapshot": {
+                "count": 3,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0,
+                "perChangedFrame": 0
+              },
+              "render_submission": {
+                "count": 3,
+                "p50": 1.0999999940395355,
+                "p95": 1.0999999940395355,
+                "p99": 1.0999999940395355,
+                "mean": 2.1666666666666665,
+                "perChangedFrame": 3.25
+              },
+              "image_convert": {
+                "count": 2,
+                "p50": 0.30000001192092896,
+                "p95": 0.30000001192092896,
+                "p99": 0.30000001192092896,
+                "mean": 0.3500000089406967,
+                "perChangedFrame": 0.3500000089406967
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 2,
+              "p50": 1125,
+              "p95": 1125,
+              "p99": 1125,
+              "mean": 2850.75
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "pan": {
+            "measuredWallMs": 6190.799999982119,
+            "backlogDrainMs": 190.7999999821186,
+            "avgFps": 0.3123633410377142,
+            "frameMs": {
+              "count": 1,
+              "p50": 5059.5,
+              "p95": 5059.5,
+              "p99": 5059.5,
+              "mean": 5059.5
+            },
+            "rafFps": 6.871993502829712,
+            "overlayPaintFps": 6.559630161791998,
+            "inputToOverlayFrameMs": {
+              "count": 215,
+              "p50": 360.8999999940388,
+              "p95": 741.9000000059605,
+              "p99": 861.4999999880783,
+              "mean": 354.26372093037156
+            },
+            "inputToNextFrameMs": {
+              "count": 215,
+              "p50": 2582,
+              "p95": 4838,
+              "p99": 5052.4000000059605,
+              "mean": 2590.6539534883445
+            },
+            "dispatchDelayMs": {
+              "count": 215,
+              "p50": 12.5,
+              "p95": 21.700000017881393,
+              "p99": 24,
+              "mean": 11.8556521848492
+            },
+            "inputEvents": 215,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 1,
+                "p50": 0.09999999403953552,
+                "p95": 0.09999999403953552,
+                "p99": 0.09999999403953552,
+                "mean": 0.09999999403953552,
+                "perChangedFrame": 0.04999999701976776
+              },
+              "ui_render": {
+                "count": 42,
+                "p50": 0.30000001192092896,
+                "p95": 0.5,
+                "p99": 0.5999999940395355,
+                "mean": 0.33333333152713196,
+                "perChangedFrame": 9.149999961256981
+              },
+              "image_upload": {
+                "count": 42,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.8999999761581421,
+                "mean": 0.06976744116738785,
+                "perChangedFrame": 1.4999999850988388
+              },
+              "snapshot": {
+                "count": 3,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0.0333333412806193,
+                "perChangedFrame": 0.050000011920928955
+              },
+              "render_submission": {
+                "count": 3,
+                "p50": 1,
+                "p95": 1,
+                "p99": 1,
+                "mean": 1.3333333333333333,
+                "perChangedFrame": 2
+              },
+              "image_convert": {
+                "count": 2,
+                "p50": 0.3999999761581421,
+                "p95": 0.3999999761581421,
+                "p99": 0.3999999761581421,
+                "mean": 0.6500000059604645,
+                "perChangedFrame": 0.6500000059604645
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 2,
+              "p50": 1577.2000000178814,
+              "p95": 1577.2000000178814,
+              "p99": 1577.2000000178814,
+              "mean": 2947.8500000089407
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "zoom": {
+            "measuredWallMs": 17524.29999998212,
+            "backlogDrainMs": 11524.299999982119,
+            "avgFps": 0.22825448092101147,
+            "frameMs": {
+              "count": 3,
+              "p50": 4853.5999999940395,
+              "p95": 4853.5999999940395,
+              "p99": 4853.5999999940395,
+              "mean": 4750.9666666686535
+            },
+            "rafFps": 5.592234782564781,
+            "overlayPaintFps": 5.478107542104276,
+            "inputToOverlayFrameMs": {
+              "count": 105,
+              "p50": 203.80000001192093,
+              "p95": 418.09999999999854,
+              "p99": 521.999999994041,
+              "mean": 193.071428583577
+            },
+            "inputToNextFrameMs": {
+              "count": 105,
+              "p50": 2269.4000000059605,
+              "p95": 4665.5999999940395,
+              "p99": 4859.399999976158,
+              "mean": 2339.1200000027816
+            },
+            "dispatchDelayMs": {
+              "count": 105,
+              "p50": 4606.100000023842,
+              "p95": 13275.200000017881,
+              "p99": 14014.700000017881,
+              "mean": 5536.879047629663
+            },
+            "inputEvents": 105,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "snapshot": {
+                "count": 5,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0,
+                "mean": 0.019999998807907104,
+                "perChangedFrame": 0.02499999850988388
+              },
+              "ui_render": {
+                "count": 95,
+                "p50": 0.30000001192092896,
+                "p95": 0.5,
+                "p99": 1.2999999821186066,
+                "mean": 0.38602150576089017,
+                "perChangedFrame": 8.975000008940697
+              },
+              "image_upload": {
+                "count": 95,
+                "p50": 0,
+                "p95": 0.10000002384185791,
+                "p99": 1.300000011920929,
+                "mean": 0.10210526334611993,
+                "perChangedFrame": 2.4250000044703484
+              },
+              "render_submission": {
+                "count": 5,
+                "p50": 1.100000023841858,
+                "p95": 2.7000000178813934,
+                "p99": 2.7000000178813934,
+                "mean": 2.2200000047683717,
+                "perChangedFrame": 2.7750000059604645
+              },
+              "image_convert": {
+                "count": 4,
+                "p50": 0.30000001192092896,
+                "p95": 0.3999999761581421,
+                "p99": 0.3999999761581421,
+                "mean": 0.3749999925494194,
+                "perChangedFrame": 0.3749999925494194
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 4,
+              "p50": 4443.899999976158,
+              "p95": 4841.0999999940395,
+              "p99": 4841.0999999940395,
+              "mean": 3709.7249999940395
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          },
+          "preview": {
+            "measuredWallMs": 6029,
+            "backlogDrainMs": 29,
+            "avgFps": 0,
+            "frameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "rafFps": 7.961519323270857,
+            "overlayPaintFps": 7.326245868832685,
+            "inputToOverlayFrameMs": {
+              "count": 248,
+              "p50": 318.499999988082,
+              "p95": 567.4000000059605,
+              "p99": 677.5999999940395,
+              "mean": 318.2161290330025
+            },
+            "inputToNextFrameMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "dispatchDelayMs": {
+              "count": 248,
+              "p50": 9.400000005960464,
+              "p95": 19.5,
+              "p99": 28.400000005960464,
+              "mean": 9.988709687826134
+            },
+            "inputEvents": 248,
+            "offeredEvents": 360,
+            "cpuMs": {
+              "picking": {
+                "count": 248,
+                "p50": 0,
+                "p95": 0.09999999403953552,
+                "p99": 0.10000002384185791,
+                "mean": 0.01687242820429704,
+                "perChangedFrame": null
+              },
+              "ui_render": {
+                "count": 45,
+                "p50": 0.29999998211860657,
+                "p95": 0.5,
+                "p99": 0.5,
+                "mean": 0.3239130429599596,
+                "perChangedFrame": null
+              },
+              "image_upload": {
+                "count": 45,
+                "p50": 0,
+                "p95": 0,
+                "p99": 0.09999999403953552,
+                "mean": 0.006976744463277417,
+                "perChangedFrame": null
+              }
+            },
+            "gpuWaitReadbackMs": {
+              "count": 0,
+              "p50": null,
+              "p95": null,
+              "p99": null,
+              "mean": null
+            },
+            "gpuUploadedBytes": 0,
+            "jsWasmBoundaryMs": null
+          }
+        },
+        "placement": {
+          "single": {
+            "attempted": 10,
+            "accepted": 10,
+            "visible": 10,
+            "clickToVisibleMs": {
+              "count": 10,
+              "p50": 458.2999999821186,
+              "p95": 500.09999999403954,
+              "p99": 500.09999999403954,
+              "mean": 474.1799999922514
+            },
+            "eventTimestampToVisibleMs": {
+              "count": 10,
+              "p50": 458.89999997615814,
+              "p95": 500.59999999403954,
+              "p99": 500.59999999403954,
+              "mean": 474.8199999898672
+            },
+            "dispatchDelayMs": {
+              "count": 10,
+              "p50": 0.7000000178813934,
+              "p95": 0.800000011920929,
+              "p99": 0.800000011920929,
+              "mean": 0.690000006556511
+            },
+            "editCpuMs": {
+              "count": 10,
+              "p50": 2.800000011920929,
+              "p95": 3.7000000178813934,
+              "p99": 3.7000000178813934,
+              "mean": 3.26000000834465
+            },
+            "meshCpuMs": {
+              "count": 10,
+              "p50": 5.4000000059604645,
+              "p95": 10.600000023841858,
+              "p99": 10.600000023841858,
+              "mean": 8.420000007748603
+            },
+            "updatedChunks": {
+              "count": 10,
+              "p50": 2,
+              "p95": 4,
+              "p99": 4,
+              "mean": 2.8
+            },
+            "totalToLastVisibleMs": 8202
+          },
+          "series": {
+            "attempted": 50,
+            "accepted": 50,
+            "visible": 50,
+            "clickToVisibleMs": {
+              "count": 50,
+              "p50": 5227.4000000059605,
+              "p95": 5961.9000000059605,
+              "p99": 6029.4000000059605,
+              "mean": 5003.761999997497
+            },
+            "eventTimestampToVisibleMs": {
+              "count": 50,
+              "p50": 5228.4000000059605,
+              "p95": 5963.4000000059605,
+              "p99": 6030.4000000059605,
+              "mean": 5008.740000008941
+            },
+            "dispatchDelayMs": {
+              "count": 50,
+              "p50": 1.5,
+              "p95": 9.400000005960464,
+              "p99": 12.400000005960464,
+              "mean": 3.0520000112056733
+            },
+            "editCpuMs": {
+              "count": 50,
+              "p50": 2.600000023841858,
+              "p95": 3.300000011920929,
+              "p99": 4.200000017881393,
+              "mean": 2.7280000042915344
+            },
+            "meshCpuMs": {
+              "count": 3,
+              "p50": 10.099999994039536,
+              "p95": 10.099999994039536,
+              "p99": 10.099999994039536,
+              "mean": 13.266666660706202
+            },
+            "updatedChunks": {
+              "count": 3,
+              "p50": 3,
+              "p95": 3,
+              "p99": 3,
+              "mean": 3.3333333333333335
+            },
+            "totalToLastVisibleMs": 6594.199999988079,
+            "wallIncludingIdleWaitMs": 6981.774136000022
+          }
+        }
+      }
+    }
+  ]
+}

@@ -328,7 +328,12 @@ impl EditorView {
         // GPUI schedules one render on the next display tick. Input only updates
         // camera state and this bit; no raster jobs or per-event idle timers.
         self.render_pending = true;
-        cx.notify();
+        // A camera-only event cannot change the painted image until this task
+        // finishes. Repainting the entire GPUI shell meanwhile queues unrelated
+        // GPU work ahead of the viewport readback, especially on software GPUs.
+        if !self.rendering {
+            cx.notify();
+        }
     }
     fn start_render(&mut self, cx: &mut Context<Self>) {
         if !self.use_gpu || self.render_size[0] == 0 || self.rendering || !self.render_pending {
@@ -1045,7 +1050,13 @@ impl EditorView {
             self.drag = None;
             self.hover = self.ray(e.position).and_then(|r| self.editor.target(r));
         }
-        cx.notify();
+        let navigating = matches!(
+            e.pressed_button,
+            Some(MouseButton::Right | MouseButton::Middle)
+        );
+        if !navigating || !self.use_gpu || !self.rendering {
+            cx.notify();
+        }
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         if self.dialog_open {
@@ -1970,7 +1981,9 @@ impl EditorView {
                 this.editor.camera.zoom(delta);
                 this.camera_fitted = false;
                 this.request_navigation(cx);
-                cx.notify();
+                if !this.use_gpu || !this.rendering {
+                    cx.notify();
+                }
                 cx.stop_propagation();
             }))
     }

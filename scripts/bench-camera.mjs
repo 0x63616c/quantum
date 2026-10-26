@@ -12,6 +12,9 @@ const output = arg('--out', 'docs/perf/camera-before.json');
 const runs = Number(arg('--runs', '3'));
 const duration = Number(arg('--duration', '6000'));
 const backend = arg('--backend', 'webgl');
+if(!Number.isInteger(runs)||runs<1||runs>20||!Number.isFinite(duration)||duration<1000) throw Error('Use 1–20 runs and a duration of at least 1000 ms');
+if(!['all','typical','large'].includes(arg('--scene','all'))) throw Error('--scene must be all, typical, or large');
+if(!['webgl','webgpu'].includes(backend)) throw Error('--backend must be webgl or webgpu');
 const extraQuery = arg('--query', '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 import { summarize, median, markdown } from './lib/camera-metrics.mjs';
@@ -38,6 +41,7 @@ const report = { schema:1, date:new Date().toISOString(), commit:execFileSync('g
 await mkdir('docs/perf', {recursive:true});
 try {
 for (let si=0;si<scenes.length;si++) {
+ if(arg('--scene','all')!=='all'&&arg('--scene')!==(si?'large':'typical')) continue;
  const scene=scenes[si];
  const result={name:si?'large':'typical', title:scene.document.name, voxels:scene.layers.reduce((n,l)=>n+l.voxels.length,0), sha256:createHash('sha256').update(JSON.stringify(scene)).digest('hex'), runs:[]};
  report.scenes.push(result);

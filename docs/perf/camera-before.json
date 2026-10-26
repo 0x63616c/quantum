@@ -33,7 +33,7 @@
     "cpu": "Inclusive wasm spans; nested intervals must not be added. JS/wasm boundary overhead is not separately measurable and is reported null.",
     "cameraLatency": "Browser capture-phase event to first changed viewport paint after it (next RAF); intermediate coalesced events may not have their own frame.",
     "placementLatency": "Capture-phase left mousedown to first painted revision >= successful edit revision (next RAF). Rejections/no-ops separately counted.",
-    "analysis": "scripts/lib/camera-metrics.mjs; preview reports overlay latency separately, with no latency attributed to unrelated future 3D images. GPU wait/readback is asynchronous wall time, excluded from CPU spans."
+    "analysis": "scripts/lib/camera-metrics.mjs; GPU wait/readback is wall time, not CPU time. No changed-image metrics are attributed to overlay-only phases."
   },
   "scenes": [
     {
@@ -447,7 +447,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.10000002384185791,
                   "mean": 0.010139860369108774,
-                  "perChangedFrame": 2.9000000655651093
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 33,
@@ -455,7 +455,7 @@
                   "p95": 0.5,
                   "p99": 0.5,
                   "mean": 0.4393939402970401,
-                  "perChangedFrame": 14.500000029802322
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 33,
@@ -463,7 +463,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.10000002384185791,
                   "mean": 0.01515151605461583,
-                  "perChangedFrame": 0.5000000298023224
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -986,7 +986,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.10000002384185791,
                   "mean": 0.010181818225167014,
-                  "perChangedFrame": 2.800000011920929
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 34,
@@ -994,7 +994,7 @@
                   "p95": 0.5,
                   "p99": 0.5,
                   "mean": 0.4411764679586186,
-                  "perChangedFrame": 14.999999910593033
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 34,
@@ -1002,7 +1002,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.09999999403953552,
                   "mean": 0.01176470605766072,
-                  "perChangedFrame": 0.4000000059604645
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -1525,7 +1525,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.09999999403953552,
                   "mean": 0.011355311005980103,
-                  "perChangedFrame": 3.0999999046325684
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 34,
@@ -1533,7 +1533,7 @@
                   "p95": 0.5,
                   "p99": 0.5,
                   "mean": 0.34705882300348845,
-                  "perChangedFrame": 11.799999982118607
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 34,
@@ -1541,7 +1541,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.10000002384185791,
                   "mean": 0.008823530638919157,
-                  "perChangedFrame": 0.30000004172325134
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -2065,7 +2065,7 @@
                 "p95": 0.09999999403953552,
                 "p99": 0.10000002384185791,
                 "mean": 0.010181818225167014,
-                "perChangedFrame": 2.9000000655651093
+                "perChangedFrame": null
               },
               "ui_render": {
                 "count": 34,
@@ -2073,7 +2073,7 @@
                 "p95": 0.5,
                 "p99": 0.5,
                 "mean": 0.4393939402970401,
-                "perChangedFrame": 14.500000029802322
+                "perChangedFrame": null
               },
               "image_upload": {
                 "count": 34,
@@ -2081,7 +2081,7 @@
                 "p95": 0.09999999403953552,
                 "p99": 0.10000002384185791,
                 "mean": 0.01176470605766072,
-                "perChangedFrame": 0.4000000059604645
+                "perChangedFrame": null
               }
             },
             "gpuWaitReadbackMs": {
@@ -2599,7 +2599,7 @@
                   "p95": 0.09999999403953552,
                   "p99": 0.10000002384185791,
                   "mean": 0.0186770429639037,
-                  "perChangedFrame": 4.800000041723251
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 32,
@@ -2607,7 +2607,7 @@
                   "p95": 0.4000000059604645,
                   "p99": 0.5,
                   "mean": 0.32499999459832907,
-                  "perChangedFrame": 10.39999982714653
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 32,
@@ -2615,7 +2615,7 @@
                   "p95": 0,
                   "p99": 0.09999999403953552,
                   "mean": 0.006250000558793545,
-                  "perChangedFrame": 0.20000001788139343
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -3130,7 +3130,7 @@
                   "p95": 0.10000002384185791,
                   "p99": 0.10000002384185791,
                   "mean": 0.018623482360530963,
-                  "perChangedFrame": 4.6000001430511475
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 33,
@@ -3138,7 +3138,7 @@
                   "p95": 0.5,
                   "p99": 0.5,
                   "mean": 0.33939394174200116,
-                  "perChangedFrame": 11.200000077486038
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 33,
@@ -3146,7 +3146,7 @@
                   "p95": 0,
                   "p99": 0,
                   "mean": 0.0030303028496828947,
-                  "perChangedFrame": 0.09999999403953552
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -3661,7 +3661,7 @@
                   "p95": 0.10000002384185791,
                   "p99": 0.10000002384185791,
                   "mean": 0.019600000500679015,
-                  "perChangedFrame": 4.900000125169754
+                  "perChangedFrame": null
                 },
                 "ui_render": {
                   "count": 34,
@@ -3669,7 +3669,7 @@
                   "p95": 0.5,
                   "p99": 0.5,
                   "mean": 0.3735294131671681,
-                  "perChangedFrame": 12.700000047683716
+                  "perChangedFrame": null
                 },
                 "image_upload": {
                   "count": 34,
@@ -3677,7 +3677,7 @@
                   "p95": 0,
                   "p99": 0.09999999403953552,
                   "mean": 0.005882352590560913,
-                  "perChangedFrame": 0.19999998807907104
+                  "perChangedFrame": null
                 }
               },
               "gpuWaitReadbackMs": {
@@ -4193,7 +4193,7 @@
                 "p95": 0.10000002384185791,
                 "p99": 0.10000002384185791,
                 "mean": 0.0186770429639037,
-                "perChangedFrame": 4.800000041723251
+                "perChangedFrame": null
               },
               "ui_render": {
                 "count": 33,
@@ -4201,7 +4201,7 @@
                 "p95": 0.5,
                 "p99": 0.5,
                 "mean": 0.33939394174200116,
-                "perChangedFrame": 11.200000077486038
+                "perChangedFrame": null
               },
               "image_upload": {
                 "count": 33,
@@ -4209,7 +4209,7 @@
                 "p95": 0,
                 "p99": 0.09999999403953552,
                 "mean": 0.005882352590560913,
-                "perChangedFrame": 0.19999998807907104
+                "perChangedFrame": null
               }
             },
             "gpuWaitReadbackMs": {
