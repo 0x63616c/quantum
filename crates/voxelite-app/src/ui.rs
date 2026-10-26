@@ -10,6 +10,7 @@ mod comments;
 mod history;
 use comments::Panel;
 mod palettes;
+mod settings;
 mod share;
 mod shortcut_hint;
 use crate::{
@@ -28,7 +29,7 @@ use voxelite_render::{PresetView, RenderOptions, View};
 // Keep render sizing and native layout on the same logical-pixel metrics.
 const SIDEBAR_WIDTH: f32 = 352.0;
 const TOOL_RAIL_WIDTH: f32 = 56.0;
-const MENUBAR_HEIGHT: f32 = 32.0;
+const MENUBAR_HEIGHT: f32 = if cfg!(target_os = "macos") { 0.0 } else { 32.0 };
 const TOOLBAR_HEIGHT: f32 = 64.0;
 const STATUSBAR_HEIGHT: f32 = 32.0;
 const PANEL_GUTTER: f32 = 24.0;
@@ -52,6 +53,13 @@ pub struct EditorView {
     agent: agent::Agent,
     editor: Editor,
     theme: Theme,
+    preferences: voxelite_app::preferences::Preferences,
+    #[cfg(not(target_family = "wasm"))]
+    settings_window: Option<WindowHandle<settings::SettingsView>>,
+    #[cfg(target_family = "wasm")]
+    settings_modal: Option<Entity<settings::SettingsView>>,
+    palette_focus: FocusHandle,
+    sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
     painted_image: Option<Arc<RenderImage>>,
@@ -236,11 +244,20 @@ const PALETTES: [(&str, Option<Preset>); 8] = [
 impl EditorView {
     pub fn new(
         editor: Editor,
-        theme: Theme,
+        override_theme: Option<Theme>,
         socket: Option<PathBuf>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        settings::init(override_theme, cx);
+        let preferences = cx.global::<settings::SettingsState>().values.clone();
+        let theme = settings::theme(preferences.appearance, window);
+        cx.observe_global_in::<settings::SettingsState>(window, |this, window, cx| {
+            this.sync_preferences(window, cx)
+        })
+        .detach();
+        cx.observe_window_appearance(window, |this, window, cx| this.sync_preferences(window, cx))
+            .detach();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let weak = cx.weak_entity();
@@ -264,8 +281,8 @@ impl EditorView {
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;
-                cx.notify();
             }
+            cx.notify();
         })
         .detach();
         let mut palettes = palettes::PaletteManager::new(cx);
@@ -311,6 +328,14 @@ impl EditorView {
             navigation_epoch: 0,
             interactive_render: false,
             editor,
+            grid: preferences.grid,
+            preferences,
+            #[cfg(not(target_family = "wasm"))]
+            settings_window: None,
+            #[cfg(target_family = "wasm")]
+            settings_modal: None,
+            palette_focus: cx.focus_handle(),
+            sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
             image: None,
@@ -322,7 +347,6 @@ impl EditorView {
             viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
-            grid: true,
             menu: None,
             menu_index: 0,
             palette_open: false,
@@ -396,7 +420,11 @@ impl EditorView {
             } else {
                 self.render_size[1]
             },
-            supersampling: if interactive { 1 } else { 2 },
+            supersampling: if interactive || !self.preferences.antialiasing {
+                1
+            } else {
+                2
+            },
             view: View::Camera(self.editor.camera.camera()),
             background: [0; 4],
             ..Default::default()
@@ -606,11 +634,45 @@ impl EditorView {
             cx.notify();
             return;
         }
-        self.run(op, cx);
+        match op {
+            Op::Settings | Op::Theme => {
+                self.open_settings(
+                    if op == Op::Theme {
+                        settings::Section::Appearance
+                    } else {
+                        settings::Section::General
+                    },
+                    window,
+                    cx,
+                );
+                return;
+            }
+            Op::Minimize => window.minimize_window(),
+            Op::ZoomWindow => window.zoom_window(),
+            Op::ShowPalette => {
+                self.panel = Panel::Session;
+                self.sidebar_scroll.scroll_to_bottom();
+                window.focus(&self.palette_focus, cx);
+                self.status = "Palette focused · Arrow keys choose a brush color · Escape returns to the viewport".into();
+                cx.notify();
+                return;
+            }
+            _ => self.run(op, cx),
+        }
         window.focus(&self.focus, cx);
     }
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
+            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
+            Op::About => self.info = Some(("About Voxelite", format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION")).into())),
+            Op::CheckUpdates => {
+                #[cfg(target_os = "macos")]
+                crate::updater::check_for_updates();
+                self.status = "Update integration is not available in this build.".into();
+            }
+            Op::Hide => cx.hide(),
+            Op::HideOthers => cx.hide_other_apps(),
+            Op::ShowAll => cx.unhide_other_apps(),
             Op::Quit => cx.quit(),
             Op::New => match Editor::blank() {
                 Ok(editor) => {
@@ -639,8 +701,7 @@ impl EditorView {
                 let r = self.editor.redo();
                 self.report(r, "Redone", cx);
             }
-            Op::Theme => self.theme.toggle(),
-            Op::Grid => self.grid = !self.grid,
+            Op::Grid => settings::change(cx, |p| p.grid = !p.grid),
             Op::Frame | Op::Front | Op::Right | Op::Top => {
                 self.agent.follow = false;
                 let b = self.viewport.get();
@@ -911,6 +972,48 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        #[cfg(target_family = "wasm")]
+        if self.settings_modal.is_some() {
+            return;
+        }
+        if self.palette_focus.is_focused(window) {
+            let delta = match e.keystroke.key.as_str() {
+                "left" => Some(-1),
+                "right" => Some(1),
+                "up" => Some(-8),
+                "down" => Some(8),
+                _ => None,
+            };
+            if let Some(delta) = delta {
+                let palette = self.active_palette();
+                if !palette.order.is_empty() {
+                    let current = palette
+                        .order
+                        .iter()
+                        .position(|slot| {
+                            palette
+                                .get(*slot)
+                                .is_some_and(|color| color.rgba == self.editor.color.rgba)
+                        })
+                        .unwrap_or(0);
+                    let next = (current as isize + delta).rem_euclid(palette.order.len() as isize)
+                        as usize;
+                    self.editor.color = palette
+                        .get(palette.order[next])
+                        .expect("palette slot")
+                        .clone();
+                    self.swatch_scroll
+                        .set_offset(point(px(0.0), -px((next / 8) as f32 * 38.0)));
+                    cx.notify();
+                }
+                cx.stop_propagation();
+                return;
+            }
+            if e.keystroke.key != "escape" {
+                // Choosing a brush color must never apply the viewport tool.
+                return;
+            }
+        }
         if self.dialog_open {
             cx.stop_propagation();
             return;
@@ -1337,12 +1440,21 @@ impl EditorView {
                 }),
             )
     }
-    fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
+    fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         row()
+            .id("main-titlebar")
+            .on_mouse_down(MouseButton::Left, |event, window, _| {
+                if event.click_count == 2 {
+                    window.zoom_window();
+                } else {
+                    window.start_window_move();
+                }
+            })
             .h(px(TOOLBAR_HEIGHT))
             .flex_shrink_0()
             .px(px(24.0))
+            .when(cfg!(target_os = "macos"), |d| d.pl(px(104.0)))
             .gap(px(16.0))
             .border_b_1()
             .border_color(t.line())
@@ -1404,22 +1516,24 @@ impl EditorView {
                 ),
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
-            .child(self.button(
-                "theme",
-                if t == Theme::Dark { "sun" } else { "moon" },
-                "",
-                Op::Theme,
-                cx,
-            ))
+            .child(self.button("settings", "sliders-horizontal", "", Op::Settings, cx))
             .child(
                 self.button("share", "share-2", "Share", Op::Share, cx)
+                    .w(px(96.0))
+                    .h(px(36.0))
+                    .justify_center()
+                    .flex_shrink_0()
                     .border_1()
                     .border_color(t.line()),
             )
             .child(
                 self.button("save", "save", "Save", Op::Save, cx)
+                    .w(px(96.0))
                     .h(px(36.0))
-                    .px(px(20.0))
+                    .justify_center()
+                    .flex_shrink_0()
+                    .border_1()
+                    .border_color(t.text())
                     .font_weight(FontWeight::MEDIUM)
                     .bg(t.text())
                     .text_color(t.background()),
@@ -1642,56 +1756,58 @@ impl EditorView {
                 )
             })
             .child(self.orientation(cx))
-            .child(
-                div().absolute().bottom(px(20.0)).left(px(24.0)).child(
-                    row()
-                        .id("camera-hints")
-                        .h(px(32.0))
-                        .gap(px(12.0))
-                        .text_size(px(12.0))
-                        .text_color(t.muted())
-                        .child(
-                            row()
-                                .id("orbit-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint("Right-drag to orbit", t))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("orbit").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Orbit")),
-                        )
-                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                        .child(
-                            row()
-                                .id("pan-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint(
-                                    HintText::default()
-                                        .key("shift-rightdrag")
-                                        .text(" or middle-drag to pan"),
-                                    t,
-                                ))
-                                .child(icon("arrow-up").text_color(t.muted()))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("move").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Pan")),
-                        )
-                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                        .child(
-                            row()
-                                .id("zoom-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint(
-                                    HintText::from("Scroll to zoom · ")
-                                        .action(Op::Frame)
-                                        .text(" to frame the model"),
-                                    t,
-                                ))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("zoom-in").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Zoom")),
-                        ),
-                ),
-            )
+            .when(self.preferences.navigation_hints, |d| {
+                d.child(
+                    div().absolute().bottom(px(20.0)).left(px(24.0)).child(
+                        row()
+                            .id("camera-hints")
+                            .h(px(32.0))
+                            .gap(px(12.0))
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child(
+                                row()
+                                    .id("orbit-hint")
+                                    .gap(px(4.0))
+                                    .tooltip(hint("Right-drag to orbit", t))
+                                    .child(icon("mouse").text_color(t.muted()))
+                                    .child(icon("orbit").text_color(t.muted()))
+                                    .when(!compact, |d| d.child("Orbit")),
+                            )
+                            .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
+                            .child(
+                                row()
+                                    .id("pan-hint")
+                                    .gap(px(4.0))
+                                    .tooltip(hint(
+                                        HintText::default()
+                                            .key("shift-rightdrag")
+                                            .text(" or middle-drag to pan"),
+                                        t,
+                                    ))
+                                    .child(icon("arrow-up").text_color(t.muted()))
+                                    .child(icon("mouse").text_color(t.muted()))
+                                    .child(icon("move").text_color(t.muted()))
+                                    .when(!compact, |d| d.child("Pan")),
+                            )
+                            .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
+                            .child(
+                                row()
+                                    .id("zoom-hint")
+                                    .gap(px(4.0))
+                                    .tooltip(hint(
+                                        HintText::from("Scroll to zoom · ")
+                                            .action(Op::Frame)
+                                            .text(" to frame the model"),
+                                        t,
+                                    ))
+                                    .child(icon("mouse").text_color(t.muted()))
+                                    .child(icon("zoom-in").text_color(t.muted()))
+                                    .when(!compact, |d| d.child("Zoom")),
+                            ),
+                    ),
+                )
+            })
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
                     row()
@@ -1874,6 +1990,8 @@ impl EditorView {
             .child(
                 div()
                     .id("swatch-scroll")
+                    .track_focus(&self.palette_focus)
+                    .focus(move |d| d.border_1().border_color(t.accent()))
                     .track_scroll(&self.swatch_scroll)
                     .max_h(px(swatch_height))
                     .overflow_y_scroll()
@@ -2215,6 +2333,7 @@ impl EditorView {
         div()
             .id("sidebar-scroll")
             .overflow_y_scroll()
+            .track_scroll(&self.sidebar_scroll)
             .w(px(SIDEBAR_WIDTH))
             .flex_shrink_0()
             .h_full()
@@ -2364,6 +2483,29 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        #[cfg(target_family = "wasm")]
+        if let Some(settings) = &self.settings_modal {
+            return Some(
+                div()
+                    .absolute()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(rgba(0x00000060))
+                    .child(
+                        div()
+                            .w(px(880.0))
+                            .max_w_full()
+                            .h(px(640.0))
+                            .max_h_full()
+                            .rounded(px(14.0))
+                            .shadow_lg()
+                            .child(settings.clone()),
+                    )
+                    .into_any_element(),
+            );
+        }
         if self.agent.open && !self.dialog_open {
             return Some(self.agent_popover(cx));
         }
@@ -2829,45 +2971,45 @@ impl Render for EditorView {
             window.set_window_title(&title);
             self.last_title = title;
         }
-        cx.set_menus(
-            MENUS
-                .iter()
-                .map(|(name, items)| {
-                    Menu::new(*name).items(items.iter().map(|op| {
-                        MenuItem::action(op.label(), *op)
-                            .checked(self.selected(*op))
-                            .disabled(!self.enabled(*op))
-                    }))
-                })
-                .collect::<Vec<_>>(),
-        );
+        if cfg!(target_os = "macos") && window.is_window_active() {
+            cx.set_menus(crate::actions::menus(
+                |op| self.selected(op),
+                |op| self.enabled(op),
+            ));
+        }
+        #[cfg(target_family = "wasm")]
+        let settings_open = self.settings_modal.is_some();
+        #[cfg(not(target_family = "wasm"))]
+        let settings_open = false;
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")
-            .key_context(
-                if self.palettes.name.read(cx).focused(window)
-                    || self.palettes.hex.read(cx).focused(window)
-                    || self.discussion.text.read(cx).focused(window)
-                    || self.timeline.name.read(cx).focused(window)
-                    || self.sharing.person.read(cx).focused(window)
-                {
-                    "TextField"
-                } else if self.command_open {
-                    "CommandPalette"
-                } else if self.menu.is_some()
-                    || self.palette_open
-                    || self.pending.is_some()
-                    || self.info.is_some()
-                    || self.dialog_open
-                    || self.palettes.open
-                    || self.sharing.open
-                    || self.agent.open
-                {
-                    "Modal"
-                } else {
-                    "Editor"
-                },
-            )
+            .key_context(if settings_open {
+                "Settings"
+            } else if self.palettes.name.read(cx).focused(window)
+                || self.palettes.hex.read(cx).focused(window)
+                || self.discussion.text.read(cx).focused(window)
+                || self.timeline.name.read(cx).focused(window)
+                || self.sharing.person.read(cx).focused(window)
+            {
+                "TextField"
+            } else if self.palette_focus.is_focused(window) {
+                "Palette"
+            } else if self.command_open {
+                "CommandPalette"
+            } else if self.menu.is_some()
+                || self.palette_open
+                || self.pending.is_some()
+                || self.info.is_some()
+                || self.dialog_open
+                || self.palettes.open
+                || self.sharing.open
+                || self.agent.open
+            {
+                "Modal"
+            } else {
+                "Editor"
+            })
             .track_focus(&self.focus)
             .size_full()
             .relative()
@@ -2879,11 +3021,15 @@ impl Render for EditorView {
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
             .on_action(cx.listener(|this, op: &Op, window, cx| {
-                if this.info.is_none() && this.pending.is_none() && !this.palettes.open {
+                if matches!(
+                    op,
+                    Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::ShowAll
+                ) || (this.info.is_none() && this.pending.is_none() && !this.palettes.open)
+                {
                     this.invoke(*op, window, cx);
                 }
             }))
-            .child(self.menubar(cx))
+            .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))
             .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
             .child(
                 row()
@@ -2905,6 +3051,10 @@ impl Render for EditorView {
                         MouseButton::Left,
                         cx.listener(|this, _, window, cx| {
                             window.focus(&this.focus, cx);
+                            #[cfg(target_family = "wasm")]
+                            {
+                                this.settings_modal = None;
+                            }
                             this.agent.open = false;
                             this.sharing.open = false;
                             this.palettes.open = false;

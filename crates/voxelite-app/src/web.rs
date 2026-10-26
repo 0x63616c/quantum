@@ -174,9 +174,11 @@ pub fn start() -> Result<(), JsValue> {
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
             let theme = if query.contains("theme=light") {
-                Theme::Light
+                Some(Theme::Light)
+            } else if query.contains("theme=dark") {
+                Some(Theme::Dark)
             } else {
-                Theme::Dark
+                None
             };
             cx.open_window(
                 WindowOptions {

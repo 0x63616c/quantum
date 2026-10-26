@@ -78,11 +78,4 @@ impl Theme {
     pub fn disabled(self) -> Hsla {
         rgb(0x737373).into()
     }
-    pub fn toggle(&mut self) {
-        *self = if *self == Self::Dark {
-            Self::Light
-        } else {
-            Self::Dark
-        };
-    }
 }
