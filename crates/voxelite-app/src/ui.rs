@@ -7,6 +7,7 @@ mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
 mod comments;
+mod gpu_viewport;
 mod history;
 mod orientation;
 use comments::Panel;
@@ -65,6 +66,7 @@ fn check_for_updates() -> Option<&'static str> {
 struct FrameIdentity {
     generation: u64,
     revision: u64,
+    preview: Option<voxelite_app::history::PreviewSource>,
     camera: OrbitCamera,
     size: [u32; 2],
 }
@@ -86,9 +88,11 @@ pub struct EditorView {
     modal_focus: FocusHandle,
     sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
+    gpu: gpu_viewport::State,
     image: Option<Arc<RenderImage>>,
     image_renderer: RendererKind,
     painted_image: Option<Arc<RenderImage>>,
+    painted_frame: Rc<Cell<Option<FrameIdentity>>>,
     last_title: String,
     rendering: bool,
     frame_meter: FrameMeter,
@@ -351,6 +355,8 @@ impl EditorView {
             }
         })
         .detach();
+        #[cfg(target_os = "macos")]
+        Self::monitor_gpu(cx);
         Self {
             agent,
             palettes,
@@ -379,9 +385,11 @@ impl EditorView {
             sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
+            gpu: gpu_viewport::State::new(),
             image: None,
             image_renderer: RendererKind::Cpu,
             painted_image: None,
+            painted_frame: Rc::new(Cell::new(None)),
             last_title: String::new(),
             rendering: false,
             frame_meter: FrameMeter::new(RendererKind::Cpu),
@@ -442,6 +450,14 @@ impl EditorView {
         cx.notify();
     }
     fn request_render(&mut self, cx: &mut Context<Self>) {
+        #[cfg(target_os = "macos")]
+        if self.gpu.enabled {
+            self.request_gpu_render(cx);
+            return;
+        }
+        self.request_cpu_render(cx);
+    }
+    fn request_cpu_render(&mut self, cx: &mut Context<Self>) {
         if self.render_size[0] == 0 {
             return;
         }
@@ -488,6 +504,7 @@ impl EditorView {
                 // Never install a render from a replaced document or an older edit.
                 if this.document_generation == identity.generation
                     && this.editor.engine.revision() == identity.revision
+                    && this.frame_identity().preview == identity.preview
                     && this.render_size == identity.size
                 {
                     match result {
@@ -520,6 +537,10 @@ impl EditorView {
         .detach();
     }
     fn request_navigation(&mut self, cx: &mut Context<Self>) {
+        if self.gpu.enabled {
+            self.request_render(cx);
+            return;
+        }
         self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
         let epoch = self.navigation_epoch;
         self.interactive_render = true;
@@ -542,6 +563,7 @@ impl EditorView {
         FrameIdentity {
             generation: self.document_generation,
             revision: self.editor.engine.revision(),
+            preview: self.editor.preview.as_ref().map(|p| p.source),
             camera: self.editor.camera,
             size: self.render_size,
         }
@@ -574,6 +596,7 @@ impl EditorView {
         self.editor = editor;
         self.document_generation = self.document_generation.wrapping_add(1);
         self.image = None;
+        self.gpu.clear_frame();
         self.displayed = None;
         self.hover = None;
         self.drag = None;
@@ -964,7 +987,8 @@ impl EditorView {
         // Pointer edits must use the exact camera of the image the user can see.
         if self.rendering
             || self.interactive_render
-            || self.image.is_none()
+            || (self.image.is_none() && !self.gpu.has_frame())
+            || self.painted_frame.get() != self.displayed
             || self.displayed != Some(self.frame_identity())
         {
             return None;
@@ -1577,6 +1601,12 @@ impl EditorView {
         let renderer = self.image_renderer;
         let generation = self.document_generation;
         let view = cx.weak_entity();
+        #[cfg(target_os = "macos")]
+        let gpu_frame = self.gpu.frame.clone();
+        let gpu_active = self.gpu.enabled;
+        let entity = cx.weak_entity();
+        let painted_frame = self.painted_frame.clone();
+        let identity = self.displayed;
         let camera = self.display_camera;
         let frame_size = self.displayed.map(|_| self.display_size);
         let hover = self.hover;
@@ -1601,8 +1631,13 @@ impl EditorView {
             })
             .and_then(|a| a.region().ok());
         let surface = canvas(
-            move |bounds, _, _| {
-                bounds_cell.set(bounds);
+            move |bounds, window, _| {
+                let previous = bounds_cell.replace(bounds);
+                if previous != bounds {
+                    window.on_next_frame(move |_, cx| {
+                        let _ = entity.update(cx, |_, cx| cx.notify());
+                    });
+                }
             },
             move |bounds, _, window, cx| {
                 let aspect = frame_size
@@ -1617,7 +1652,7 @@ impl EditorView {
                         bounds.origin.y + bounds.size.height * uv[1] as f32,
                     )
                 };
-                if grid {
+                if grid && !gpu_active {
                     let mut path = PathBuilder::stroke(px(0.6));
                     let y = f64::from(doc_bounds.min[1]) - 0.05;
                     let extent = doc_bounds.min[0].min(doc_bounds.min[2]) - 16;
@@ -1632,6 +1667,12 @@ impl EditorView {
                         window.paint_path(path, t.line().opacity(0.24));
                     }
                 }
+                let mut painted = false;
+                #[cfg(target_os = "macos")]
+                if let Some(frame) = gpu_frame {
+                    window.paint_surface(bounds, frame.pixel_buffer());
+                    painted = true;
+                }
                 if let Some(image) = image {
                     let frame_id = image.id.0;
                     let visible = bounds.intersect(&window.content_mask().bounds);
@@ -1641,6 +1682,7 @@ impl EditorView {
                             .paint_image(bounds, bounds, Corners::default(), image, 0, false)
                             .is_ok()
                     {
+                        painted = true;
                         let at = cx.background_executor().now();
                         // Measure successful paints, not render completions or UI
                         // repaints. Defer the notification until drawing is over.
@@ -1655,6 +1697,7 @@ impl EditorView {
                         });
                     }
                 }
+                painted_frame.set(if painted { identity } else { None });
                 if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
                     let lo = box_start
                         .map(|s| std::array::from_fn(|a| s[a].min(at[a])))
@@ -2845,10 +2888,21 @@ impl Render for EditorView {
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
             (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
-        let scale = (1024.0 / width.max(height)).min(1.0);
+        let actual = self.viewport.get().size;
+        let (width, height) = if self.gpu.enabled && actual.width > px(0.) && actual.height > px(0.)
+        {
+            (f32::from(actual.width), f32::from(actual.height))
+        } else {
+            (width, height)
+        };
+        let scale = if self.gpu.enabled {
+            window.scale_factor()
+        } else {
+            (1024.0 / width.max(height)).min(1.0)
+        };
         let dimensions = [
-            (width * scale).round() as u32,
-            (height * scale).round() as u32,
+            ((width * scale).round() as u32).max(1),
+            ((height * scale).round() as u32).max(1),
         ];
         if self.render_size != dimensions {
             if self.camera_fitted {
@@ -2863,11 +2917,14 @@ impl Render for EditorView {
                     },
                 );
                 self.zoom_reference_span = self.editor.camera.span;
-                if self.image.is_none() {
+                if self.image.is_none() && !self.gpu.has_frame() {
                     self.display_camera = self.editor.camera;
                 }
             }
             self.render_size = dimensions;
+            self.request_render(cx);
+        }
+        if self.render_pending && !self.rendering {
             self.request_render(cx);
         }
         let title = format!(
