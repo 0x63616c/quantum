@@ -298,7 +298,7 @@ impl EditorView {
     }
 
     fn set_agent_view(&mut self, view: PresetView, cx: &mut Context<Self>) {
-        let b = self.viewport.get();
+        let b = self.viewport.bounds();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
         self.editor.camera = OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
         self.camera_view = match view {

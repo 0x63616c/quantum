@@ -7,9 +7,9 @@ mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
 mod comments;
-mod gpu_viewport;
 mod history;
 mod keyboard_guide;
+mod viewport;
 use keyboard_guide::keyboard_guide;
 mod orientation;
 use comments::Panel;
@@ -29,7 +29,6 @@ use gpui::{prelude::*, *};
 use shortcut_hint::{HintText, action_shortcut, shortcut};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
-use voxelite_app::frame_meter::{FrameMeter, RendererKind};
 use voxelite_core::{Palette, Pos, Preset};
 use voxelite_render::{PresetView, RenderOptions, View};
 
@@ -62,17 +61,6 @@ fn check_for_updates() -> Option<&'static str> {
     Some("Automatic updates are not available in this build.")
 }
 
-/// Image identity includes the editor incarnation, since reopening the same ID
-/// resets its revision. Camera and dimensions bind picking to displayed pixels.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct FrameIdentity {
-    generation: u64,
-    revision: u64,
-    preview: Option<voxelite_app::history::PreviewSource>,
-    camera: OrbitCamera,
-    size: [u32; 2],
-}
-
 pub struct EditorView {
     palettes: palettes::PaletteManager,
     discussion: comments::Discussion,
@@ -90,25 +78,11 @@ pub struct EditorView {
     modal_focus: FocusHandle,
     sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
-    gpu: gpu_viewport::State,
-    image: Option<Arc<RenderImage>>,
-    painted_image: Option<Arc<RenderImage>>,
-    painted_frame: Rc<Cell<Option<FrameIdentity>>>,
+    viewport: viewport::Viewport,
     last_title: String,
-    rendering: bool,
-    frame_meter: FrameMeter,
     zoom_reference_span: f64,
-    render_pending: bool,
-    render_size: [u32; 2],
-    display_camera: OrbitCamera,
-    document_generation: u64,
-    displayed: Option<FrameIdentity>,
-    display_size: [u32; 2],
     camera_view: Option<Op>,
     camera_fitted: bool,
-    navigation_epoch: u64,
-    interactive_render: bool,
-    viewport: Rc<Cell<Bounds<Pixels>>>,
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
@@ -312,12 +286,6 @@ impl EditorView {
         .detach();
         #[cfg(target_os = "macos")]
         Self::monitor_gpu(cx);
-        let gpu = gpu_viewport::State::new();
-        let renderer = if gpu.enabled {
-            RendererKind::Gpu
-        } else {
-            RendererKind::Cpu
-        };
         Self {
             agent,
             palettes,
@@ -325,15 +293,10 @@ impl EditorView {
             panel: Panel::Session,
             timeline: history::Timeline::new(cx),
             cursor: editor.snapshot().bounds.min,
-            display_camera: editor.camera,
-            document_generation: 0,
-            displayed: None,
-            display_size: [0, 0],
             camera_view: Some(Op::Frame),
             camera_fitted: true,
-            navigation_epoch: 0,
-            interactive_render: false,
             zoom_reference_span: editor.camera.span,
+            viewport: viewport::Viewport::new(editor.camera),
             editor,
             grid: preferences.grid,
             preferences,
@@ -346,16 +309,7 @@ impl EditorView {
             sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
-            gpu,
-            image: None,
-            painted_image: None,
-            painted_frame: Rc::new(Cell::new(None)),
             last_title: String::new(),
-            rendering: false,
-            frame_meter: FrameMeter::new(renderer),
-            render_pending: false,
-            render_size: [0, 0],
-            viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
             gizmo_drag: None,
@@ -404,139 +358,15 @@ impl EditorView {
         }
         // Sampling, empty clicks and rejected edits do not invalidate the image.
         // Avoid another CPU render (and its input wait) for unchanged content.
-        if self.displayed != Some(self.frame_identity()) {
+        if !self.viewport.is_current(&self.editor) {
             self.request_render(cx);
         }
         cx.notify();
-    }
-    fn request_render(&mut self, cx: &mut Context<Self>) {
-        #[cfg(target_os = "macos")]
-        if self.gpu.enabled {
-            self.request_gpu_render(cx);
-            return;
-        }
-        self.request_cpu_render(cx);
-    }
-    fn request_cpu_render(&mut self, cx: &mut Context<Self>) {
-        if self.render_size[0] == 0 {
-            return;
-        }
-        if self.rendering {
-            self.render_pending = true;
-            return;
-        }
-        if !self.render_pending {
-            self.frame_meter.begin_frame(cx.background_executor().now());
-        }
-        self.rendering = true;
-        self.render_pending = false;
-        let snapshot = self.editor.display_snapshot().clone();
-        let camera = self.editor.camera;
-        let identity = self.frame_identity();
-        let interactive = self.interactive_render;
-        let options = RenderOptions {
-            width: if interactive {
-                self.render_size[0].div_ceil(2)
-            } else {
-                self.render_size[0]
-            },
-            height: if interactive {
-                self.render_size[1].div_ceil(2)
-            } else {
-                self.render_size[1]
-            },
-            supersampling: if interactive || !self.preferences.antialiasing {
-                1
-            } else {
-                2
-            },
-            view: View::Camera(self.editor.camera.camera()),
-            background: [0; 4],
-            ..Default::default()
-        };
-        let task = cx
-            .background_executor()
-            .spawn(self.editor.raster.task(snapshot, options));
-        cx.spawn(async move |this, cx| {
-            let result = task.await;
-            let _ = this.update(cx, |this, cx| {
-                this.rendering = false;
-                // Never install a render from a replaced document or an older edit.
-                if this.document_generation == identity.generation
-                    && this.editor.engine.revision() == identity.revision
-                    && this.frame_identity().preview == identity.preview
-                    && this.render_size == identity.size
-                {
-                    match result {
-                        Ok(mut frame) => {
-                            for pixel in frame.rgba.as_chunks_mut::<4>().0 {
-                                pixel.swap(0, 2);
-                            }
-                            this.display_size = [frame.width, frame.height];
-                            let buffer =
-                                image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
-                                    .expect("renderer dimensions");
-                            this.display_camera = camera;
-                            this.displayed = Some(identity);
-                            this.image =
-                                Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])));
-                        }
-                        Err(e) => {
-                            this.pause_history(cx);
-                            this.error = true;
-                            this.status = e.to_string().into();
-                        }
-                    }
-                }
-                if this.render_pending {
-                    this.request_render(cx);
-                }
-                cx.notify();
-            });
-        })
-        .detach();
-    }
-    fn request_navigation(&mut self, cx: &mut Context<Self>) {
-        if self.gpu.enabled {
-            self.request_render(cx);
-            return;
-        }
-        self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
-        let epoch = self.navigation_epoch;
-        self.interactive_render = true;
-        self.request_render(cx);
-        let timer = cx
-            .background_executor()
-            .timer(std::time::Duration::from_millis(180));
-        cx.spawn(async move |this, cx| {
-            timer.await;
-            let _ = this.update(cx, |this, cx| {
-                if this.navigation_epoch == epoch {
-                    this.interactive_render = false;
-                    this.request_render(cx);
-                }
-            });
-        })
-        .detach();
-    }
-    fn frame_identity(&self) -> FrameIdentity {
-        FrameIdentity {
-            generation: self.document_generation,
-            revision: self.editor.engine.revision(),
-            preview: self.editor.preview.as_ref().map(|p| p.source),
-            camera: self.editor.camera,
-            size: self.render_size,
-        }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
         self.pause_history(cx);
         self.timeline.dragging = false;
         self.zoom_reference_span = editor.camera.span;
-        self.frame_meter = FrameMeter::new(if self.gpu.enabled {
-            RendererKind::Gpu
-        } else {
-            RendererKind::Cpu
-        });
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
@@ -560,19 +390,13 @@ impl EditorView {
         self.discussion.first = None;
 
         self.editor = editor;
-        self.document_generation = self.document_generation.wrapping_add(1);
-        self.image = None;
-        self.gpu.clear_frame();
-        self.displayed = None;
         self.hover = None;
         self.drag = None;
         self.cursor = self.editor.display_snapshot().bounds.min;
         self.palette_index = 0;
         self.camera_view = Some(Op::Frame);
         self.camera_fitted = true;
-        let aspect = f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1));
-        self.editor.camera = OrbitCamera::fit(self.editor.display_snapshot(), aspect.max(0.01));
-        self.display_camera = self.editor.camera;
+        self.viewport.replace_editor(&mut self.editor);
         self.error = false;
         self.request_render(cx);
     }
@@ -731,7 +555,7 @@ impl EditorView {
             Op::Grid => settings::change(cx, |p| p.grid = !p.grid),
             Op::Frame | Op::Front | Op::Right | Op::Top => {
                 self.agent.follow = false;
-                let b = self.viewport.get();
+                let b = self.viewport.bounds();
                 let aspect = (f32::from(b.size.width) / f32::from(b.size.height).max(1.0)) as f64;
                 let view = match op {
                     Op::Front => PresetView::Front,
@@ -935,27 +759,6 @@ impl EditorView {
         }
         cx.notify();
     }
-    fn ray(&self, p: Point<Pixels>) -> Option<voxelite_app::editor::Ray> {
-        // Pointer edits must use the exact camera of the image the user can see.
-        if self.rendering
-            || self.interactive_render
-            || (self.image.is_none() && !self.gpu.has_frame())
-            || self.painted_frame.get() != self.displayed
-            || self.displayed != Some(self.frame_identity())
-        {
-            return None;
-        }
-        let b = self.viewport.get();
-        let w = f64::from(f32::from(b.size.width));
-        let h = f64::from(f32::from(b.size.height));
-        self.display_camera.ray(
-            [
-                f64::from(f32::from(p.x - b.origin.x)) / w,
-                f64::from(f32::from(p.y - b.origin.y)) / h,
-            ],
-            f64::from(self.render_size[0]) / f64::from(self.render_size[1].max(1)),
-        )
-    }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
         if self.gizmo_drag.is_some() {
             return;
@@ -980,7 +783,7 @@ impl EditorView {
                     self.editor.camera.pan(
                         dx,
                         dy,
-                        f64::from(f32::from(self.viewport.get().size.height)),
+                        f64::from(f32::from(self.viewport.bounds().size.height)),
                     );
                 } else {
                     self.editor.camera.orbit(dx, dy);
@@ -994,7 +797,10 @@ impl EditorView {
             self.hover = None;
         } else {
             self.drag = None;
-            self.hover = self.ray(e.position).and_then(|r| self.editor.target(r));
+            self.hover = self
+                .viewport
+                .ray(&self.editor, e.position)
+                .and_then(|r| self.editor.target(r));
         }
         cx.notify();
     }
@@ -1546,145 +1352,7 @@ impl EditorView {
     }
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        let bounds_cell = self.viewport.clone();
-        let image = self.image.clone();
-        let generation = self.document_generation;
-        let view = cx.weak_entity();
-        #[cfg(target_os = "macos")]
-        let gpu_frame = self
-            .gpu
-            .frame
-            .clone()
-            .map(|frame| (frame, self.gpu.frame_serial));
-        let gpu_active = self.gpu.enabled;
-        let entity = cx.weak_entity();
-        let painted_frame = self.painted_frame.clone();
-        let identity = self.displayed;
-        let camera = self.display_camera;
-        let frame_size = self.displayed.map(|_| self.display_size);
-        let hover = self.hover;
-        let grid = self.grid;
-        let doc_bounds = self.editor.display_snapshot().bounds;
-        let box_start = self.editor.box_start;
-        let comment_region = self
-            .discussion
-            .draft
-            .as_ref()
-            .or_else(|| {
-                self.discussion
-                    .selected
-                    .and_then(|id| {
-                        self.editor
-                            .display_snapshot()
-                            .comments
-                            .iter()
-                            .find(|c| c.id == id)
-                    })
-                    .map(|c| &c.anchor)
-            })
-            .and_then(|a| a.region().ok());
-        let surface = canvas(
-            move |bounds, window, _| {
-                let previous = bounds_cell.replace(bounds);
-                if previous != bounds {
-                    window.on_next_frame(move |_, cx| {
-                        let _ = entity.update(cx, |_, cx| cx.notify());
-                    });
-                }
-            },
-            move |bounds, _, window, cx| {
-                let aspect = frame_size
-                    .map(|s| f64::from(s[0]) / f64::from(s[1].max(1)))
-                    .unwrap_or_else(|| {
-                        f64::from(f32::from(bounds.size.width) / f32::from(bounds.size.height))
-                    });
-                let project = |p: DVec3| {
-                    let uv = camera.project(p, aspect);
-                    point(
-                        bounds.origin.x + bounds.size.width * uv[0] as f32,
-                        bounds.origin.y + bounds.size.height * uv[1] as f32,
-                    )
-                };
-                if grid && !gpu_active {
-                    let mut path = PathBuilder::stroke(px(0.6));
-                    let y = f64::from(doc_bounds.min[1]) - 0.05;
-                    let extent = doc_bounds.min[0].min(doc_bounds.min[2]) - 16;
-                    let end = doc_bounds.max[0].max(doc_bounds.max[2]) + 16;
-                    for a in (extent..=end).step_by(4) {
-                        path.move_to(project(DVec3::new(f64::from(a), y, f64::from(extent))));
-                        path.line_to(project(DVec3::new(f64::from(a), y, f64::from(end))));
-                        path.move_to(project(DVec3::new(f64::from(extent), y, f64::from(a))));
-                        path.line_to(project(DVec3::new(f64::from(end), y, f64::from(a))));
-                    }
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, t.line().opacity(0.24));
-                    }
-                }
-                let mut presented = None;
-                let visible = bounds.intersect(&window.content_mask().bounds);
-                if visible.size.width > px(0.0) && visible.size.height > px(0.0) {
-                    #[cfg(target_os = "macos")]
-                    if let Some((frame, serial)) = gpu_frame {
-                        window.paint_surface(bounds, frame.pixel_buffer());
-                        presented = Some((RendererKind::Gpu, serial));
-                    }
-                    if presented.is_none()
-                        && let Some(image) = image
-                    {
-                        let frame_id = image.id.0;
-                        if window
-                            .paint_image(bounds, bounds, Corners::default(), image, 0, false)
-                            .is_ok()
-                        {
-                            presented = Some((RendererKind::Cpu, frame_id));
-                        }
-                    }
-                }
-                painted_frame.set(presented.and(identity));
-                if let Some((renderer, frame_id)) = presented {
-                    let at = cx.background_executor().now();
-                    // Count distinct content handed to GPUI, not completions or
-                    // repeated paints. Notify only after drawing has finished.
-                    window.defer(cx, move |_, cx| {
-                        let _ = view.update(cx, |this, cx| {
-                            if this.document_generation == generation
-                                && (renderer != RendererKind::Gpu || this.gpu.enabled)
-                                && this.frame_meter.record_presented(renderer, frame_id, at)
-                            {
-                                cx.notify();
-                            }
-                        });
-                    });
-                }
-                if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
-                    let lo = box_start
-                        .map(|s| std::array::from_fn(|a| s[a].min(at[a])))
-                        .unwrap_or(at);
-                    let hi: Pos = box_start
-                        .map(|s| std::array::from_fn(|a| s[a].max(at[a]) + 1))
-                        .unwrap_or(at.map(|v| v + 1));
-                    let mut path = PathBuilder::stroke(px(1.4));
-                    let (lo, hi) = comment_region.map(|r| (r.min, r.max)).unwrap_or((lo, hi));
-                    for bits in 0..8 {
-                        for a in 0..3 {
-                            if bits & (1 << a) == 0 {
-                                let p: [f64; 3] = std::array::from_fn(|j| {
-                                    f64::from(if bits & (1 << j) == 0 { lo[j] } else { hi[j] })
-                                });
-                                let mut q = p;
-                                q[a] = f64::from(hi[a]);
-                                path.move_to(project(p.into()));
-                                path.line_to(project(q.into()));
-                            }
-                        }
-                    }
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, t.accent());
-                    }
-                }
-            },
-        )
-        .size_full();
+        let surface = self.viewport_surface(cx);
         div()
             .id("viewport")
             .relative()
@@ -1824,7 +1492,7 @@ impl EditorView {
                         cx.notify();
                         return;
                     }
-                    if let Some(ray) = this.ray(e.position) {
+                    if let Some(ray) = this.viewport.ray(&this.editor, e.position) {
                         if this.discussion.placing {
                             if let Some(hit) =
                                 voxelite_app::editor::raycast(this.editor.display_snapshot(), ray)
@@ -2845,12 +2513,7 @@ impl Render for EditorView {
         for image in self.agent.retired.drain(..) {
             let _ = window.drop_image(image);
         }
-        if self.image.as_ref().map(|i| i.id) != self.painted_image.as_ref().map(|i| i.id) {
-            if let Some(previous) = self.painted_image.take() {
-                let _ = window.drop_image(previous);
-            }
-            self.painted_image = self.image.clone();
-        }
+        self.viewport.release_retired_image(window);
         self.palettes
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
@@ -2864,48 +2527,7 @@ impl Render for EditorView {
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
         let size = window.viewport_size();
-        let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
-        let height =
-            (f32::from(size.height) - MENUBAR_HEIGHT - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT).max(1.0);
-        let actual = self.viewport.get().size;
-        let (width, height) = if self.gpu.enabled && actual.width > px(0.) && actual.height > px(0.)
-        {
-            (f32::from(actual.width), f32::from(actual.height))
-        } else {
-            (width, height)
-        };
-        let scale = if self.gpu.enabled {
-            window.scale_factor()
-        } else {
-            (1024.0 / width.max(height)).min(1.0)
-        };
-        let dimensions = [
-            ((width * scale).round() as u32).max(1),
-            ((height * scale).round() as u32).max(1),
-        ];
-        if self.render_size != dimensions {
-            if self.camera_fitted {
-                self.editor.camera = OrbitCamera::fit_view(
-                    self.editor.display_snapshot(),
-                    f64::from(dimensions[0]) / f64::from(dimensions[1].max(1)),
-                    match self.camera_view {
-                        Some(Op::Front) => PresetView::Front,
-                        Some(Op::Right) => PresetView::Right,
-                        Some(Op::Top) => PresetView::Top,
-                        _ => PresetView::Iso,
-                    },
-                );
-                self.zoom_reference_span = self.editor.camera.span;
-                if self.image.is_none() && !self.gpu.has_frame() {
-                    self.display_camera = self.editor.camera;
-                }
-            }
-            self.render_size = dimensions;
-            self.request_render(cx);
-        }
-        if self.render_pending && !self.rendering {
-            self.request_render(cx);
-        }
+        self.layout_viewport(window, cx);
         let title = format!(
             "{}{} — Voxelite",
             self.editor.display_snapshot().name,
