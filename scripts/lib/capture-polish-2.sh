@@ -24,7 +24,6 @@ xdotool mousemove 28 435 click 1
 xdotool mousemove 28 475 click 1
 capture_feature tools
 xdotool key b shift+x shift+y shift+z
-source scripts/lib/capture-share.sh
 search 'manage palettes'
 # Presets stay immutable; duplicate PICO-8 and author a custom brush palette.
 xdotool mousemove 420 307 click 1

@@ -11,7 +11,6 @@ mod history;
 use comments::Panel;
 mod palettes;
 mod settings;
-mod share;
 mod shortcut_hint;
 mod status;
 use crate::{
@@ -47,7 +46,6 @@ struct FrameIdentity {
 
 pub struct EditorView {
     palettes: palettes::PaletteManager,
-    sharing: share::Sharing,
     discussion: comments::Discussion,
     panel: Panel,
     timeline: history::Timeline,
@@ -317,7 +315,6 @@ impl EditorView {
         Self {
             agent,
             palettes,
-            sharing: share::Sharing::new(cx),
             discussion: comments::Discussion::new(cx),
             panel: Panel::Session,
             timeline: history::Timeline::new(cx),
@@ -529,7 +526,7 @@ impl EditorView {
         self.discussion.draft = None;
         self.discussion.placing = false;
         self.discussion.first = None;
-        self.sharing.open = false;
+
         self.editor = editor;
         self.document_generation = self.document_generation.wrapping_add(1);
         self.image = None;
@@ -702,7 +699,6 @@ impl EditorView {
             Op::ExportGlb => self.export_browser(false, cx),
             #[cfg(target_family = "wasm")]
             Op::ExportPng => self.export_browser(true, cx),
-            Op::Share => self.open_share(cx),
             Op::Comment => self.begin_comment(cx),
             Op::Undo => {
                 let r = self.editor.undo();
@@ -832,7 +828,7 @@ impl EditorView {
         }).detach();
     }
     #[cfg(not(target_family = "wasm"))]
-    fn write_project(&mut self, path: PathBuf, copy: bool, cx: &mut Context<Self>) {
+    fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.dialog_open = true;
         self.status = "Saving project…".into();
         let save = self.editor.prepare_save(&path);
@@ -844,12 +840,8 @@ impl EditorView {
                 let next = this.after_save.take();
                 match result {
                     Ok(saved) => {
-                        if copy {
-                            this.status = "Project copy saved".into();
-                        } else {
-                            this.editor.finish_save(saved);
-                            this.status = "Saved".into();
-                        }
+                        this.editor.finish_save(saved);
+                        this.status = "Saved".into();
                         this.error = false;
                         if let Some(op) = next {
                             this.run(op, cx);
@@ -868,14 +860,13 @@ impl EditorView {
     #[cfg(not(target_family = "wasm"))]
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
-            self.write_project(path, false, cx);
+            self.write_project(path, cx);
             return;
         }
-        self.choose_save_path(false, cx);
+        self.choose_save_path(cx);
     }
-    /// A shared copy must not adopt its destination or clear the working file's dirty state.
     #[cfg(not(target_family = "wasm"))]
-    fn choose_save_path(&mut self, copy: bool, cx: &mut Context<Self>) {
+    fn choose_save_path(&mut self, cx: &mut Context<Self>) {
         let directory = self
             .editor
             .path
@@ -896,7 +887,7 @@ impl EditorView {
                 match result {
                     Ok(Ok(Some(mut path))) => {
                         if path.extension().is_none() { path.set_extension("voxl"); }
-                        this.write_project(path, copy, cx);
+                        this.write_project(path, cx);
                     }
                     Ok(Ok(None)) => { this.dialog_open = false; this.after_save = None; }
                     _ => {
@@ -1038,9 +1029,7 @@ impl EditorView {
             && !self.agent.open
             && self.info.is_none()
         {
-            let fields = if self.sharing.open {
-                vec![self.sharing.person.focus_handle(cx)]
-            } else if self.palettes.open {
+            let fields = if self.palettes.open {
                 vec![
                     self.palettes.name.focus_handle(cx),
                     self.palettes.hex.focus_handle(cx),
@@ -1073,17 +1062,11 @@ impl EditorView {
             }
         }
 
-        if self.sharing.open && self.sharing.person.read(cx).focused(window) && key == "enter" {
-            self.add_share_person(cx);
-            cx.stop_propagation();
-            return;
-        }
         if key != "escape"
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
-                || self.timeline.name.read(cx).focused(window)
-                || self.sharing.person.read(cx).focused(window))
+                || self.timeline.name.read(cx).focused(window))
         {
             return;
         }
@@ -1096,7 +1079,7 @@ impl EditorView {
                 self.refresh_preview(cx);
             }
             self.agent.open = false;
-            self.sharing.open = false;
+
             self.palettes.open = false;
             window.focus(&self.focus, cx);
             self.menu = None;
@@ -1113,7 +1096,7 @@ impl EditorView {
             cx.notify();
             return;
         }
-        if self.palettes.open || self.sharing.open || self.agent.open {
+        if self.palettes.open || self.agent.open {
             cx.stop_propagation();
             return;
         }
@@ -1529,15 +1512,6 @@ impl EditorView {
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
             .child(self.button("settings", "sliders-horizontal", "", Op::Settings, cx))
-            .child(
-                self.button("share", "share-2", "Share", Op::Share, cx)
-                    .w(px(96.0))
-                    .h(px(36.0))
-                    .justify_center()
-                    .flex_shrink_0()
-                    .border_1()
-                    .border_color(t.line()),
-            )
             .child(
                 self.button("save", "save", "Save", Op::Save, cx)
                     .w(px(96.0))
@@ -2488,9 +2462,6 @@ impl EditorView {
         if self.agent.open && !self.dialog_open {
             return Some(self.agent_popover(cx));
         }
-        if self.sharing.open && !self.dialog_open {
-            return Some(self.share_popover(cx));
-        }
         if self.palettes.open && !self.dialog_open {
             return Some(self.palette_manager(cx));
         }
@@ -2906,9 +2877,6 @@ impl Render for EditorView {
         self.timeline
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
-        self.sharing
-            .person
-            .update(cx, |field, cx| field.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
@@ -2970,7 +2938,6 @@ impl Render for EditorView {
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window)
-                || self.sharing.person.read(cx).focused(window)
             {
                 "TextField"
             } else if self.palette_focus.is_focused(window) {
@@ -2983,7 +2950,6 @@ impl Render for EditorView {
                 || self.info.is_some()
                 || self.dialog_open
                 || self.palettes.open
-                || self.sharing.open
                 || self.agent.open
             {
                 "Modal"
@@ -3036,7 +3002,7 @@ impl Render for EditorView {
                                 this.settings_modal = None;
                             }
                             this.agent.open = false;
-                            this.sharing.open = false;
+
                             this.palettes.open = false;
                             this.menu = None;
                             this.palette_open = false;

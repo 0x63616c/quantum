@@ -6,7 +6,6 @@ pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;
 pub mod preferences;
-pub mod share;
 
 #[cfg(all(feature = "web", target_family = "wasm"))]
 extern crate self as voxelite_app;

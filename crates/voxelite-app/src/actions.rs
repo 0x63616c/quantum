@@ -24,7 +24,6 @@ pub enum Op {
     ExportGlb,
     #[cfg(target_family = "wasm")]
     ExportPng,
-    Share,
     Comment,
     Quit,
     Undo,
@@ -70,7 +69,6 @@ impl Op {
             Self::SaveAs => "file-output",
             #[cfg(target_family = "wasm")]
             Self::ExportGlb | Self::ExportPng => "download",
-            Self::Share => "share-2",
             Self::Comment => "comment",
             Self::Quit => "log-out",
             Self::Undo => "undo",
@@ -119,7 +117,6 @@ impl Op {
             Self::ExportGlb => "Export GLB…",
             #[cfg(target_family = "wasm")]
             Self::ExportPng => "Export PNG…",
-            Self::Share => "Share project…",
             Self::Comment => "Add comment pin",
             Self::Quit => "Quit Voxelite",
             Self::Undo => "Undo",
@@ -207,7 +204,6 @@ pub const MENUS: &[(&str, &[Op])] = &[
             Op::ExportGlb,
             #[cfg(target_family = "wasm")]
             Op::ExportPng,
-            Op::Share,
             #[cfg(not(target_family = "wasm"))]
             Op::Quit,
         ],
