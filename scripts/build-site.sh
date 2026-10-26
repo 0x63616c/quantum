@@ -13,6 +13,7 @@ for asset in index.html voxelite_app.js voxelite_app_bg.wasm; do
 done
 # Refresh the HTML source even when reusing the compiled editor bundle.
 cp web/index.html web/dist/index.html
+# Also exports Markdown/LLM indexes and preserves site/appcast.xml if supplied.
 cargo run --locked -p voxelite-site -- site
 mkdir -p site/assets/skills
 cp -R skills/. site/assets/skills/
