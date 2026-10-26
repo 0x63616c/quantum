@@ -1,6 +1,6 @@
 # Voxelite
 
-> A local-first voxel editor with native Mac and browser workspaces, an MCP interface for AI agents, and portable .voxl projects.
+> A voxel editor with native Mac and browser workspaces, an MCP interface for AI agents, and portable .voxl projects.
 
 These docs describe the development build. The MCP reference is generated from the live server catalog.
 

@@ -1,6 +1,6 @@
 # Voxelite website
 
-A local-first static marketing site and Rust-generated documentation. No cookies,
+A static marketing site and Rust-generated documentation. No cookies,
 remote fonts, or runtime framework. Every page loads Vercel Web Analytics and
 Speed Insights from same-origin `/_vercel/` paths: cookie-free, anonymous page-view
 and performance counts, nothing in the editor or your files. Dark and light themes share the app's Geist
