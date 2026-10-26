@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 default = ["native"]
-native = ["dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger"]
+native = ["dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple"]
 web = ["dep:gpui", "dep:gpui_web", "dep:image", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:js-sys", "dep:futures-channel"]
 
 [lib]
@@ -63,3 +63,10 @@ js-sys = { version = "0.3", optional = true }
 futures-channel = { version = "0.3", optional = true }
 web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "HtmlInputElement", "HtmlAnchorElement", "FileList", "File", "Blob", "BlobPropertyBag", "Url", "Storage", "Event", "EventTarget", "Location", "BeforeUnloadEvent"] }
 uuid = { workspace = true, features = ["js"] }
+
+[target.'cfg(target_os = "macos")'.dependencies.voxelite-render]
+workspace = true
+features = ["gpu"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
