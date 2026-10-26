@@ -333,6 +333,8 @@ pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
 /// One open project, with UI preferences separate from portable document content.
 pub struct Editor {
     pub(crate) session: DocumentSession,
+    /// Persistent software viewport occupancy, shared with background render tasks.
+    pub raster: voxelite_render::RasterCache,
     /// Read-only preview, separate from the live authority.
     pub preview: Option<crate::history::Preview>,
     pub(crate) playback: Option<crate::history::Playback>,
@@ -383,6 +385,7 @@ impl Editor {
         let camera = OrbitCamera::fit(s, 1.3);
         Ok(Self {
             session,
+            raster: voxelite_render::RasterCache::default(),
             preview: None,
             playback: None,
             layer,
