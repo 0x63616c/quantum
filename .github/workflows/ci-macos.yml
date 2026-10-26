@@ -1,0 +1,48 @@
+name: CI macOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    # Never schedule untrusted fork code on the homelab runner.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, xcode]
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
+      MACOS_SIGNING_MODE: adhoc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up runner tools
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --locked -- -D warnings
+      - name: Test workspace
+        run: cargo test --workspace --locked
+      - name: Build app and unsigned DMG
+        run: scripts/package-macos.sh
+      - name: Upload unsigned DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Voxelite-macos-arm64-unsigned
+          path: |
+            dist/Voxelite.dmg
+            dist/Voxelite.dmg.sha256
+          if-no-files-found: error
+          retention-days: 3
