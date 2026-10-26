@@ -12,8 +12,15 @@ struct Globals {
     shadow_settings: vec4<f32>, // inverse map size, world-space normal offset, reserved
 };
 @group(0) @binding(0) var<uniform> globals: Globals;
-@group(1) @binding(0) var shadow_map: texture_depth_2d;
-@group(1) @binding(1) var shadow_sampler: sampler_comparison;
+// Packed ABI from occupancy.rs: 48-byte header, 16 words per 8³ brick,
+// followed by one bit per nonempty brick. World origin is used in VS only.
+struct Occupancy {
+    min: vec4<i32>,
+    size: vec4<u32>,
+    bricks: vec4<u32>, // xyz dimensions, w = coarse-mask word offset
+    words: array<u32>,
+};
+@group(1) @binding(0) var<storage, read> occupancy: Occupancy;
 struct Vertex {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
@@ -22,72 +29,93 @@ struct Vertex {
 struct Varying {
     @builtin(position) position: vec4<f32>,
     @location(0) world: vec3<f32>,
-    @location(1) normal: vec3<f32>,
+    @location(1) @interpolate(flat) normal: vec3<f32>,
     @location(2) color_ao: vec4<f32>,
+    @location(3) local: vec3<f32>,
 };
 @vertex fn vs_main(v: Vertex) -> Varying {
     var out: Varying;
     out.position = globals.view_projection * vec4(v.position, 1.0);
     out.world = v.position;
+    out.local = v.position - vec3<f32>(occupancy.min.xyz);
     out.normal = v.normal;
     out.color_ao = v.color_ao;
     return out;
-}
-@vertex fn vs_shadow(v: Vertex) -> @builtin(position) vec4<f32> {
-    return globals.light_projection * vec4(v.position, 1.0);
 }
 struct Fragment {
     @location(0) color: vec4<f32>,
     @location(1) geometry: vec4<f32>,
 };
-// Orthographic light projection rows are orthogonal but have different scales.
-// Transform the receiver plane's normal by the inverse transpose, then solve
-// its depth slope in texture UV (including the flipped Y axis).
-fn shadow_depth_gradient(normal: vec3<f32>, m: mat4x4<f32>) -> vec2<f32> {
-    let x = vec3(m[0].x, m[1].x, m[2].x);
-    let y = vec3(m[0].y, m[1].y, m[2].y);
-    let z = vec3(m[0].z, m[1].z, m[2].z);
-    let plane = vec3(dot(normal, x) / dot(x, x),
-        dot(normal, y) / dot(y, y), dot(normal, z) / dot(z, z));
-    return -plane.xy / plane.z * vec2(2.0, -2.0);
+// Mirror of occupancy.rs. Keep the operation order, f32 precision and XYZ ties.
+const SHADOW_EPSILON: f32 = 0.001;
+const FAR: f32 = 1.0e30;
+fn crossing(origin: f32, direction: f32, cell: i32) -> f32 {
+    if direction == 0.0 { return FAR; }
+    let boundary = f32(cell + select(0, 1, direction > 0.0));
+    var distance = origin - boundary;
+    if direction > 0.0 { distance = boundary - origin; }
+    if distance > FAR * abs(direction) { return FAR; }
+    return distance / abs(direction);
 }
-fn shadow_filter_depth(center: f32, gradient: vec2<f32>, offset_uv: vec2<f32>, texel: f32) -> f32 {
-    // Bilinear comparison uses four texel centers, each up to one texel from
-    // the tap. Cover their receiver-depth variation independently of the caster
-    // slope bias (the footprint can cross onto a differently oriented face).
-    let footprint_bias = dot(abs(gradient), vec2(texel));
-    return center + dot(gradient, offset_uv) - footprint_bias;
+fn first_axis(t: vec3<f32>) -> u32 {
+    if t.x <= t.y && t.x <= t.z { return 0u; }
+    if t.y <= t.z { return 1u; }
+    return 2u;
 }
-fn shadow_visibility(world: vec3<f32>, normal: vec3<f32>, diffuse: f32) -> f32 {
-    if globals.settings.z < 0.5 || diffuse <= 0.0 { return 1.0; }
-    // Bias follows the fitted texel size and surface slope, so it shrinks when
-    // zooming in instead of detaching close-up contact shadows from the voxels.
-    let offset = globals.shadow_settings.y * sqrt(max(0.0, 1.0 - diffuse * diffuse));
-    let position = globals.light_projection * vec4(world + normal * offset, 1.0);
-    let uv = position.xy * vec2(0.5, -0.5) + vec2(0.5);
-    if any(uv < vec2(0.0)) || any(uv > vec2(1.0)) || position.z < 0.0 || position.z > 1.0 {
-        return 1.0;
-    }
-    // Nine bilinear hardware comparisons. Explicit LOD permits the early-outs
-    // above without derivative-uniformity issues on Metal or in WGSL validation.
-    let gradient = shadow_depth_gradient(normal, globals.light_projection);
-    var visibility = 0.0;
-    for (var y = -1; y <= 1; y++) {
-        for (var x = -1; x <= 1; x++) {
-            let offset_uv = vec2(f32(x), f32(y)) * globals.shadow_settings.x;
-            // Each tap lies at a different depth on a sloping receiver. Using
-            // the center depth for every tap causes periodic self-shadow bands;
-            // raster bias alone does not cover the diagonal PCF footprint.
-            let depth = shadow_filter_depth(position.z, gradient, offset_uv, globals.shadow_settings.x);
-            visibility += textureSampleCompareLevel(shadow_map, shadow_sampler,
-                uv + offset_uv, depth);
+fn precedes(t: f32, axis: u32, end: f32, end_axis: u32) -> bool {
+    return t < end || (t == end && axis <= end_axis);
+}
+fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
+    let scale = max(max(abs(direction.x), abs(direction.y)), abs(direction.z));
+    if scale == 0.0 { return false; }
+    let dir = direction / scale;
+    let size = vec3<i32>(occupancy.size.xyz);
+    var cell = vec3<i32>(floor(origin));
+    let step = vec3<i32>(sign(dir));
+    for (var iteration = 0u; iteration < 768u; iteration++) {
+        if any(cell < vec3(0)) || any(cell >= size) { return false; }
+        let p = vec3<u32>(cell);
+        let b = p / 8u;
+        let brick = b.x + occupancy.bricks.x * (b.y + occupancy.bricks.y * b.z);
+        let bit = p.x % 8u + 8u * (p.y % 8u) + 64u * (p.z % 8u);
+        let word = brick * 16u + bit / 32u;
+        let mask = occupancy.bricks.w + brick / 32u;
+        if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
+            let lo = (cell / 8) * 8;
+            let hi = lo + vec3(7);
+            var end: vec3<f32>;
+            for (var a = 0u; a < 3u; a++) {
+                end[a] = crossing(origin[a], dir[a], select(lo[a], hi[a], step[a] > 0));
+            }
+            let axis = first_axis(end);
+            let time = end[axis];
+            for (var a = 0u; a < 3u; a++) {
+                if step[a] == 0 { continue; }
+                var candidate = clamp(i32(floor(origin[a] + dir[a] * time)), lo[a], hi[a]);
+                while (candidate - cell[a]) * step[a] > 0 && !precedes(crossing(origin[a], dir[a], candidate - step[a]), a, time, axis) {
+                    candidate -= step[a];
+                }
+                while candidate >= lo[a] && candidate <= hi[a] && precedes(crossing(origin[a], dir[a], candidate), a, time, axis) {
+                    candidate += step[a];
+                }
+                cell[a] = candidate;
+            }
+        } else {
+            if (occupancy.words[word] & (1u << (bit % 32u))) != 0u { return true; }
+            var next: vec3<f32>;
+            for (var a = 0u; a < 3u; a++) { next[a] = crossing(origin[a], dir[a], cell[a]); }
+            let axis = first_axis(next);
+            cell[axis] += step[axis];
         }
     }
-    return visibility / 9.0;
+    return false;
 }
 @fragment fn fs_main(v: Varying) -> Fragment {
     let diffuse = max(0.0, dot(v.normal, globals.light.xyz));
-    let shadow = 0.2 + 0.8 * shadow_visibility(v.world, v.normal, diffuse);
+    var shadow = 1.0;
+    if diffuse > 0.0 {
+        if trace_shadow(v.local + v.normal * SHADOW_EPSILON, globals.light.xyz) { shadow = 0.2; }
+    }
     let illumination = (0.44 + 0.56 * diffuse * shadow) * v.color_ao.a;
     var out: Fragment;
     out.color = vec4(v.color_ao.rgb * illumination, 1.0);

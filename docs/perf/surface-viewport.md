@@ -25,7 +25,7 @@ The presentation sequence is:
 
 1. Multiply the laid-out viewport bounds by the window scale factor to obtain
    physical display pixels. Render the scene at twice those dimensions, with
-   4x MSAA, ambient occlusion, filtered shadows and an opaque background/grid.
+   4x MSAA, ambient occlusion, exact voxel shadows and an opaque background/grid.
    Outlines follow the CPU viewport default (disabled).
 2. Resolve linear shading to nonlinear RGB in an RGBA8Unorm target. Convert it
    with the exact inverse of GPUI 1.25.3's full-range BT.601 matrix, including
@@ -43,17 +43,26 @@ ownership; the implementation never samples retain counts or blindly rotates
 slots. Resizing replaces the pool while existing frames keep old allocations
 alive until their consumers release them.
 
-Directional shadows use one 4096² `Depth32Float` map (64 MiB). Its light-space
-X/Y projection fits the convex intersection of the camera frustum and scene
-bounds, including edge/face intersections in orthographic and perspective views.
-Light-space depth still covers the entire scene so offscreen casters can shadow
-visible receivers. The fit uses a world-anchored, texel-snapped center and small
-upward extent steps to reduce motion shimmer. Guard bands cover the normal
-offset and 3×3 bilinear comparison PCF; slope-scaled raster depth bias and a
-texel-sized normal offset limit acne without a fixed close-up gap. Camera/light,
-aspect, bounds or chunk changes invalidate the map; style-only frames reuse it.
-The fit takes at most 220 plane intersections and never scans mesh vertices.
-The software rasterizer is unchanged.
+Directional shadows now trace the visible composite with the shared `occupancy.rs`
+f32 DDA and its WGSL mirror. Each 8³ brick occupies 16 contiguous u32 words; a
+coarse bitset skips empty bricks. The maximum 256³ storage buffer is 2,101,296
+bytes including its 48-byte header. Rays start at the surface plus 0.001 voxel
+along its axis normal, in grid-local coordinates to preserve the epsilon near
+±32768. Tied crossings visit X, Y, then Z. Shadow visibility is binary; the
+existing illumination, AO, and MSAA remain unchanged.
+
+Both GPU and software viewports retain occupancy across camera frames. Immutable
+chunk differences and visible-layer membership identify changed cells; only dirty
+brick word ranges and coarse mask words are uploaded on scene changes. A single
+changed brick needs 64 bytes plus its 4-byte mask word. Hidden layers never cast;
+layer order and palette colors cannot change boolean occupancy. Stateless export
+renders build occupancy once per call.
+
+The former 4096² depth map, fit, comparison sampler, and PCF shader are isolated
+in `ShadowFallback` / `gpu/shadow_map.wgsl`. They are allocated only if the
+occupancy buffer exceeds device limits or a scoped allocation/upload fails. The
+fallback persists for that viewport's lifetime; normal frames perform no shadow
+depth pass or fit. Device loss still selects the existing software fallback.
 
 ## FPS integration and face banding regression
 
@@ -66,11 +75,11 @@ GPU work uses the same idle-window reset as CPU work. Fallback immediately reset
 the meter to CPU, and deferred GPU paint callbacks cannot switch it back. GPU
 navigation still bypasses the CPU half-resolution render and 180 ms refinement.
 
-The banding investigation reproduced self-shadowing on an isolated solid with
+The earlier shadow-map banding investigation (now fallback-only) reproduced self-shadowing on an isolated solid with
 AO and outlines disabled. The fitted map's 3×3 PCF compared all taps against the
 center receiver depth. Caster slope bias and a normal offset did not cover the
 full diagonal filter footprint, especially near grazing incidence and face edges.
-The shader now derives the receiver plane's depth gradient from the orthographic
+The fallback shader derives the receiver plane's depth gradient from the orthographic
 light projection, corrects each tap's depth, and biases for the four internal
 bilinear samples. That bias scales with the fitted texel size. The existing
 caster slope bias and light-space normal offset remain in use. No face noise,
