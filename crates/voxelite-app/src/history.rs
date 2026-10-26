@@ -1,7 +1,20 @@
 //! Immutable timeline previews and guarded explicit restoration.
+#[cfg(test)]
+mod playback_tests;
+
 use crate::editor::{Editor, EditorError, EditorResult};
 use std::sync::Arc;
+use std::time::Duration;
 use voxelite_core::*;
+use web_time::Instant;
+
+/// Default playback cadence: four retained history states per second.
+pub const HISTORY_STEP_INTERVAL: Duration = Duration::from_millis(250);
+
+pub(crate) struct Playback {
+    next_step: Instant,
+    revision: u64,
+}
 /// Source of a captured, read-only viewport state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PreviewSource {
@@ -38,6 +51,70 @@ pub fn display_label(label: &str) -> &str {
     }
 }
 impl Editor {
+    /// Retained states in playback order, including redo entries.
+    pub fn timeline_entries(&self) -> impl Iterator<Item = Option<Uuid>> + '_ {
+        std::iter::once(None)
+            .filter(|_| self.engine.initial_retained())
+            .chain(self.engine.timeline().map(|e| Some(e.id)))
+    }
+
+    /// Whether history is advancing automatically.
+    pub fn history_playing(&self) -> bool {
+        self.playback.is_some()
+    }
+
+    /// Pause at the displayed state without changing the live document.
+    pub fn pause_history(&mut self) {
+        self.playback = None;
+    }
+
+    /// Start at the current timeline state, or restart at the first when at the end.
+    /// Returns whether a preview was installed; fewer than two states cannot play.
+    pub fn play_history(&mut self, now: Instant) -> EditorResult<bool> {
+        self.pause_history();
+        let entries: Vec<_> = self.timeline_entries().collect();
+        if entries.len() < 2 {
+            return Ok(false);
+        }
+        let index = self.timeline_index();
+        let index = if index >= entries.len() - 1 { 0 } else { index };
+        self.load_history_preview(entries[index])?;
+        self.playback = Some(Playback {
+            next_step: now + HISTORY_STEP_INTERVAL,
+            revision: self.engine.revision(),
+        });
+        Ok(true)
+    }
+
+    /// Advance at most one state when due. Delayed ticks never skip build steps.
+    /// Stops on the final state, an intervening live edit, or a preview error.
+    pub fn tick_history(&mut self, now: Instant) -> EditorResult<bool> {
+        let Some(playback) = &self.playback else {
+            return Ok(false);
+        };
+        if playback.revision != self.engine.revision() {
+            self.pause_history();
+            return Ok(false);
+        }
+        if now < playback.next_step {
+            return Ok(false);
+        }
+        let entries: Vec<_> = self.timeline_entries().collect();
+        let next = self.timeline_index() + 1;
+        self.pause_history();
+        let Some(entry) = entries.get(next) else {
+            return Ok(false);
+        };
+        self.load_history_preview(*entry)?;
+        if next + 1 < entries.len() {
+            self.playback = Some(Playback {
+                next_step: now + HISTORY_STEP_INTERVAL,
+                revision: self.engine.revision(),
+            });
+        }
+        Ok(true)
+    }
+
     /// Timeline cursor follows the preview or the actual applied head, never a redo entry.
     pub fn timeline_index(&self) -> usize {
         let source = self
@@ -45,9 +122,7 @@ impl Editor {
             .as_ref()
             .map(|p| p.source)
             .unwrap_or(PreviewSource::History(self.engine.head()));
-        std::iter::once(None)
-            .filter(|_| self.engine.initial_retained())
-            .chain(self.engine.timeline().map(|e| Some(e.id)))
+        self.timeline_entries()
             .position(|id| source == PreviewSource::History(id))
             .unwrap_or(0)
     }
@@ -58,7 +133,8 @@ impl Editor {
             .as_ref()
             .map_or_else(|| self.snapshot(), |p| &p.snapshot)
     }
-    pub(crate) fn ensure_live(&self) -> EditorResult<()> {
+    pub(crate) fn ensure_live(&mut self) -> EditorResult<()> {
+        self.pause_history();
         if self.preview.is_some() {
             Err(EditorError::Gesture(
                 "History preview is read-only. Return to live or Restore.".into(),
@@ -69,6 +145,10 @@ impl Editor {
     }
     /// Scrub without changing revision, dirty state, or undo/redo.
     pub fn preview_history(&mut self, entry: Option<Uuid>) -> EditorResult<()> {
+        self.pause_history();
+        self.load_history_preview(entry)
+    }
+    fn load_history_preview(&mut self, entry: Option<Uuid>) -> EditorResult<()> {
         let doc = self.engine.preview(entry)?;
         let label = entry
             .and_then(|id| self.engine.timeline().find(|e| e.id == id))
@@ -82,6 +162,7 @@ impl Editor {
     }
     /// Preview a durable named snapshot without altering the live project.
     pub fn preview_version(&mut self, id: Uuid) -> EditorResult<()> {
+        self.pause_history();
         let v = self
             .engine
             .versions()
@@ -103,10 +184,12 @@ impl Editor {
     }
     /// Exit preview; live edits that arrived while previewing remain intact.
     pub fn return_live(&mut self) {
+        self.pause_history();
         self.preview = None;
     }
     /// Explicit restore adds one reversible transaction and rejects an intervening edit.
     pub fn restore_preview(&mut self) -> EditorResult<()> {
+        self.pause_history();
         let p = self
             .preview
             .as_ref()

@@ -1,11 +1,12 @@
 //! Timeline slider and named version library.
 use super::*;
-use voxelite_app::history::{PreviewSource, display_label};
+use voxelite_app::history::{HISTORY_STEP_INTERVAL, PreviewSource, display_label};
 use voxelite_core::{Origin, Uuid};
 pub(super) struct Timeline {
     pub name: Entity<crate::text_field::TextField>,
     pub dragging: bool,
     pub scroll: ScrollHandle,
+    pub playback_task: Option<Task<()>>,
 }
 impl Timeline {
     pub fn new(cx: &mut App) -> Self {
@@ -13,10 +14,68 @@ impl Timeline {
             name: crate::text_field::TextField::new("Name this version…", cx),
             dragging: false,
             scroll: ScrollHandle::new(),
+            playback_task: None,
         }
     }
 }
 impl EditorView {
+    pub(super) fn pause_history(&mut self, cx: &mut Context<Self>) {
+        self.editor.pause_history();
+        self.timeline.playback_task = None;
+        cx.notify();
+    }
+
+    pub(super) fn toggle_history(&mut self, cx: &mut Context<Self>) {
+        if self.editor.history_playing() {
+            self.pause_history(cx);
+            return;
+        }
+        // Dropping the previous task cancels its pending timer, including on a
+        // rapid pause/resume. Only this playback session can advance the cursor.
+        self.timeline.playback_task = None;
+        match self.editor.play_history(web_time::Instant::now()) {
+            Ok(true) => self.refresh_history_playback(cx),
+            Ok(false) => return,
+            Err(e) => {
+                self.report(Err::<(), _>(e), "", cx);
+                return;
+            }
+        }
+        self.timeline.playback_task = Some(cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(HISTORY_STEP_INTERVAL).await;
+                let playing = this.update(cx, |this, cx| {
+                    if !this.editor.history_playing() {
+                        return false;
+                    }
+                    // Slow renders must finish before advancing, or every
+                    // intermediate frame could be discarded as stale.
+                    if this.displayed != Some(this.frame_identity()) {
+                        return true;
+                    }
+                    match this.editor.tick_history(web_time::Instant::now()) {
+                        Ok(true) => this.refresh_history_playback(cx),
+                        Ok(false) => cx.notify(),
+                        Err(e) => this.report(Err::<(), _>(e), "", cx),
+                    }
+                    this.editor.history_playing()
+                });
+                if !matches!(playing, Ok(true)) {
+                    break;
+                }
+            }
+        }));
+    }
+
+    fn refresh_history_playback(&mut self, cx: &mut Context<Self>) {
+        self.timeline.scroll.scroll_to_item(
+            self.editor.timeline_entries().count() - self.editor.timeline_index() - 1,
+        );
+        self.status = "History preview · read-only".into();
+        self.error = false;
+        self.refresh_preview(cx);
+    }
+
     pub(super) fn refresh_preview(&mut self, cx: &mut Context<Self>) {
         self.document_generation = self.document_generation.wrapping_add(1);
         self.hover = None;
@@ -25,10 +84,9 @@ impl EditorView {
         cx.notify();
     }
     pub(super) fn scrub(&mut self, index: usize, cx: &mut Context<Self>) {
-        let ids: Vec<Option<Uuid>> = std::iter::once(None)
-            .filter(|_| self.editor.engine.initial_retained())
-            .chain(self.editor.engine.timeline().map(|e| Some(e.id)))
-            .collect();
+        // Even scrubbing to the already selected state must stop playback.
+        self.pause_history(cx);
+        let ids: Vec<Option<Uuid>> = self.editor.timeline_entries().collect();
         if let Some(id) = ids.get(index) {
             if self.editor.preview.as_ref().is_some_and(|p| {
                 p.source == PreviewSource::History(*id)
@@ -60,6 +118,12 @@ impl EditorView {
             .collect();
         let selected = self.editor.timeline_index();
         let count = steps.len();
+        let playing = self.editor.history_playing();
+        let playback_label = if playing {
+            "Pause history"
+        } else {
+            "Play history"
+        };
         let mut versions: Vec<_> = self.editor.engine.versions().collect();
         versions.sort_by(|a, b| a.name.cmp(&b.name).then(a.id.cmp(&b.id)));
         let bounds = Rc::new(Cell::new(Bounds::<Pixels>::default()));
@@ -87,7 +151,33 @@ impl EditorView {
                 row()
                     .justify_between()
                     .child(section_title("History & versions"))
-                    .child(mono(format!("{} steps", steps.len())).text_color(t.muted())),
+                    .child(
+                        row()
+                            .gap(px(8.0))
+                            .child(mono(format!("{} steps", steps.len())).text_color(t.muted()))
+                            .when(count > 1, |d| {
+                                d.child(
+                                    self.control(
+                                        "history-playback",
+                                        if playing { "pause" } else { "play" },
+                                        "",
+                                        cx,
+                                        |this, _, cx| this.toggle_history(cx),
+                                    )
+                                    .w(px(34.0))
+                                    .px(px(0.0))
+                                    .gap(px(0.0))
+                                    .justify_center()
+                                    .aria_label(playback_label)
+                                    .aria_keyshortcuts("Space")
+                                    .anchored_hint(
+                                        HintText::from(playback_label).text("  ").key("space"),
+                                        t,
+                                        TooltipSide::Below,
+                                    ),
+                                )
+                            }),
+                    ),
             )
             .child(
                 div().text_color(t.muted()).text_size(px(12.0)).child(
@@ -189,7 +279,7 @@ impl EditorView {
                         .gap(px(8.0))
                         .child(self.control(
                             "history-live",
-                            "play",
+                            "log-out",
                             "Return to live",
                             cx,
                             |this, _, cx| {
