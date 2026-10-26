@@ -1,8 +1,8 @@
 //! MCP over a private Unix socket, with edits serialized by the editor's UI owner.
 //!
 //! The network worker only validates protocol framing and queues requests. `poll`
-//! temporarily lends the live engine to the existing MCP session, so humans and
-//! agents share one revision, history, locks and operation-receipt authority.
+//! temporarily lends the live document session to the MCP dispatcher, so humans
+//! and agents share content, revision, history, locks, and saved-file state.
 use crate::{catalog, error::Failure, session::Session, transport::JsonLines};
 use rmcp::{ErrorData, RoleServer, ServerHandler, ServiceExt, model::*, service::RequestContext};
 use serde_json::Value;
@@ -21,8 +21,8 @@ use std::{
     },
 };
 use tokio::sync::oneshot;
-use voxelite_core::{Changes, Engine, Snapshot, Uuid, compare};
-use voxelite_format::Project;
+use voxelite_core::{Changes, Snapshot, Uuid, compare};
+use voxelite_format::{Project, session::DocumentSession};
 
 struct Request {
     name: String,
@@ -194,7 +194,7 @@ impl AttachedSession {
     }
     /// Process a bounded number of requests on the engine's owner thread.
     /// No request executes after its awaiting protocol caller has cancelled.
-    pub fn poll(&mut self, engine: &mut Engine) -> Vec<SessionEvent> {
+    pub fn poll(&mut self, document: &mut DocumentSession) -> Vec<SessionEvent> {
         let mut events = Vec::new();
         if let Some(receiver) = &self.render {
             match receiver.try_recv() {
@@ -208,19 +208,17 @@ impl AttachedSession {
                 Err(mpsc::TryRecvError::Empty) => {}
             }
         }
-        let model = engine.document().id;
+        let model = document.engine.document().id;
         if !self.session.documents.contains_key(&model) {
             return events;
         }
-        // This swap is owner-thread exclusive. The worker never reads the shadow engine.
+        // This swap is owner-thread exclusive. The worker never reads the placeholder.
         std::mem::swap(
-            engine,
-            &mut self
-                .session
+            document,
+            self.session
                 .documents
                 .get_mut(&model)
-                .expect("attached document")
-                .engine,
+                .expect("attached document"),
         );
         for _ in 0..4 {
             let Ok(request) = self.requests.try_recv() else {
@@ -366,13 +364,11 @@ impl AttachedSession {
             let _ = request.reply.send(result);
         }
         std::mem::swap(
-            engine,
-            &mut self
-                .session
+            document,
+            self.session
                 .documents
                 .get_mut(&model)
-                .expect("attached document")
-                .engine,
+                .expect("attached document"),
         );
         events
     }
@@ -400,3 +396,6 @@ pub async fn proxy_stdio(path: &Path) -> io::Result<()> {
     tokio::try_join!(input, output)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

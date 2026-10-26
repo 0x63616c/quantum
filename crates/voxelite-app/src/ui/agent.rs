@@ -53,12 +53,10 @@ impl EditorView {
         let Some(session) = &mut self.agent.session else {
             return;
         };
-        let revision = self.editor.engine.revision();
-        let clients = session.clients();
-        let events = session.poll(&mut self.editor.engine);
-        let notify = clients != self.agent.clients || !events.is_empty();
-        self.agent.clients = clients;
-        for mut event in events {
+        let update = self.editor.poll_attachment(session);
+        let notify = update.clients != self.agent.clients || !update.events.is_empty();
+        self.agent.clients = update.clients;
+        for mut event in update.events {
             if let Some(snapshot) = event.inspection.take() {
                 if self.agent.follow
                     && self.editor.preview.is_none()
@@ -74,8 +72,7 @@ impl EditorView {
                 self.agent.expanded = None;
             }
         }
-        if self.editor.engine.revision() != revision {
-            self.editor.agent_updated();
+        if update.changed {
             self.request_render(cx);
             self.status = format!(
                 "Agent updated document · r{}",

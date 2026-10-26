@@ -4,6 +4,7 @@
 //! core commands to reconstruct a timeline. Unknown optional metadata
 //! is inert, bounded, preserved, and never interpreted as a URL or executable.
 mod build_history;
+pub mod session;
 mod stream;
 pub use build_history::{BuildHistory, BuildStep};
 use serde::{Deserialize, Serialize};

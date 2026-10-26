@@ -27,7 +27,6 @@ glam.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
 serde.workspace = true
-sha2.workspace = true
 anyhow = "1"
 web-time = "1"
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }

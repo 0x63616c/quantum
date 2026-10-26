@@ -54,8 +54,8 @@ impl Editor {
     /// Retained states in playback order, including redo entries.
     pub fn timeline_entries(&self) -> impl Iterator<Item = Option<Uuid>> + '_ {
         std::iter::once(None)
-            .filter(|_| self.engine.initial_retained())
-            .chain(self.engine.timeline().map(|e| Some(e.id)))
+            .filter(|_| self.session.engine.initial_retained())
+            .chain(self.session.engine.timeline().map(|e| Some(e.id)))
     }
 
     /// Whether history is advancing automatically.
@@ -81,7 +81,7 @@ impl Editor {
         self.load_history_preview(entries[index])?;
         self.playback = Some(Playback {
             next_step: now + HISTORY_STEP_INTERVAL,
-            revision: self.engine.revision(),
+            revision: self.session.engine.revision(),
         });
         Ok(true)
     }
@@ -92,7 +92,7 @@ impl Editor {
         let Some(playback) = &self.playback else {
             return Ok(false);
         };
-        if playback.revision != self.engine.revision() {
+        if playback.revision != self.session.engine.revision() {
             self.pause_history();
             return Ok(false);
         }
@@ -109,7 +109,7 @@ impl Editor {
         if next + 1 < entries.len() {
             self.playback = Some(Playback {
                 next_step: now + HISTORY_STEP_INTERVAL,
-                revision: self.engine.revision(),
+                revision: self.session.engine.revision(),
             });
         }
         Ok(true)
@@ -121,7 +121,7 @@ impl Editor {
             .preview
             .as_ref()
             .map(|p| p.source)
-            .unwrap_or(PreviewSource::History(self.engine.head()));
+            .unwrap_or(PreviewSource::History(self.session.engine.head()));
         self.timeline_entries()
             .position(|id| source == PreviewSource::History(id))
             .unwrap_or(0)
@@ -149,9 +149,9 @@ impl Editor {
         self.load_history_preview(entry)
     }
     fn load_history_preview(&mut self, entry: Option<Uuid>) -> EditorResult<()> {
-        let doc = self.engine.preview(entry)?;
+        let doc = self.session.engine.preview(entry)?;
         let label = entry
-            .and_then(|id| self.engine.timeline().find(|e| e.id == id))
+            .and_then(|id| self.session.engine.timeline().find(|e| e.id == id))
             .map_or_else(|| "Initial state".into(), |e| e.label.clone());
         self.set_preview(
             PreviewSource::History(entry),
@@ -164,6 +164,7 @@ impl Editor {
     pub fn preview_version(&mut self, id: Uuid) -> EditorResult<()> {
         self.pause_history();
         let v = self
+            .session
             .engine
             .versions()
             .find(|v| v.id == id)
@@ -177,8 +178,8 @@ impl Editor {
             snapshot,
             source,
             label,
-            revision: self.engine.revision(),
-            head: self.engine.head(),
+            revision: self.session.engine.revision(),
+            head: self.session.engine.head(),
         });
         self.box_start = None;
     }
@@ -196,7 +197,7 @@ impl Editor {
             .ok_or_else(|| EditorError::Gesture("Choose a history state first".into()))?;
         match p.source {
             PreviewSource::History(entry) => {
-                self.engine.restore_history(
+                self.session.engine.restore_history(
                     p.revision,
                     p.head,
                     entry,
@@ -205,7 +206,7 @@ impl Editor {
                 )?;
             }
             PreviewSource::Version(id) => {
-                self.engine.execute(Transaction {
+                self.session.engine.execute(Transaction {
                     expected_revision: p.revision,
                     id: Uuid::new_v4(),
                     actor: Actor::new(Origin::Human),
@@ -299,9 +300,10 @@ mod tests {
         let v = e.save_version("Before".into()).unwrap();
         e.apply_at([0, 0, 0]).unwrap();
         e.preview_version(v).unwrap();
-        e.engine
+        e.session
+            .engine
             .execute(Transaction {
-                expected_revision: e.engine.revision(),
+                expected_revision: e.session.engine.revision(),
                 id: Uuid::new_v4(),
                 actor: Actor::new(Origin::Agent),
                 label: "Agent edit".into(),
