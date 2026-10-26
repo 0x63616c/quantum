@@ -115,7 +115,8 @@ Both workflows use `[self-hosted, macOS, ARM64, xcode]`, targeting the
 GitHub-hosted macOS jobs. The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
-`actions/checkout@v4` and `actions/upload-artifact@v4`.
+the v4 checkout and artifact actions, pinned to reviewed commit SHAs in the
+workflows.
 
 CI checks formatting, runs `cargo clippy --workspace --locked -- -D warnings`,
 runs `cargo test --workspace --locked`, builds the release app, and packages a
@@ -127,11 +128,17 @@ expire after **3 days**. New runs cancel older CI runs for the same ref.
 
 ## Release behavior
 
-The existing release workflow is triggered by `v*` tags or manual dispatch with an
-existing tag. The tag without `v` supplies both bundle version fields. Use an
+The release workflow is triggered by `v*` tags or manual dispatch with an
+existing tag. It accepts stable `vMAJOR.MINOR.PATCH` tags only and checks out the
+fully qualified `refs/tags/` ref, so a same-named branch cannot supply the build.
+The tag without `v` supplies both bundle version fields. Use an
 increasing version for each public update and keep published release tags/assets
 immutable; the update feed depends on their exact bytes. Releases serialize and
-are not cancelled in progress.
+are not cancelled in progress. Publication creates a draft, uploads the DMG,
+checksum, and optional feed together, then publishes only after every upload
+succeeds. An existing release (including a draft) makes publication fail; assets
+are never overwritten. A failed upload leaves a draft for inspection. Remove
+that unpublished draft manually before retrying, or use a new version tag.
 
 The packager:
 

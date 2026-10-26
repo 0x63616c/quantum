@@ -23,7 +23,7 @@ jobs:
       MACOS_SIGNING_MODE: adhoc
       SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Set up runner tools
@@ -39,7 +39,7 @@ jobs:
       - name: Build app and unsigned DMG
         run: scripts/package-macos.sh
       - name: Upload unsigned DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Voxelite-macos-arm64-unsigned
           path: |
