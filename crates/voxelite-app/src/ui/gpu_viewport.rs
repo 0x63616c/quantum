@@ -57,10 +57,10 @@ impl EditorView {
                     if let Some(error) = gpui_apple::metal_renderer::take_surface_error() {
                         this.gpu_fallback(voxelite_render::RenderError::Invalid(error), cx);
                     }
-                    if let Some(renderer) = &this.gpu.renderer {
-                        if let Err(error) = renderer.check_health() {
-                            this.gpu_fallback(error, cx);
-                        }
+                    if let Some(renderer) = &this.gpu.renderer
+                        && let Err(error) = renderer.check_health()
+                    {
+                        this.gpu_fallback(error, cx);
                     }
                     this.gpu.enabled
                 });
