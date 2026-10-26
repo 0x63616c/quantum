@@ -52,8 +52,7 @@ This table is the release boundary agreed on 2026-10-25. v1 is the working produ
 | Open Linux-like plugin core | DEFERRED — v1.x/v2 | Dropped from v1. Built-in editing tools remain internal Rust modules using the shared command engine. Runtime extension registration, public plugin interfaces and agent-authored tools follow v1. |
 | Native script/WASM plugin host foundation | DEFERRED — v1.x/v2 | Dropped from v1 with the plugin core. Runtime adapters, versioned ABI and capability grants require a separate future feasibility gate. |
 | Canonical JSON `.voxl`, GLB/PNG, agent engine | v1 | A single UTF-8 JSON project with deterministic voxel lines; CPU render-to-image, shared commands/undo/layers/palette, versioned MCP and GPUI shell in the build order below. |
-| Local Share preview | v1 | Concept A popover with Copy, stable `voxelite://share/<id>` identifier, View / Comment / Remix choices and a per-person list backed by the local share backend. Label “Local preview — hosted sharing coming soon”; Save a copy is secondary. No hosted authorization or invitations are implied. |
-| Hosted share links: view/comment/remix | v1.x | Requires hosting/persistence and enforced permissions; remix creates independent lineage. Local editing remains account-free. |
+| Hosted Share | v2 | Share returns with hosted sharing (v2). No local Share preview in v1; Save and local Comments remain available. |
 | Git integration | v1.x | After v1: repository state, commits and visual diffs alongside local history; canonical files already work with ordinary Git in v1. |
 | Real-time collaboration and presence | v2 | Hosted multi-user editing, presence and conflict/recovery contracts; distinct from v1 local human/agent live sessions. |
 | CAD-style precision | v2 | Dimensions, measurements, snapping, precision numeric inputs and parametric modelling. Existing integer voxel coordinates and basic shape fields remain v1 editing/API foundations. |
@@ -521,7 +520,7 @@ Every row is required on native and web unless a platform difference is stated. 
 
 | ID / feature | Concrete acceptance criteria |
 | --- | --- |
-| F01 Workspace | Concept A is selected: viewport dominates, menu bar and one unified toolbar, a persistent left rail for Place/Erase/Paint/Fill/Box/Picker and Mirror X/Y/Z, command search, Comments/History actions, compact palette/layers and a docked agent session. Rail controls use Lucide icons, shortcut tooltips and clear active states. Tool selection belongs in the rail and Tools menu; a toolbar dropdown may expose tool options only. Current call precedes recent changes; details, diffs, captures and per-step revert disclose progressively. Sidebar resizes/scrolls and switches Session/Comments/History without covering the artwork. At 1024×640 controls, history exit and keyboard open/create/save/export remain reachable. Local Share preview is required now with the explicit local-only label; hosted sharing and presence remain in their assigned releases. |
+| F01 Workspace | Concept A is selected: viewport dominates, menu bar and one unified toolbar, a persistent left rail for Place/Erase/Paint/Fill/Box/Picker and Mirror X/Y/Z, command search, Comments/History actions, compact palette/layers and a docked agent session. Rail controls use Lucide icons, shortcut tooltips and clear active states. Tool selection belongs in the rail and Tools menu; a toolbar dropdown may expose tool options only. Current call precedes recent changes; details, diffs, captures and per-step revert disclose progressively. Sidebar resizes/scrolls and switches Session/Comments/History without covering the artwork. At 1024×640 controls, history exit and keyboard open/create/save/export remain reachable. Share returns with hosted sharing (v2); the local Share preview is removed. |
 | F02 Orbit/pan/zoom | RMB drag or Alt+LMB drag orbits; MMB or Space+LMB pans; wheel/pinch zooms toward cursor. Alt+LMB becomes orbit after a 4 CSS-pixel movement threshold; a stationary click is the picker. Trackpad-only workflow works. Clamp pitch/distance, prevent NaNs, maintain cursor capture during drags, and release it on cancel/focus loss. Home frames the visible model; empty model frames bounds. |
 | F03 Grid/axes | Antialiased floor at bounds minimum Y, major/minor grid lines, clear origin, and labeled X/Y/Z gizmo. Clicking an axis selects the corresponding orthographic view; return to perspective without changing geometry. Grid/gizmo toggles do not dirty the document or appear in default exports. |
 | F04 Place | Click adds one voxel adjacent to hit face or on work plane; drag interpolates a continuous grid stroke with no skipped cells. Preview shows target/mirror cells. Whole stroke is one undo; empty/out-of-bounds/locked cases obey core rules. |
@@ -593,7 +592,7 @@ Selected tools, mirrors, swatches and cameras use a solid edge/check/shape in ad
 
 Captured render pixels, camera parameters, visible-layer set and source revision stay together. Camera movement, layer visibility and Undo must not silently replace prior evidence: label stale captures **Outdated**, replace only after a successful new render and omit selection/highlight overlays from captures. Show at least three distinct captured thumbnails, with the standard four-view MCP workflow still available. All manual camera operations disengage Follow; selecting a captured view or framing also disengages it. Real zoom controls, grid state, projected orientation gizmo and keyboard orbit/pan/zoom match their affordances and focused-viewport ring.
 
-An MCP connection alone is not a prompt channel. A composer may hold a local draft with Copy, disabled when empty, with selectable-text fallback on clipboard failure. Only expose direct prompt submission when the selected host integration supports and verifies it. Comments dock beside the scene and history uses compact rows/overflow; palette management is a focused sheet/dialog. The local Share preview persists link/access/participant metadata and labels its scope explicitly; hosted links and online presence await v1.x/v2 services; do not show false connected users or imply hosted enforcement in the local preview.
+An MCP connection alone is not a prompt channel. A composer may hold a local draft with Copy, disabled when empty, with selectable-text fallback on clipboard failure. Only expose direct prompt submission when the selected host integration supports and verifies it. Comments dock beside the scene and history uses compact rows/overflow; palette management is a focused sheet/dialog. Share returns with hosted sharing (v2). The local Share preview and its metadata UI are removed; Comments remain local and independent of sharing.
 
 ### First-run and empty-state specification
 
@@ -887,11 +886,15 @@ Create `design/acceptance.yaml` and a generated evidence index at M0: each A01�
 
 ### Later release gates
 
+Share returns with hosted sharing (v2).
+
+Accounts/login (v1.x/v2, with hosted sharing): when auth is added, support auth.md (WorkOS's agent-auth standard) so AI agents can authenticate on a user's behalf.
+
 These are separate from the v1 M0–M10 gates; the scope table in §1 governs release assignment.
 
 | Release | Deliverable and acceptance |
 | --- | --- |
-| v1.x — hosted sharing | Define hosting/persistence, link issuance/revocation and server-enforced view/comment/remix permissions before launch. View cannot write; comment can create/reply/resolve within its grant; remix creates an independent project with source lineage and cannot mutate the original. Persist anchored threads and test revoked links, offline failures and artifact access. Static Vercel assets alone do not supply this authority; local editing remains account-free. |
+| v2 — hosted sharing | Define hosting/persistence, link issuance/revocation and server-enforced view/comment/remix permissions before launch. View cannot write; comment can create/reply/resolve within its grant; remix creates an independent project with source lineage and cannot mutate the original. Persist anchored threads and test revoked links, offline failures and artifact access. Static Vercel assets alone do not supply this authority; local editing remains account-free. |
 | v1.x — Git integration | After v1, expose repository status, explicit commits and visual/semantic diffs for canonical `.voxl`. Preserve external edits and surface conflicts; do not confuse local named-version branching with Git operations. |
 | v2 — collaboration/presence | Multi-user sessions need hosted identity/authorization, presence, concurrent-edit resolution, reconnect/recovery and explicit ownership rules. Local human/agent sessions remain the v1 foundation. |
 | v2 — CAD precision | Dimensions/measurements, snapping, precision numeric inputs and parametric constraints with reproducible evaluation; existing integer API coordinates/basic shape fields remain v1. |

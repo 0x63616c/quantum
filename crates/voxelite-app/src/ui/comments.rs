@@ -113,22 +113,19 @@ impl EditorView {
                 .into_iter()
                 .enumerate()
                 .map(|(i, (panel, label))| {
-                    self.control(
-                        ("panel-tab", i),
-                        ["spark", "comment", "history"][i],
-                        label,
-                        cx,
-                        move |this, window, cx| {
-                            window.focus(&this.focus, cx);
-                            this.panel = panel;
-                            cx.notify();
-                        },
-                    )
+                    self.control(("panel-tab", i), "", label, cx, move |this, window, cx| {
+                        window.focus(&this.focus, cx);
+                        this.panel = panel;
+                        cx.notify();
+                    })
                     .flex_1()
                     .justify_center()
                     .border_0()
+                    .rounded_none()
+                    .border_b_2()
+                    .border_color(t.background())
                     .when(self.panel == panel, |d| {
-                        d.bg(t.selected()).text_color(t.text())
+                        d.border_color(t.text()).text_color(t.text())
                     })
                 }),
             )
@@ -231,6 +228,9 @@ impl EditorView {
                                 let first = &c.messages[0];
                                 div()
                                     .id(("thread", i))
+                                    .tab_index(0)
+                                    .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                                    .active(move |d| d.bg(t.selected()))
                                     .p(px(12.0))
                                     .mb(px(8.0))
                                     .rounded(px(8.0))
@@ -297,6 +297,10 @@ impl EditorView {
             )
     }
     pub(super) fn comment_pins(&self, cx: &Context<Self>) -> Vec<AnyElement> {
+        // Pins are contextual annotations, not unexplained badges over the art.
+        if self.panel != Panel::Comments {
+            return Vec::new();
+        }
         let t = self.theme;
         let b = self.viewport.get();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
@@ -338,8 +342,7 @@ impl EditorView {
                             t.line()
                         })
                         .bg(t.background())
-                        .text_color(t.accent())
-                        .opacity(if dim { 0.6 } else { 1.0 })
+                        .text_color(if dim { t.muted() } else { t.accent() })
                         .shadow_sm()
                         .cursor_pointer()
                         .tooltip(hint(

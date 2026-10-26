@@ -36,16 +36,7 @@ pub fn data_dir() -> PathBuf {
 /// Replace a local settings file atomically.
 #[cfg(not(target_family = "wasm"))]
 pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
-    use std::io::Write;
-    let parent = path
-        .parent()
-        .ok_or_else(|| EditorError::Gesture("Invalid settings path".into()))?;
-    std::fs::create_dir_all(parent)?;
-    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
-    temp.write_all(bytes)?;
-    temp.as_file().sync_all()?;
-    temp.persist(path).map_err(|e| e.error)?;
-    Ok(())
+    crate::persistence::write_local(path, bytes)
 }
 impl PaletteLibrary {
     /// Read and validate a bounded library; a missing file starts empty.

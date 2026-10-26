@@ -78,22 +78,18 @@ assert [s['rgba'] for s in palette['slots']] == [s['rgba'] for s in source['slot
 assert len((root/'export.hex').read_text().splitlines()) == 36
 assert (root/'export.gpl').read_text().startswith('GIMP Palette\n')
 PY
-xdotool key Escape ctrl+k
-xdotool type --clearmodifiers 'share project'
-xdotool key Return
-sleep 0.5
-xdotool mousemove 1070 586 click 1
-chooser Save "$VOXELITE_DATA_DIR/shared-copy.voxl"
-python3 - "$VOXELITE_DATA_DIR/shared-copy.voxl" <<'PY'
+xdotool key Escape
+xdotool key --clearmodifiers ctrl+s
+chooser Save "$VOXELITE_DATA_DIR/working-project.voxl"
+python3 - "$VOXELITE_DATA_DIR/working-project.voxl" <<'PY'
 import json, sys
 project = json.load(open(sys.argv[1]))
 assert project['document']['name'] == 'Autumn Workshop', project.keys()
 assert sum(len(layer['voxels']) for layer in project['layers']) == 27897
 PY
-# A shared copy must not become the working file. This untitled project must
-# still prompt for a destination on its first ordinary Save.
-xdotool key --clearmodifiers ctrl+s
-chooser Save "$VOXELITE_DATA_DIR/working-project.voxl"
-cmp "$VOXELITE_DATA_DIR/shared-copy.voxl" "$VOXELITE_DATA_DIR/working-project.voxl"
-printf 'Native palette interchange and local Share Save a copy passed.\n' 
+# Save As opens another destination chooser and preserves the project contents.
+xdotool key --clearmodifiers ctrl+shift+s
+chooser Save "$VOXELITE_DATA_DIR/renamed-project.voxl"
+cmp "$VOXELITE_DATA_DIR/working-project.voxl" "$VOXELITE_DATA_DIR/renamed-project.voxl"
+printf 'Native palette interchange, Save and Save As passed.\n'
 REVIEW

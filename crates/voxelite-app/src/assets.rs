@@ -128,9 +128,6 @@ impl AssetSource for Assets {
             "icons/save.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/save.svg"))),
             "icons/search.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/search.svg"))),
             "icons/send.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/send.svg"))),
-            "icons/share-2.svg" => {
-                Some(Cow::Borrowed(include_bytes!("../assets/icons/share-2.svg")))
-            }
             "icons/sliders-horizontal.svg" => Some(Cow::Borrowed(include_bytes!(
                 "../assets/icons/sliders-horizontal.svg"
             ))),

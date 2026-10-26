@@ -8,10 +8,14 @@ mod agent;
 mod browser;
 mod comments;
 mod history;
+mod orientation;
 use comments::Panel;
 mod palettes;
-mod share;
+mod settings;
 mod shortcut_hint;
+mod tooltip;
+use tooltip::{AnchoredTooltip, TooltipSide};
+mod status;
 use crate::{
     actions::{MENUS, Op},
     shortcuts::{ShortcutPlatform, navigation_key},
@@ -28,10 +32,31 @@ use voxelite_render::{PresetView, RenderOptions, View};
 // Keep render sizing and native layout on the same logical-pixel metrics.
 const SIDEBAR_WIDTH: f32 = 352.0;
 const TOOL_RAIL_WIDTH: f32 = 56.0;
-const MENUBAR_HEIGHT: f32 = 32.0;
+const MENUBAR_HEIGHT: f32 = if cfg!(target_os = "macos") { 0.0 } else { 32.0 };
 const TOOLBAR_HEIGHT: f32 = 64.0;
-const STATUSBAR_HEIGHT: f32 = 32.0;
+const STATUSBAR_HEIGHT: f32 = 28.0;
 const PANEL_GUTTER: f32 = 24.0;
+
+fn updates_available() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        crate::updater::is_available()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
+// Both windows use Sparkle's own progress and result dialogs when available.
+fn check_for_updates() -> Option<&'static str> {
+    #[cfg(target_os = "macos")]
+    if updates_available() {
+        crate::updater::check_for_updates();
+        return None;
+    }
+    Some("Automatic updates are not available in this build.")
+}
 
 /// Image identity includes the editor incarnation, since reopening the same ID
 /// resets its revision. Camera and dimensions bind picking to displayed pixels.
@@ -45,18 +70,27 @@ struct FrameIdentity {
 
 pub struct EditorView {
     palettes: palettes::PaletteManager,
-    sharing: share::Sharing,
     discussion: comments::Discussion,
     panel: Panel,
     timeline: history::Timeline,
     agent: agent::Agent,
     editor: Editor,
     theme: Theme,
+    preferences: voxelite_app::preferences::Preferences,
+    #[cfg(not(target_family = "wasm"))]
+    settings_window: Option<WindowHandle<settings::SettingsView>>,
+    #[cfg(target_family = "wasm")]
+    settings_modal: Option<Entity<settings::SettingsView>>,
+    palette_focus: FocusHandle,
+    modal_focus: FocusHandle,
+    sidebar_scroll: ScrollHandle,
     focus: FocusHandle,
     image: Option<Arc<RenderImage>>,
     painted_image: Option<Arc<RenderImage>>,
     last_title: String,
     rendering: bool,
+    render_ms: Option<f64>,
+    zoom_reference_span: f64,
     render_pending: bool,
     render_size: [u32; 2],
     display_camera: OrbitCamera,
@@ -71,6 +105,9 @@ pub struct EditorView {
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
+    gizmo_drag: Option<orientation::GizmoDrag>,
+    gizmo_hover: Option<voxelite_app::gizmo::AxisEnd>,
+    gizmo_bounds: Rc<Cell<Bounds<Pixels>>>,
     grid: bool,
     menu: Option<usize>,
     menu_index: usize,
@@ -120,6 +157,15 @@ impl Render for Hint {
 }
 fn row() -> Div {
     div().flex().items_center()
+}
+fn focus_ring(theme: Theme) -> Vec<BoxShadow> {
+    vec![BoxShadow {
+        inset: false,
+        color: theme.accent(),
+        offset: point(px(0.0), px(0.0)),
+        blur_radius: px(0.0),
+        spread_radius: px(2.0),
+    }]
 }
 fn mono(text: impl Into<SharedString>) -> Div {
     div()
@@ -236,11 +282,20 @@ const PALETTES: [(&str, Option<Preset>); 8] = [
 impl EditorView {
     pub fn new(
         editor: Editor,
-        theme: Theme,
+        override_theme: Option<Theme>,
         socket: Option<PathBuf>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        settings::init(override_theme, cx);
+        let preferences = cx.global::<settings::SettingsState>().values.clone();
+        let theme = settings::theme(preferences.appearance, window);
+        cx.observe_global_in::<settings::SettingsState>(window, |this, window, cx| {
+            this.sync_preferences(window, cx)
+        })
+        .detach();
+        cx.observe_window_appearance(window, |this, window, cx| this.sync_preferences(window, cx))
+            .detach();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let weak = cx.weak_entity();
@@ -264,8 +319,8 @@ impl EditorView {
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;
-                cx.notify();
             }
+            cx.notify();
         })
         .detach();
         let mut palettes = palettes::PaletteManager::new(cx);
@@ -297,7 +352,6 @@ impl EditorView {
         Self {
             agent,
             palettes,
-            sharing: share::Sharing::new(cx),
             discussion: comments::Discussion::new(cx),
             panel: Panel::Session,
             timeline: history::Timeline::new(cx),
@@ -310,19 +364,32 @@ impl EditorView {
             camera_fitted: true,
             navigation_epoch: 0,
             interactive_render: false,
+            zoom_reference_span: editor.camera.span,
             editor,
+            grid: preferences.grid,
+            preferences,
+            #[cfg(not(target_family = "wasm"))]
+            settings_window: None,
+            #[cfg(target_family = "wasm")]
+            settings_modal: None,
+            palette_focus: cx.focus_handle(),
+            modal_focus: cx.focus_handle(),
+            sidebar_scroll: ScrollHandle::new(),
             theme,
             focus,
             image: None,
             painted_image: None,
             last_title: String::new(),
             rendering: false,
+            render_ms: None,
             render_pending: false,
             render_size: [0, 0],
             viewport: Rc::new(Cell::new(Bounds::default())),
             hover: None,
             drag: None,
-            grid: true,
+            gizmo_drag: None,
+            gizmo_hover: None,
+            gizmo_bounds: Rc::new(Cell::new(Bounds::default())),
             menu: None,
             menu_index: 0,
             palette_open: false,
@@ -343,7 +410,7 @@ impl EditorView {
             status: library_error
                 .clone()
                 .or(agent_error.clone())
-                .unwrap_or_else(|| "Ready".into())
+                .unwrap_or_default()
                 .into(),
             error: library_error.is_some() || agent_error.is_some(),
         }
@@ -396,16 +463,23 @@ impl EditorView {
             } else {
                 self.render_size[1]
             },
-            supersampling: if interactive { 1 } else { 2 },
+            supersampling: if interactive || !self.preferences.antialiasing {
+                1
+            } else {
+                2
+            },
             view: View::Camera(self.editor.camera.camera()),
             background: [0; 4],
             ..Default::default()
         };
-        let task = cx
-            .background_executor()
-            .spawn(async move { voxelite_render::render(&snapshot, &options) });
+        let clock = cx.background_executor().clone();
+        let task = cx.background_executor().spawn(async move {
+            let started = clock.now();
+            let result = voxelite_render::render(&snapshot, &options);
+            (result, (clock.now() - started).as_secs_f64() * 1000.0)
+        });
         cx.spawn(async move |this, cx| {
-            let result = task.await;
+            let (result, elapsed_ms) = task.await;
             let _ = this.update(cx, |this, cx| {
                 this.rendering = false;
                 // Never install a render from a replaced document or an older edit.
@@ -415,6 +489,7 @@ impl EditorView {
                 {
                     match result {
                         Ok(mut frame) => {
+                            this.render_ms = Some(elapsed_ms);
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }
@@ -469,6 +544,8 @@ impl EditorView {
         }
     }
     fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+        self.zoom_reference_span = editor.camera.span;
+        self.render_ms = None;
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
@@ -490,7 +567,7 @@ impl EditorView {
         self.discussion.draft = None;
         self.discussion.placing = false;
         self.discussion.first = None;
-        self.sharing.open = false;
+
         self.editor = editor;
         self.document_generation = self.document_generation.wrapping_add(1);
         self.image = None;
@@ -564,6 +641,7 @@ impl EditorView {
         match op {
             Op::Undo => self.editor.preview.is_none() && self.editor.engine.head().is_some(),
             Op::Redo => self.editor.preview.is_none() && self.editor.engine.redo_head().is_some(),
+            Op::CheckUpdates => updates_available(),
             _ => true,
         }
     }
@@ -606,11 +684,45 @@ impl EditorView {
             cx.notify();
             return;
         }
-        self.run(op, cx);
+        match op {
+            Op::Settings | Op::Theme => {
+                self.open_settings(
+                    if op == Op::Theme {
+                        settings::Section::Appearance
+                    } else {
+                        settings::Section::General
+                    },
+                    window,
+                    cx,
+                );
+                return;
+            }
+            Op::Minimize => window.minimize_window(),
+            Op::ZoomWindow => window.zoom_window(),
+            Op::ShowPalette => {
+                self.panel = Panel::Session;
+                self.sidebar_scroll.scroll_to_bottom();
+                window.focus(&self.palette_focus, cx);
+                self.status = "Palette focused · Arrow keys choose a brush color · Escape returns to the viewport".into();
+                cx.notify();
+                return;
+            }
+            _ => self.run(op, cx),
+        }
         window.focus(&self.focus, cx);
     }
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
+            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
+            Op::About => self.info = Some(("About Voxelite", format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION")).into())),
+            Op::CheckUpdates => {
+                let message = check_for_updates();
+                self.error = message.is_some();
+                self.status = message.unwrap_or("Checking for updates…").into();
+            }
+            Op::Hide => cx.hide(),
+            Op::HideOthers => cx.hide_other_apps(),
+            Op::ShowAll => cx.unhide_other_apps(),
             Op::Quit => cx.quit(),
             Op::New => match Editor::blank() {
                 Ok(editor) => {
@@ -629,7 +741,6 @@ impl EditorView {
             Op::ExportGlb => self.export_browser(false, cx),
             #[cfg(target_family = "wasm")]
             Op::ExportPng => self.export_browser(true, cx),
-            Op::Share => self.open_share(cx),
             Op::Comment => self.begin_comment(cx),
             Op::Undo => {
                 let r = self.editor.undo();
@@ -639,8 +750,7 @@ impl EditorView {
                 let r = self.editor.redo();
                 self.report(r, "Redone", cx);
             }
-            Op::Theme => self.theme.toggle(),
-            Op::Grid => self.grid = !self.grid,
+            Op::Grid => settings::change(cx, |p| p.grid = !p.grid),
             Op::Frame | Op::Front | Op::Right | Op::Top => {
                 self.agent.follow = false;
                 let b = self.viewport.get();
@@ -653,6 +763,7 @@ impl EditorView {
                 };
                 self.editor.camera =
                     OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
+                self.zoom_reference_span = self.editor.camera.span;
                 self.camera_view = Some(op);
                 self.camera_fitted = true;
                 self.request_render(cx);
@@ -759,7 +870,7 @@ impl EditorView {
         }).detach();
     }
     #[cfg(not(target_family = "wasm"))]
-    fn write_project(&mut self, path: PathBuf, copy: bool, cx: &mut Context<Self>) {
+    fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.dialog_open = true;
         self.status = "Saving project…".into();
         let save = self.editor.prepare_save(&path);
@@ -771,12 +882,8 @@ impl EditorView {
                 let next = this.after_save.take();
                 match result {
                     Ok(saved) => {
-                        if copy {
-                            this.status = "Project copy saved".into();
-                        } else {
-                            this.editor.finish_save(saved);
-                            this.status = "Saved".into();
-                        }
+                        this.editor.finish_save(saved);
+                        this.status = "Saved".into();
                         this.error = false;
                         if let Some(op) = next {
                             this.run(op, cx);
@@ -795,14 +902,13 @@ impl EditorView {
     #[cfg(not(target_family = "wasm"))]
     fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
-            self.write_project(path, false, cx);
+            self.write_project(path, cx);
             return;
         }
-        self.choose_save_path(false, cx);
+        self.choose_save_path(cx);
     }
-    /// A shared copy must not adopt its destination or clear the working file's dirty state.
     #[cfg(not(target_family = "wasm"))]
-    fn choose_save_path(&mut self, copy: bool, cx: &mut Context<Self>) {
+    fn choose_save_path(&mut self, cx: &mut Context<Self>) {
         let directory = self
             .editor
             .path
@@ -823,7 +929,7 @@ impl EditorView {
                 match result {
                     Ok(Ok(Some(mut path))) => {
                         if path.extension().is_none() { path.set_extension("voxl"); }
-                        this.write_project(path, copy, cx);
+                        this.write_project(path, cx);
                     }
                     Ok(Ok(None)) => { this.dialog_open = false; this.after_save = None; }
                     _ => {
@@ -872,6 +978,9 @@ impl EditorView {
         )
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.gizmo_drag.is_some() {
+            return;
+        }
         if self.command_open
             || self.menu.is_some()
             || self.palette_open
@@ -911,55 +1020,78 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        #[cfg(target_family = "wasm")]
+        if self.settings_modal.is_some() {
+            return;
+        }
+        if self.palette_focus.is_focused(window) {
+            let delta = match e.keystroke.key.as_str() {
+                "left" => Some(-1),
+                "right" => Some(1),
+                "up" => Some(-8),
+                "down" => Some(8),
+                _ => None,
+            };
+            if let Some(delta) = delta {
+                let palette = self.active_palette();
+                if !palette.order.is_empty() {
+                    let current = palette
+                        .order
+                        .iter()
+                        .position(|slot| {
+                            palette
+                                .get(*slot)
+                                .is_some_and(|color| color.rgba == self.editor.color.rgba)
+                        })
+                        .unwrap_or(0);
+                    let next = (current as isize + delta).rem_euclid(palette.order.len() as isize)
+                        as usize;
+                    self.editor.color = palette
+                        .get(palette.order[next])
+                        .expect("palette slot")
+                        .clone();
+                    self.swatch_scroll
+                        .set_offset(point(px(0.0), -px((next / 8) as f32 * 38.0)));
+                    cx.notify();
+                }
+                cx.stop_propagation();
+                return;
+            }
+            if !matches!(e.keystroke.key.as_str(), "escape" | "tab") {
+                // Choosing a brush color must never apply the viewport tool.
+                return;
+            }
+        }
         if self.dialog_open {
             cx.stop_propagation();
             return;
         }
         let key = navigation_key(&e.keystroke).unwrap_or_default();
+
         if key == "tab"
             && self.pending.is_none()
             && !self.command_open
             && self.menu.is_none()
-            && !self.agent.open
             && self.info.is_none()
         {
-            let fields = if self.sharing.open {
-                vec![self.sharing.person.focus_handle(cx)]
-            } else if self.palettes.open {
-                vec![
-                    self.palettes.name.focus_handle(cx),
-                    self.palettes.hex.focus_handle(cx),
-                ]
-            } else if self.panel == Panel::Comments
-                && self.editor.preview.is_none()
-                && (self.discussion.selected.is_some() || self.discussion.draft.is_some())
-            {
-                vec![self.discussion.text.focus_handle(cx)]
-            } else if self.panel == Panel::History && self.editor.preview.is_none() {
-                vec![self.timeline.name.focus_handle(cx)]
+            if e.keystroke.modifiers.shift {
+                window.focus_prev(cx);
             } else {
-                vec![]
-            };
-            if !fields.is_empty() {
-                let i = fields
-                    .iter()
-                    .position(|f| f.is_focused(window))
-                    .map_or(0, |i| {
-                        (i + if e.keystroke.modifiers.shift {
-                            fields.len() - 1
-                        } else {
-                            1
-                        }) % fields.len()
-                    });
-                window.focus(&fields[i], cx);
-                cx.stop_propagation();
-                cx.notify();
-                return;
+                window.focus_next(cx);
             }
-        }
-
-        if self.sharing.open && self.sharing.person.read(cx).focused(window) && key == "enter" {
-            self.add_share_person(cx);
+            if self.palettes.open || self.agent.open {
+                // Focus traversal wraps. Skip controls behind the modal sheet.
+                for _ in 0..256 {
+                    if self.modal_focus.contains_focused(window, cx) {
+                        break;
+                    }
+                    if e.keystroke.modifiers.shift {
+                        window.focus_prev(cx);
+                    } else {
+                        window.focus_next(cx);
+                    }
+                }
+            }
             cx.stop_propagation();
             return;
         }
@@ -967,9 +1099,11 @@ impl EditorView {
             && (self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
-                || self.timeline.name.read(cx).focused(window)
-                || self.sharing.person.read(cx).focused(window))
+                || self.timeline.name.read(cx).focused(window))
         {
+            return;
+        }
+        if !self.focus.is_focused(window) && matches!(key, "enter" | "space") {
             return;
         }
         if key == "escape" {
@@ -981,7 +1115,7 @@ impl EditorView {
                 self.refresh_preview(cx);
             }
             self.agent.open = false;
-            self.sharing.open = false;
+
             self.palettes.open = false;
             window.focus(&self.focus, cx);
             self.menu = None;
@@ -991,14 +1125,16 @@ impl EditorView {
             self.pending = None;
             self.editor.box_start = None;
             self.drag = None;
+            self.gizmo_drag = None;
+            self.gizmo_hover = None;
             self.hover = None;
-            self.status = "Ready".into();
+            self.status = HintText::default();
             self.error = false;
             cx.stop_propagation();
             cx.notify();
             return;
         }
-        if self.palettes.open || self.sharing.open || self.agent.open {
+        if self.palettes.open || self.agent.open {
             cx.stop_propagation();
             return;
         }
@@ -1188,17 +1324,28 @@ impl EditorView {
         row()
             .id(id)
             .aria_keyshortcuts(op.shortcut())
-            .tooltip(move |_, cx| {
-                cx.new(|_| Hint {
-                    text: if enabled {
-                        HintText::from(op.label()).text("  ").action(op)
-                    } else {
-                        format!("{} · {}", op.label(), disabled_reason).into()
-                    },
-                    theme,
-                })
-                .into()
+            .aria_label(op.label())
+            .when(enabled, |d| d.tab_index(0))
+            .focus_visible(move |d| {
+                d.bg(if primary { theme.text() } else { theme.hover() })
+                    .shadow(focus_ring(theme))
             })
+            .active(move |d| d.bg(theme.selected()).text_color(theme.accent()))
+            .anchored_hint(
+                if enabled {
+                    HintText::from(op.label()).text("  ").action(op)
+                } else {
+                    format!("{} · {}", op.label(), disabled_reason).into()
+                },
+                theme,
+                if id.starts_with("rail-") {
+                    TooltipSide::Right
+                } else if id.starts_with("view-") {
+                    TooltipSide::Above
+                } else {
+                    TooltipSide::Below
+                },
+            )
             .h(px(32.0))
             .min_w(px(32.0))
             .px(px(9.0))
@@ -1337,12 +1484,21 @@ impl EditorView {
                 }),
             )
     }
-    fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Div {
+    fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         row()
+            .id("main-titlebar")
+            .on_mouse_down(MouseButton::Left, |event, window, _| {
+                if event.click_count == 2 {
+                    window.zoom_window();
+                } else {
+                    window.start_window_move();
+                }
+            })
             .h(px(TOOLBAR_HEIGHT))
             .flex_shrink_0()
             .px(px(24.0))
+            .when(cfg!(target_os = "macos"), |d| d.pl(px(104.0)))
             .gap(px(16.0))
             .border_b_1()
             .border_color(t.line())
@@ -1394,110 +1550,25 @@ impl EditorView {
                 )
                 .h(px(36.0))
                 .gap(px(12.0))
-                .child(
-                    action_shortcut(Op::Commands)
-                        .px(px(5.0))
-                        .py(px(2.0))
-                        .rounded(px(4.0))
-                        .border_1()
-                        .border_color(t.line()),
-                ),
+                .child(action_shortcut(Op::Commands)),
             )
             .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
-            .child(self.button(
-                "theme",
-                if t == Theme::Dark { "sun" } else { "moon" },
-                "",
-                Op::Theme,
-                cx,
-            ))
-            .child(
-                self.button("share", "share-2", "Share", Op::Share, cx)
-                    .border_1()
-                    .border_color(t.line()),
-            )
+            .child(self.button("settings", "sliders-horizontal", "", Op::Settings, cx))
             .child(
                 self.button("save", "save", "Save", Op::Save, cx)
+                    .w(px(96.0))
                     .h(px(36.0))
-                    .px(px(20.0))
+                    .justify_center()
+                    .flex_shrink_0()
+                    .border_1()
+                    .border_color(t.text())
                     .font_weight(FontWeight::MEDIUM)
                     .bg(t.text())
                     .text_color(t.background()),
             )
     }
-    /// Project the world axes with the displayed camera, not a fixed illustration.
-    fn orientation(&self, cx: &Context<Self>) -> Stateful<Div> {
-        let t = self.theme;
-        let (right, up, _) = self.display_camera.basis();
-        let axes = [
-            ("X", DVec3::X, Op::Right),
-            ("Y", DVec3::Y, Op::Top),
-            ("Z", DVec3::Z, Op::Front),
-        ]
-        .map(|(label, axis, op)| {
-            (
-                label,
-                [axis.dot(right) as f32 * 34.0, -axis.dot(up) as f32 * 34.0],
-                op,
-            )
-        });
-        div()
-            .id("orientation")
-            .absolute()
-            .top(px(12.0))
-            .right(px(12.0))
-            .size(px(104.0))
-            .cursor_default()
-            .child(
-                canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| {
-                        let center = bounds.origin + point(px(52.0), px(52.0));
-                        let mut path = PathBuilder::stroke(px(1.0));
-                        for (_, delta, _) in axes {
-                            path.move_to(center - point(px(delta[0] * 0.5), px(delta[1] * 0.5)));
-                            path.line_to(center + point(px(delta[0]), px(delta[1])));
-                        }
-                        if let Ok(path) = path.build() {
-                            window.paint_path(path, t.muted().opacity(0.55));
-                        }
-                    },
-                )
-                .size_full(),
-            )
-            .children(axes.into_iter().enumerate().map(|(i, (label, delta, op))| {
-                row()
-                    .id(("axis", i))
-                    .absolute()
-                    .left(px(36.0 + delta[0]))
-                    .top(px(36.0 + delta[1]))
-                    .size(px(32.0))
-                    .justify_center()
-                    .rounded_full()
-                    .cursor_pointer()
-                    .tooltip(hint(op.label(), t))
-                    .hover(move |d| d.bg(t.hover()))
-                    .child(
-                        row()
-                            .size(px(22.0))
-                            .justify_center()
-                            .rounded_full()
-                            .border_1()
-                            .border_color(t.line())
-                            .bg(t.background())
-                            .text_size(px(12.0))
-                            .text_color(t.muted())
-                            .child(label),
-                    )
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .on_click(cx.listener(move |this, _, window, cx| this.invoke(op, window, cx)))
-            }))
-            .on_mouse_move(|_, _, cx| cx.stop_propagation())
-    }
-
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        let compact = self.render_size[0] < 800;
         let bounds_cell = self.viewport.clone();
         let image = self.image.clone();
         let camera = self.display_camera;
@@ -1642,56 +1713,15 @@ impl EditorView {
                 )
             })
             .child(self.orientation(cx))
-            .child(
-                div().absolute().bottom(px(20.0)).left(px(24.0)).child(
-                    row()
-                        .id("camera-hints")
-                        .h(px(32.0))
-                        .gap(px(12.0))
-                        .text_size(px(12.0))
-                        .text_color(t.muted())
-                        .child(
-                            row()
-                                .id("orbit-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint("Right-drag to orbit", t))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("orbit").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Orbit")),
-                        )
-                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                        .child(
-                            row()
-                                .id("pan-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint(
-                                    HintText::default()
-                                        .key("shift-rightdrag")
-                                        .text(" or middle-drag to pan"),
-                                    t,
-                                ))
-                                .child(icon("arrow-up").text_color(t.muted()))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("move").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Pan")),
-                        )
-                        .child(div().w(px(1.0)).h(px(12.0)).bg(t.line()))
-                        .child(
-                            row()
-                                .id("zoom-hint")
-                                .gap(px(4.0))
-                                .tooltip(hint(
-                                    HintText::from("Scroll to zoom · ")
-                                        .action(Op::Frame)
-                                        .text(" to frame the model"),
-                                    t,
-                                ))
-                                .child(icon("mouse").text_color(t.muted()))
-                                .child(icon("zoom-in").text_color(t.muted()))
-                                .when(!compact, |d| d.child("Zoom")),
-                        ),
-                ),
-            )
+            .when(self.preferences.navigation_hints, |d| {
+                d.child(
+                    div()
+                        .absolute()
+                        .bottom(px(20.0))
+                        .left(px(24.0))
+                        .child(self.button("view-help", "keyboard", "", Op::Help, cx)),
+                )
+            })
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
                     row()
@@ -1781,7 +1811,7 @@ impl EditorView {
                                 .key("escape")
                                 .text(" cancels")
                         } else {
-                            "Ready".into()
+                            HintText::default()
                         };
                         this.report(r, status, cx);
                     }
@@ -1846,6 +1876,9 @@ impl EditorView {
                     .child(
                         row()
                             .id("palette-switch")
+                            .tab_index(0)
+                            .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                            .active(move |d| d.bg(t.selected()))
                             .h(px(32.0))
                             .gap(px(8.0))
                             .rounded(px(6.0))
@@ -1857,7 +1890,7 @@ impl EditorView {
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .child(self.palette_name()),
                             )
-                            .child(icon("chevron").size(px(14.0)).text_color(t.muted()))
+                            .child(icon("chevron").size(px(14.0)).text_color(t.text()))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.palette_open = !this.palette_open;
                                 this.palette_cursor = this.palette_index;
@@ -1867,13 +1900,15 @@ impl EditorView {
                     .child(
                         div()
                             .text_size(px(12.0))
-                            .text_color(t.muted())
+                            .text_color(t.text())
                             .child(format!("{} colors", palette.order.len())),
                     ),
             )
             .child(
                 div()
                     .id("swatch-scroll")
+                    .track_focus(&self.palette_focus)
+                    .focus(move |d| d.bg(t.accent().opacity(0.22)))
                     .track_scroll(&self.swatch_scroll)
                     .max_h(px(swatch_height))
                     .overflow_y_scroll()
@@ -1900,6 +1935,7 @@ impl EditorView {
                                 .cursor_pointer()
                                 .tooltip(hint(label, t))
                                 .hover(move |d| d.border_color(t.text()))
+                                .active(move |d| d.border_2().border_color(t.accent()))
                                 .when(selected, |d| {
                                     d.child(icon("check").size(px(16.0)).text_color(swatch_ink(c)))
                                 })
@@ -1916,8 +1952,8 @@ impl EditorView {
                     .mt(px(if compact { 8.0 } else { 12.0 }))
                     .gap(px(8.0))
                     .text_size(px(12.0))
-                    .text_color(t.muted())
-                    .child(mono(hex))
+                    .text_color(t.text())
+                    .child(hex)
                     .child(div().flex_1())
                     .when(!overflowing, |d| d.child("Brush color"))
                     .when(overflowing, |d| {
@@ -1986,6 +2022,9 @@ impl EditorView {
                                 let locked = layer.locked;
                                 row()
                                     .id(("layer", i))
+                                    .tab_index(0)
+                                    .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                                    .active(move |d| d.bg(t.selected()))
                                     .h(px(if compact { 32.0 } else { 36.0 }))
                                     .pl(px(6.0))
                                     .pr(px(8.0))
@@ -2015,6 +2054,11 @@ impl EditorView {
                                     .child(
                                         row()
                                             .id(("eye", i))
+                                            .tab_index(0)
+                                            .focus_visible(move |d| {
+                                                d.bg(t.hover()).shadow(focus_ring(t))
+                                            })
+                                            .active(move |d| d.bg(t.selected()))
                                             .w(px(32.0))
                                             .h(px(32.0))
                                             .justify_center()
@@ -2042,6 +2086,11 @@ impl EditorView {
                                     .child(
                                         row()
                                             .id(("lock", i))
+                                            .tab_index(0)
+                                            .focus_visible(move |d| {
+                                                d.bg(t.hover()).shadow(focus_ring(t))
+                                            })
+                                            .active(move |d| d.bg(t.selected()))
                                             .w(px(32.0))
                                             .h(px(32.0))
                                             .justify_center()
@@ -2215,6 +2264,7 @@ impl EditorView {
         div()
             .id("sidebar-scroll")
             .overflow_y_scroll()
+            .track_scroll(&self.sidebar_scroll)
             .w(px(SIDEBAR_WIDTH))
             .flex_shrink_0()
             .h_full()
@@ -2256,15 +2306,6 @@ impl EditorView {
                                     "Editing on this device".into()
                                 }),
                         ),
-                    )
-                    .child(
-                        div()
-                            .id("revision")
-                            .tooltip(hint("Current document revision", t))
-                            .child(
-                                mono(format!("r{:03}", self.editor.engine.revision()))
-                                    .text_color(t.muted()),
-                            ),
                     ),
             )
             .child(self.panel_tabs(cx))
@@ -2277,39 +2318,6 @@ impl EditorView {
                 d.child(self.layers_panel(compact || self.agent.capture.is_some(), cx))
                     .child(self.palette_panel(compact || self.agent.capture.is_some(), cx))
             })
-    }
-    fn statusbar(&self) -> Div {
-        let t = self.theme;
-        let s = self.editor.display_snapshot();
-        let size: [i32; 3] = std::array::from_fn(|a| s.bounds.max[a] - s.bounds.min[a]);
-        row()
-            .h(px(STATUSBAR_HEIGHT))
-            .flex_shrink_0()
-            .border_t_1()
-            .border_color(t.line())
-            .px(px(24.0))
-            .gap(px(16.0))
-            .text_size(px(12.0))
-            .text_color(t.muted())
-            .child(mono(format!(
-                "{} voxels",
-                s.layers.iter().map(|l| l.voxels.len()).sum::<usize>()
-            )))
-            .child(mono(format!("{} × {} × {}", size[0], size[1], size[2])))
-            .child(div().h(px(12.0)).w(px(1.0)).bg(t.line()))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .text_color(if self.error { t.danger() } else { t.muted() })
-                    .child(self.status.clone()),
-            )
-            .when_some(self.hover, |d, p| {
-                d.child(mono(format!("X {}   Y {}   Z {}", p[0], p[1], p[2])))
-            })
-            .when(self.rendering, |d| d.child("Rendering…"))
     }
     fn action_row(
         &self,
@@ -2353,6 +2361,8 @@ impl EditorView {
     fn floating(&self) -> Stateful<Div> {
         div()
             .id("floating-panel")
+            .track_focus(&self.modal_focus)
+            .tab_stop(false)
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .bg(self.theme.background())
@@ -2364,11 +2374,31 @@ impl EditorView {
     }
     fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        #[cfg(target_family = "wasm")]
+        if let Some(settings) = &self.settings_modal {
+            return Some(
+                div()
+                    .absolute()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(rgba(0x00000060))
+                    .child(
+                        div()
+                            .w(px(880.0))
+                            .max_w_full()
+                            .h(px(640.0))
+                            .max_h_full()
+                            .rounded(px(14.0))
+                            .shadow_lg()
+                            .child(settings.clone()),
+                    )
+                    .into_any_element(),
+            );
+        }
         if self.agent.open && !self.dialog_open {
             return Some(self.agent_popover(cx));
-        }
-        if self.sharing.open && !self.dialog_open {
-            return Some(self.share_popover(cx));
         }
         if self.palettes.open && !self.dialog_open {
             return Some(self.palette_manager(cx));
@@ -2785,9 +2815,6 @@ impl Render for EditorView {
         self.timeline
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
-        self.sharing
-            .person
-            .update(cx, |field, cx| field.appearance(self.theme, cx));
         let size = window.viewport_size();
         let width = (f32::from(size.width) - SIDEBAR_WIDTH - TOOL_RAIL_WIDTH).max(1.0);
         let height =
@@ -2809,6 +2836,7 @@ impl Render for EditorView {
                         _ => PresetView::Iso,
                     },
                 );
+                self.zoom_reference_span = self.editor.camera.span;
                 if self.image.is_none() {
                     self.display_camera = self.editor.camera;
                 }
@@ -2829,46 +2857,48 @@ impl Render for EditorView {
             window.set_window_title(&title);
             self.last_title = title;
         }
-        cx.set_menus(
-            MENUS
-                .iter()
-                .map(|(name, items)| {
-                    Menu::new(*name).items(items.iter().map(|op| {
-                        MenuItem::action(op.label(), *op)
-                            .checked(self.selected(*op))
-                            .disabled(!self.enabled(*op))
-                    }))
-                })
-                .collect::<Vec<_>>(),
-        );
+        if cfg!(target_os = "macos") && window.is_window_active() {
+            cx.set_menus(crate::actions::menus(
+                |op| self.selected(op),
+                |op| self.enabled(op),
+            ));
+        }
+        #[cfg(target_family = "wasm")]
+        let settings_open = self.settings_modal.is_some();
+        #[cfg(not(target_family = "wasm"))]
+        let settings_open = false;
+        if self.gizmo_drag.is_none() {
+            self.gizmo_hover = self.gizmo_hit(window.mouse_position());
+        }
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")
-            .key_context(
-                if self.palettes.name.read(cx).focused(window)
-                    || self.palettes.hex.read(cx).focused(window)
-                    || self.discussion.text.read(cx).focused(window)
-                    || self.timeline.name.read(cx).focused(window)
-                    || self.sharing.person.read(cx).focused(window)
-                {
-                    "TextField"
-                } else if self.command_open {
-                    "CommandPalette"
-                } else if self.menu.is_some()
-                    || self.palette_open
-                    || self.pending.is_some()
-                    || self.info.is_some()
-                    || self.dialog_open
-                    || self.palettes.open
-                    || self.sharing.open
-                    || self.agent.open
-                {
-                    "Modal"
-                } else {
-                    "Editor"
-                },
-            )
+            .key_context(if settings_open {
+                "Settings"
+            } else if self.palettes.name.read(cx).focused(window)
+                || self.palettes.hex.read(cx).focused(window)
+                || self.discussion.text.read(cx).focused(window)
+                || self.timeline.name.read(cx).focused(window)
+            {
+                "TextField"
+            } else if self.palette_focus.is_focused(window) {
+                "Palette"
+            } else if self.command_open {
+                "CommandPalette"
+            } else if self.menu.is_some()
+                || self.palette_open
+                || self.pending.is_some()
+                || self.info.is_some()
+                || self.dialog_open
+                || self.palettes.open
+                || self.agent.open
+            {
+                "Modal"
+            } else {
+                "Editor"
+            })
             .track_focus(&self.focus)
+            .tab_stop(false)
             .size_full()
             .relative()
             .flex()
@@ -2878,12 +2908,35 @@ impl Render for EditorView {
             .font(gpui::font("Geist"))
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
+            .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
+                if this.gizmo_drag.is_some() {
+                    this.move_gizmo(event, cx);
+                }
+            }))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseUpEvent, _, cx| {
+                    this.release_gizmo(event.position, cx);
+                }),
+            )
+            .on_mouse_up_out(
+                MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.gizmo_drag = None;
+                    this.gizmo_hover = None;
+                    cx.notify();
+                }),
+            )
             .on_action(cx.listener(|this, op: &Op, window, cx| {
-                if this.info.is_none() && this.pending.is_none() && !this.palettes.open {
+                if matches!(
+                    op,
+                    Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::ShowAll
+                ) || (this.info.is_none() && this.pending.is_none() && !this.palettes.open)
+                {
                     this.invoke(*op, window, cx);
                 }
             }))
-            .child(self.menubar(cx))
+            .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))
             .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
             .child(
                 row()
@@ -2894,7 +2947,7 @@ impl Render for EditorView {
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
-            .child(self.statusbar())
+            .child(self.statusbar(f32::from(size.width) < 1200.0))
             .children(overlay.map(|overlay| {
                 div()
                     .id("overlay")
@@ -2905,8 +2958,12 @@ impl Render for EditorView {
                         MouseButton::Left,
                         cx.listener(|this, _, window, cx| {
                             window.focus(&this.focus, cx);
+                            #[cfg(target_family = "wasm")]
+                            {
+                                this.settings_modal = None;
+                            }
                             this.agent.open = false;
-                            this.sharing.open = false;
+
                             this.palettes.open = false;
                             this.menu = None;
                             this.palette_open = false;

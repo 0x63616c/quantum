@@ -9,9 +9,9 @@ palettes and layer lists scroll within bounded panels.
 
 The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
 current visual assessment, verification and both-theme captures. The sidebar
-switches between Session, Comments and History; the toolbar keeps Save and the
-local Share preview within reach. Static medium and semibold Geist faces
-preserve the intended weight hierarchy on Linux.
+switches between Session, Comments and History; the toolbar keeps Save within
+reach. Sharing is deferred to the hosted edition. Static medium and semibold
+Geist faces preserve the intended weight hierarchy on Linux.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -41,6 +41,8 @@ cargo test -p voxelite-app --no-default-features
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z; Apple: ⌘Z / ⇧⌘Z |
 | New / open / save / save as | Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S; Apple: ⌘N / ⌘O / ⌘S / ⇧⌘S |
 | Search commands | Ctrl+K (Apple: ⌘K); type, arrows, Enter, Escape |
+| Settings | Ctrl+, (Apple: ⌘,); Escape or Done closes the settings view |
+| Focus brush colors | Palette → Show Palette; arrows choose colors, Escape returns to the viewport |
 | Cancel box or dismiss menus | Escape |
 | Choose a preset palette | Palette menu, then Up/Down and Enter |
 | Unsaved-changes prompt | Tab or Left/Right, Enter to confirm, Escape to cancel |
@@ -94,8 +96,31 @@ view; every named view fits its own projected bounds. Unchanged clicks and color
 sampling do not trigger a new CPU render.
 Development profiles optimize the CPU renderer and core to keep iteration usable.
 
-The app takes the system appearance at startup; the toolbar toggles it for the
-current session. `--theme dark|light` makes captures reproducible.
+Appearance lives in Settings, with Light, Dark and System choices. System follows
+live OS appearance changes. Preferences (appearance, grid, antialiasing,
+navigation hints and render statistics) persist in `settings.json` alongside the
+existing palette library, or in origin-local storage on the web. `VOXELITE_DATA_DIR`
+can isolate desktop preferences. `--theme dark|light` overrides startup appearance
+for reproducible captures.
+
+Settings opens in a separate desktop window; repeated requests focus that window.
+The web edition uses the same view in an in-page modal. Sections are searchable,
+controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
+immediately. A failed save retains the previous preferences and reports the error.
+On macOS, the native Voxelite menu includes Settings, About, Services, application
+visibility and Quit. The native menus share the editor action registry; standard
+clipboard commands act on the focused text field. There is no voxel clipboard
+or persistent voxel-selection tool yet. Packaged macOS builds with Sparkle support
+Check for Updates from the Voxelite menu and Settings → Updates. Builds without
+the bundled updater disable the menu action and explain availability in Settings.
+The transparent native titlebar places real traffic lights in the top toolbar.
+Linux and web retain their in-window menus.
+
+The bottom bar shows hovered voxel coordinates, active layer/tool, zoom relative
+to the last fitted view, model bounds and CPU render performance. Selection size
+and count describe the inclusive box-tool preview; after commit they return to
+zero. FPS is the reciprocal of the last completed CPU render duration, not the
+monitor refresh rate. Rendering is demand-driven; idle frames are not synthesized.
 `--exit-after SECONDS` (alias `--screenshot-delay`) exits after the specified
 interval for unattended captures. This explicit automation option does not
 prompt about unsaved edits.
@@ -126,10 +151,14 @@ mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
 It also captures both themes at 1024×640. The round 2 capture workflow verifies
 palette authoring, a human reply, a named version and
 preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
-exercises real native HEX/GPL file dialogs and Share → Save a copy. The Share
-captures also verify clipboard contents, participant updates and persisted
-access choices through the native UI. Earlier review captures and reports
-remain historical evidence for the preceding shell revision.
+exercises real native HEX/GPL file dialogs, Save and Save As. Earlier review
+captures and reports remain historical evidence for the preceding shell revision.
+Use `VOXELITE_CAPTURE_UI_ONLY=1 VOXELITE_CAPTURE_DIR=/tmp/voxelite-shots bash scripts/capture-native.sh`
+for the focused UI capture suite: both main-window sizes, settings sections,
+appearance persistence, clipboard search, window reuse/reopen and box telemetry.
+The macOS menu, traffic-light positioning and background blur still require a
+native Mac smoke test; Linux captures do not verify AppKit behavior.
+
 `bash scripts/capture-native-scales.sh` adds native 150% and 200% density captures
 in both themes while preserving a logical 1440×900 workspace.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
@@ -147,8 +176,7 @@ are copied into the crate with their OFL notices; `design/` is never a build-tim
 mutable output. The default example is embedded at compile time.
 
 This stage implements the native editor polish scope, not every release row in
-`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Persistent appearance preferences,
-recovery journals, GLB export UI, hosted collaboration and screen-reader
+`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Recovery journals, GLB export UI, hosted collaboration and screen-reader
 certification remain outside this round. Portable data is retained on save.
 
 ## Polish round 2: local authoring and live agents
@@ -157,7 +185,7 @@ The left rail exposes Place/Erase/Paint/Fill/Box/Picker with Lucide icons and
 highlights the active tool. Mirror X/Y/Z controls live below the tool group.
 Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
 Tools → Choose tool retains searchable selection without a toolbar dropdown.
-The toolbar has separate Save and Share actions. Plugin hosting remains an open v1 gate.
+The toolbar provides Save and Settings actions. Plugin hosting remains an open v1 gate.
 
 **Palette → Manage palettes** opens a persistent custom library. Create, rename,
 duplicate, delete, edit a six-digit hex color, choose a hue or drag RGB channels,
@@ -166,17 +194,9 @@ Presets and project colors are read-only in the manager; Duplicate creates an
 editable brush palette. These operations never silently recolor document slots.
 Libraries are validated and atomically replaced in the app's local data directory.
 
-**Share** opens the Concept A popover with a stable `voxelite://share/<id>` link,
-Copy feedback, View / Comment / Remix access, and a local People & agents list.
-Add participant labels, choose their access explicitly, or remove them; Tab
-focuses the name field and Enter adds it. Settings persist atomically through
-`ShareBackend` and `LocalShareBackend`, without changing the model or dirty state.
-The popover is labeled **Local preview — hosted sharing coming soon**: these
-links are local identifiers, not published URLs or enforced online permissions;
-no invitations are sent. **Save a copy…** remains a secondary native `.voxl`
-action and preserves the working path and dirty state. The settings scroll at
-the minimum window size while the title, local-preview label and Save a copy
-stay visible. Escape/outside click restores editor focus.
+Hosted sharing is deferred to v2. The local Share preview, participant/access
+settings and Save a copy action have been removed. Use **File → Save as…** to
+save a `.voxl` under a new name; that destination becomes the working file.
 
 **Comments** lists Open/Resolved/All threads. Click a projected numbered pin to
 open its docked sidebar thread, or Add/C then click a voxel. Switch Anchor to Region and click
@@ -226,9 +246,9 @@ catalog because file lifecycle and external-change detection belong to the app.
 The standalone server retains those tools. This is a local session, not hosted
 multi-user collaboration or a durable recovery journal.
 
-`VOXELITE_DATA_DIR` overrides local palette/share/socket storage for isolated runs.
+`VOXELITE_DATA_DIR` overrides local palette/settings/socket storage for isolated runs.
 The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
-`bash scripts/capture-native.sh` now also captures main/tools/palettes/share/
+`bash scripts/capture-native.sh` now also captures main/tools/palettes/
 comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
 client drives the real stdio bridge and checks edit receipts. It also checks selection reversal, repeated swatch moves and small-window feature states. See
 [the round 2 review](../../docs/reviews/app-polish-2.md) for validation and limits.

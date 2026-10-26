@@ -4,7 +4,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo build -p voxelite-app -p voxelite-mcp
-mkdir -p screenshots
+mkdir -p "${VOXELITE_CAPTURE_DIR:-screenshots}"
+export VOXELITE_CAPTURE_DIR
+VOXELITE_CAPTURE_DIR="$(cd "${VOXELITE_CAPTURE_DIR:-screenshots}" && pwd)"
 export VOXELITE_CAPTURE_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 xvfb-run -a -s '-screen 0 1440x900x24 -nolisten tcp' dbus-run-session -- bash <<'CAPTURE'
@@ -43,21 +45,27 @@ for theme in dark light; do
   done
   [[ -n "$window" ]] || { cat "$XDG_RUNTIME_DIR/$theme.log"; exit 1; }
   xdotool windowmove "$window" 0 0 windowsize "$window" 1440 900
-  xdotool mousemove 1439 899
+  xdotool mousemove 400 60
   # Allow the full-quality CPU render and compositor upload to finish.
   sleep 6
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
-  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme.png"
+  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_DIR/app-$theme.png"
   xdotool windowsize "$window" 1024 640
   sleep 6
   kill -0 "$app_pid"
   timeout 15s import -window "$window" "$XDG_RUNTIME_DIR/capture.png"
-  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_ROOT/screenshots/app-$theme-small.png"
-  source scripts/lib/capture-polish-2.sh
+  mv "$XDG_RUNTIME_DIR/capture.png" "$VOXELITE_CAPTURE_DIR/app-$theme-small.png"
+  if [[ "${VOXELITE_CAPTURE_UI2:-0}" == 1 ]]; then
+    source scripts/lib/capture-ui2.sh
+  elif [[ "${VOXELITE_CAPTURE_UI_ONLY:-0}" == 1 ]]; then
+    source scripts/lib/capture-ui.sh
+  else
+    source scripts/lib/capture-polish-2.sh
+  fi
   kill "$app_pid"
   wait "$app_pid" || true
   app_pid=''
 done
 CAPTURE
-"$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --viewport-png screenshots/viewport.png
+"$VOXELITE_CAPTURE_ROOT/target/debug/voxelite" --viewport-png "$VOXELITE_CAPTURE_DIR/viewport.png"

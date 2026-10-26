@@ -1,11 +1,12 @@
 //! Display-independent editor state, picking, camera, and file persistence.
 pub mod comments;
 pub mod editor;
+pub mod gizmo;
 pub mod history;
 pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;
-pub mod share;
+pub mod preferences;
 
 #[cfg(all(feature = "web", target_family = "wasm"))]
 extern crate self as voxelite_app;

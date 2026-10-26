@@ -1,5 +1,5 @@
 //! Small native single-line field with clipboard, selection, and IME support.
-use crate::{shortcuts::ShortcutPlatform, theme::Theme};
+use crate::{actions::ClipboardOp, shortcuts::ShortcutPlatform, theme::Theme};
 use gpui::{prelude::*, *};
 use std::ops::Range;
 
@@ -80,28 +80,44 @@ impl TextField {
         cx.notify();
         true
     }
+    fn clipboard(&mut self, op: ClipboardOp, cx: &mut Context<Self>) {
+        match op {
+            ClipboardOp::SelectAll => {
+                self.selection = 0..self.text.len();
+                self.reversed = false;
+            }
+            ClipboardOp::Copy | ClipboardOp::Cut => {
+                if !self.selection.is_empty() {
+                    cx.write_to_clipboard(ClipboardItem::new_string(
+                        self.text[self.selection.clone()].into(),
+                    ));
+                    if op == ClipboardOp::Cut {
+                        self.replace(None, "", cx);
+                    }
+                }
+            }
+            ClipboardOp::Paste => {
+                if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
+                    self.replace(None, &text, cx);
+                }
+            }
+        }
+        cx.notify();
+    }
     fn key(&mut self, e: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         let key = e.keystroke.key.as_str();
         let cmd = ShortcutPlatform::current().is_primary(e.keystroke.modifiers);
         let handled = match key {
-            "a" if cmd => {
-                self.selection = 0..self.text.len();
-                self.reversed = false;
-                true
-            }
-            "c" | "x" if cmd => {
-                cx.write_to_clipboard(ClipboardItem::new_string(
-                    self.text[self.selection.clone()].into(),
-                ));
-                if key == "x" {
-                    self.replace(None, "", cx);
-                }
-                true
-            }
-            "v" if cmd => {
-                if let Some(s) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                    self.replace(None, &s, cx);
-                }
+            "a" | "c" | "x" | "v" if cmd => {
+                self.clipboard(
+                    match key {
+                        "a" => ClipboardOp::SelectAll,
+                        "c" => ClipboardOp::Copy,
+                        "x" => ClipboardOp::Cut,
+                        _ => ClipboardOp::Paste,
+                    },
+                    cx,
+                );
                 true
             }
             "backspace" | "delete" => {
@@ -250,6 +266,7 @@ impl Render for TextField {
         let focused = self.focused(window);
         div()
             .id("text-field")
+            .tab_index(0)
             .track_focus(&self.focus)
             .key_context("TextField")
             .h(px(38.0))
@@ -263,6 +280,9 @@ impl Render for TextField {
             .overflow_hidden()
             .cursor_text()
             .on_key_down(cx.listener(Self::key))
+            .on_action(cx.listener(|this, op: &ClipboardOp, _, cx| {
+                this.clipboard(*op, cx);
+            }))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, e: &MouseDownEvent, window, cx| {
