@@ -28,7 +28,7 @@ At most six views, 1024 × 1024 per view and 4,194,304 combined view/sheet pixel
 | --------------------------------------- | --------------------------------------------------------------------------------- |
 | `revision_conflict`, `epoch_conflict`   | Read the current model/session, rebase the intended edit, use a new operation ID. |
 | `operation_id_reused`                   | Recover the original request. A retry must have identical tool, arguments and ID. |
-| `layer_blocked`                         | Confirm the target layer; show or unlock it explicitly if intended.               |
+| `layer_blocked`                         | Confirm the target layer; make it visible or editable explicitly if intended.     |
 | `history_conflict`                      | Read history and capture the exact current head/redo ID.                          |
 | `invalid_argument`, `out_of_bounds`     | Correct the indicated field or half-open bounds.                                  |
 | `limit_exceeded`                        | Reduce batch/page/render size. If receipts are exhausted, save and restart.       |
@@ -5655,7 +5655,7 @@ Complete output schema
 
 ### voxelite\_layers\_lock
 
-Set lock explicitly. Unlock in a separate operation before voxel editing; all mutations share the core lock rules and history.
+Set lock explicitly. Clear the lock in a separate operation before voxel editing; all mutations share the core lock rules and history.
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |

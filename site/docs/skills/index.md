@@ -4,10 +4,10 @@ Teach the workflow once. Keep the creative loop moving.
 
 These portable skills teach agents how to use the implemented Voxelite MCP tools. They cover atomic edits, palette choices, primitive composition, real image inspection and recovery from conflicts.
 
-- [**Voxel art workflow ↗** Discover, compose, inspect, refine and save.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-workflow/SKILL.md)
-- [**Palettes ↗** Material roles, exact presets and stable slot mappings.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-palettes/SKILL.md)
-- [**Primitive shapes ↗** Boxes, mirrored masses and computed curved forms.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-primitives/SKILL.md)
-- [**Render review ↗** Four real views, concrete repairs and consistent evidence.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-render-review/SKILL.md)
+- [**Voxel art workflow**Discover, compose, inspect, refine and save.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-workflow/SKILL.md)
+- [**Palettes**Material roles, exact presets and stable slot mappings.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-palettes/SKILL.md)
+- [**Primitive shapes**Boxes, mirrored masses and computed curved forms.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-primitives/SKILL.md)
+- [**Render review**Four real views, concrete repairs and consistent evidence.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-render-review/SKILL.md)
 
 ## Install in your host
 

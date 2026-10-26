@@ -106,7 +106,7 @@ def check_seo(path, page):
     description = page.meta('description')
     assert 120 <= len(description) <= 160, f'Description length: {len(description)}'
     if path.is_relative_to(SITE / 'docs'):
-        assert title.endswith(' — Voxelite docs'), f'Docs title: {title}'
+        assert title.endswith(': Voxelite docs'), f'Docs title: {title}'
         assert 'documentation: documentation' not in description.lower(), description
 
     canonical = [attrs for attrs in page.tags('link') if 'canonical' in attrs.get('rel', '').split()]

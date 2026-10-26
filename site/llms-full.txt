@@ -12,10 +12,10 @@ A small world starts with a good first step.
 
 Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, and a browser build of the same editor. Create with an agent, work by hand, or move between both in a native session.
 
-- [**Getting started ↗** Install the app, connect a host, and make your first model.](https://voxelite.worldwidewebb.co/docs/getting-started.md)
-- [**MCP tools ↗** The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
-- [**The .voxl format ↗** Portable projects, canonical JSON, and the rules on disk.](https://voxelite.worldwidewebb.co/docs/format.md)
-- [**Agent skills ↗** Reusable workflows for composition, palettes and visual review.](https://voxelite.worldwidewebb.co/docs/skills.md)
+- [**Getting started**Install the app, connect a host, and make your first model.](https://voxelite.worldwidewebb.co/docs/getting-started.md)
+- [**MCP tools**The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
+- [**The .voxl format**Portable projects, canonical JSON, and the rules on disk.](https://voxelite.worldwidewebb.co/docs/format.md)
+- [**Agent skills**Reusable workflows for composition, palettes and visual review.](https://voxelite.worldwidewebb.co/docs/skills.md)
 
 ## Choose your workspace
 
@@ -37,11 +37,11 @@ Source: [https://voxelite.worldwidewebb.co/docs/getting-started.md](https://voxe
 
 Install Voxelite. Connect your agent. Make your first model.
 
-- [Download for Mac ↘](https://voxelite.worldwidewebb.co/download/)
-- [Connect MCP ↘](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
+- [Download for Mac](https://voxelite.worldwidewebb.co/download/)
+- [Connect MCP](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
 
 Just exploring? [Try the web editor](https://voxelite.worldwidewebb.co/app/) on desktop.\
-Keyboard & mouse required · 1024 × 640 minimum.
+Keyboard & mouse required, 1024 × 640 minimum.
 
 ## Build from source
 
@@ -250,7 +250,7 @@ At most six views, 1024 × 1024 per view and 4,194,304 combined view/sheet pixel
 | --------------------------------------- | --------------------------------------------------------------------------------- |
 | `revision_conflict`, `epoch_conflict`   | Read the current model/session, rebase the intended edit, use a new operation ID. |
 | `operation_id_reused`                   | Recover the original request. A retry must have identical tool, arguments and ID. |
-| `layer_blocked`                         | Confirm the target layer; show or unlock it explicitly if intended.               |
+| `layer_blocked`                         | Confirm the target layer; make it visible or editable explicitly if intended.     |
 | `history_conflict`                      | Read history and capture the exact current head/redo ID.                          |
 | `invalid_argument`, `out_of_bounds`     | Correct the indicated field or half-open bounds.                                  |
 | `limit_exceeded`                        | Reduce batch/page/render size. If receipts are exhausted, save and restart.       |
@@ -5877,7 +5877,7 @@ Complete output schema
 
 ### voxelite\_layers\_lock
 
-Set lock explicitly. Unlock in a separate operation before voxel editing; all mutations share the core lock rules and history.
+Set lock explicitly. Clear the lock in a separate operation before voxel editing; all mutations share the core lock rules and history.
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -13312,7 +13312,7 @@ One project. One readable JSON file.
 | `required_features` | Required array of strings. Only an empty array is currently supported.                              |
 | `document`          | Required `id`, `name`, `bounds`.                                                                    |
 | `palette`           | Required `slots` and `order`.                                                                       |
-| `layers`            | Required array, bottom to top; 1–64 entries.                                                        |
+| `layers`            | Required array, bottom to top; 1 to 64 entries.                                                     |
 | `comments`          | Optional thread array, omitted when empty.                                                          |
 | `versions`          | Optional named snapshot array, omitted when empty.                                                  |
 | `lineage`           | Optional source `document` and `version` UUIDs for an independent branch.                           |
@@ -13320,13 +13320,13 @@ One project. One readable JSON file.
 
 ## Coordinates and layers
 
-Coordinates are integer `[x, y, z]` triples in a right-handed, Y-up space. A cell at `[x,y,z]` occupies a unit cube. `bounds.min` is inclusive and `bounds.max` exclusive. Each extent must be 1–256; cell coordinates must lie in `[-32768, 32768)`. The exclusive maximum may equal 32768.
+Coordinates are integer `[x, y, z]` triples in a right-handed, Y-up space. A cell at `[x,y,z]` occupies a unit cube. `bounds.min` is inclusive and `bounds.max` exclusive. Each extent must be 1 to 256; cell coordinates must lie in `[-32768, 32768)`. The exclusive maximum may equal 32768.
 
 Each layer has `id`, `name`, `visible`, `locked`, and `voxels`. A voxel row is `[x, y, z, slot]`. Omit air entirely: slot zero is invalid on disk. All rows must lie in the document bounds and reference existing palette slots. Duplicate coordinates within a layer reject; the same coordinate in different layers is valid. The highest visible occupied layer wins the composite. Hidden geometry is retained; lock state does not change rendering.
 
 ## Palette identity
 
-A slot has `index` (1–256), `rgba` (four bytes, alpha exactly 255), and an optional `name`. There must be 1–256 slots, with unique indices. `order` is a full permutation of those indices and controls display order independently of identity. No translucent voxels are supported.
+A slot has `index` (1 to 256), `rgba` (four bytes, alpha exactly 255), and an optional `name`. There must be 1 to 256 slots, with unique indices. `order` is a full permutation of those indices and controls display order independently of identity. No translucent voxels are supported.
 
 ## Canonical bytes and hashes
 
@@ -13347,15 +13347,15 @@ A named version contains `id`, `name`, optional `parent`, `origin`, `content_has
 
 ## Parser and resource limits
 
-| Resource                                       | Limit                                                                               |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Encoded file                                   | 128 MiB                                                                             |
-| Live layer-voxels / allocated chunks           | 1,048,576 / 8,192; overlapping layers count separately                              |
-| Decoded voxels across live and version content | 4,194,304                                                                           |
-| Metadata excluding voxel arrays                | 8 MiB total; 4 MiB top-level comments, 4 MiB other metadata                         |
-| JSON nesting / optional metadata nesting       | 32 / 16                                                                             |
-| Comment threads / messages                     | 1,024 / 10,000 per snapshot; each message 1–8,192 UTF-8 bytes; 4 MiB comment budget |
-| Named versions                                 | 64; aggregate canonical snapshot bytes ≤64 MiB                                      |
+| Resource                                       | Limit                                                                                  |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Encoded file                                   | 128 MiB                                                                                |
+| Live layer-voxels / allocated chunks           | 1,048,576 / 8,192; overlapping layers count separately                                 |
+| Decoded voxels across live and version content | 4,194,304                                                                              |
+| Metadata excluding voxel arrays                | 8 MiB total; 4 MiB top-level comments, 4 MiB other metadata                            |
+| JSON nesting / optional metadata nesting       | 32 / 16                                                                                |
+| Comment threads / messages                     | 1,024 / 10,000 per snapshot; each message 1 to 8,192 UTF-8 bytes; 4 MiB comment budget |
+| Named versions                                 | 64; aggregate canonical snapshot bytes ≤64 MiB                                         |
 
 Duplicate object keys reject at every level. Parsing validates all layers and snapshots, including hidden content. Unknown major versions and nonempty required-feature lists fail without installing the document. Limits may reject a file before any model becomes available.
 
@@ -13401,10 +13401,10 @@ Teach the workflow once. Keep the creative loop moving.
 
 These portable skills teach agents how to use the implemented Voxelite MCP tools. They cover atomic edits, palette choices, primitive composition, real image inspection and recovery from conflicts.
 
-- [**Voxel art workflow ↗** Discover, compose, inspect, refine and save.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-workflow/SKILL.md)
-- [**Palettes ↗** Material roles, exact presets and stable slot mappings.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-palettes/SKILL.md)
-- [**Primitive shapes ↗** Boxes, mirrored masses and computed curved forms.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-primitives/SKILL.md)
-- [**Render review ↗** Four real views, concrete repairs and consistent evidence.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-render-review/SKILL.md)
+- [**Voxel art workflow**Discover, compose, inspect, refine and save.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-workflow/SKILL.md)
+- [**Palettes**Material roles, exact presets and stable slot mappings.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-palettes/SKILL.md)
+- [**Primitive shapes**Boxes, mirrored masses and computed curved forms.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-primitives/SKILL.md)
+- [**Render review**Four real views, concrete repairs and consistent evidence.](https://voxelite.worldwidewebb.co/assets/skills/voxelite-render-review/SKILL.md)
 
 ## Install in your host
 
