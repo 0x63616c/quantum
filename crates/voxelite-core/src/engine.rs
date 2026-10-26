@@ -247,7 +247,7 @@ impl Engine {
             self.head(),
             &mut work,
         )?;
-        staged.validate()?;
+        staged.validate_after(&self.document)?;
         let changes = compare(&self.document.content, &staged.content);
         let changed = staged != *self.document;
         let bytes = if changed {
@@ -602,21 +602,10 @@ pub fn compare(a: &Snapshot, b: &Snapshot) -> Changes {
             continue;
         }
         out.layers.insert(id);
-        let coords: BTreeSet<_> = before
-            .into_iter()
-            .flat_map(|l| l.voxels.iter().map(|(p, _)| p))
-            .chain(
-                after
-                    .into_iter()
-                    .flat_map(|l| l.voxels.iter().map(|(p, _)| p)),
-            )
-            .collect();
-        for p in coords {
-            let old = before.map_or(0, |l| l.voxels.get(p));
-            let new = after.map_or(0, |l| l.voxels.get(p));
-            if old == new {
-                continue;
-            }
+        let empty = Volume::default();
+        let before_volume = before.map_or(&empty, |l| &l.voxels);
+        let after_volume = after.map_or(&empty, |l| &l.voxels);
+        for (p, old, new) in after_volume.changed_cells(before_volume) {
             if old == 0 {
                 out.added += 1;
             } else if new == 0 {

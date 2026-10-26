@@ -660,3 +660,25 @@ proptest! {
         for state in states{let h=e.redo_head().unwrap();e.redo(e.revision(),h).unwrap();prop_assert_eq!(e.snapshot(),state);}prop_assert_eq!(e.snapshot(),final_state);
     }
 }
+
+#[test]
+fn chunk_differences_match_full_cell_scan_through_undo_and_independent_load() {
+    let mut engine=Engine::new(Document::default()).unwrap();
+    let layer=engine.document().content.layers[0].id;
+    for (i,at) in [[-17,0,-1],[-16,0,0],[15,15,15],[16,16,16],[-16,0,0]].into_iter().enumerate() {
+        let before=engine.snapshot();
+        let receipt=engine.execute(Transaction{expected_revision:engine.revision(),id:Uuid::new_v4(),actor:Actor::new(Origin::Human),label:"Diff regression".into(),command:Command::SetVoxels{layer,voxels:vec![Voxel{at,slot:1}],mode:if i==4{Mode::Erase}else{Mode::Place},mirror:Mirror::default()}}).unwrap();
+        let a=&before.content.layers[0].voxels;let b=&engine.document().content.layers[0].voxels;
+        let coords:std::collections::BTreeSet<_>=a.iter().chain(b.iter()).map(|(p,_)|p).collect();
+        let oracle:Vec<_>=coords.into_iter().filter_map(|p|{let (old,new)=(a.get(p),b.get(p));(old!=new).then_some((p,old,new))}).collect();
+        let mut actual=b.changed_cells(a);actual.sort_unstable();assert_eq!(actual,oracle);
+        assert_eq!(receipt.changes.voxel_count(),oracle.len());
+        assert!(engine.document().validate().is_ok());
+        // Separately allocated, value-equal chunks also compare correctly.
+        let reloaded:Snapshot=serde_json::from_slice(&serde_json::to_vec(&engine.document().content).unwrap()).unwrap();
+        assert!(reloaded.layers[0].voxels.changed_chunks(b).is_empty());
+        let id=engine.head().unwrap();engine.undo(engine.revision(),id).unwrap();
+        assert_eq!(engine.document().content,before.content);
+        engine.redo(engine.revision(),id).unwrap();assert_eq!(engine.document().content,reloaded);
+    }
+}

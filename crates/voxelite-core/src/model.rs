@@ -238,6 +238,11 @@ impl Snapshot {
     }
     /// Validate every model invariant, including hidden layers and orphan anchors.
     pub fn validate(&self) -> Result<()> {
+        self.validate_after(None)
+    }
+    // The previous snapshot is an engine-owned, already validated state. Immutable
+    // shared chunks need no repeated bounds/palette scan unless those rules change.
+    fn validate_after(&self, previous: Option<&Self>) -> Result<()> {
         validate_name(&self.name)?;
         self.bounds.validate()?;
         self.palette.validate()?;
@@ -254,7 +259,18 @@ impl Snapshot {
             }
             voxels += l.voxels.len();
             chunks += l.voxels.chunk_count();
-            for (p, s) in l.voxels.iter() {
+            let previous_volume = previous
+                .filter(|old| old.bounds == self.bounds && old.palette == self.palette)
+                .and_then(|old| old.layers.iter().find(|old| old.id == l.id))
+                .map(|l| &l.voxels);
+            let chunk_positions = previous_volume.map_or_else(
+                || l.voxels.chunk_positions().collect(),
+                |old| l.voxels.changed_chunks(old),
+            );
+            for (p, s) in chunk_positions
+                .into_iter()
+                .flat_map(|at| l.voxels.chunk_entries(at))
+            {
                 if !self.bounds.contains(p) {
                     return Err(Error::OutOfBounds(p));
                 }
@@ -430,6 +446,16 @@ impl Document {
     /// Validate live and version content, hashes, parent references and version bytes.
     pub fn validate(&self) -> Result<()> {
         self.content.validate()?;
+        self.validate_versions()
+    }
+    pub(crate) fn validate_after(&self, previous: &Self) -> Result<()> {
+        self.content.validate_after(Some(&previous.content))?;
+        if self.versions != previous.versions {
+            self.validate_versions()?;
+        }
+        Ok(())
+    }
+    fn validate_versions(&self) -> Result<()> {
         if self.versions.len() > 64 {
             return Err(Error::Limit("64 named versions".into()));
         }
