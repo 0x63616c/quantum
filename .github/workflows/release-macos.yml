@@ -10,19 +10,59 @@ permissions:
 concurrency: { group: release-macos, cancel-in-progress: false }
 jobs:
   dmg:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, ARM64, xcode]
+    timeout-minutes: 120
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.tag || github.ref }}" }
-      - name: Build and package
+      - name: Validate release tag
+        shell: bash
         run: |
-          export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:$PATH"; echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
-          VERSION="${TAG#v}" scripts/package-macos.sh
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tag must be a stable version such as v0.1.0." >&2
+            exit 1
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # A branch with the same name must never supply the release's code.
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+      - name: Set up runner tools
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+      - name: Build app without signing credentials
+        run: cargo build --release --locked -p voxelite-app --bin voxelite
+      - name: Sign and package
+        env:
+          MACOS_SIGNING_MODE: auto
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          VERSION="${TAG#v}" scripts/package-macos.sh --skip-build
+      - name: Generate signed update feed
+        id: appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: scripts/generate-macos-appcast.sh
       - name: Publish release
-        env: { GH_TOKEN: "${{ github.token }}" }
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPCAST_GENERATED: ${{ steps.appcast.outputs.generated }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Voxelite $TAG" --notes-file packaging/macos/RELEASE_NOTES.md --verify-tag
-          gh release upload "$TAG" dist/Voxelite.dmg dist/Voxelite.dmg.sha256 --clobber
+          # Creation fails if this tag already has a release. Never replace bytes
+          # referenced by an existing signed appcast, even when retrying a run.
+          gh release create "$TAG" --draft --title "Voxelite $TAG" --notes-file packaging/macos/RELEASE_NOTES.md --verify-tag
+          assets=(dist/Voxelite.dmg dist/Voxelite.dmg.sha256)
+          if [[ "$APPCAST_GENERATED" == true ]]; then
+            assets+=(site/appcast.xml)
+          fi
+          gh release upload "$TAG" "${assets[@]}"
+          gh release edit "$TAG" --draft=false

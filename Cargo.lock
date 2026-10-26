@@ -5844,6 +5844,8 @@ dependencies = [
  "gpui-web-gpui-unofficial",
  "image",
  "js-sys",
+ "libloading",
+ "objc2 0.6.5",
  "serde",
  "serde_json",
  "sha2",
