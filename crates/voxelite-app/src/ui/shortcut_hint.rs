@@ -164,36 +164,34 @@ impl RenderOnce for HintText {
         if let [HintPart::Text(text)] = self.0.as_slice() {
             return text.clone().into_any_element();
         }
-        let mut result = div().flex().flex_col();
-        let mut line = div()
-            .flex()
-            .flex_row()
-            .flex_nowrap()
-            .whitespace_nowrap()
-            .flex_none()
-            .items_center()
-            .gap_x(px(2.0));
+        let new_line = || {
+            div()
+                .flex()
+                .flex_nowrap()
+                .whitespace_nowrap()
+                .flex_none()
+                .items_center()
+                .gap_x(px(7.0))
+        };
+        let mut result = div().flex().flex_col().flex_none().items_start();
+        let mut line = new_line();
         for part in self.0 {
             match part {
-                HintPart::Key(key) => line = line.child(div().flex_none().ml(px(4.0)).child(key)),
+                HintPart::Key(key) => line = line.child(key),
                 HintPart::Text(text) => {
                     for (index, paragraph) in text.split('\n').enumerate() {
                         if index > 0 {
                             result = result.child(line);
-                            line = div()
-                                .flex()
-                                .flex_row()
-                                .flex_nowrap()
-                                .whitespace_nowrap()
-                                .flex_none()
-                                .items_center()
-                                .gap_x(px(2.0));
+                            line = new_line();
                         }
-                        // Explicit newlines split paragraphs; each line stays
-                        // intact when the tooltip requests its intrinsic size.
-                        for word in paragraph.split_inclusive(' ') {
+                        // Shape prose as a whole: spacing around keycaps comes
+                        // only from the row gap, never spaces or per-word gaps.
+                        let paragraph = paragraph.trim();
+                        if !paragraph.is_empty() {
                             line = line.child(
-                                div().flex_none().child(SharedString::from(word.to_owned())),
+                                div()
+                                    .flex_none()
+                                    .child(SharedString::from(paragraph.to_owned())),
                             );
                         }
                     }
