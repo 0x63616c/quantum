@@ -25,7 +25,8 @@ The presentation sequence is:
 
 1. Multiply the laid-out viewport bounds by the window scale factor to obtain
    physical display pixels. Render the scene at twice those dimensions, with
-   4x MSAA, ambient occlusion, filtered shadows, outlines and an opaque background/grid.
+   4x MSAA, ambient occlusion, filtered shadows and an opaque background/grid.
+   Outlines follow the CPU viewport default (disabled).
 2. Resolve linear shading to nonlinear RGB in an RGBA8Unorm target. Convert it
    with the exact inverse of GPUI 1.25.3's full-range BT.601 matrix, including
    its four-decimal coefficients and 0.5 chroma center.
@@ -53,6 +54,42 @@ texel-sized normal offset limit acne without a fixed close-up gap. Camera/light,
 aspect, bounds or chunk changes invalidate the map; style-only frames reuse it.
 The fit takes at most 220 plane intersections and never scans mesh vertices.
 The software rasterizer is unchanged.
+
+## FPS integration and face banding regression
+
+The rebase retains main's native UI, gizmo, preferences, status bar and single-line
+tooltips. Theme/grid preference changes request new GPU content. The FPS meter
+records visible content at the `paint_surface`/`paint_image` handoff, with a new
+serial per installed GPU frame. Repainting that surface does not count again;
+neither pooled pixel-buffer addresses nor scene identities identify new content.
+GPU work uses the same idle-window reset as CPU work. Fallback immediately resets
+the meter to CPU, and deferred GPU paint callbacks cannot switch it back. GPU
+navigation still bypasses the CPU half-resolution render and 180 ms refinement.
+
+The banding investigation reproduced self-shadowing on an isolated solid with
+AO and outlines disabled. The fitted map's 3×3 PCF compared all taps against the
+center receiver depth. Caster slope bias and a normal offset did not cover the
+full diagonal filter footprint, especially near grazing incidence and face edges.
+The shader now derives the receiver plane's depth gradient from the orthographic
+light projection, corrects each tap's depth, and biases for the four internal
+bilinear samples. That bias scales with the fitted texel size. The existing
+caster slope bias and light-space normal offset remain in use. No face noise,
+texture sampling or mesh change was required. GPU outlines were also enabled
+unconditionally even though the CPU viewport disables them; both now use the
+CPU default, removing the extra dark crease lines.
+
+An isolated Linux Vulkan/llvmpipe harness exercised the production mesh, fitted
+shadow math, WGSL and render passes, replacing only the Metal adapter/presenter
+with offscreen readback. A solid box `[-8,0,-8]..[8,16,8]`, orthographic height 24,
+pitch 25°, distance 50 and yaw 55°..85° in 5° steps produced respectively
+4, 5, 1183, 307, 229, 163 and 634 changed pixels when shadows were enabled before
+the fix (256×256 output). After the fix, all seven images exactly match their
+unshadowed controls. The actual WGSL gradient and comparison-depth expressions
+also have host regressions against independent ray/plane intersections and
+bilinear sample depths across zoom, aspect, slope sign and subtexel phase.
+A close-up of the bundled workshop still has real cast shadows: enabling them
+changes 247632 of 921600 pixels, with a maximum RGB-channel delta of 29. These
+checks exercise shading; they do not validate Metal or GPUI presentation.
 
 ## Review findings and fixes
 
@@ -98,6 +135,18 @@ which is why retaining only the underlying Metal textures is insufficient.
 
 ## Verification on the Linux host
 
+After the rebase and FPS/banding fixes (2026-10-26):
+
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --workspace --locked -- -D warnings`: passed.
+- `cargo test --workspace --locked`: passed, including GPU/CPU meter transitions,
+  duplicate presentation handling, actual WGSL math and shadow filter guards.
+- `cargo clippy -p voxelite-render --features gpu --target aarch64-apple-darwin --tests --locked -- -D warnings`:
+  passed. The macOS UI paint/fallback code was also manually checked for cfg,
+  ownership and Rust 2024 Clippy issues; no full macOS UI/runtime pass is claimed.
+
+Earlier branch verification and platform constraints:
+
 - `cargo fmt --all`: passed; `cargo fmt --all -- --check`: passed.
 - `cargo test`: passed, including incremental chunk invalidation, negative chunk
   seams, AO neighbors, visibility/palette changes, shader validation, WGSL/Metal
@@ -119,7 +168,8 @@ which is why retaining only the underlying Metal textures is insufficient.
 
 ## Untested and remaining risks
 
-No physical Mac or GPU was available. CoreVideo allocation/import, actual Metal
+No physical Mac or hardware GPU was available; the banding experiment used
+software Vulkan (llvmpipe). CoreVideo allocation/import, actual Metal
 shader compilation, GPUI compositing, ring reuse under GPU load, visual fidelity,
 frame pacing, Retina monitor migration, device removal and DMG packaging remain
 unverified at runtime. No speedup or responsiveness measurement is claimed.

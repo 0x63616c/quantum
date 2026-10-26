@@ -256,8 +256,8 @@ mod tests {
                 for normal in [Vec3::X, Vec3::NEG_X, Vec3::Y, Vec3::NEG_Y] {
                     let biased = p.as_vec3() + normal * fit.normal_offset;
                     let ndc = fit.projection.project_point3(biased);
-                    // A +/-1 tap plus bilinear filtering reaches 1.5 texels out.
-                    let guard = 3.0 / SHADOW_SIZE as f32;
+                    // A +/-1 tap plus bilinear filtering reaches up to 2 texels out.
+                    let guard = 4.0 / SHADOW_SIZE as f32;
                     assert!(ndc.x.abs() + guard <= 1.0, "{aspect}: {ndc:?}");
                     assert!(ndc.y.abs() + guard <= 1.0, "{aspect}: {ndc:?}");
                 }

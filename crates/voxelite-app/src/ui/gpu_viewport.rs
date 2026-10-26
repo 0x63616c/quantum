@@ -115,7 +115,7 @@ impl EditorView {
         let grid_color: Rgba = self.theme.line().into();
         let style = voxelite_render::gpu::Style {
             background: [background, background, background, 1.],
-            outline: true,
+            outline: RenderOptions::default().outline,
             grid: self.grid,
             grid_color: [grid_color.r, grid_color.g, grid_color.b, 0.24],
         };
