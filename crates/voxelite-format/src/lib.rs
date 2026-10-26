@@ -1,8 +1,11 @@
 //! Versioned canonical `.voxl` JSON with bounded streaming voxel storage.
 //!
-//! Runtime revisions/history never enter this format. Unknown optional metadata
+//! Runtime revisions never enter this format. Optional build recipes replay real
+//! core commands to reconstruct a timeline. Unknown optional metadata
 //! is inert, bounded, preserved, and never interpreted as a URL or executable.
+mod build_history;
 mod stream;
+pub use build_history::{BuildHistory, BuildStep};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -60,6 +63,8 @@ pub struct Project {
     /// Optional portable default view. Excluded from semantic content hashes.
     pub view: Option<Value>,
     template: Value,
+    build_history: Option<BuildHistory>,
+    built_document: Option<Document>,
 }
 #[derive(Serialize, Deserialize)]
 struct Header {
@@ -83,6 +88,8 @@ struct Wire {
     lineage: Option<Lineage>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     view: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    build_history: Option<BuildHistory>,
     #[serde(flatten)]
     extra: Extra,
 }
@@ -95,6 +102,8 @@ impl Project {
             version: Version::default(),
             view: None,
             template: json!({}),
+            build_history: None,
+            built_document: None,
         })
     }
     /// Access retained input metadata (voxel arrays are deliberately empty here).
@@ -122,6 +131,10 @@ impl Project {
                 .as_object_mut()
                 .expect("root object")
                 .remove("view");
+            metadata
+                .as_object_mut()
+                .expect("root object")
+                .remove("build_history");
         }
         validate_metadata(&metadata)?;
         let mut writer = stream::BoundedWriter {
@@ -133,7 +146,7 @@ impl Project {
         writer.write_all(b"\n")?;
         Ok(())
     }
-    /// SHA-256 of all canonical bytes except the optional portable `view` field.
+    /// SHA-256 of canonical content, excluding `view` and optional `build_history`.
     pub fn semantic_hash(&self) -> FormatResult<String> {
         struct HashWriter(Sha256);
         impl Write for HashWriter {
@@ -191,6 +204,7 @@ impl Project {
             lineage: self.document.lineage.clone(),
             view: self.view.clone(),
             extra: s.extra.clone(),
+            build_history: self.build_history().cloned(),
         };
         let mut metadata = serde_json::to_value(wire)?;
         preserve_unknown(&mut metadata, &self.template, "");
@@ -248,12 +262,26 @@ pub fn read(reader: impl Read) -> FormatResult<Project> {
         lineage: wire.lineage,
     };
     document.validate()?;
-    Ok(Project {
+    let mut project = Project {
         document,
         version: wire.version,
         view: wire.view,
         template: metadata,
-    })
+        build_history: None,
+        built_document: None,
+    };
+    if let Some(history) = wire.build_history {
+        // Recipes are executable typed data, unlike inert optional metadata.
+        // Reject unknown command fields and noncanonical UUID spellings rather
+        // than silently dropping or reinterpreting them on a subsequent save.
+        if serde_json::to_value(&history)? != project.template["build_history"] {
+            return Err(FormatError::Invalid(
+                "noncanonical build command fields".into(),
+            ));
+        }
+        project.set_build_history(history)?;
+    }
+    Ok(project)
 }
 /// Parse an in-memory input without copying its voxel text.
 pub fn from_bytes(bytes: &[u8]) -> FormatResult<Project> {
@@ -277,6 +305,7 @@ fn known(path: &str) -> Option<&'static [&'static str]> {
             "versions",
             "lineage",
             "view",
+            "build_history",
         ]);
     }
     match last {
@@ -303,6 +332,9 @@ fn known(path: &str) -> Option<&'static [&'static str]> {
 // Known fields come from live content. Unknown fields are merged by stable IDs,
 // never by array position, so a layer reorder cannot move extension ownership.
 fn preserve_unknown(current: &mut Value, old: &Value, path: &str) {
+    if path == "/build_history" {
+        return;
+    }
     match (current, old) {
         (Value::Object(new), Value::Object(old)) => {
             let keys = known(path).unwrap_or(&[]);

@@ -88,6 +88,8 @@ impl Session {
         }
     }
     pub(crate) fn attach(&mut self, project: Project) -> crate::error::Result<()> {
+        // Attachment swaps in the editor's live engine before serving requests.
+        // Its idle shadow needs content only, not a second copy of build history.
         let engine = Engine::new(project.document.clone())?;
         self.documents.clear();
         self.receipts.clear();
@@ -322,13 +324,10 @@ impl Session {
                 "document ID is already open; use its model_id",
             ));
         }
-        let engine = Engine::with_limits(
-            project.document.clone(),
-            Limits {
-                history_bytes: 16 * 1024 * 1024,
-                ..Default::default()
-            },
-        )?;
+        let engine = project.open_engine(Limits {
+            history_bytes: 16 * 1024 * 1024,
+            ..Default::default()
+        })?;
         let data = info(&engine, !tracked.is_empty());
         self.documents.insert(
             id,

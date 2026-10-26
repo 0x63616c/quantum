@@ -354,7 +354,7 @@ impl Editor {
                 Ok::<_, EditorError>((path, hash))
             })
             .transpose()?;
-        let engine = Engine::new(project.document.clone())?;
+        let engine = project.open_engine(Limits::default())?;
         let s = &engine.document().content;
         let layer = s
             .layers

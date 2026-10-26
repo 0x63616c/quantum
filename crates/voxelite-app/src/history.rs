@@ -156,6 +156,39 @@ impl Editor {
 mod tests {
     use super::*;
     #[test]
+    fn bundled_build_history_opens_scrubs_and_survives_an_unchanged_save() {
+        let mut e = Editor::example().unwrap();
+        let count = e.engine.history().count();
+        assert!((20..=60).contains(&count));
+        assert_eq!(e.timeline_index(), count);
+        assert!(!e.engine.is_dirty());
+        let live = e.engine.snapshot();
+        let revision = e.engine.revision();
+        e.preview_history(None).unwrap();
+        assert!(
+            e.display_snapshot()
+                .layers
+                .iter()
+                .all(|l| l.voxels.is_empty())
+        );
+        assert_eq!(e.engine.snapshot(), live);
+        assert_eq!(e.engine.revision(), revision);
+        assert_eq!(e.timeline_index(), 0);
+        e.return_live();
+        e.undo().unwrap();
+        assert_eq!(e.timeline_index(), count - 1);
+        e.redo().unwrap();
+        assert_eq!(e.engine.snapshot(), live);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("demo.voxl");
+        e.save(&path).unwrap();
+        let reopened = Editor::open(&path).unwrap();
+        assert_eq!(reopened.engine.history().count(), count);
+        assert_eq!(reopened.engine.snapshot(), live);
+        assert!(!reopened.engine.is_dirty());
+    }
+
+    #[test]
     fn scrub_is_read_only_restore_is_new_undoable_edit() {
         let mut e = Editor::blank().unwrap();
         e.apply_at([0, 0, 0]).unwrap();

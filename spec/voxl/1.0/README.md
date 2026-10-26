@@ -19,9 +19,10 @@ versions and absent optional fields are omitted. Unknown optional fields remain
 inert and round-trip, including nested object metadata. Unsupported required
 features and majors reject; compatible newer minors preserve their declaration.
 
-SHA-256 semantic hashes cover canonical bytes excluding `view`. Version hashes cover
-the canonical nonrecursive core snapshot, including snapshot-level inert fields.
-No timestamps, host identities, session revisions, or undo logs are generated.
+SHA-256 semantic hashes cover canonical bytes excluding `view` and `build_history`.
+Version hashes cover the canonical nonrecursive core snapshot, including
+snapshot-level inert fields. No wall-clock timestamps, host identities, session
+revisions, or raw undo logs are generated.
 Portable view floats use serde_json's shortest round-trip representation, normalized
 zero on input. Views are hints; hosts validate camera usability before applying them.
 
@@ -40,3 +41,29 @@ pure transformations retaining original files; no lossy downgrade is attempted.
 `fixtures/populated.canonical.voxl` freezes exact canonical bytes. Tests also cover
 empty defaults, comments, versions, unknown fields, malformed bytes and randomized
 round trips.
+
+## Optional build history
+
+`build_history` is a versioned command recipe for projects built from an empty
+`Document::new(document.id, base_layer)` scene. Version 1 stores `base_layer` and
+1–64 `steps`, each with a stable `id`, human-readable `label`, `origin`, logical
+`elapsed_ms`, and a typed `voxelite-core::Command`. Commands use snake-case external
+tags; `set_voxels.voxels` uses `[x, y, z, slot]` tuples (zero erases). Optional command
+arguments are explicit nulls. Unknown fields inside recipes and noncanonical UUIDs
+are rejected; recipe schema changes require a new recipe version.
+
+Times are strictly increasing relative build offsets, not dates or claims about
+actual authoring time. Loading executes every command against a private engine,
+rejects no-ops, applies core work/history budgets and an aggregate 4,194,304
+work-unit cap (4 × MAX_WORK), and compares the resulting **entire document** with
+the file, including named versions. `Project::open_engine` replays the recipe into
+the host's undo/scrub timeline and marks the result saved. Files without a recipe
+retain the existing empty-history behavior. Recipe data is subject to the normal
+metadata and file byte limits. The full recipe must fit the default 128 MiB history
+budget; hosts with smaller budgets may evict its earliest entries normally.
+
+This optional recipe describes the saved build, not subsequent interactive edits.
+An unchanged save retains it. Saving changed content omits the stale recipe;
+ordinary interactive undo/redo remains session-local. Recipe omission must not be
+undone by merging retained optional metadata back into the output. Older readers
+can still display the live scene without understanding its build recipe.
