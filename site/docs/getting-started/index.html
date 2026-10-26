@@ -1,7 +1,22 @@
 <!doctype html><html lang="en" data-theme="dark"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Getting started — Voxelite</title><meta name="description" content="Voxelite documentation: Getting started. Build, connect, create and inspect with the Rust voxel editor.">
-<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
+<title>Getting started — Voxelite docs</title>
+<meta name="description" content="Build Voxelite from source, connect your AI agent through MCP, and create your first voxel model with a step-by-step guide to editing and exports.">
+<link rel="canonical" href="https://voxelite.worldwidewebb.co/docs/getting-started/">
+<meta property="og:title" content="Getting started — Voxelite docs">
+<meta property="og:description" content="Build Voxelite from source, connect your AI agent through MCP, and create your first voxel model with a step-by-step guide to editing and exports.">
+<meta property="og:url" content="https://voxelite.worldwidewebb.co/docs/getting-started/">
+<meta property="og:image" content="https://voxelite.worldwidewebb.co/assets/session-dark.png">
+<meta property="og:image:alt" content="Voxelite editor showing the Autumn Workshop model, palette, layers, and agent activity.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Voxelite">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Getting started — Voxelite docs">
+<meta name="twitter:description" content="Build Voxelite from source, connect your AI agent through MCP, and create your first voxel model with a step-by-step guide to editing and exports.">
+<meta name="twitter:image" content="https://voxelite.worldwidewebb.co/assets/session-dark.png">
+<meta name="twitter:image:alt" content="Voxelite editor showing the Autumn Workshop model, palette, layers, and agent activity.">
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
 <a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation"><a href="/docs/">Documentation</a><a href="/docs/getting-started/" aria-current="page">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a></nav></details><details name="docs-menu"><summary>On this page</summary><nav aria-label="Page sections"><a href="#build">Build from source</a><a href="#web">Build the web editor and site</a><a href="#hands">Make your first edit by hand</a><a href="#connect">Connect your agent</a><a href="#first-model">Your first model through MCP</a><a href="#recover">When a call fails</a></nav></details></div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p><a href="/docs/">Documentation</a><a href="/docs/getting-started/" aria-current="page">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a></nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>Getting started</h1><p class="lede">Build locally. Connect your agent. Make your first model.</p>
 <nav class="setup-paths" aria-label="Quick start"><a href="#build">Build the app <span aria-hidden="true">↘</span></a><a href="#connect">Connect MCP <span aria-hidden="true">↘</span></a></nav>

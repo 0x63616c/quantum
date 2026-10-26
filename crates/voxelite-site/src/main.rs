@@ -4,34 +4,58 @@ use serde_json::Value;
 use std::{error::Error, fmt::Write as _, fs, path::Path};
 use voxelite_mcp::VoxeliteServer;
 
+mod seo;
+
 const SITE_BASE_URL: &str = "https://voxelite.worldwidewebb.co";
 
-const PAGES: &[(&str, &str, &str)] = &[
-    (
-        "",
-        "Documentation",
-        include_str!("../../../site/content/overview.html"),
-    ),
-    (
-        "getting-started",
-        "Getting started",
-        include_str!("../../../site/content/getting-started.html"),
-    ),
-    (
-        "mcp",
-        "MCP tools",
-        include_str!("../../../site/content/mcp.html"),
-    ),
-    (
-        "format",
-        "The .voxl format",
-        include_str!("../../../site/content/format.html"),
-    ),
-    (
-        "skills",
-        "Agent skills",
-        include_str!("../../../site/content/skills.html"),
-    ),
+struct DocPage {
+    slug: &'static str,
+    title: &'static str,
+    description: &'static str,
+    content: &'static str,
+}
+
+impl DocPage {
+    fn path(&self) -> String {
+        if self.slug.is_empty() {
+            "/docs/".to_owned()
+        } else {
+            format!("/docs/{}/", self.slug)
+        }
+    }
+}
+
+const PAGES: &[DocPage] = &[
+    DocPage {
+        slug: "",
+        title: "Documentation",
+        description: "Learn how to build voxel models with Voxelite, connect an AI agent through MCP, work in the native or web editor, and save portable projects.",
+        content: include_str!("../../../site/content/overview.html"),
+    },
+    DocPage {
+        slug: "getting-started",
+        title: "Getting started",
+        description: "Build Voxelite from source, connect your AI agent through MCP, and create your first voxel model with a step-by-step guide to editing and exports.",
+        content: include_str!("../../../site/content/getting-started.html"),
+    },
+    DocPage {
+        slug: "mcp",
+        title: "MCP tools",
+        description: "Explore Voxelite's MCP tool reference, including input and output schemas, atomic edits, rendered previews, revision guards, and error recovery.",
+        content: include_str!("../../../site/content/mcp.html"),
+    },
+    DocPage {
+        slug: "format",
+        title: "The .voxl format",
+        description: "Understand Voxelite's .voxl project format: JSON structure, voxel coordinates, palettes, layers, canonical hashes, parser limits, and compatibility.",
+        content: include_str!("../../../site/content/format.html"),
+    },
+    DocPage {
+        slug: "skills",
+        title: "Agent skills",
+        description: "Give your AI agent reusable Voxelite skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.",
+        content: include_str!("../../../site/content/skills.html"),
+    },
 ];
 
 fn escape(text: &str) -> String {
@@ -58,7 +82,7 @@ fn section_links(content: &str) -> String {
     links
 }
 
-fn layout(slug: &str, title: &str, content: &str) -> String {
+fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
     let sections = section_links(content);
     let mobile_sections = if sections.is_empty() {
         String::new()
@@ -75,13 +99,10 @@ fn layout(slug: &str, title: &str, content: &str) -> String {
         )
     };
     let mut navigation = String::new();
-    for (path, label, _) in PAGES {
-        let href = if path.is_empty() {
-            "/docs/".to_owned()
-        } else {
-            format!("/docs/{path}/")
-        };
-        let current = if *path == slug {
+    for page in PAGES {
+        let href = page.path();
+        let label = page.title;
+        let current = if page.slug == slug {
             " aria-current=\"page\""
         } else {
             ""
@@ -91,8 +112,8 @@ fn layout(slug: &str, title: &str, content: &str) -> String {
     format!(
         r##"<!doctype html><html lang="en" data-theme="dark"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title} — Voxelite</title><meta name="description" content="Voxelite documentation: {title}. Build, connect, create and inspect with the Rust voxel editor.">
-<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
+{metadata}
+<meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
 <a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Voxelite</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
 "##
@@ -182,31 +203,48 @@ fn main() -> Result<(), Box<dyn Error>> {
         root.join("index.html"),
         format!(
             include_str!("../templates/index.html"),
-            site_base_url = SITE_BASE_URL,
+            metadata = seo::metadata("/", seo::HOME_TITLE, seo::HOME_DESCRIPTION),
+            structured_data = seo::software_application(),
         ),
     )?;
     fs::write(
         root.join("assets/mcp-tools.json"),
         format!("{}\n", serde_json::to_string_pretty(&tools)?),
     )?;
-    for (slug, title, content) in PAGES {
-        let directory = root.join("docs").join(slug);
+    for page in PAGES {
+        let directory = root.join("docs").join(page.slug);
         fs::create_dir_all(&directory)?;
-        let body = if *slug == "mcp" {
-            format!("{content}{}", catalog(&tools)?)
+        let body = if page.slug == "mcp" {
+            format!("{}{}", page.content, catalog(&tools)?)
         } else {
-            (*content).to_owned()
+            page.content.to_owned()
         };
-        fs::write(directory.join("index.html"), layout(slug, title, &body))?;
+        let metadata = seo::metadata(
+            &page.path(),
+            &format!("{} — Voxelite docs", page.title),
+            page.description,
+        );
+        fs::write(
+            directory.join("index.html"),
+            layout(page.slug, page.title, &metadata, &body),
+        )?;
     }
     fs::write(
         root.join("404.html"),
         layout(
             "404",
             "A little off the grid",
+            &seo::metadata(
+                "/404.html",
+                "Page not found — Voxelite",
+                "This page could not be found. Explore Voxelite's documentation to build voxel models, connect an AI agent, or get started in the browser editor.",
+            ),
             "<p>This page could not be found. Head back to the <a href=\"/\">Voxelite homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
         ),
     )?;
+    let mut public_paths = vec!["/".to_owned(), "/app/".to_owned()];
+    public_paths.extend(PAGES.iter().map(DocPage::path));
+    seo::write_crawl_files(root, &public_paths)?;
     println!(
         "Generated homepage, {} documentation pages and {} MCP tool references",
         PAGES.len(),

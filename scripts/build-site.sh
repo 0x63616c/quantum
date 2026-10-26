@@ -11,6 +11,8 @@ esac
 for asset in index.html voxelite_app.js voxelite_app_bg.wasm; do
   test -s "web/dist/$asset" || { printf 'Missing web/dist/%s; run scripts/build-web.sh first.\n' "$asset" >&2; exit 1; }
 done
+# Refresh the HTML source even when reusing the compiled editor bundle.
+cp web/index.html web/dist/index.html
 cargo run --locked -p voxelite-site -- site
 mkdir -p site/assets/skills
 cp -R skills/. site/assets/skills/
