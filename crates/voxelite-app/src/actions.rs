@@ -1,4 +1,5 @@
 //! Shared action registry for native menus, the Linux menubar and command search.
+use crate::shortcuts::{ShortcutPlatform, format_shortcut};
 use gpui::{Action, App, KeyBinding, Menu, MenuItem};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
@@ -152,77 +153,15 @@ impl Op {
             _ => "File operation in progress",
         }
     }
-    pub fn shortcut(self) -> &'static str {
-        match self {
-            Self::New => {
-                if cfg!(target_os = "macos") {
-                    "⌘ N"
-                } else {
-                    "Ctrl N"
-                }
-            }
-            Self::Open => {
-                if cfg!(target_os = "macos") {
-                    "⌘ O"
-                } else {
-                    "Ctrl O"
-                }
-            }
-            Self::Save => {
-                if cfg!(target_os = "macos") {
-                    "⌘ S"
-                } else {
-                    "Ctrl S"
-                }
-            }
-            Self::SaveAs => {
-                if cfg!(target_os = "macos") {
-                    "⇧ ⌘ S"
-                } else {
-                    "Ctrl Shift S"
-                }
-            }
-            Self::Quit => {
-                if cfg!(target_os = "macos") {
-                    "⌘ Q"
-                } else {
-                    "Ctrl Q"
-                }
-            }
-            Self::Undo => {
-                if cfg!(target_os = "macos") {
-                    "⌘ Z"
-                } else {
-                    "Ctrl Z"
-                }
-            }
-            Self::Redo => {
-                if cfg!(target_os = "macos") {
-                    "⇧ ⌘ Z"
-                } else {
-                    "Ctrl Shift Z"
-                }
-            }
-            Self::Commands => {
-                if cfg!(target_os = "macos") {
-                    "⌘ K"
-                } else {
-                    "Ctrl K"
-                }
-            }
-            Self::Frame => "F",
-            Self::Place => "B",
-            Self::Erase => "E",
-            Self::Paint => "P",
-            Self::Fill => "G",
-            Self::Box => "U",
-            Self::Comment => "C",
-            Self::Picker => "I",
-            Self::MirrorX => "Shift X",
-            Self::MirrorY => "Shift Y",
-            Self::MirrorZ => "Shift Z",
-            _ => "",
-        }
+    pub fn shortcut(self) -> String {
+        self.key()
+            .map(|key| format_shortcut(key, ShortcutPlatform::current()))
+            .unwrap_or_default()
+    }
+
+    fn binding(self, platform: ShortcutPlatform) -> Option<KeyBinding> {
+        self.key()
+            .map(|key| KeyBinding::new(&platform.binding_key(key), self, Some("Editor")))
     }
 }
 pub const MENUS: &[(&str, &[Op])] = &[
@@ -277,6 +216,7 @@ pub const MENUS: &[(&str, &[Op])] = &[
     ("Help", &[Op::Help]),
 ];
 pub fn install(cx: &mut App) {
+    let platform = ShortcutPlatform::current();
     cx.set_menus(
         MENUS
             .iter()
@@ -289,9 +229,83 @@ pub fn install(cx: &mut App) {
         MENUS
             .iter()
             .flat_map(|(_, items)| items.iter())
-            .filter_map(|op| {
-                op.key()
-                    .map(|key| KeyBinding::new(key, *op, Some("Editor")))
-            }),
+            .filter_map(|op| op.binding(platform)),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{KeyContext, Keymap, Keystroke};
+
+    #[test]
+    fn primary_actions_bind_command_on_apple_and_control_elsewhere() {
+        for (op, apple, other) in [
+            (Op::New, "cmd-n", "ctrl-n"),
+            (Op::Open, "cmd-o", "ctrl-o"),
+            (Op::Save, "cmd-s", "ctrl-s"),
+            (Op::SaveAs, "cmd-shift-s", "ctrl-shift-s"),
+            (Op::Quit, "cmd-q", "ctrl-q"),
+            (Op::Undo, "cmd-z", "ctrl-z"),
+            (Op::Redo, "cmd-shift-z", "ctrl-shift-z"),
+            (Op::Commands, "cmd-k", "ctrl-k"),
+        ] {
+            for (platform, accepted, rejected) in [
+                (ShortcutPlatform::Apple, apple, other),
+                (ShortcutPlatform::WindowsLinux, other, apple),
+            ] {
+                let binding = op.binding(platform).unwrap();
+                let accepted = Keystroke::parse(accepted).unwrap();
+                let rejected = Keystroke::parse(rejected).unwrap();
+                assert_eq!(binding.match_keystrokes(&[accepted]), Some(false), "{op:?}");
+                assert_eq!(binding.match_keystrokes(&[rejected]), None, "{op:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn tool_and_mirror_bindings_are_platform_independent() {
+        for op in MENUS.iter().flat_map(|(_, items)| *items) {
+            let Some(key) = op.key().filter(|key| !key.contains("secondary")) else {
+                continue;
+            };
+            let stroke = Keystroke::parse(key).unwrap();
+            for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
+                assert_eq!(
+                    op.binding(platform)
+                        .unwrap()
+                        .match_keystrokes(std::slice::from_ref(&stroke)),
+                    Some(false),
+                    "{op:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn editor_shortcuts_are_inactive_while_typing_or_in_modals() {
+        for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
+            let bindings: Vec<_> = MENUS
+                .iter()
+                .flat_map(|(_, items)| *items)
+                .filter_map(|op| op.binding(platform))
+                .collect();
+            let keymap = Keymap::new(bindings.clone());
+            for binding in bindings {
+                let (matches, _) = keymap.bindings_for_input(
+                    binding.keystrokes(),
+                    &[KeyContext::parse("Editor").unwrap()],
+                );
+                assert_eq!(matches.len(), 1);
+                for context in ["TextField", "CommandPalette", "Modal"] {
+                    let (matches, pending) = keymap.bindings_for_input(
+                        binding.keystrokes(),
+                        &[KeyContext::parse(context).unwrap()],
+                    );
+                    assert!(matches.is_empty(), "{context}: {binding:?}");
+                    assert!(!pending);
+                }
+            }
+        }
+    }
 }

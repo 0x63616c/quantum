@@ -1,5 +1,5 @@
 //! Small native single-line field with clipboard, selection, and IME support.
-use crate::theme::Theme;
+use crate::{shortcuts::ShortcutPlatform, theme::Theme};
 use gpui::{prelude::*, *};
 use std::ops::Range;
 
@@ -82,7 +82,7 @@ impl TextField {
     }
     fn key(&mut self, e: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         let key = e.keystroke.key.as_str();
-        let cmd = e.keystroke.modifiers.control || e.keystroke.modifiers.platform;
+        let cmd = ShortcutPlatform::current().is_primary(e.keystroke.modifiers);
         let handled = match key {
             "a" if cmd => {
                 self.selection = 0..self.text.len();

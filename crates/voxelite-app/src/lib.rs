@@ -14,6 +14,8 @@ mod actions;
 #[cfg(all(feature = "web", target_family = "wasm"))]
 mod assets;
 #[cfg(all(feature = "web", target_family = "wasm"))]
+mod shortcuts;
+#[cfg(all(feature = "web", target_family = "wasm"))]
 mod text_field;
 #[cfg(all(feature = "web", target_family = "wasm"))]
 mod theme;

@@ -1,4 +1,4 @@
-# Bundled Geist faces
+# Bundled fonts
 
 `Geist.ttf` and `GeistMono.ttf` are the existing locally bundled variable fonts,
 with their accompanying SIL Open Font License notices. The two static Geist
@@ -21,3 +21,9 @@ for weight, name in [(500, "Medium"), (600, "SemiBold")]:
     instantiateVariableFont(font, {"wght": weight}, inplace=True, updateFontNames=True)
     font.save(f"Geist-{name}.ttf")
 ```
+
+Shortcut modifier and navigation symbols are custom SVG paths in
+`../icons/shortcut-*.svg`, rendered with GPUI's SVG facilities. Their 20-unit
+cap boxes and 2-unit strokes scale to Geist Mono's cap height; the renderer
+uses GPUI's font metrics to align them to the text baseline. No symbol font
+fallback is bundled.

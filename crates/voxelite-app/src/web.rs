@@ -6,7 +6,7 @@ use crate::{
     ui,
 };
 use gpui::*;
-use std::{borrow::Cow, rc::Rc};
+use std::rc::Rc;
 use wasm_bindgen::{JsCast, prelude::*};
 
 fn error(value: JsValue) -> EditorError {
@@ -169,12 +169,7 @@ pub fn start() -> Result<(), JsValue> {
         .with_assets(assets::Assets)
         .run(move |cx| {
             cx.text_system()
-                .add_fonts(vec![
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-SemiBold.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf")),
-                ])
+                .add_fonts(assets::fonts())
                 .expect("bundled fonts");
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
