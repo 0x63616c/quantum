@@ -120,7 +120,7 @@ Both workflows use `[self-hosted, macOS, ARM64, xcode]`, targeting the
 GitHub-hosted macOS jobs. The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
-the v4 checkout and artifact actions, pinned to reviewed commit SHAs in the
+the v4 checkout and artifact actions, pinned to commit SHAs in the
 workflows.
 
 CI checks formatting, runs the mocked packaging/release regression tests,
@@ -156,8 +156,10 @@ The packager:
 2. If a public Sparkle key exists, downloads the pinned archive, verifies SHA-256,
    preserves framework symlinks, and embeds Sparkle plus its license. It sets
    `SUFeedURL=https://voxelite.worldwidewebb.co/appcast.xml`, `SUPublicEDKey`, and
-   `SUEnableAutomaticChecks=true` in the built Info.plist. Without the public key,
-   it omits those keys and the framework and prints a notice.
+   `SUEnableAutomaticChecks=true`, `SUVerifyUpdateBeforeExtraction=true`, and
+   `SURequireSignedFeed=true` in the built Info.plist. The last two settings opt
+   into signed update metadata and archive verification before extraction.
+   Without the public key, it omits those keys and the framework and prints a notice.
 3. With a certificate and password, signs the Sparkle XPC services, helper tool,
    updater app, framework, and outer app in that order, using the same Developer
    ID, hardened runtime, and secure timestamps. The app uses
@@ -205,8 +207,12 @@ The script rejects an unsigned enclosure, wrong URL, incorrect size, or stale
 bundle version, and requires the release tag to equal `v` plus the bundle version.
 Sparkle compares the signing key with the bundled public key;
 a mismatch cannot be published as an unsigned update. The feed itself is also
-signed by the pinned Sparkle tool. Missing private key, missing framework, or
-non-notarized output skips generation with a notice.
+signed because the bundle opts into `SURequireSignedFeed`; enclosure signing alone
+does not sign the XML. The script requires `sign_update --verify` to validate the
+feed signature before copying it for upload. Both tools receive the key only on
+stdin. See [Sparkle's signed feed requirements](https://sparkle-project.org/documentation/#signing-feeds-optional).
+Missing private key, missing framework, or non-notarized output skips generation
+with a notice.
 
 The release workflow uploads `Voxelite.dmg`, `Voxelite.dmg.sha256`, and, when
 generated, **`appcast.xml` as GitHub release assets**. It never commits the feed,

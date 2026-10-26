@@ -119,6 +119,8 @@ if public_key:
         SUFeedURL="https://voxelite.worldwidewebb.co/appcast.xml",
         SUPublicEDKey=public_key,
         SUEnableAutomaticChecks=True,
+        SUVerifyUpdateBeforeExtraction=True,
+        SURequireSignedFeed=True,
     )
 with open(sys.argv[1], "wb") as output:
     plistlib.dump(info, output)

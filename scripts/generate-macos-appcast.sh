@@ -52,6 +52,15 @@ printf '%s\n' "$SPARKLE_ED_PRIVATE_KEY" | dist/sparkle/bin/generate_appcast \
   --link 'https://voxelite.worldwidewebb.co' \
   -o "$WORK_DIR/appcast.xml" "$WORK_DIR/archives"
 
+# The enclosure signature alone does not authenticate the feed's update metadata.
+# Verify the embedded feed signature with the pinned tool before publishing bytes.
+# sign_update can echo malformed key input; never expose its raw diagnostics.
+if ! printf '%s\n' "$SPARKLE_ED_PRIVATE_KEY" | dist/sparkle/bin/sign_update \
+  --ed-key-file - --verify "$WORK_DIR/appcast.xml" > "$WORK_DIR/feed-verification.log" 2>&1; then
+  echo "Appcast signature verification failed; raw key diagnostics suppressed." >&2
+  exit 1
+fi
+
 # A mismatched key can produce an unsigned enclosure with only a tool warning.
 # Reject it, wrong asset URLs, stale versions, and incorrect lengths before upload.
 python3 - "$WORK_DIR/appcast.xml" <<'PY'

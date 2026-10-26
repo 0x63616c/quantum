@@ -89,6 +89,19 @@ if not os.environ.get('UNSIGNED_FEED'): attrs[ns+'edSignature'] = base64.b64enco
 if os.environ.get('WRONG_URL'): attrs['url'] = 'https://example.invalid/Voxelite.dmg'
 ET.SubElement(item, 'enclosure', attrs)
 ET.ElementTree(root).write(args[args.index('-o')+1], encoding='utf-8', xml_declaration=True)
+if info.get('SURequireSignedFeed') and not os.environ.get('UNSIGNED_METADATA'):
+    with open(args[args.index('-o')+1], 'a') as output:
+        output.write('<!-- fixture feed signature -->')
+'''
+
+VERIFIER = r'''#!/usr/bin/env python3
+import os, pathlib, sys
+assert 'SPARKLE_ED_PRIVATE_KEY' not in os.environ
+assert sys.stdin.read().strip() == 'fixture private key'
+assert sys.argv[1:4] == ['--ed-key-file', '-', '--verify']
+if '<!-- fixture feed signature -->' not in pathlib.Path(sys.argv[4]).read_text():
+    print('PRIVATE-DIAGNOSTIC-SENTINEL')
+    sys.exit(1)
 '''
 
 
@@ -203,6 +216,10 @@ class PackagingTests(unittest.TestCase):
 
     def test_sparkle_signing_and_feed_validation(self):
         self.run_script(overrides=CERT | NOTARY | PUBLIC)
+        with (self.root / 'dist/Voxelite.app/Contents/Info.plist').open('rb') as source:
+            info = plistlib.load(source)
+        self.assertIs(info.get('SURequireSignedFeed'), True)
+        self.assertIs(info.get('SUVerifyUpdateBeforeExtraction'), True)
         signatures = [Path(args[-1]).name for name, args, _ in self.events()
                       if name == "codesign" and "--verify" not in args]
         self.assertEqual(signatures, ["Installer.xpc", "Downloader.xpc", "Autoupdate",
@@ -210,14 +227,19 @@ class PackagingTests(unittest.TestCase):
         generator = self.root / "dist/sparkle/bin/generate_appcast"
         generator.write_text(GENERATOR)
         generator.chmod(0o755)
+        verifier = self.root / "dist/sparkle/bin/sign_update"
+        verifier.write_text(VERIFIER)
+        verifier.chmod(0o755)
         output = self.root / "outputs"
         credentials = {"SPARKLE_ED_PRIVATE_KEY": "fixture private key", "GITHUB_OUTPUT": str(output)}
         for overrides, success in [({}, True), ({"TAG": "v9.9.9"}, False),
-                                   ({"UNSIGNED_FEED": "1"}, False), ({"WRONG_URL": "1"}, False)]:
+                                   ({"UNSIGNED_FEED": "1"}, False), ({"WRONG_URL": "1"}, False),
+                                   ({"UNSIGNED_METADATA": "1"}, False)]:
             with self.subTest(overrides=overrides):
                 output.unlink(missing_ok=True)
-                self.run_script("generate-macos-appcast.sh", credentials | overrides, success=success)
+                result = self.run_script("generate-macos-appcast.sh", credentials | overrides, success=success)
                 self.assertEqual("generated=true" in output.read_text(), success)
+                self.assertNotIn("PRIVATE-DIAGNOSTIC-SENTINEL", result.stdout + result.stderr)
         dmg = self.root / "dist/Voxelite.dmg"
         dmg.write_text("corrupt dmg")
         self.run_script("generate-macos-appcast.sh", credentials, success=False)
