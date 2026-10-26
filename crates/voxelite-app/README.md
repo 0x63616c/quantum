@@ -41,6 +41,8 @@ cargo test -p voxelite-app --no-default-features
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z; Apple: ⌘Z / ⇧⌘Z |
 | New / open / save / save as | Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S; Apple: ⌘N / ⌘O / ⌘S / ⇧⌘S |
 | Search commands | Ctrl+K (Apple: ⌘K); type, arrows, Enter, Escape |
+| Settings | Ctrl+, (Apple: ⌘,); Escape or Done closes the settings view |
+| Focus brush colors | Palette → Show Palette; arrows choose colors, Escape returns to the viewport |
 | Cancel box or dismiss menus | Escape |
 | Choose a preset palette | Palette menu, then Up/Down and Enter |
 | Unsaved-changes prompt | Tab or Left/Right, Enter to confirm, Escape to cancel |
@@ -94,8 +96,29 @@ view; every named view fits its own projected bounds. Unchanged clicks and color
 sampling do not trigger a new CPU render.
 Development profiles optimize the CPU renderer and core to keep iteration usable.
 
-The app takes the system appearance at startup; the toolbar toggles it for the
-current session. `--theme dark|light` makes captures reproducible.
+Appearance lives in Settings, with Light, Dark and System choices. System follows
+live OS appearance changes. Preferences (appearance, grid, antialiasing,
+navigation hints and render statistics) persist in `settings.json` alongside the
+existing palette library, or in origin-local storage on the web. `VOXELITE_DATA_DIR`
+can isolate desktop preferences. `--theme dark|light` overrides startup appearance
+for reproducible captures.
+
+Settings opens in a separate desktop window; repeated requests focus that window.
+The web edition uses the same view in an in-page modal. Sections are searchable,
+controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
+immediately. A failed save retains the previous preferences and reports the error.
+On macOS, the native Voxelite menu includes Settings, About, Services, application
+visibility and Quit. The native menus share the editor action registry; standard
+clipboard commands act on the focused text field. There is no voxel clipboard
+or persistent voxel-selection tool yet. The updater hook is currently a stub.
+The transparent native titlebar places real traffic lights in the top toolbar.
+Linux and web retain their in-window menus.
+
+The bottom bar shows hovered voxel coordinates, active layer/tool, zoom relative
+to the last fitted view, model bounds and CPU render performance. Selection size
+and count describe the inclusive box-tool preview; after commit they return to
+zero. FPS is the reciprocal of the last completed CPU render duration, not the
+monitor refresh rate. Rendering is demand-driven; idle frames are not synthesized.
 `--exit-after SECONDS` (alias `--screenshot-delay`) exits after the specified
 interval for unattended captures. This explicit automation option does not
 prompt about unsaved edits.
@@ -130,6 +153,12 @@ exercises real native HEX/GPL file dialogs and Share → Save a copy. The Share
 captures also verify clipboard contents, participant updates and persisted
 access choices through the native UI. Earlier review captures and reports
 remain historical evidence for the preceding shell revision.
+Use `VOXELITE_CAPTURE_UI_ONLY=1 VOXELITE_CAPTURE_DIR=/tmp/voxelite-shots bash scripts/capture-native.sh`
+for the focused UI capture suite: both main-window sizes, settings sections,
+appearance persistence, clipboard search, window reuse/reopen and box telemetry.
+The macOS menu, traffic-light positioning and background blur still require a
+native Mac smoke test; Linux captures do not verify AppKit behavior.
+
 `bash scripts/capture-native-scales.sh` adds native 150% and 200% density captures
 in both themes while preserving a logical 1440×900 workspace.
 A working session D-Bus and desktop portal backend are needed for file dialogs;
@@ -147,8 +176,7 @@ are copied into the crate with their OFL notices; `design/` is never a build-tim
 mutable output. The default example is embedded at compile time.
 
 This stage implements the native editor polish scope, not every release row in
-`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Persistent appearance preferences,
-recovery journals, GLB export UI, hosted collaboration and screen-reader
+`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Recovery journals, GLB export UI, hosted collaboration and screen-reader
 certification remain outside this round. Portable data is retained on save.
 
 ## Polish round 2: local authoring and live agents
