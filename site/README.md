@@ -16,9 +16,14 @@ can reuse the verified `web/dist/` with `scripts/build-site.sh --skip-web`.
 `site/app/` and `web/dist/` are generated and ignored by Git. Nothing in these
 scripts deploys, pushes, or configures hosting.
 
-Edit landing-page markup in `index.html`, shared styles in `assets/site.css`,
-documentation bodies in `content/`, and portable skills in the repository's
-`skills/` directory. Run the build after content/skill changes. The
+Edit landing-page markup in `crates/voxelite-site/templates/index.html`, shared
+styles in `assets/site.css`, documentation bodies in `content/`, and portable
+skills in the repository's `skills/` directory. Edit metadata in
+`crates/voxelite-site/src/` and the browser editor's HTML in `web/index.html`.
+The generator uses `https://voxelite.worldwidewebb.co` for canonical URLs, social
+previews, structured data and crawl files. `sitemap.xml` lists the homepage,
+docs and editor; the 404 page is marked `noindex` and has no canonical URL.
+Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
 from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
 
