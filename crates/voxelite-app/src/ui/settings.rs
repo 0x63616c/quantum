@@ -1221,7 +1221,7 @@ impl EditorView {
                         } else {
                             WindowBackgroundAppearance::Opaque
                         },
-                        app_id: Some("dev.voxelite.editor".into()),
+                        app_id: Some(voxelite_app::APP_ID.into()),
                         ..Default::default()
                     },
                     |window, cx| {
