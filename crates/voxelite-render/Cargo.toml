@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 voxelite-core.workspace = true
+voxelite-mesh.workspace = true
 
 # Unsafe FFI is confined to the audited Metal interop module.
 [lints.rust]
@@ -17,11 +18,11 @@ all = "warn"
 
 [dependencies.glam]
 workspace = true
-[dependencies.thiserror]
-workspace = true
 
 [dev-dependencies]
+voxelite-format.workspace = true
 proptest.workspace = true
+serde_json.workspace = true
 
 [features]
 # Additive backend for the portable harness; production Metal devices are unchanged.

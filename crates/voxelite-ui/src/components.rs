@@ -463,6 +463,30 @@ impl SidebarItem {
         theme: Theme,
     ) -> Stateful<Div> {
         let label = label.into();
+        Self::custom(id, label.clone(), selected, theme)
+            .child(icon(glyph).text_color(if selected {
+                theme.accent_fg()
+            } else {
+                theme.muted()
+            }))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(label),
+            )
+    }
+    /// Build the navigation frame for custom content such as a palette thumbnail.
+    /// The label names the complete row for assistive technology.
+    pub fn custom(
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        selected: bool,
+        theme: Theme,
+    ) -> Stateful<Div> {
+        let label = label.into();
         row()
             .id(id)
             .tab_index(0)
@@ -492,19 +516,6 @@ impl SidebarItem {
                 })
                 .shadow(tokens::focus_ring(theme))
             })
-            .child(icon(glyph).text_color(if selected {
-                theme.accent_fg()
-            } else {
-                theme.muted()
-            }))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .child(label),
-            )
     }
 }
 /// Quiet sidebar group label.

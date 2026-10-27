@@ -79,10 +79,10 @@ fn pre_plugin_export_bytes() {
             },
             voxelite_export::glb(&snapshot).unwrap(),
         ),
-        (
-            "scene.png",
-            voxelite_export::render_png(&snapshot, &options).unwrap(),
-        ),
+        ("scene.png", {
+            let image = voxelite_render::render(&snapshot, &options).unwrap();
+            voxelite_export::png_rgba(image.width, image.height, &image.rgba).unwrap()
+        }),
         (
             "rgba.png",
             voxelite_export::png_rgba(

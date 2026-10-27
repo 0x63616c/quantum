@@ -2,13 +2,10 @@
 #[test]
 fn viewport_shaders_validate() {
     for (name, source) in [
-        ("viewport", include_str!("../src/gpu/viewport.wgsl")),
-        (
-            "shadow fallback",
-            include_str!("../src/gpu/shadow_map.wgsl"),
-        ),
-        ("resolve", include_str!("../src/gpu/resolve.wgsl")),
-        ("nv12", include_str!("../src/gpu/nv12.wgsl")),
+        ("viewport", include_str!("../gpu/viewport.wgsl")),
+        ("shadow fallback", include_str!("../gpu/shadow_map.wgsl")),
+        ("resolve", include_str!("../gpu/resolve.wgsl")),
+        ("nv12", include_str!("../gpu/nv12.wgsl")),
     ] {
         let module = naga::front::wgsl::parse_str(source)
             .unwrap_or_else(|e| panic!("{name}: {}", e.emit_to_string(source)));
@@ -92,7 +89,7 @@ fn evaluate(
 
 #[test]
 fn nv12_round_trips_through_the_vendored_gpui_matrix() {
-    let module = naga::front::wgsl::parse_str(include_str!("../src/gpu/nv12.wgsl")).unwrap();
+    let module = naga::front::wgsl::parse_str(include_str!("../gpu/nv12.wgsl")).unwrap();
     let (_, convert) = module
         .functions
         .iter()
@@ -106,7 +103,7 @@ fn nv12_round_trips_through_the_vendored_gpui_matrix() {
             _ => None,
         })
         .unwrap();
-    let metal = include_str!("../../../vendor/gpui-apple/src/shaders.metal");
+    let metal = include_str!("../../../../vendor/gpui-apple/src/shaders.metal");
     let transform = metal
         .split("const float4x4 ycbcrToRGBTransform =")
         .nth(1)
@@ -166,7 +163,7 @@ fn nv12_round_trips_through_the_vendored_gpui_matrix() {
 #[test]
 fn shadow_filter_depth_tracks_the_receiver_plane() {
     use glam::{DMat4, DVec3, DVec4};
-    let module = naga::front::wgsl::parse_str(include_str!("../src/gpu/shadow_map.wgsl")).unwrap();
+    let module = naga::front::wgsl::parse_str(include_str!("../gpu/shadow_map.wgsl")).unwrap();
     let (_, gradient) = module
         .functions
         .iter()
@@ -229,7 +226,7 @@ fn shadow_filter_depth_tracks_the_receiver_plane() {
 
 #[test]
 fn shadow_filter_bias_covers_bilinear_samples_at_every_texel_phase() {
-    let module = naga::front::wgsl::parse_str(include_str!("../src/gpu/shadow_map.wgsl")).unwrap();
+    let module = naga::front::wgsl::parse_str(include_str!("../gpu/shadow_map.wgsl")).unwrap();
     let (_, filter) = module
         .functions
         .iter()
@@ -284,7 +281,7 @@ fn shadow_filter_bias_covers_bilinear_samples_at_every_texel_phase() {
 
 #[test]
 fn occupancy_storage_layout_and_epsilon_match_the_host() {
-    let module = naga::front::wgsl::parse_str(include_str!("../src/gpu/viewport.wgsl")).unwrap();
+    let module = naga::front::wgsl::parse_str(include_str!("../gpu/viewport.wgsl")).unwrap();
     let (_, layout) = module
         .types
         .iter()
@@ -304,6 +301,6 @@ fn occupancy_storage_layout_and_epsilon_match_the_host() {
         .unwrap();
     assert_eq!(
         evaluate(&module.global_expressions, epsilon.init, &[]),
-        vec![f64::from(voxelite_render::SHADOW_EPSILON)]
+        vec![f64::from(crate::occupancy::SHADOW_EPSILON)]
     );
 }

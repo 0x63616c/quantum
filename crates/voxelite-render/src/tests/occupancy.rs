@@ -1,7 +1,7 @@
 //! Incremental occupancy must match a fresh visible composite, including uploads.
+use crate::occupancy::{Occupancy, OccupancyCache};
 use proptest::prelude::*;
 use voxelite_core::*;
-use voxelite_render::*;
 fn execute(engine: &mut Engine, command: Command) {
     engine
         .execute(Transaction {

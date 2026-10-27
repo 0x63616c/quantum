@@ -31,7 +31,7 @@ fn exports_preserve_voxl_history_and_disabled_exporters_do_not_break_save_or_und
         let job = editor.prepare_export(&format.id).unwrap();
         let completion = job.run(&SnapshotExport {
             snapshot: editor.snapshot(),
-            options: &options,
+            render_view: &render_view(&options),
         });
         assert!(!editor.finish_export(completion).unwrap().is_empty());
     }
@@ -42,7 +42,7 @@ fn exports_preserve_voxl_history_and_disabled_exporters_do_not_break_save_or_und
     let job = editor.prepare_export(&png.id).unwrap();
     let completion = job.run(&SnapshotExport {
         snapshot: editor.snapshot(),
-        options: &options,
+        render_view: &render_view(&options),
     });
     editor
         .set_plugin_enabled("dev.voxelite.exporters", false)

@@ -84,7 +84,7 @@ impl EditorView {
                 self.editor
                     .finish_export(job.run(&voxelite_plugin_host::SnapshotExport {
                         snapshot: self.editor.snapshot(),
-                        options: &options,
+                        render_view: &voxelite_app::editor::render_view(&options),
                     }))?;
             crate::web::download(
                 &format!("{}.{}", self.editor.snapshot().name, ext),

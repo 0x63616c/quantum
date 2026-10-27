@@ -429,7 +429,11 @@ fn manager_exports_formats_and_registry_pal_encoder_use_the_same_bytes() {
     .unwrap();
     let export_cx = SnapshotExport {
         snapshot: &snapshot,
-        options: &Default::default(),
+        render_view: &|_| {
+            Err(voxelite_plugin_api::ExportError::Invalid(
+                "palette export does not render".into(),
+            ))
+        },
     };
     let bytes = host.dispatch_export(PAL, &export_cx).unwrap().unwrap();
     assert_eq!(bytes, to_pal(&snapshot.palette).unwrap().as_bytes());
