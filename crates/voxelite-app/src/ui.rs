@@ -7,6 +7,8 @@ mod agent;
 mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
+#[cfg(target_os = "linux")]
+mod capture;
 mod command_palette;
 mod comments;
 mod history;
@@ -633,6 +635,10 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        #[cfg(target_os = "linux")]
+        if self.capture_status(e, cx) {
+            return;
+        }
         self.reconcile_palette_panel(window, cx);
         #[cfg(target_family = "wasm")]
         if self.settings_modal.is_some() {
@@ -2358,7 +2364,7 @@ impl Render for EditorView {
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
-            .child(self.statusbar(f32::from(size.width) < 1200.0))
+            .child(self.statusbar(f32::from(size.width) < metrics::STATUS_COMPACT_WIDTH))
             .children(overlay.map(|overlay| {
                 div()
                     .id("overlay")

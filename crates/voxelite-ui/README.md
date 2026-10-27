@@ -30,3 +30,18 @@ StatusBar and StatusSegment reserve physical widths using Geist Mono's advance.
 `fixed_slot` uses nonbreaking padding, an em-dash placeholder, and `+` on overflow;
 coordinates, dimensions and full box counts have explicit tested cell budgets.
 Keep telemetry in fixed slots and the message in a middle `flex_1` region.
+
+## Native visual checks
+
+From the repository root, run `BIN=/path/to/voxelite OUT=/path/to/shots
+scripts/capture-ui-polish.sh`. It requires Xvfb, xdotool, ImageMagick and Python
+with Pillow; xfwm4 enables the real fullscreen transition check. The same script
+accepts the baseline binary and tolerates missing features. It records full and
+compact windows, About and acknowledgements, Updates, View menu, and both
+fullscreen labels.
+
+The explicit `VOXELITE_CAPTURE_STATUS` switch enables Linux-only status fixtures
+for this script. They affect only the readout, never voxel tool input or document
+state. `statusbar-stability.png` compares positive, negative, three-digit, i32
+extreme and placeholder values; `statusbar-separators.json` records the painted
+separator columns so identical positions can be checked independently of text.

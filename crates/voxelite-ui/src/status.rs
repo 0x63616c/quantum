@@ -57,7 +57,7 @@ pub struct StatusSegment {
     label: SharedString,
     value: String,
     cells: usize,
-    glyph: Option<SharedString>,
+    glyph: Option<(SharedString, Hsla)>,
 }
 impl StatusSegment {
     /// Construct a slot. Values are padded or truncated before rendering.
@@ -70,8 +70,8 @@ impl StatusSegment {
         }
     }
     /// Add a fixed-size leading icon.
-    pub fn icon(mut self, glyph: impl Into<SharedString>) -> Self {
-        self.glyph = Some(glyph.into());
+    pub fn icon(mut self, glyph: impl Into<SharedString>, color: impl Into<Hsla>) -> Self {
+        self.glyph = Some((glyph.into(), color.into()));
         self
     }
     /// Build; add `id` and a tooltip to this row without changing its geometry.
@@ -81,8 +81,13 @@ impl StatusSegment {
             .font_family(type_size::MONO)
             .text_size(px(type_size::CAPTION))
             .whitespace_nowrap()
-            .when_some(self.glyph, |d, glyph| {
-                d.child(icon(glyph).size(px(metrics::ICON_SM)).mr(px(space::XS)))
+            .when_some(self.glyph, |d, (glyph, color)| {
+                d.child(
+                    icon(glyph)
+                        .text_color(color)
+                        .size(px(metrics::ICON_SM))
+                        .mr(px(space::XS)),
+                )
             })
             .when(!self.label.is_empty(), |d| {
                 d.child(

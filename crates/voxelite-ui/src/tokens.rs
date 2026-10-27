@@ -241,6 +241,8 @@ pub mod metrics {
     pub const ICON_SM: f32 = 12.;
     /// Status bar height.
     pub const STATUS_HEIGHT: f32 = 28.;
+    /// Minimum window width for full-range selection telemetry.
+    pub const STATUS_COMPACT_WIDTH: f32 = 1360.;
     /// Toolbar height.
     pub const TOOLBAR_HEIGHT: f32 = 64.;
     /// Form row minimum height.

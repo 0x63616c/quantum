@@ -3,7 +3,9 @@ use super::{AnchoredTooltip, EditorView, TooltipSide, row};
 use gpui::{prelude::*, *};
 use voxelite_core::Pos;
 use voxelite_ui::tokens::{space, type_size};
-use voxelite_ui::{COORDINATE_CELLS, StatusBar, StatusSegment, ToolbarSeparator};
+use voxelite_ui::{
+    COORDINATE_CELLS, COUNT_CELLS, DIMENSION_CELLS, StatusBar, StatusSegment, ToolbarSeparator,
+};
 
 fn grouped(value: impl ToString) -> String {
     let value = value.to_string();
@@ -48,16 +50,20 @@ impl EditorView {
             .iter()
             .find(|layer| layer.id == self.editor.layer)
             .map_or("No layer", |layer| layer.name.as_str());
-        let selection = self
-            .editor
-            .box_start
-            .map(|start| selection_metrics(start, self.hover.unwrap_or(self.cursor)))
+        let (hover, box_start) = (self.hover, self.editor.box_start);
+        #[cfg(target_os = "linux")]
+        let (hover, box_start) = super::capture::status_fixture()
+            .map_or((hover, box_start), |position| {
+                (position, position.map(|_| [0; 3]))
+            });
+        let selection = box_start
+            .map(|start| selection_metrics(start, hover.unwrap_or(self.cursor)))
             .unwrap_or(([0; 3], 0));
-        // Coordinate slots cover all i32 values. Selection and model dimensions
-        // deliberately use compact slots: '+' indicates overflow, with the exact
-        // (up to 2^96) count available in the tooltip. No live value changes width.
-        let extent_cells = if compact { 3 } else { 5 };
-        let count_cells = if compact { 6 } else { 10 };
+        // Full slots cover the entire i32 coordinate domain and inclusive 2^96
+        // box volume. Compact selection slots use '+' on overflow; tooltips keep
+        // the exact values. Only the window-size breakpoint changes geometry.
+        let extent_cells = if compact { 3 } else { DIMENSION_CELLS };
+        let count_cells = if compact { 6 } else { COUNT_CELLS };
         let slot =
             |label, value: String, cells| StatusSegment::new(label, Some(value), cells).build();
         let position = row()
@@ -67,10 +73,7 @@ impl EditorView {
                 row()
                     .flex_shrink_0()
                     .child(slot(["X", "Y", "Z"][axis], String::new(), 0).text_color(t.axis(axis)))
-                    .child(
-                        StatusSegment::new("", self.hover.map(|p| p[axis]), COORDINATE_CELLS)
-                            .build(),
-                    )
+                    .child(StatusSegment::new("", hover.map(|p| p[axis]), COORDINATE_CELLS).build())
             }));
         let selection_row = row().id("status-selection").flex_shrink_0()
             .anchored_hint(format!("Box selection preview: {} × {} × {} · {} cells. No persistent selection remains after commit.", selection.0[0], selection.0[1], selection.0[2], selection.1), t, TooltipSide::Above)
@@ -98,8 +101,8 @@ impl EditorView {
                     .child(selection_row)
                     .child(ToolbarSeparator::line(t))
                     .child(
-                        StatusSegment::new("", Some(layer), if compact { 8 } else { 12 })
-                            .icon("layer")
+                        StatusSegment::new("", Some(layer), if compact { 8 } else { 16 })
+                            .icon("layer", t.muted())
                             .build()
                             .id("status-layer")
                             .anchored_hint(format!("Active layer: {layer}"), t, TooltipSide::Above),
