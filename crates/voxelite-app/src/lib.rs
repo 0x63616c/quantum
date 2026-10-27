@@ -6,7 +6,6 @@ pub mod core_plugin;
 pub use core_plugin::app_host;
 pub mod editor;
 pub mod frame_meter;
-pub mod gizmo;
 pub mod history;
 pub mod palettes;
 #[cfg(not(target_family = "wasm"))]

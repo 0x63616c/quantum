@@ -4,6 +4,9 @@ use voxelite_plugin_api::*;
 
 use super::*;
 
+#[path = "overlay_tests.rs"]
+mod overlay_tests;
+
 #[path = "transform_tests.rs"]
 mod transform_tests;
 
@@ -644,6 +647,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Deactivate => "deactivate",
                         Phase::Tool => "tool",
                         Phase::CommandTransform => "command_transform",
+                        Phase::Overlay => "overlay",
                     }
                 )
                 .unwrap()

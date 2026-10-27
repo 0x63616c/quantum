@@ -84,6 +84,17 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
             "unbound transform: {transform}"
         );
     }
+    let overlays: Vec<_> = host
+        .registry()
+        .render_passes()
+        .map(|(_, p)| p.id.clone())
+        .collect();
+    // Render passes can also bind renderer-specific behavior in future. Exercise
+    // every portable binding that this plugin supplies.
+    let overlays: Vec<_> = overlays
+        .into_iter()
+        .filter(|id| host.has_overlay(id).expect("overlay binding panicked"))
+        .collect();
     host.enable(id).expect("repeated enable must be a no-op");
     assert_eq!(host.timings().get(id, "activate").unwrap().count, 1);
 
@@ -111,6 +122,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
             "disabled tool remains bound: {tool}"
         );
     }
+    for overlay in &overlays {
+        assert!(
+            !host.has_overlay(overlay).unwrap(),
+            "disabled overlay remains bound: {overlay}"
+        );
+    }
     assert_eq!(host.timings().get(id, "deactivate").unwrap().count, 1);
     for transform in &transforms {
         assert!(
@@ -127,6 +144,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    for overlay in &overlays {
+        assert!(
+            host.has_overlay(overlay)
+                .expect("overlay binding panicked after reenable")
+        );
+    }
     for transform in &transforms {
         assert!(
             host.has_command_transform(transform)

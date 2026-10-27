@@ -20,7 +20,7 @@ macro_rules! operations {
                 match self { $($(#[$attr])* Self::$op => $id),+ }
             }
 
-            fn from_command_id(id: &str) -> Option<Self> {
+            pub(crate) fn from_command_id(id: &str) -> Option<Self> {
                 match id {
                     $($(#[$attr])* $id => Some(Self::$op),)+
                     _ => None,
@@ -574,7 +574,12 @@ mod tests {
         for (owner, command) in commands {
             let op = Op::from_command_id(&command.id).expect("command must have a dispatch Op");
             assert_eq!(op.command_id(), command.id);
-            assert!(command.id.starts_with(&format!("{owner}.")));
+            if op == Op::Grid {
+                // Ownership moved; the persisted shell identity did not.
+                assert_eq!(owner.as_str(), "dev.voxelite.gizmo-grid");
+            } else {
+                assert!(command.id.starts_with(&format!("{owner}.")));
+            }
         }
         assert_eq!(Op::from_command_id("dev.voxelite.unknown.command"), None);
     }
