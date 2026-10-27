@@ -10,6 +10,7 @@ struct Globals {
     grid: vec4<f32>,
     grid_color: vec4<f32>,
     shadow_settings: vec4<f32>, // inverse map size, world-space normal offset, reserved
+    ambient_occlusion: vec4<f32>, // strength, reserved
 };
 @group(0) @binding(0) var<uniform> globals: Globals;
 // Packed ABI from occupancy.rs: 80-byte header, 16 words per 8³ brick,
@@ -140,7 +141,12 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
     if diffuse > 0.0 {
         if trace_shadow(v.local + v.normal * SHADOW_EPSILON, globals.light.xyz) { shadow = 0.2; }
     }
-    let illumination = (0.44 + 0.56 * diffuse * shadow) * v.color_ao.a;
+    // Keep the original interpolated value untouched at the default strength.
+    var ao = v.color_ao.a;
+    if globals.ambient_occlusion.x != 1.0 {
+        ao = 1.0 - (1.0 - ao) * globals.ambient_occlusion.x;
+    }
+    let illumination = (0.44 + 0.56 * diffuse * shadow) * ao;
     var out: Fragment;
     out.color = vec4(v.color_ao.rgb * illumination, 1.0);
     let face = dot(abs(v.normal), vec3(1.0, 3.0, 5.0)) + max(0.0, dot(v.normal, vec3(1.0)));

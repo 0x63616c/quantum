@@ -609,6 +609,10 @@ fn render_cameras_limits_and_exports_are_read_only() {
         json!({"views":["iso"],"camera":{"eye":[5,5,5],"target":[1,1,1],"up":[0,1,0],"projection":"orthographic","ortho_height":5}}),
         json!({"camera":{"eye":[0,0,0],"target":[0,0,0],"up":[0,1,0],"projection":"orthographic","ortho_height":5}}),
         json!({"views":["iso","front","right","back","top","left"],"width":1024,"height":1024}),
+        json!({"ambient_occlusion_strength":-0.1}),
+        json!({"ambient_occlusion_strength":2.1}),
+        json!({"ambient_occlusion_strength":null}),
+        json!({"ambient_occlusion_strength":"1"}),
     ] {
         let mut args = args;
         args["model_id"] = f.model.clone();

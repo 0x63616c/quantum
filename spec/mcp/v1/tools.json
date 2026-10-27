@@ -3364,6 +3364,13 @@
         ]
       },
       "properties": {
+        "ambient_occlusion_strength": {
+          "default": 1,
+          "description": "Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.",
+          "maximum": 2,
+          "minimum": 0,
+          "type": "number"
+        },
         "background": {
           "items": {
             "maximum": 255,
@@ -8671,6 +8678,13 @@
         ]
       },
       "properties": {
+        "ambient_occlusion_strength": {
+          "default": 1,
+          "description": "Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.",
+          "maximum": 2,
+          "minimum": 0,
+          "type": "number"
+        },
         "background": {
           "items": {
             "maximum": 255,

@@ -5,7 +5,7 @@
 use crate::chunk_mesh::{ChunkMeshes, MeshVertex};
 use crate::occupancy::{Occupancy, OccupancyCache};
 use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
-use crate::{Camera, Projection, RenderError, RenderResult};
+use crate::{AmbientOcclusionStrength, Camera, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use std::time::Instant;
 use std::{
@@ -35,6 +35,9 @@ pub struct Style {
     pub background: [f32; 4],
     /// Draw voxel edge outlines.
     pub outline: bool,
+    /// Local voxel contact shading; default one preserves baked vertex AO exactly.
+    /// Applied per frame without rebuilding chunk geometry; zero disables AO.
+    pub ambient_occlusion_strength: AmbientOcclusionStrength,
     /// Optional world grid [height, minimum X/Z, maximum X/Z, spacing],
     /// supplied by the host and composited behind the model.
     pub grid: Option<[f32; 4]>,
@@ -60,6 +63,7 @@ struct Globals {
     grid: [f32; 4],
     grid_color: [f32; 4],
     shadow_settings: [f32; 4],
+    ambient_occlusion: [f32; 4],
 }
 struct ChunkBuffer {
     buffer: wgpu::Buffer,
@@ -431,6 +435,7 @@ impl Viewport {
                 0.0,
                 0.0,
             ],
+            ambient_occlusion: [style.ambient_occlusion_strength.get() as f32, 0.0, 0.0, 0.0],
         };
 
         self.queue

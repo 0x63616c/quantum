@@ -107,6 +107,7 @@ impl EditorView {
         let style = voxelite_render::gpu::Style {
             background: [background, background, background, 1.],
             outline: RenderOptions::default().outline,
+            ambient_occlusion_strength: self.viewport.ambient_occlusion_strength,
             grid: grid.map(|grid| {
                 [
                     grid.plane as f32 + grid.offset as f32,

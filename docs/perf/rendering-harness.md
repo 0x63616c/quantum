@@ -24,6 +24,7 @@ old Worker/NV12 profiling JSON.
 
 The fixed style, `app-dark-grid-v1`, is the app's dark appearance: black opaque
 background, `RenderOptions::default()` outlines off, default ground grid enabled.
+AO strength is fixed at its default 1.0, independent of saved app preferences.
 It mirrors `ui/viewport/gpu_viewport.rs`, `Theme::Dark::line()` (`#232323`), and
 the built-in gizmo-grid overlay: bounds minimum Y minus 0.05, X/Z extent plus
 16 cells, spacing 4, opacity 0.24. The system appearance preference is deliberately

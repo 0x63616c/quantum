@@ -4,11 +4,13 @@
 //! CPU rasterization ([`View`], [`RenderOptions`], [`RenderedImage`], [`RasterCache`],
 //! [`render`]), [`RenderError`]/[`RenderResult`], and the optional `gpu` module.
 //! Occupancy, chunk meshes, shadow traversal and GPU resources are implementation details.
+mod ambient_occlusion;
 mod camera;
 mod camera_transition;
 pub use camera_transition::*;
 mod occupancy;
 mod raster;
+pub use ambient_occlusion::AmbientOcclusionStrength;
 pub use camera::{Camera, PresetView, Projection, visible_bounds};
 pub use raster::{RasterCache, RenderOptions, RenderedImage, View, render};
 

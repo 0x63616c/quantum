@@ -230,3 +230,60 @@ fn cached_raster_matches_stateless_through_camera_and_visibility_changes() {
         }
     }
 }
+
+#[test]
+fn ao_strength_preserves_default_pixels_and_only_darkens_contacts() {
+    // Three touching voxels form a concave step; a convex cube alone has no AO.
+    let snapshot: Snapshot = serde_json::from_slice(include_bytes!(
+        "../../voxelite-export/tests/golden/scene.json"
+    ))
+    .unwrap();
+    let cache = RasterCache::default();
+    for shadows in [false, true] {
+        let mut options = RenderOptions {
+            shadows,
+            ..options()
+        };
+        let original = render(&snapshot, &options).unwrap();
+        options.ambient_occlusion_strength = AmbientOcclusionStrength::new(1.0).unwrap();
+        assert_eq!(original, render(&snapshot, &options).unwrap());
+        options.ambient_occlusion = false;
+        let disabled = render(&snapshot, &options).unwrap();
+        options.ambient_occlusion = true;
+        options.ambient_occlusion_strength = AmbientOcclusionStrength::OFF;
+        assert_eq!(disabled, render(&snapshot, &options).unwrap());
+        assert_ne!(disabled.rgba, original.rgba);
+
+        let mut previous = disabled;
+        for strength in [0.5, 1.0, 2.0] {
+            options.ambient_occlusion_strength = AmbientOcclusionStrength::new(strength).unwrap();
+            let next = render(&snapshot, &options).unwrap();
+            assert_eq!(next, cache.render(&snapshot, &options).unwrap());
+            assert_eq!(next.camera, previous.camera);
+            assert_eq!(next.quads, previous.quads);
+            assert_ne!(next.rgba, previous.rgba);
+            for (a, b) in previous
+                .rgba
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(next.rgba.as_chunks::<4>().0)
+            {
+                assert_eq!(a[3], b[3], "AO must preserve coverage");
+                assert!((0..3).all(|c| b[c] <= a[c]), "increasing AO only darkens");
+            }
+            previous = next;
+        }
+    }
+}
+
+#[test]
+fn ao_leaves_unoccluded_surfaces_unchanged() {
+    let snapshot = scene();
+    let mut options = options();
+    let original = render(&snapshot, &options).unwrap();
+    for strength in [0.0, 0.5, 2.0] {
+        options.ambient_occlusion_strength = AmbientOcclusionStrength::new(strength).unwrap();
+        assert_eq!(original, render(&snapshot, &options).unwrap());
+    }
+}
