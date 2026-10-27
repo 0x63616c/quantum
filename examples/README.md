@@ -40,3 +40,13 @@ cargo run --release --locked -p voxelite-export --example cottage
 ```
 
 It additionally writes the GLB and reference PNG views under `docs/screenshots`.
+
+To render small AO-off/default comparisons of the pinned workshop, the export
+step fixture and the single-voxel format fixture, without modifying the models:
+
+```sh
+cargo run --release --locked -p voxelite-export --example cottage -- --ao-comparisons
+```
+
+The six 384² PNGs go to `docs/screenshots/ao` (an optional second argument changes
+the output directory). See [the comparison notes](../docs/ambient-occlusion.md).

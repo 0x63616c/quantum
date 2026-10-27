@@ -7,29 +7,32 @@ mod theme;
 mod ui;
 #[cfg(target_os = "macos")]
 pub mod updater;
-use gpui::{prelude::*, *};
+use gpui::*;
 use std::{path::PathBuf, time::Duration};
 use theme::Theme;
 use voxelite_app::editor::Editor;
 
 struct Options {
     path: Option<PathBuf>,
+    example: bool,
     theme: Option<Theme>,
     exit_after: Option<u64>,
     viewport_png: Option<PathBuf>,
     session_socket: Option<PathBuf>,
 }
-fn options() -> anyhow::Result<Options> {
+fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     let mut options = Options {
         path: None,
+        example: false,
         theme: None,
         exit_after: None,
         viewport_png: None,
         session_socket: None,
     };
-    let mut args = std::env::args().skip(1);
+    let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--example" => options.example = true,
             "--session-socket" => {
                 options.session_socket = Some(
                     args.next()
@@ -64,7 +67,7 @@ fn options() -> anyhow::Result<Options> {
             }
             "--help" | "-h" => {
                 println!(
-                    "Voxelite native voxel editor\n\nvoxelite [project.voxl] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the bundled autumn-workshop diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
+                    "Voxelite native voxel editor\n\nvoxelite [project.voxl] [--example] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the welcome window.\n--example opens the bundled autumn-workshop diorama for exploration and captures.\n--viewport-png without a path renders that diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
                 );
                 std::process::exit(0);
             }
@@ -75,16 +78,20 @@ fn options() -> anyhow::Result<Options> {
             }
         }
     }
+    anyhow::ensure!(
+        !options.example || options.path.is_none(),
+        "--example cannot be combined with a project path"
+    );
     Ok(options)
 }
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
-    let options = options()?;
-    let editor = match options.path {
-        Some(path) => Editor::open(&path)?,
-        None => Editor::example()?,
-    };
+    let options = options(std::env::args().skip(1))?;
     if let Some(path) = options.viewport_png {
+        let editor = match options.path.as_ref() {
+            Some(path) => Editor::open(path)?,
+            None => Editor::example()?,
+        };
         let format = editor.export_format("png")?;
         let job = editor.prepare_export(&format.id)?;
         let options = voxelite_render::RenderOptions {
@@ -105,6 +112,15 @@ fn main() -> anyhow::Result<()> {
         std::fs::write(path, bytes)?;
         return Ok(());
     }
+    let editor = if options.example {
+        Some(Editor::example()?)
+    } else {
+        options
+            .path
+            .as_ref()
+            .map(|path| Editor::open(path))
+            .transpose()?
+    };
     gpui_platform::application()
         .with_assets(assets::Assets)
         .run(move |cx| {
@@ -115,36 +131,13 @@ fn main() -> anyhow::Result<()> {
                 .expect("bundled fonts");
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
-            let bounds = Bounds::centered(None, size(px(1440.0), px(900.0)), cx);
-            if let Err(error) = cx.open_window(
-                WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    titlebar: if cfg!(target_os = "macos") {
-                        Some(TitlebarOptions {
-                            title: Some("Voxelite".into()),
-                            appears_transparent: true,
-                            traffic_light_position: Some(point(px(20.0), px(24.0))),
-                        })
-                    } else {
-                        None
-                    },
-                    app_owns_titlebar_drag: cfg!(target_os = "macos"),
-                    window_min_size: Some(size(px(1024.0), px(640.0))),
-                    app_id: Some("dev.voxelite.editor".into()),
-                    ..Default::default()
-                },
-                |window, cx| {
-                    cx.new(|cx| {
-                        ui::EditorView::new(
-                            editor,
-                            options.theme,
-                            options.session_socket,
-                            window,
-                            cx,
-                        )
-                    })
-                },
-            ) {
+            ui::welcome::init(options.theme, options.session_socket, cx);
+            let result = if let Some(editor) = editor {
+                ui::welcome::open_editor(editor, cx)
+            } else {
+                ui::welcome::show(cx).map(|_| ())
+            };
+            if let Err(error) = result {
                 eprintln!("Cannot open Voxelite: {error}");
                 cx.quit();
             }
@@ -165,4 +158,37 @@ fn main() -> anyhow::Result<()> {
             cx.activate(true);
         });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Options, Theme, options};
+    use std::path::PathBuf;
+
+    fn parse(args: &[&str]) -> anyhow::Result<Options> {
+        options(args.iter().map(|arg| (*arg).to_owned()))
+    }
+
+    #[test]
+    fn startup_distinguishes_welcome_path_and_explicit_capture_fixture() {
+        let welcome = parse(&[]).unwrap();
+        assert!(welcome.path.is_none() && !welcome.example);
+        let path = parse(&["scene.voxl"]).unwrap();
+        assert_eq!(path.path, Some(PathBuf::from("scene.voxl")));
+        assert!(!path.example);
+        let example = parse(&["--example", "--theme", "dark"]).unwrap();
+        assert!(example.example && example.path.is_none());
+        assert_eq!(example.theme, Some(Theme::Dark));
+        assert!(parse(&["--example", "scene.voxl"]).is_err());
+        assert!(parse(&["scene.voxl", "other.voxl"]).is_err());
+    }
+
+    #[test]
+    fn display_free_capture_keeps_its_optional_path() {
+        let capture = parse(&["--viewport-png", "preview.png"]).unwrap();
+        assert_eq!(capture.viewport_png, Some(PathBuf::from("preview.png")));
+        assert!(capture.path.is_none());
+        let capture = parse(&["scene.voxl", "--viewport-png", "preview.png"]).unwrap();
+        assert_eq!(capture.path, Some(PathBuf::from("scene.voxl")));
+    }
 }

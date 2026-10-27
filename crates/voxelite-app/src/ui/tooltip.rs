@@ -2,10 +2,13 @@
 use super::{Hint, HintText, Theme};
 use gpui::{prelude::*, *};
 use std::{cell::Cell, rc::Rc};
+use voxelite_ui::tokens::{metrics, space};
 
 #[derive(Clone, Copy)]
 pub(super) enum TooltipSide {
     Right,
+    /// Retain the established mirror tooltip position while the button becomes square.
+    Mirror(usize),
     Below,
     Above,
 }
@@ -22,21 +25,29 @@ impl Render for AnchoredHint {
         let (anchor, position) = match self.side {
             TooltipSide::Right => (
                 Anchor::LeftCenter,
-                point(bounds.right() + px(8.0), bounds.center().y),
+                point(bounds.right() + px(space::MD), bounds.center().y),
+            ),
+            TooltipSide::Mirror(axis) => (
+                Anchor::LeftCenter,
+                point(
+                    bounds.right() + px(space::MD + metrics::MIRROR_HINT_X),
+                    bounds.center().y
+                        + px(metrics::MIRROR_HINT_Y + axis as f32 * metrics::MIRROR_HINT_ROW),
+                ),
             ),
             TooltipSide::Below => (
                 Anchor::TopCenter,
-                point(bounds.center().x, bounds.bottom() + px(8.0)),
+                point(bounds.center().x, bounds.bottom() + px(space::MD)),
             ),
             TooltipSide::Above => (
                 Anchor::BottomCenter,
-                point(bounds.center().x, bounds.top() - px(8.0)),
+                point(bounds.center().x, bounds.top() - px(space::MD)),
             ),
         };
         anchored()
             .anchor(anchor)
             .position(position)
-            .snap_to_window_with_margin(px(4.0))
+            .snap_to_window_with_margin(px(space::XS))
             .child(self.hint.clone())
     }
 }

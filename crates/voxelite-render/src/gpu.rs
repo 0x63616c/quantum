@@ -5,7 +5,7 @@
 use crate::chunk_mesh::{ChunkMeshes, MeshVertex};
 use crate::occupancy::{Occupancy, OccupancyCache};
 use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
-use crate::{Camera, Projection, RenderError, RenderResult};
+use crate::{AmbientOcclusionStrength, Camera, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use std::time::Instant;
 use std::{
@@ -37,6 +37,9 @@ pub struct Style {
     pub background: [f32; 4],
     /// Draw voxel edge outlines.
     pub outline: bool,
+    /// Local voxel contact shading; default one preserves baked vertex AO exactly.
+    /// Applied per frame without rebuilding chunk geometry; zero disables AO.
+    pub ambient_occlusion_strength: AmbientOcclusionStrength,
     /// Optional world grid [height, minimum X/Z, maximum X/Z, spacing],
     /// supplied by the host and composited behind the model.
     pub grid: Option<[f32; 4]>,
@@ -62,6 +65,7 @@ struct Globals {
     grid: [f32; 4],
     grid_color: [f32; 4],
     shadow_settings: [f32; 4],
+    ambient_occlusion: [f32; 4],
 }
 struct ChunkBuffer {
     buffer: wgpu::Buffer,
@@ -72,6 +76,7 @@ struct Target {
 }
 struct Targets {
     copy_src: bool,
+    transient: bool,
     size: [u32; 2],
     color_ms: Target,
     geometry_ms: Target,
@@ -102,6 +107,9 @@ struct Viewport {
     stats: Option<FrameStats>,
     timer: Option<GpuTimer>,
     capture: bool,
+    /// Whether the adapter saves memory for attachments that are never re-read
+    /// (Apple GPUs keep them in tile memory): MSAA targets are then transient.
+    transient: bool,
 }
 impl Viewport {
     /// Initialize portable GPU resources; Metal presentation lives in mac.rs.
@@ -269,6 +277,7 @@ impl Viewport {
             stats: collect.then(FrameStats::default),
             timer,
             capture: false,
+            transient: adapter.get_info().transient_saves_memory == Some(true),
         })
     }
     /// Check asynchronous validation/device-loss errors even while the view is idle.
@@ -371,6 +380,7 @@ impl Viewport {
                 &self.resolve_layout,
                 size,
                 self.capture,
+                self.transient,
             ));
         }
         let target = self.targets.as_ref().unwrap();
@@ -430,6 +440,7 @@ impl Viewport {
                 0.0,
                 0.0,
             ],
+            ambient_occlusion: [style.ambient_occlusion_strength.get() as f32, 0.0, 0.0, 0.0],
         };
 
         self.queue
@@ -445,7 +456,7 @@ impl Viewport {
                 label: Some("fallback voxel shadow"),
                 timestamp_writes: self.timer.as_ref().map(|t| t.writes(0, 1)),
                 color_attachments: &[],
-                depth_stencil_attachment: Some(depth_attachment(&fallback.shadow.view)),
+                depth_stencil_attachment: Some(depth_attachment(&fallback.shadow.view, false)),
                 ..Default::default()
             });
             pass.set_pipeline(&fallback.shadow_pipeline);
@@ -463,13 +474,18 @@ impl Viewport {
                     Some(color_attachment(
                         &target.color_ms.view,
                         Some(&target.color.view),
+                        target.transient,
                     )),
                     Some(color_attachment(
                         &target.geometry_ms.view,
                         Some(&target.geometry.view),
+                        target.transient,
                     )),
                 ],
-                depth_stencil_attachment: Some(depth_attachment(&target.depth.view)),
+                depth_stencil_attachment: Some(depth_attachment(
+                    &target.depth.view,
+                    target.transient,
+                )),
                 ..Default::default()
             });
             let (pipeline, bind) = match &self.fallback {
@@ -488,7 +504,7 @@ impl Viewport {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("voxel sRGB resolve"),
                 timestamp_writes: self.timer.as_ref().map(|t| t.writes(4, 5)),
-                color_attachments: &[Some(color_attachment(&target.output.view, None))],
+                color_attachments: &[Some(color_attachment(&target.output.view, None, false))],
                 ..Default::default()
             });
             pass.set_pipeline(&self.resolve_pipeline);
@@ -735,13 +751,21 @@ impl Targets {
         layout: &wgpu::BindGroupLayout,
         size: [u32; 2],
         copy_src: bool,
+        transient: bool,
     ) -> Self {
+        // The multisampled attachments are only resolved, never read by a later
+        // pass, so they can be discarded after the main pass (tile-memory only).
+        let ms_usage = if transient {
+            wgpu::TextureUsages::TRANSIENT_ATTACHMENT
+        } else {
+            wgpu::TextureUsages::empty()
+        };
         let color_ms = target(
             device,
             size,
             wgpu::TextureFormat::Rgba8Unorm,
             SAMPLES,
-            wgpu::TextureUsages::empty(),
+            ms_usage,
             "MSAA color",
         );
         let geometry_ms = target(
@@ -749,7 +773,7 @@ impl Targets {
             size,
             wgpu::TextureFormat::Rgba16Float,
             SAMPLES,
-            wgpu::TextureUsages::empty(),
+            ms_usage,
             "MSAA normals/depth",
         );
         let depth = target(
@@ -757,7 +781,7 @@ impl Targets {
             size,
             wgpu::TextureFormat::Depth24Plus,
             SAMPLES,
-            wgpu::TextureUsages::empty(),
+            ms_usage,
             "MSAA depth",
         );
         let color = target(
@@ -806,6 +830,7 @@ impl Targets {
         Self {
             copy_src,
             size,
+            transient,
             color_ms,
             geometry_ms,
             depth,
@@ -819,23 +844,34 @@ impl Targets {
 fn color_attachment<'a>(
     view: &'a wgpu::TextureView,
     resolve_target: Option<&'a wgpu::TextureView>,
+    discard: bool,
 ) -> wgpu::RenderPassColorAttachment<'a> {
     wgpu::RenderPassColorAttachment {
         view,
         resolve_target,
         ops: wgpu::Operations {
             load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-            store: wgpu::StoreOp::Store,
+            store: store_op(discard),
         },
         depth_slice: None,
     }
 }
-fn depth_attachment(view: &wgpu::TextureView) -> wgpu::RenderPassDepthStencilAttachment<'_> {
+fn store_op(discard: bool) -> wgpu::StoreOp {
+    if discard {
+        wgpu::StoreOp::Discard
+    } else {
+        wgpu::StoreOp::Store
+    }
+}
+fn depth_attachment(
+    view: &wgpu::TextureView,
+    discard: bool,
+) -> wgpu::RenderPassDepthStencilAttachment<'_> {
     wgpu::RenderPassDepthStencilAttachment {
         view,
         depth_ops: Some(wgpu::Operations {
             load: wgpu::LoadOp::Clear(1.),
-            store: wgpu::StoreOp::Store,
+            store: store_op(discard),
         }),
         stencil_ops: None,
     }

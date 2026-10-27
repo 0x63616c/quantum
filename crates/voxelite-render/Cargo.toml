@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 voxelite-core.workspace = true
 voxelite-mesh.workspace = true
+serde.workspace = true
 voxelite-render-plan.workspace = true
 
 # Unsafe FFI is confined to the audited Metal interop module.

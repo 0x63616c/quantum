@@ -6,26 +6,27 @@ use crate::{
     theme::Theme,
 };
 use gpui::{prelude::*, *};
+use voxelite_ui::tokens::{space, type_size};
 
 pub(super) fn keyboard_guide(theme: Theme) -> Div {
     let columns = keyboard_guide_sections(ShortcutPlatform::current());
     row()
         .items_start()
-        .gap(px(32.0))
+        .gap(px(space::XXXL))
         .children(columns.iter().map(|sections| {
             div()
                 .flex()
                 .flex_col()
                 .flex_1()
-                .min_w(px(0.0))
-                .gap(px(16.0))
+                .min_w(px(space::NONE))
+                .gap(px(space::XL))
                 .children(sections.iter().map(|section| {
                     div()
                         .child(
                             div()
-                                .mb(px(6.0))
-                                .text_size(px(12.0))
-                                .line_height(px(16.0))
+                                .mb(px(space::SM))
+                                .text_size(px(type_size::BODY))
+                                .line_height(px(type_size::LINE_SM))
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_color(theme.muted())
                                 .child(section.title),
@@ -34,16 +35,16 @@ pub(super) fn keyboard_guide(theme: Theme) -> Div {
                             let keys = match binding {
                                 GuideShortcut::Action(op) => action_shortcut(*op),
                                 GuideShortcut::Keys(keys) => row()
-                                    .gap(px(4.0))
+                                    .gap(px(space::XS))
                                     .children(keys.iter().map(|key| shortcut(key))),
                                 GuideShortcut::Gesture(text) => {
-                                    div().text_size(px(12.0)).child(*text)
+                                    div().text_size(px(type_size::BODY)).child(*text)
                                 }
                             };
                             row()
-                                .h(px(28.0))
+                                .h(px(space::PANE))
                                 .justify_between()
-                                .gap(px(12.0))
+                                .gap(px(space::LG))
                                 .whitespace_nowrap()
                                 .child(div().child(*label))
                                 .child(keys.flex_shrink_0().text_color(theme.muted()))

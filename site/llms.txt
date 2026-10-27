@@ -13,3 +13,4 @@ All documentation in one file: [llms-full.txt](https://voxelite.worldwidewebb.co
 - [MCP tools](https://voxelite.worldwidewebb.co/docs/mcp.md): Explore Voxelite's MCP tool reference, including input and output schemas, atomic edits, rendered previews, revision guards, and error recovery.
 - [The .voxl format](https://voxelite.worldwidewebb.co/docs/format.md): Understand Voxelite's .voxl project format: JSON structure, voxel coordinates, palettes, layers, canonical hashes, parser limits, and compatibility.
 - [Agent skills](https://voxelite.worldwidewebb.co/docs/skills.md): Give your AI agent reusable Voxelite skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.
+- [Plugins](https://voxelite.worldwidewebb.co/docs/plugins.md): Explore Voxelite's built-in plugins, the core boundary, manifests, lifecycle, versioned project data, and a walkthrough for writing a plugin.

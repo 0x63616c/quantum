@@ -33,6 +33,12 @@ macro_rules! operations {
 operations! {
     New => "dev.voxelite.core.new",
     Open => "dev.voxelite.core.open",
+    #[cfg(not(target_family = "wasm"))]
+    OpenRecent => "dev.voxelite.core.open_recent",
+    #[cfg(not(target_family = "wasm"))]
+    ClearRecents => "dev.voxelite.core.clear_recents",
+    #[cfg(not(target_family = "wasm"))]
+    Welcome => "dev.voxelite.core.welcome",
     Save => "dev.voxelite.core.save",
     SaveAs => "dev.voxelite.core.save_as",
     #[cfg(target_family = "wasm")]
@@ -76,6 +82,14 @@ operations! {
     Hide => "dev.voxelite.core.hide",
     HideOthers => "dev.voxelite.core.hide_others",
     ShowAll => "dev.voxelite.core.show_all",
+}
+
+/// A native recent-menu item carries its path, never an unstable list index.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Debug, PartialEq, Eq, Action)]
+#[action(no_json)]
+pub struct OpenRecentProject {
+    pub path: std::path::PathBuf,
 }
 
 /// Immutable presentation of the host's enabled commands. The host owns plugin
@@ -285,6 +299,8 @@ impl Op {
                     Self::CheckUpdates if !updates_available => {
                         Err("Updates are unavailable in this build.")
                     }
+                    #[cfg(not(target_family = "wasm"))]
+                    Self::Welcome => Ok(()),
                     Self::About
                     | Self::Settings
                     | Self::CheckUpdates
@@ -549,6 +565,22 @@ impl ShellCommands {
                 .filter(|op| command_menu(self.command(*op), apple) == name)
                 .map(item)
                 .collect();
+            #[cfg(not(target_family = "wasm"))]
+            if name == "File" {
+                items.retain(|item| {
+                    !matches!(item, MenuItem::Action { action, .. }
+                    if action.as_any().downcast_ref::<Op>() == Some(&Op::ClearRecents))
+                });
+                for entry in &mut items {
+                    if matches!(entry, MenuItem::Action { action, .. }
+                        if action.as_any().downcast_ref::<Op>() == Some(&Op::OpenRecent))
+                    {
+                        *entry = MenuItem::Submenu(
+                            Menu::new(Op::OpenRecent.label()).items([item(Op::ClearRecents)]),
+                        );
+                    }
+                }
+            }
             if name == "Edit" {
                 items.splice(
                     2..2,
@@ -734,11 +766,25 @@ mod tests {
                 let menu_ops: Vec<_> = menus
                     .iter()
                     .flat_map(|menu| &menu.items)
-                    .filter_map(|item| match item {
-                        MenuItem::Action { action, .. } => {
-                            action.as_any().downcast_ref::<Op>().copied()
+                    .flat_map(|item| match item {
+                        MenuItem::Action { action, .. } => action
+                            .as_any()
+                            .downcast_ref::<Op>()
+                            .copied()
+                            .into_iter()
+                            .collect::<Vec<_>>(),
+                        #[cfg(not(target_family = "wasm"))]
+                        MenuItem::Submenu(menu) if menu.name == Op::OpenRecent.label() => {
+                            let mut ops = vec![Op::OpenRecent];
+                            ops.extend(menu.items.iter().filter_map(|item| match item {
+                                MenuItem::Action { action, .. } => {
+                                    action.as_any().downcast_ref::<Op>().copied()
+                                }
+                                _ => None,
+                            }));
+                            ops
                         }
-                        _ => None,
+                        _ => Vec::new(),
                     })
                     .collect();
                 assert!(owned.iter().all(|op| !menu_ops.contains(op)));
@@ -791,6 +837,40 @@ mod tests {
         host.enable("dev.voxelite.mirror").unwrap();
         for op in [Op::MirrorX, Op::MirrorY, Op::MirrorZ] {
             assert!(op.availability_in(&host, context).is_ok());
+        }
+    }
+
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
+    fn welcome_and_recent_commands_share_the_registry() {
+        let menus = menus_for_platform(true, |_| false, |_| true);
+        let file = menus.iter().find(|m| m.name == "File").unwrap();
+        let recent = file
+            .items
+            .iter()
+            .find_map(|item| match item {
+                MenuItem::Submenu(menu) if menu.name == Op::OpenRecent.label() => Some(menu),
+                _ => None,
+            })
+            .unwrap();
+        assert!(
+            recent
+                .items
+                .iter()
+                .any(|item| matches!(item, MenuItem::Action { action, .. }
+            if action.as_any().downcast_ref::<Op>() == Some(&Op::ClearRecents)))
+        );
+        let window = menus.iter().find(|m| m.name == "Window").unwrap();
+        assert!(
+            window
+                .items
+                .iter()
+                .any(|item| matches!(item, MenuItem::Action { action, .. }
+            if action.as_any().downcast_ref::<Op>() == Some(&Op::Welcome)))
+        );
+        for op in [Op::Welcome, Op::OpenRecent, Op::ClearRecents] {
+            assert!(search_on(op.label(), false, ShortcutPlatform::Apple).contains(&op));
+            assert_eq!(Op::from_command_id(op.command_id()), Some(op));
         }
     }
 
@@ -1025,6 +1105,8 @@ mod tests {
     #[test]
     fn settings_availability_keeps_editor_commands_disabled() {
         let available = [
+            #[cfg(not(target_family = "wasm"))]
+            Op::Welcome,
             Op::About,
             Op::Settings,
             Op::CheckUpdates,
@@ -1240,6 +1322,11 @@ mod tests {
         assert!(menus[0].items.iter().any(|item| matches!(item, MenuItem::SystemMenu(menu) if menu.menu_type == gpui::SystemMenuType::Services)));
         let items: Vec<_> = menus.iter().flat_map(|menu| &menu.items).collect();
         for op in shortcut_sheet(ShortcutPlatform::Apple) {
+            #[cfg(not(target_family = "wasm"))]
+            if matches!(op, Op::OpenRecent | Op::ClearRecents) {
+                // Nested placement is asserted by welcome_and_recent_commands_share_the_registry.
+                continue;
+            }
             assert_eq!(items.iter().filter(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(&op))).count(), 1, "missing or duplicated {op:?}");
             let menu = menus
                 .iter()
@@ -1325,6 +1412,8 @@ mod tests {
                         Some(
                             Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::FullScreen,
                         ) => true,
+                        #[cfg(not(target_family = "wasm"))]
+                        Some(Op::Welcome) => true,
                         Some(_) => context == "Editor",
                         None => context == "TextField",
                     };

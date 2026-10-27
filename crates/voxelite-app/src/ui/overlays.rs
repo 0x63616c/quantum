@@ -25,7 +25,7 @@ impl EditorView {
             .overlay_bounds
             .borrow()
             .get(id)
-            .map_or(point(px(0.), px(0.)), |b| b.origin);
+            .map_or(point(px(space::NONE), px(space::NONE)), |b| b.origin);
         let local = position - origin;
         OverlayInput {
             gesture,
@@ -223,7 +223,7 @@ impl EditorView {
                             .border_color(color(t, circle.border))
                             .bg(color(t, circle.fill))
                             .text_color(color(t, circle.text))
-                            .text_size(px(12.0))
+                            .text_size(px(type_size::BODY))
                             .font_weight(FontWeight::SEMIBOLD)
                             .children(circle.label)
                             .when(circle.highlighted, |d| d.shadow(focus_ring(t)))

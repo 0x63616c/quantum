@@ -9,6 +9,12 @@ images belong in `golden/apple-m2-metal/<scene>_<still>.png`, with the matching
 JSON metadata beside each image. Performance baselines belong in
 `baseline/<machine_key>.json`.
 
+Bench comparison gates process RSS separately with `--rss-pct 50 --rss-mb 128`:
+RSS fails only when its increase exceeds both 50% and 128 MB. RSS is current
+resident memory sampled at phase boundaries, not a peak, and varies with
+allocator history and OS memory compression. Vertex, occupancy, target and device
+allocated byte gates retain `--memory-pct 10` with no absolute slack.
+
 Reference files are intentionally absent from the initial harness change. Run
 `rebaseline-visual` and `bench-baseline` through the Rendering checks workflow on
 the mini, download the artifacts, review changed side-by-side images, and add the

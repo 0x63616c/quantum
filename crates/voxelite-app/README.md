@@ -1,7 +1,7 @@
 # Voxelite native editor
 
-A Rust/GPUI desktop shell for the shared Voxelite engine. It opens the bundled
-Autumn Workshop diorama, or a `.voxl` path supplied on the command line. The
+A Rust/GPUI desktop shell for the shared Voxelite engine. With no file argument,
+it opens the welcome window; a `.voxl` path opens directly in the editor. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
 toolbar, a persistent left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
@@ -65,6 +65,7 @@ Linux column denotes a macOS-only command.
 | Mirror Y | ⇧Y | Shift+Y |
 | Mirror Z | ⇧Z | Shift+Z |
 | Add comment pin | C | C |
+| Welcome | ⇧⌘1 | Ctrl+Shift+1 |
 | Minimize | ⌘M | Ctrl+M |
 | Hide Voxelite | ⌘H | — |
 | Hide Others | ⌥⌘H | — |
@@ -113,6 +114,26 @@ Layers can be added, selected, hidden and locked. Their metadata changes are
 undoable. History and the connected MCP feed show actual edits and counts.
 
 ## Files and rendering
+
+The welcome window offers **New Project**, **Open…**, and up to 12 recent projects.
+Tab moves between controls; focus Recent and use Up/Down, then Enter to open, or
+double-click a row. Opening or creating a project closes Welcome and shows the
+editor. If an editor is already open, its Save/Discard/Cancel flow protects edits.
+**Window → Welcome** (Cmd/Ctrl+Shift+1) reopens the launcher; the native
+**File → Open Recent** submenu opens a recent project directly. **Clear Recent
+Projects** removes the history without deleting project files. Closing the last
+window quits, following the existing desktop lifecycle.
+
+Recent projects persist in versioned `recents.json` beside `settings.json`, with
+canonical-path deduplication and missing files filtered out. The `thumbnails/`
+cache stores small CPU-rendered PNGs of saved documents, keyed by canonical path
+and file modification time. Saves update the preview; missing/stale previews are
+rendered lazily in the background while Welcome shows a placeholder. Preview
+failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
+`--example` opens the bundled Autumn Workshop with no write destination, including
+in the existing editor capture scripts. The browser editor still starts with
+Autumn Workshop, and `--viewport-png` without
+a path still renders that bundled example without opening a window.
 
 File menus use GPUI's native path prompts (the XDG desktop portal on Linux).
 The CLI path is also supported. Saved files preserve optional forward metadata,
@@ -282,7 +303,7 @@ Agent connection**. Copy the MCP configuration there, or choose an explicit path
 ```sh
 cargo build -p voxelite-app -p voxelite-mcp
 # In one terminal (the socket's parent directory must already exist):
-target/debug/voxelite --session-socket /tmp/voxelite-session.sock
+target/debug/voxelite examples/autumn-workshop.voxl --session-socket /tmp/voxelite-session.sock
 # Configure your MCP host to run this stdio bridge:
 target/debug/voxelite-mcp --connect /tmp/voxelite-session.sock
 ```

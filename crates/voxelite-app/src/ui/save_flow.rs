@@ -44,6 +44,8 @@ pub(super) struct SaveFlow {
     choice: SaveChoice,
     after_save: Option<Op>,
     dialog_open: bool,
+    #[cfg(not(target_family = "wasm"))]
+    open_path: Option<PathBuf>,
 }
 
 impl Default for SaveFlow {
@@ -53,6 +55,8 @@ impl Default for SaveFlow {
             choice: SaveChoice::Save,
             after_save: None,
             dialog_open: false,
+            #[cfg(not(target_family = "wasm"))]
+            open_path: None,
         }
     }
 }
@@ -90,6 +94,10 @@ impl SaveFlow {
 
     pub(super) fn cancel_confirmation(&mut self) {
         self.pending = None;
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.open_path = None;
+        }
     }
     pub(super) fn begin_dialog(&mut self) {
         self.dialog_open = true;
@@ -102,12 +110,17 @@ impl SaveFlow {
     fn cancel_save(&mut self) {
         self.finish_dialog();
         self.after_save = None;
+        self.open_path = None;
     }
 
     // Native saves end the dialog gate separately. Browser downloads are
     // synchronous and never open it; both consume the continuation on failure.
     pub(super) fn complete_save(&mut self, success: bool) -> Option<Op> {
         let next = self.after_save.take();
+        #[cfg(not(target_family = "wasm"))]
+        if !success {
+            self.open_path = None;
+        }
         next.filter(|_| success)
     }
 
@@ -119,7 +132,13 @@ impl SaveFlow {
                 self.after_save = Some(op);
                 PendingAction::Save
             }
-            SaveChoice::Cancel => PendingAction::Cancelled,
+            SaveChoice::Cancel => {
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    self.open_path = None;
+                }
+                PendingAction::Cancelled
+            }
         })
     }
 
@@ -145,7 +164,64 @@ impl SaveFlow {
 
 impl EditorView {
     #[cfg(not(target_family = "wasm"))]
+    pub(super) fn open_recent(
+        &mut self,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.enabled(Op::Open) {
+            return;
+        }
+        self.pause_history(cx);
+        self.menu = None;
+        self.commands.close();
+        self.palette_open = false;
+        self.save_flow.open_path = Some(path);
+        if !self
+            .save_flow
+            .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
+        {
+            self.open_dialog(cx);
+        }
+        window.focus(&self.focus, cx);
+        cx.notify();
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn load_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        self.save_flow.begin_dialog();
+        self.status = "Opening project…".into();
+        let task = cx.background_executor().spawn(async move {
+            voxelite_format::session::DocumentSession::open(&path, voxelite_core::Limits::default())
+                .map_err(voxelite_app::editor::EditorError::from)
+        });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, cx| {
+                this.save_flow.finish_dialog();
+                match result.and_then(Editor::from_session) {
+                    Ok(editor) => {
+                        this.replace_editor(editor, cx);
+                        this.status = "Project opened".into();
+                    }
+                    Err(error) => {
+                        this.status = error.to_string().into();
+                        this.error = true;
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     pub(super) fn open_dialog(&mut self, cx: &mut Context<Self>) {
+        if let Some(path) = self.save_flow.open_path.take() {
+            self.load_project(path, cx);
+            return;
+        }
         self.save_flow.begin_dialog();
         self.status = "Choose a project to open…".into();
         self.drag = None;
@@ -160,24 +236,7 @@ impl EditorView {
             let _ = this.update(cx, |this, cx| {
                 match result {
                     Ok(Ok(Some(paths))) if !paths.is_empty() => {
-                        let path = paths[0].clone();
-                        this.status = "Opening project…".into();
-                        // Load portable state off-thread; plugin instances stay on the UI thread.
-                        let task = cx.background_executor().spawn(async move {
-                            voxelite_format::session::DocumentSession::open(&path, voxelite_core::Limits::default())
-                                .map_err(voxelite_app::editor::EditorError::from)
-                        });
-                        cx.spawn(async move |this, cx| {
-                            let result = task.await;
-                            let _ = this.update(cx, |this, cx| {
-                                this.save_flow.finish_dialog();
-                                match result.and_then(Editor::from_session) {
-                                    Ok(editor) => { this.replace_editor(editor, cx); this.status = "Project opened".into(); }
-                                    Err(error) => { this.status = error.to_string().into(); this.error = true; }
-                                }
-                                cx.notify();
-                            });
-                        }).detach();
+                        this.load_project(paths[0].clone(), cx);
                     }
                     Ok(Ok(_)) => { this.save_flow.finish_dialog(); }
                     _ => {
@@ -204,10 +263,12 @@ impl EditorView {
                 match result {
                     Ok(saved) => {
                         this.editor.finish_save(saved);
+                        welcome::record(&this.editor, cx);
                         this.status = "Saved".into();
                         this.error = false;
                         if let Some(op) = next {
-                            this.run(op, cx);
+                            this.save_flow.begin_dialog();
+                            welcome::after_record(op, cx);
                         }
                     }
                     Err(error) => {
@@ -403,6 +464,37 @@ mod tests {
         for op in [Op::Save, Op::SaveAs, Op::Undo, Op::Commands] {
             assert!(!flow.confirm_if_dirty(op, || true));
             assert!(!flow.needs_confirmation());
+        }
+    }
+
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
+    fn recent_path_survives_save_but_is_discarded_on_cancel_and_failure() {
+        let mut flow = SaveFlow::default();
+        let path = std::path::PathBuf::from("project.voxl");
+        flow.open_path = Some(path.clone());
+        flow.confirm_if_dirty(Op::Open, || true);
+        assert_eq!(flow.resolve(SaveChoice::Save), Some(PendingAction::Save));
+        assert_eq!(flow.complete_save(true), Some(Op::Open));
+        assert_eq!(flow.open_path.take(), Some(path.clone()));
+        for cancel in 0..4 {
+            flow.open_path = Some(path.clone());
+            flow.confirm_if_dirty(Op::Open, || true);
+            match cancel {
+                0 => flow.cancel_confirmation(),
+                1 => {
+                    flow.resolve(SaveChoice::Cancel);
+                }
+                2 => {
+                    flow.resolve(SaveChoice::Save);
+                    flow.complete_save(false);
+                }
+                _ => {
+                    flow.resolve(SaveChoice::Save);
+                    flow.cancel_save();
+                }
+            }
+            assert!(flow.open_path.is_none());
         }
     }
 

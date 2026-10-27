@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+#[cfg(test)]
+mod tests;
+
 /// Integer world cell coordinate, with Y up.
 pub type Pos = [i32; 3];
 /// Maximum occupied cells summed over all layers.
@@ -242,6 +245,11 @@ impl Snapshot {
     }
     /// Validate every model invariant, including hidden layers and orphan anchors.
     pub fn validate(&self) -> Result<()> {
+        self.validate_against(None)
+    }
+    // Only reuse voxel checks from validated content with identical constraints.
+    fn validate_against(&self, previous: Option<&Self>) -> Result<()> {
+        let previous = previous.filter(|p| self.bounds == p.bounds && self.palette == p.palette);
         validate_name(&self.name)?;
         self.bounds.validate()?;
         self.palette.validate()?;
@@ -258,13 +266,26 @@ impl Snapshot {
             }
             voxels += l.voxels.len();
             chunks += l.voxels.chunk_count();
-            for (p, s) in l.voxels.iter() {
+            let validate_voxel = |(p, s)| {
                 if !self.bounds.contains(p) {
                     return Err(Error::OutOfBounds(p));
                 }
                 if self.palette.get(s).is_none() {
                     return Err(Error::Invalid(format!("undefined palette slot {s}")));
                 }
+                Ok(())
+            };
+            if let Some(old) = previous.and_then(|p| p.layers.iter().find(|old| old.id == l.id)) {
+                let changed = l.voxels.changed_chunks(&old.voxels);
+                // Retain the full scan's iteration order, including which invalid
+                // voxel is reported first when multiple edited chunks are invalid.
+                l.voxels
+                    .chunk_positions()
+                    .filter(|at| changed.binary_search(at).is_ok())
+                    .flat_map(|at| l.voxels.chunk_entries(at))
+                    .try_for_each(validate_voxel)?;
+            } else {
+                l.voxels.iter().try_for_each(validate_voxel)?;
             }
         }
         if voxels > MAX_VOXELS || chunks > MAX_CHUNKS {
@@ -436,7 +457,19 @@ impl Document {
     }
     /// Validate live and version content, hashes, parent references and version bytes.
     pub fn validate(&self) -> Result<()> {
-        self.content.validate()?;
+        self.validate_with_previous(None)
+    }
+    /// Validate all invariants, reusing voxel checks for unchanged layer chunks
+    /// only when bounds and palette are unchanged. New layers are scanned in full.
+    ///
+    /// `previous` must already be validated, as guaranteed by the engine invariant.
+    /// Public `validate()` always performs a full scan without this prerequisite.
+    pub(crate) fn validate_against(&self, previous: &Self) -> Result<()> {
+        self.validate_with_previous(Some(previous))
+    }
+    fn validate_with_previous(&self, previous: Option<&Self>) -> Result<()> {
+        self.content
+            .validate_against(previous.map(|p| &p.content))?;
         if self.content.extra.contains_key("extensions") {
             return Err(Error::Invalid(
                 "extensions must use the project namespace".into(),

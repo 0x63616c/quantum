@@ -59,6 +59,7 @@ optional = true
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 voxelite-mcp = { path = "../voxelite-mcp" }
 tempfile = "3"
+png.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }

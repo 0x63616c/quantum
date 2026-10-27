@@ -1,7 +1,7 @@
 use crate::occupancy::{Occupancy, OccupancyCache, SHADOW_EPSILON, trace_shadow};
 use crate::{
-    AMBIENT_ILLUMINATION, Camera, Lighting, PresetView, Projection, RenderError, RenderPlan,
-    RenderResult,
+    AMBIENT_ILLUMINATION, AmbientOcclusionStrength, Camera, Lighting, PresetView, Projection,
+    RenderError, RenderPlan, RenderResult,
 };
 use glam::{DVec2, DVec3};
 use std::{
@@ -39,6 +39,8 @@ pub struct RenderOptions {
     pub background: [u8; 4],
     /// Subtle local voxel contact shading.
     pub ambient_occlusion: bool,
+    /// AO multiplier when enabled: zero is off, one is the original shading (default).
+    pub ambient_occlusion_strength: AmbientOcclusionStrength,
     /// Cast deterministic directional shadows through the visible grid.
     pub shadows: bool,
     /// Darken silhouettes and visible creases.
@@ -59,6 +61,7 @@ impl Default for RenderOptions {
             },
             background: [0; 4],
             ambient_occlusion: true,
+            ambient_occlusion_strength: AmbientOcclusionStrength::default(),
             shadows: true,
             outline: false,
             passes: RenderPlan::standard(),
@@ -324,8 +327,11 @@ fn render_with_occupancy(
                                     }),
                                     light.as_vec3().to_array(),
                                 );
-                            let ao = if options.ambient_occlusion {
-                                ambient(p, normal, &cells)
+                            let ao = if options.ambient_occlusion
+                                && options.ambient_occlusion_strength
+                                    != AmbientOcclusionStrength::OFF
+                            {
+                                ambient(p, normal, &cells, options.ambient_occlusion_strength)
                             } else {
                                 1.0
                             };
@@ -474,7 +480,12 @@ fn triangle(b: &Basis, vertices: [Vertex; 3], slot: u16, face: u8, fragments: &m
         }
     }
 }
-fn ambient(p: DVec3, n: DVec3, cells: &HashMap<Pos, u16>) -> f64 {
+fn ambient(
+    p: DVec3,
+    n: DVec3,
+    cells: &HashMap<Pos, u16>,
+    strength: AmbientOcclusionStrength,
+) -> f64 {
     let axis = if n.x != 0.0 {
         0
     } else if n.y != 0.0 {
@@ -502,7 +513,8 @@ fn ambient(p: DVec3, n: DVec3, cells: &HashMap<Pos, u16>) -> f64 {
             occupied += 1.0;
         }
     }
-    1.0 - occupied * 0.035
+    // Multiplication by the default 1.0 preserves the original operation order.
+    1.0 - occupied * 0.035 * strength.get()
 }
 fn edge(f: &[Fragment], w: usize, h: usize, x: usize, y: usize) -> bool {
     let here = f[y * w + x];

@@ -64,6 +64,22 @@ occupancy buffer exceeds device limits or a scoped allocation/upload fails. The
 fallback persists for that viewport's lifetime; normal frames perform no shadow
 depth pass or fit. Device loss still selects the existing software fallback.
 
+## Ambient occlusion
+
+Settings → Viewport / Rendering exposes an AO toggle (on by default) and a
+strength slider from 0 to 2, with 1 preserving the original look. Both are saved
+in app-local `settings.json`. Changes apply to every open viewport, including
+the CPU fallback; frames rendered at an older strength are rejected.
+
+The GPU keeps the original per-vertex AO in chunk meshes and applies strength
+through a per-frame uniform in both shadow shaders. Changing strength does not
+rebuild geometry or occupancy. At strength 1 the interpolated AO value passes
+through unchanged. The CPU keeps its per-pixel voxel-neighbor samples and scales
+their darkening. Strength 0 disables only AO, leaving directional shadows intact.
+Exports and thumbnails use renderer defaults independently of viewport settings;
+MCP `render` and `export_png` accept an explicit `ambient_occlusion_strength`.
+See [CPU before/after comparisons](../ambient-occlusion.md).
+
 ## FPS integration and face banding regression
 
 The rebase retains main's native UI, gizmo, preferences, status bar and single-line
@@ -170,7 +186,7 @@ Earlier branch verification and platform constraints:
   the previous session. That artifact was removed and the check repeated; this
   is not a successful complete macOS build. Rust checking with that artifact
   had reached the app and GPUI patch, but did not validate Metal shaders/linking.
-- Workflow configuration targets `[self-hosted, homelab-voxelite]` on pushes to
+- Workflow configuration targeted `[self-hosted, homelab-voxelite]` at the time of this note (the workflows now use `[self-hosted, macOS, ARM64, xcode]`) on pushes to
   `main` and `perf/**`, plus manual dispatch. It runs `scripts/package-macos.sh`
   and uploads `dist/Voxelite.dmg` as the `Voxelite.dmg` artifact. No release or
   push was performed from this worktree; the workflow itself was not executed.

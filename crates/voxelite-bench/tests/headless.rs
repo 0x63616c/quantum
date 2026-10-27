@@ -42,6 +42,35 @@ fn tiny_real_viewport_capture_and_timestamps() {
 }
 
 #[test]
+#[ignore = "requires a Metal or Vulkan adapter (lavapipe is supported)"]
+fn ambient_occlusion_changes_live_without_remeshing() {
+    use voxelite_render::AmbientOcclusionStrength;
+    let snapshot = voxelite_bench::scenes::load("autumn").unwrap();
+    let bounds = snapshot.bounds;
+    let camera = Camera::fit(&snapshot, PresetView::Iso, 1.0, false).unwrap();
+    let mut gpu = block_on(Headless::new(HeadlessOptions::default())).unwrap();
+    let mut style = style(bounds);
+    let original = block_on(gpu.render(Some(snapshot), bounds, camera, [192, 192], style, true))
+        .unwrap()
+        .rgba
+        .unwrap();
+    for strength in [0.0, 0.5, 2.0, 1.0] {
+        style.ambient_occlusion_strength = AmbientOcclusionStrength::new(strength).unwrap();
+        let frame = block_on(gpu.render(None, bounds, camera, [192, 192], style, true)).unwrap();
+        assert_eq!(frame.stats.chunks_updated, 0);
+        let pixels = frame.rgba.unwrap();
+        if strength == 1.0 {
+            assert_eq!(
+                pixels, original,
+                "restoring default strength restores every pixel"
+            );
+        } else {
+            assert_ne!(pixels, original, "strength must reach the shader");
+        }
+    }
+}
+
+#[test]
 #[ignore = "renders autumn twice on a real adapter and writes diagnostic PNGs"]
 fn single_voxel_recolor_exceeds_default_visual_tolerance() {
     use voxelite_bench::{paths, scenes, visual};
