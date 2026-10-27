@@ -1,0 +1,1066 @@
+{
+ "meta": {
+  "name": "baseline-2026-10-26-d81e670",
+  "commit": "d81e67097e895080eccfcab7da7d58ec51f83556",
+  "date": "2026-10-26",
+  "renderer": "gpu::Worker Metal, 4x MSAA, 2x supersample, exact voxel shadows",
+  "viewport": "1032x808 logical, scale 2 (4128x3232 px target)",
+  "note": "M2 mini was under CI/build load during runs (load avg 12-80); M5 Pro in normal use. Raw per-frame JSONL copied alongside."
+ },
+ "runs": {
+  "m5pro/autumn/cold": {
+   "chip": "Apple M5 Pro",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 346.603,
+    "p95": 346.603,
+    "p99": 346.603,
+    "mean": 346.603
+   },
+   "fps_p50": 2.9,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 4128240.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132937216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/edit_1voxel": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 8.01,
+    "p95": 8.125,
+    "p99": 8.132,
+    "mean": 7.977
+   },
+   "fps_p50": 124.8,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132937216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/edit_cube16": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 17.441,
+    "p95": 17.788,
+    "p99": 17.971,
+    "mean": 17.427
+   },
+   "fps_p50": 57.3,
+   "draw_calls": 30,
+   "triangles": 33012,
+   "upload_bytes_p50": 2684520.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132969984,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/edit_cube40": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 49.684,
+    "p95": 57.077,
+    "p99": 59.895,
+    "mean": 50.592
+   },
+   "fps_p50": 20.1,
+   "draw_calls": 49,
+   "triangles": 30636,
+   "upload_bytes_p50": 2752920.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1133002752,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/edit_recolor": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 37.424,
+    "p95": 40.825,
+    "p99": 42.528,
+    "mean": 37.703
+   },
+   "fps_p50": 26.7,
+   "draw_calls": 30,
+   "triangles": 34230,
+   "upload_bytes_p50": 4107600.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1133002752,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/orbit_close": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 14.258,
+    "p95": 20.409,
+    "p99": 20.45,
+    "mean": 14.524
+   },
+   "fps_p50": 70.1,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132937216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/orbit_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 7.784,
+    "p95": 7.983,
+    "p99": 8.248,
+    "mean": 7.475
+   },
+   "fps_p50": 128.5,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132937216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/autumn/same_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 7.769,
+    "p95": 7.939,
+    "p99": 8.025,
+    "mean": 7.753
+   },
+   "fps_p50": 128.7,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132937216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/cold": {
+   "chip": "Apple M5 Pro",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 317.891,
+    "p95": 317.891,
+    "p99": 317.891,
+    "mean": 317.891
+   },
+   "fps_p50": 3.1,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 17903040.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148911616,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/edit_1voxel": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 16.626,
+    "p95": 20.466,
+    "p99": 23.755,
+    "mean": 16.402
+   },
+   "fps_p50": 60.1,
+   "draw_calls": 260,
+   "triangles": 149200,
+   "upload_bytes_p50": 636480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169096704,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/edit_cube16": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 22.273,
+    "p95": 26.469,
+    "p99": 27.141,
+    "mean": 22.24
+   },
+   "fps_p50": 44.9,
+   "draw_calls": 260,
+   "triangles": 148138,
+   "upload_bytes_p50": 1456560.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169129472,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/edit_cube40": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 54.462,
+    "p95": 59.69,
+    "p99": 61.415,
+    "mean": 54.411
+   },
+   "fps_p50": 18.4,
+   "draw_calls": 272,
+   "triangles": 147584,
+   "upload_bytes_p50": 2160480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169620992,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/edit_recolor": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 259.118,
+    "p95": 272.949,
+    "p99": 275.673,
+    "mean": 259.065
+   },
+   "fps_p50": 3.9,
+   "draw_calls": 257,
+   "triangles": 150768,
+   "upload_bytes_p50": 18092160.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169620992,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/edit_slab64": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 46.508,
+    "p95": 57.302,
+    "p99": 71.911,
+    "mean": 48.465
+   },
+   "fps_p50": 21.5,
+   "draw_calls": 259,
+   "triangles": 148838,
+   "upload_bytes_p50": 3966960.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1170227200,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/orbit_close": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 23.111,
+    "p95": 37.848,
+    "p99": 38.112,
+    "mean": 26.392
+   },
+   "fps_p50": 43.3,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169096704,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/orbit_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 10.442,
+    "p95": 15.465,
+    "p99": 15.513,
+    "mean": 11.049
+   },
+   "fps_p50": 95.8,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169096704,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain1m/same_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 7.8,
+    "p95": 7.931,
+    "p99": 7.96,
+    "mean": 7.761
+   },
+   "fps_p50": 128.2,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1169096704,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/sponge1m/cold": {
+   "chip": "Apple M5 Pro",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 521.98,
+    "p95": 521.98,
+    "p99": 521.98,
+    "mean": 521.98
+   },
+   "fps_p50": 1.9,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 109482720.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1242464256,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/sponge1m/edit_recolor": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 453.808,
+    "p95": 466.173,
+    "p99": 471.421,
+    "mean": 455.451
+   },
+   "fps_p50": 2.2,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 109482720.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1262649344,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/sponge1m/orbit_close": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 8.035,
+    "p95": 11.409,
+    "p99": 13.124,
+    "mean": 8.661
+   },
+   "fps_p50": 124.5,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1262649344,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/sponge1m/orbit_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 7.536,
+    "p95": 7.882,
+    "p99": 7.952,
+    "mean": 6.585
+   },
+   "fps_p50": 132.7,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1262649344,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/sponge1m/same_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 5.29,
+    "p95": 7.861,
+    "p99": 7.891,
+    "mean": 6.407
+   },
+   "fps_p50": 189.0,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1262649344,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/cold": {
+   "chip": "Apple M5 Pro",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 3304.657,
+    "p95": 3304.657,
+    "p99": 3304.657,
+    "mean": 3304.657
+   },
+   "fps_p50": 0.3,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 105116160.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1249673216,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/edit_1voxel": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 26.802,
+    "p95": 29.316,
+    "p99": 29.332,
+    "mean": 27.763
+   },
+   "fps_p50": 37.3,
+   "draw_calls": 1568,
+   "triangles": 875966,
+   "upload_bytes_p50": 450600.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269858304,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/edit_cube16": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 38.227,
+    "p95": 39.239,
+    "p99": 42.552,
+    "mean": 37.82
+   },
+   "fps_p50": 26.2,
+   "draw_calls": 1568,
+   "triangles": 874912,
+   "upload_bytes_p50": 1707840.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269940224,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/edit_cube40": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 68.456,
+    "p95": 74.143,
+    "p99": 74.719,
+    "mean": 68.935
+   },
+   "fps_p50": 14.6,
+   "draw_calls": 1580,
+   "triangles": 869710,
+   "upload_bytes_p50": 1095480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269760000,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/edit_recolor": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 3116.066,
+    "p95": 3341.761,
+    "p99": 3374.722,
+    "mean": 3141.343
+   },
+   "fps_p50": 0.3,
+   "draw_calls": 1562,
+   "triangles": 870500,
+   "upload_bytes_p50": 104460000.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269760000,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/edit_slab64": {
+   "chip": "Apple M5 Pro",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 46.061,
+    "p95": 47.593,
+    "p99": 47.671,
+    "mean": 45.753
+   },
+   "fps_p50": 21.7,
+   "draw_calls": 1574,
+   "triangles": 876144,
+   "upload_bytes_p50": 2412840.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1270169600,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/orbit_close": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 31.83,
+    "p95": 53.279,
+    "p99": 54.847,
+    "mean": 36.576
+   },
+   "fps_p50": 31.4,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269858304,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/orbit_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 20.119,
+    "p95": 23.135,
+    "p99": 23.193,
+    "mean": 18.898
+   },
+   "fps_p50": 49.7,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269858304,
+   "gpu_total_ms_p50": null
+  },
+  "m5pro/terrain10m/same_fit": {
+   "chip": "Apple M5 Pro",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 15.568,
+    "p95": 15.676,
+    "p99": 15.715,
+    "mean": 15.231
+   },
+   "fps_p50": 64.2,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1269858304,
+   "gpu_total_ms_p50": null
+  },
+  "m2/autumn/cold": {
+   "chip": "Apple M2",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 289.292,
+    "p95": 289.292,
+    "p99": 289.292,
+    "mean": 289.292
+   },
+   "fps_p50": 3.5,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 4128240.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132101632,
+   "gpu_total_ms_p50": 42.03
+  },
+  "m2/autumn/edit_1voxel": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 21.618,
+    "p95": 22.95,
+    "p99": 23.323,
+    "mean": 21.867
+   },
+   "fps_p50": 46.3,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132101632,
+   "gpu_total_ms_p50": 18.685
+  },
+  "m2/autumn/edit_cube16": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 44.602,
+    "p95": 48.229,
+    "p99": 56.752,
+    "mean": 45.177
+   },
+   "fps_p50": 22.4,
+   "draw_calls": 30,
+   "triangles": 33012,
+   "upload_bytes_p50": 2684520.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132134400,
+   "gpu_total_ms_p50": 18.651
+  },
+  "m2/autumn/edit_cube40": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 124.219,
+    "p95": 157.918,
+    "p99": 160.824,
+    "mean": 125.402
+   },
+   "fps_p50": 8.1,
+   "draw_calls": 49,
+   "triangles": 30636,
+   "upload_bytes_p50": 2752920.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132167168,
+   "gpu_total_ms_p50": 19.141
+  },
+  "m2/autumn/edit_recolor": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 83.685,
+    "p95": 100.898,
+    "p99": 114.387,
+    "mean": 85.619
+   },
+   "fps_p50": 11.9,
+   "draw_calls": 30,
+   "triangles": 34230,
+   "upload_bytes_p50": 4107600.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132167168,
+   "gpu_total_ms_p50": 19.032
+  },
+  "m2/autumn/orbit_close": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 41.749,
+    "p95": 66.405,
+    "p99": 66.573,
+    "mean": 44.411
+   },
+   "fps_p50": 24.0,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132101632,
+   "gpu_total_ms_p50": 38.961
+  },
+  "m2/autumn/orbit_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 21.215,
+    "p95": 26.403,
+    "p99": 27.327,
+    "mean": 21.084
+   },
+   "fps_p50": 47.1,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132101632,
+   "gpu_total_ms_p50": 17.998
+  },
+  "m2/autumn/same_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 21.2,
+    "p95": 21.372,
+    "p99": 21.877,
+    "mean": 20.851
+   },
+   "fps_p50": 47.2,
+   "draw_calls": 30,
+   "triangles": 34402,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1132101632,
+   "gpu_total_ms_p50": 18.618
+  },
+  "m2/terrain1m/cold": {
+   "chip": "Apple M2",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 817.052,
+    "p95": 817.052,
+    "p99": 817.052,
+    "mean": 817.052
+   },
+   "fps_p50": 1.2,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 17903040.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148076032,
+   "gpu_total_ms_p50": 34.582
+  },
+  "m2/terrain1m/edit_1voxel": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 44.154,
+    "p95": 50.341,
+    "p99": 52.552,
+    "mean": 44.454
+   },
+   "fps_p50": 22.6,
+   "draw_calls": 260,
+   "triangles": 149200,
+   "upload_bytes_p50": 636480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148076032,
+   "gpu_total_ms_p50": 25.959
+  },
+  "m2/terrain1m/edit_cube16": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 51.026,
+    "p95": 73.513,
+    "p99": 75.173,
+    "mean": 57.391
+   },
+   "fps_p50": 19.6,
+   "draw_calls": 260,
+   "triangles": 148138,
+   "upload_bytes_p50": 1456560.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148108800,
+   "gpu_total_ms_p50": 25.81
+  },
+  "m2/terrain1m/edit_cube40": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 212.457,
+    "p95": 253.074,
+    "p99": 255.007,
+    "mean": 205.213
+   },
+   "fps_p50": 4.7,
+   "draw_calls": 272,
+   "triangles": 147584,
+   "upload_bytes_p50": 2160480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148600320,
+   "gpu_total_ms_p50": 24.912
+  },
+  "m2/terrain1m/edit_recolor": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 801.915,
+    "p95": 1196.057,
+    "p99": 1226.763,
+    "mean": 836.097
+   },
+   "fps_p50": 1.2,
+   "draw_calls": 257,
+   "triangles": 150768,
+   "upload_bytes_p50": 18092160.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148600320,
+   "gpu_total_ms_p50": 24.236
+  },
+  "m2/terrain1m/edit_slab64": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 147.234,
+    "p95": 213.943,
+    "p99": 233.453,
+    "mean": 141.888
+   },
+   "fps_p50": 6.8,
+   "draw_calls": 259,
+   "triangles": 148838,
+   "upload_bytes_p50": 3966960.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1149206528,
+   "gpu_total_ms_p50": 27.236
+  },
+  "m2/terrain1m/orbit_close": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 76.581,
+    "p95": 127.423,
+    "p99": 136.319,
+    "mean": 84.828
+   },
+   "fps_p50": 13.1,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148076032,
+   "gpu_total_ms_p50": 74.19
+  },
+  "m2/terrain1m/orbit_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 30.828,
+    "p95": 46.804,
+    "p99": 47.719,
+    "mean": 32.359
+   },
+   "fps_p50": 32.4,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148076032,
+   "gpu_total_ms_p50": 28.22
+  },
+  "m2/terrain1m/same_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 21.359,
+    "p95": 22.765,
+    "p99": 23.276,
+    "mean": 21.34
+   },
+   "fps_p50": 46.8,
+   "draw_calls": 260,
+   "triangles": 149192,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1148076032,
+   "gpu_total_ms_p50": 18.395
+  },
+  "m2/sponge1m/cold": {
+   "chip": "Apple M2",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 1134.977,
+    "p95": 1134.977,
+    "p99": 1134.977,
+    "mean": 1134.977
+   },
+   "fps_p50": 0.9,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 109482720.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1241628672,
+   "gpu_total_ms_p50": 69.427
+  },
+  "m2/sponge1m/edit_recolor": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 1275.479,
+    "p95": 1692.602,
+    "p99": 1701.227,
+    "mean": 1268.571
+   },
+   "fps_p50": 0.8,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 109482720.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1241628672,
+   "gpu_total_ms_p50": 22.461
+  },
+  "m2/sponge1m/orbit_close": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 24.255,
+    "p95": 35.162,
+    "p99": 37.109,
+    "mean": 25.091
+   },
+   "fps_p50": 41.2,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1241628672,
+   "gpu_total_ms_p50": 21.843
+  },
+  "m2/sponge1m/orbit_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 18.27,
+    "p95": 21.373,
+    "p99": 22.01,
+    "mean": 18.527
+   },
+   "fps_p50": 54.7,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1241628672,
+   "gpu_total_ms_p50": 15.296
+  },
+  "m2/sponge1m/same_fit": {
+   "chip": "Apple M2",
+   "frames": 90,
+   "wall_ms": {
+    "p50": 19.04,
+    "p95": 21.232,
+    "p99": 24.745,
+    "mean": 19.332
+   },
+   "fps_p50": 52.5,
+   "draw_calls": 512,
+   "triangles": 912356,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1241628672,
+   "gpu_total_ms_p50": 15.915
+  },
+  "m2/terrain10m/cold": {
+   "chip": "Apple M2",
+   "frames": 1,
+   "wall_ms": {
+    "p50": 4983.739,
+    "p95": 4983.739,
+    "p99": 4983.739,
+    "mean": 4983.739
+   },
+   "fps_p50": 0.2,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 105116160.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248837632,
+   "gpu_total_ms_p50": 93.066
+  },
+  "m2/terrain10m/edit_1voxel": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 249.853,
+    "p95": 358.698,
+    "p99": 366.258,
+    "mean": 248.059
+   },
+   "fps_p50": 4.0,
+   "draw_calls": 1568,
+   "triangles": 875966,
+   "upload_bytes_p50": 450600.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248837632,
+   "gpu_total_ms_p50": 49.397
+  },
+  "m2/terrain10m/edit_cube16": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 413.107,
+    "p95": 542.979,
+    "p99": 580.338,
+    "mean": 417.15
+   },
+   "fps_p50": 2.4,
+   "draw_calls": 1568,
+   "triangles": 874912,
+   "upload_bytes_p50": 1707840.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248919552,
+   "gpu_total_ms_p50": 48.312
+  },
+  "m2/terrain10m/edit_cube40": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 512.194,
+    "p95": 648.332,
+    "p99": 652.549,
+    "mean": 507.873
+   },
+   "fps_p50": 2.0,
+   "draw_calls": 1580,
+   "triangles": 869710,
+   "upload_bytes_p50": 1095480.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248739328,
+   "gpu_total_ms_p50": 47.611
+  },
+  "m2/terrain10m/edit_recolor": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 5819.802,
+    "p95": 10251.514,
+    "p99": 13902.337,
+    "mean": 6859.402
+   },
+   "fps_p50": 0.2,
+   "draw_calls": 1562,
+   "triangles": 870500,
+   "upload_bytes_p50": 104460000.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248739328,
+   "gpu_total_ms_p50": 49.234
+  },
+  "m2/terrain10m/edit_slab64": {
+   "chip": "Apple M2",
+   "frames": 20,
+   "wall_ms": {
+    "p50": 161.941,
+    "p95": 471.551,
+    "p99": 488.661,
+    "mean": 211.063
+   },
+   "fps_p50": 6.2,
+   "draw_calls": 1574,
+   "triangles": 876144,
+   "upload_bytes_p50": 2412840.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1249148928,
+   "gpu_total_ms_p50": 48.802
+  },
+  "m2/terrain10m/orbit_close": {
+   "chip": "Apple M2",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 111.845,
+    "p95": 181.429,
+    "p99": 183.661,
+    "mean": 127.668
+   },
+   "fps_p50": 8.9,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248837632,
+   "gpu_total_ms_p50": 109.277
+  },
+  "m2/terrain10m/orbit_fit": {
+   "chip": "Apple M2",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 60.672,
+    "p95": 72.889,
+    "p99": 75.036,
+    "mean": 59.013
+   },
+   "fps_p50": 16.5,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248837632,
+   "gpu_total_ms_p50": 58.086
+  },
+  "m2/terrain10m/same_fit": {
+   "chip": "Apple M2",
+   "frames": 60,
+   "wall_ms": {
+    "p50": 45.785,
+    "p95": 45.985,
+    "p99": 46.615,
+    "mean": 45.343
+   },
+   "fps_p50": 21.8,
+   "draw_calls": 1568,
+   "triangles": 875968,
+   "upload_bytes_p50": 0.0,
+   "target_bytes": 1067335680,
+   "device_alloc_bytes": 1248837632,
+   "gpu_total_ms_p50": 42.224
+  }
+ }
+}
