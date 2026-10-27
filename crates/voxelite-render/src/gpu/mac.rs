@@ -77,13 +77,12 @@ impl Worker {
                         };
                         let result = objc2::rc::autoreleasepool(|_| {
                             pollster::block_on(async {
-                                let updates = match request.snapshot {
-                                    Some(snapshot) => {
-                                        occupancy.sync(&snapshot)?;
-                                        mesh.sync_validated(&snapshot)?
-                                    }
-                                    None => Vec::new(),
-                                };
+                                let updates = sync_snapshot(
+                                    &mut occupancy,
+                                    &mut mesh,
+                                    request.snapshot,
+                                    None,
+                                )?;
                                 if renderer.is_none() {
                                     let mut descriptor =
                                         wgpu::InstanceDescriptor::new_without_display_handle();
@@ -547,6 +546,16 @@ impl Surfaces {
             return Err(error("surface completion/reuse timed out"));
         }
         Ok(())
+    }
+}
+
+/// Read-only query; the HAL guard keeps the MTLDevice alive for the call.
+pub(super) fn device_allocated_bytes(device: &wgpu::Device) -> Option<u64> {
+    // SAFETY: no mutation or raw resource escapes the live HAL guard.
+    unsafe {
+        device
+            .as_hal::<wgpu::hal::api::Metal>()
+            .map(|hal| hal.raw_device().currentAllocatedSize() as u64)
     }
 }
 

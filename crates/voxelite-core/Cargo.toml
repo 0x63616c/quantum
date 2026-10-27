@@ -17,3 +17,8 @@ proptest.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+# BENCH ONLY: allow render-only 10M scenes. Never enable in application builds.
+# Despite the historical name, admission remains bounded at 256^3 occupied cells.
+unbounded-voxels = []

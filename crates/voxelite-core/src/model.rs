@@ -6,7 +6,11 @@ use std::sync::Arc;
 /// Integer world cell coordinate, with Y up.
 pub type Pos = [i32; 3];
 /// Maximum occupied cells summed over all layers.
+#[cfg(not(feature = "unbounded-voxels"))]
 pub const MAX_VOXELS: usize = 1_048_576;
+/// Benchmark-only admission limit; production builds retain 1,048,576 cells.
+#[cfg(feature = "unbounded-voxels")]
+pub const MAX_VOXELS: usize = 16_777_216;
 /// Maximum nonempty chunks summed over all layers.
 pub const MAX_CHUNKS: usize = 8192;
 /// Maximum candidate work per transaction.
