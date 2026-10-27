@@ -941,6 +941,12 @@ impl Render for SettingsView {
                 match op {
                     Op::Settings => window.activate_window(),
                     Op::About => this.editor_action(Op::About, cx),
+                    #[cfg(not(target_family = "wasm"))]
+                    Op::Welcome => {
+                        cx.defer(|cx| {
+                            let _ = super::welcome::show(cx);
+                        });
+                    }
                     Op::Help => this.navigate(Section::Shortcuts, cx),
                     Op::CheckUpdates => {
                         this.navigate(Section::Updates, cx);

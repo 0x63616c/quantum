@@ -12,9 +12,13 @@ pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;
 pub mod preferences;
+#[cfg(not(target_family = "wasm"))]
+pub mod recents;
 pub mod reduce_motion;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;
+#[cfg(not(target_family = "wasm"))]
+pub mod thumbnails;
 
 #[cfg(all(feature = "web", target_family = "wasm"))]
 extern crate self as voxelite_app;
