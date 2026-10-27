@@ -466,7 +466,7 @@ impl SettingsView {
     }
     fn form_row(
         &self,
-        label: &'static str,
+        label: impl Into<SharedString>,
         detail: &'static str,
         control: impl IntoElement,
         t: Theme,
@@ -476,21 +476,18 @@ impl SettingsView {
             .px(px(16.0))
             .py(px(12.0))
             .gap(px(20.0))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .child(label)
-                    .when(!detail.is_empty(), |d| {
-                        d.child(
-                            div()
-                                .mt(px(3.0))
-                                .text_size(px(12.0))
-                                .text_color(t.muted())
-                                .child(detail),
-                        )
-                    }),
-            )
+            .child(div().flex_1().min_w(px(0.0)).child(label.into()).when(
+                !detail.is_empty(),
+                |d| {
+                    d.child(
+                        div()
+                            .mt(px(3.0))
+                            .text_size(px(12.0))
+                            .text_color(t.muted())
+                            .child(detail),
+                    )
+                },
+            ))
             .child(control)
     }
     fn group(&self, rows: Vec<Div>, t: Theme) -> Div {
@@ -626,6 +623,18 @@ impl SettingsView {
                     ),
             )
     }
+    fn grid_setting(&self, cx: &Context<Self>) -> Option<voxelite_plugin_api::SettingContribution> {
+        self.owner.upgrade().and_then(|owner| {
+            owner
+                .read(cx)
+                .editor
+                .plugin_host()
+                .registry()
+                .settings()
+                .find(|(_, setting)| setting.key == voxelite_plugin_gizmo_grid::GRID_SETTING)
+                .map(|(_, setting)| setting.clone())
+        })
+    }
     fn content(&self, section: Section, t: Theme, cx: &Context<Self>) -> Div {
         let p = &cx.global::<SettingsState>().values;
         match section {
@@ -725,38 +734,43 @@ impl SettingsView {
                 t,
             ),
             Section::Viewport => self.group(
-                vec![
-                    self.form_row(
-                        "Ground grid",
-                        "Keep a spatial reference beneath your model.",
-                        self.toggle("ground-grid", p.grid, |p| p.grid = !p.grid, t, cx),
-                        t,
-                    ),
-                    self.form_row(
-                        "Antialiasing",
-                        "Smooth edges when the camera comes to rest.",
-                        self.toggle(
-                            "antialiasing",
-                            p.antialiasing,
-                            |p| p.antialiasing = !p.antialiasing,
+                self.grid_setting(cx)
+                    .map(|setting| {
+                        self.form_row(
+                            setting.label_key,
+                            "Keep a spatial reference beneath your model.",
+                            self.toggle("ground-grid", p.grid, |p| p.grid = !p.grid, t, cx),
                             t,
-                            cx,
-                        ),
-                        t,
-                    ),
-                    self.form_row(
-                        "Render performance",
-                        "Show viewport FPS, average frame time and renderer.",
-                        self.toggle(
-                            "performance",
-                            p.show_performance,
-                            |p| p.show_performance = !p.show_performance,
+                        )
+                    })
+                    .into_iter()
+                    .chain([
+                        self.form_row(
+                            "Antialiasing",
+                            "Smooth edges when the camera comes to rest.",
+                            self.toggle(
+                                "antialiasing",
+                                p.antialiasing,
+                                |p| p.antialiasing = !p.antialiasing,
+                                t,
+                                cx,
+                            ),
                             t,
-                            cx,
                         ),
-                        t,
-                    ),
-                ],
+                        self.form_row(
+                            "Render performance",
+                            "Show viewport FPS, average frame time and renderer.",
+                            self.toggle(
+                                "performance",
+                                p.show_performance,
+                                |p| p.show_performance = !p.show_performance,
+                                t,
+                                cx,
+                            ),
+                            t,
+                        ),
+                    ])
+                    .collect(),
                 t,
             ),
             Section::Shortcuts => self.group(
@@ -880,7 +894,26 @@ impl Render for SettingsView {
         let t = theme(state.values.appearance, window);
         self.search.update(cx, |field, cx| field.appearance(t, cx));
         let query = self.search.read(cx).text.clone();
-        let results = search_sections(&query);
+        let mut results = search_sections(&query);
+        if self.grid_setting(cx).is_none() {
+            for result in &mut results {
+                result.settings.retain(|label| *label != "Ground grid");
+            }
+            if !query.trim().is_empty() {
+                results.retain(|result| {
+                    !result.settings.is_empty()
+                        || result.section != Section::Viewport
+                        || matches_query(
+                            &format!(
+                                "{} {}",
+                                result.section.title(),
+                                result.section.keywords().replace("grid ", "")
+                            ),
+                            &query.trim().to_lowercase(),
+                        )
+                });
+            }
+        }
         let section = self.history.current();
         let mut sidebar_rows = div()
             .id("settings-sections")
@@ -1261,9 +1294,11 @@ impl EditorView {
         let next_theme = theme(next.appearance, window);
         let rerender = self.preferences.antialiasing != next.antialiasing
             || (self.viewport.gpu_enabled()
-                && (self.theme != next_theme || self.grid != next.grid));
+                && (self.theme != next_theme || self.preferences.grid != next.grid));
         self.theme = next_theme;
-        self.grid = next.grid;
+        self.editor
+            .set_grid(next.grid)
+            .expect("declared boolean grid setting");
         self.preferences = next;
         if rerender {
             self.request_render(cx);

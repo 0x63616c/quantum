@@ -177,16 +177,6 @@ impl Plugin for CorePlugin {
                 None,
             ),
             (
-                "dev.voxelite.core.grid",
-                "Toggle grid",
-                None,
-                None,
-                "grid",
-                "View",
-                150,
-                None,
-            ),
-            (
                 "dev.voxelite.core.theme",
                 "Appearance…",
                 None,
@@ -318,6 +308,7 @@ pub fn app_host() -> voxelite_plugin_host::Host {
         Box::new(CorePlugin),
         Box::new(voxelite_plugin_tools::ToolsPlugin),
         Box::new(voxelite_plugin_mirror::MirrorPlugin),
+        Box::new(voxelite_plugin_gizmo_grid::GizmoGridPlugin),
         Box::new(voxelite_plugin_palette::PalettePlugin),
         Box::new(voxelite_plugin_comments::CommentsPlugin),
         Box::new(voxelite_plugin_agent::AgentPlugin),
@@ -331,6 +322,29 @@ mod tests {
     #[test]
     fn conforms_to_plugin_contract() {
         voxelite_plugin_host::conformance::check(|| Box::new(CorePlugin));
+    }
+
+    #[test]
+    fn grid_and_camera_command_ids_and_shortcuts_are_stable() {
+        let host = app_host();
+        for (id, key, order) in [
+            ("dev.voxelite.core.frame", Some("f"), 110),
+            ("dev.voxelite.core.front", None, 120),
+            ("dev.voxelite.core.right", None, 130),
+            ("dev.voxelite.core.top", None, 140),
+            ("dev.voxelite.core.grid", None, 150),
+        ] {
+            let command = host
+                .registry()
+                .commands()
+                .find(|(_, c)| c.id == id)
+                .unwrap()
+                .1;
+            assert_eq!(command.default_keybinding.as_deref(), key);
+            assert_eq!(command.context.as_deref(), key.map(|_| "Editor"));
+            assert_eq!(command.order, order);
+            assert_eq!(command.menu.as_deref(), Some("View"));
+        }
     }
 
     #[test]
@@ -354,6 +368,7 @@ mod tests {
                 "dev.voxelite.core",
                 "dev.voxelite.tools",
                 "dev.voxelite.mirror",
+                "dev.voxelite.gizmo-grid",
                 "dev.voxelite.palette",
                 "dev.voxelite.comments",
                 "dev.voxelite.agent"

@@ -12,7 +12,7 @@ mod history;
 mod keyboard_guide;
 mod viewport;
 use keyboard_guide::keyboard_guide;
-mod orientation;
+mod overlays;
 use comments::Panel;
 mod palettes;
 mod save_flow;
@@ -89,10 +89,9 @@ pub struct EditorView {
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
-    gizmo_drag: Option<orientation::GizmoDrag>,
-    gizmo_hover: Option<voxelite_app::gizmo::AxisEnd>,
-    gizmo_bounds: Rc<Cell<Bounds<Pixels>>>,
-    grid: bool,
+    overlay_drag: Option<(String, voxelite_plugin_api::OverlayDrag)>,
+    overlay_hover: Option<(String, u32)>,
+    overlay_bounds: Rc<std::cell::RefCell<std::collections::BTreeMap<String, Bounds<Pixels>>>>,
     menu: Option<usize>,
     menu_index: usize,
     commands: command_palette::CommandPalette,
@@ -212,7 +211,7 @@ const PALETTES: [(&str, Option<Preset>); 8] = [
 
 impl EditorView {
     pub fn new(
-        editor: Editor,
+        mut editor: Editor,
         override_theme: Option<Theme>,
         socket: Option<PathBuf>,
         window: &mut Window,
@@ -221,6 +220,9 @@ impl EditorView {
         settings::init(override_theme, cx);
         let preferences = cx.global::<settings::SettingsState>().values.clone();
         let theme = settings::theme(preferences.appearance, window);
+        editor
+            .set_grid(preferences.grid)
+            .expect("declared boolean grid setting");
         cx.observe_global_in::<settings::SettingsState>(window, |this, window, cx| {
             this.sync_preferences(window, cx)
         })
@@ -294,7 +296,6 @@ impl EditorView {
             zoom_reference_span: editor.camera.span,
             viewport: viewport::Viewport::new(editor.camera),
             editor,
-            grid: preferences.grid,
             preferences,
             #[cfg(not(target_family = "wasm"))]
             settings_window: None,
@@ -309,9 +310,9 @@ impl EditorView {
             last_edited: None,
             hover: None,
             drag: None,
-            gizmo_drag: None,
-            gizmo_hover: None,
-            gizmo_bounds: Rc::new(Cell::new(Bounds::default())),
+            overlay_drag: None,
+            overlay_hover: None,
+            overlay_bounds: Rc::default(),
             menu: None,
             menu_index: 0,
             commands: command_palette::CommandPalette::default(),
@@ -380,6 +381,12 @@ impl EditorView {
         self.discussion.first = None;
 
         self.editor = editor;
+        self.editor
+            .set_grid(self.preferences.grid)
+            .expect("declared boolean grid setting");
+        self.overlay_drag = None;
+        self.overlay_hover = None;
+        self.overlay_bounds.borrow_mut().clear();
         self.hover = None;
         self.drag = None;
         self.cursor = self.editor.display_snapshot().bounds.min;
@@ -432,7 +439,7 @@ impl EditorView {
             Op::Fill => self.editor.tool == Tool::Fill,
             Op::Box => self.editor.tool == Tool::Box,
             Op::Picker => self.editor.tool == Tool::Picker,
-            Op::Grid => self.grid,
+            Op::Grid => self.editor.grid(),
             Op::Frame | Op::Front | Op::Right | Op::Top => self.camera_view == Some(op),
             Op::MirrorX => self.editor.mirror_axes()[0],
             Op::MirrorY => self.editor.mirror_axes()[1],
@@ -621,7 +628,7 @@ impl EditorView {
         cx.notify();
     }
     fn pointer_move(&mut self, e: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
-        if self.gizmo_drag.is_some() {
+        if self.overlay_drag.is_some() {
             return;
         }
         if self.commands.is_open()
@@ -775,8 +782,8 @@ impl EditorView {
             self.save_flow.cancel_confirmation();
             self.editor.box_start = None;
             self.drag = None;
-            self.gizmo_drag = None;
-            self.gizmo_hover = None;
+            self.overlay_drag = None;
+            self.overlay_hover = None;
             self.hover = None;
             self.status = HintText::default();
             self.error = false;
@@ -1200,7 +1207,7 @@ impl EditorView {
                         ),
                 )
             })
-            .child(self.orientation(cx))
+            .children(self.viewport_widgets(cx))
             .child(
                 row()
                     .absolute()
@@ -2355,8 +2362,16 @@ impl Render for EditorView {
         let settings_open = self.settings_modal.is_some();
         #[cfg(not(target_family = "wasm"))]
         let settings_open = false;
-        if self.gizmo_drag.is_none() {
-            self.gizmo_hover = self.gizmo_hit(window.mouse_position());
+        if self
+            .overlay_drag
+            .as_ref()
+            .is_some_and(|(id, _)| self.editor.plugin_host().registry().get(id).is_none())
+        {
+            self.overlay_drag = None;
+            self.overlay_hover = None;
+        }
+        if self.overlay_drag.is_none() {
+            self.overlay_hover = self.overlay_hit(window.mouse_position());
         }
         let overlay = self.overlay(cx);
         div()
@@ -2397,21 +2412,21 @@ impl Render for EditorView {
             .text_size(px(13.0))
             .capture_key_down(cx.listener(Self::key_down))
             .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
-                if this.gizmo_drag.is_some() {
-                    this.move_gizmo(event, cx);
+                if this.overlay_drag.is_some() {
+                    this.move_overlay(event, cx);
                 }
             }))
             .on_mouse_up(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseUpEvent, _, cx| {
-                    this.release_gizmo(event.position, cx);
+                    this.release_overlay(event.position, cx);
                 }),
             )
             .on_mouse_up_out(
                 MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
-                    this.gizmo_drag = None;
-                    this.gizmo_hover = None;
+                    this.overlay_drag = None;
+                    this.overlay_hover = None;
                     cx.notify();
                 }),
             )

@@ -3,7 +3,8 @@
 Date: 2026-10-26
 
 Status: Accepted; the shell reads command metadata and the editor dispatches tools
-and command transforms through the host registry.
+and command transforms through the host registry. Camera gizmo and grid drawing
+and interaction also dispatch through enabled overlay bindings.
 
 ## Context
 
@@ -42,7 +43,7 @@ contribution identifiers within a plugin and setting defaults. IDs and setting
 keys are namespaced; data section names may also name existing `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx`,
-`TransformCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
+`TransformCx`, `OverlayCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
 service locator.
 `ActivateCx` scopes activation capabilities separately. `CommandCx`, `ExportCx`
 and `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
@@ -53,13 +54,13 @@ The API depends on `voxelite-core` and re-exports the core command and value typ
 plugin crates still depend only on the API.
 
 `Plugin` exposes `manifest`, `contribute`, default-unbound `tool(id)` and
-`command_transform(id)` implementation lookups, and default no-op
+`command_transform(id)` and `overlay(id)` implementation lookups, and default no-op
 `activate`/`deactivate` hooks. The host owns API compatibility checks, cross-plugin
 conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool lookup and invocation are admitted
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.4.0`, independently of plugin implementation versions and `.voxl` or
+is `0.4.1`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -69,6 +70,9 @@ minor boundary and reject newer required API versions.
 The `0.2.0` bump adds command presentation fields to public struct construction.
 The `0.3.0` bump adds required `ToolCx` queries and the tool behavior contract.
 The `0.4.0` bump adds the command transform contribution kind and behavior contract.
+The compatible `0.4.1` addition binds portable overlays to existing render-pass
+contributions through a default-unbound lookup, without changing existing exhaustive
+API enums or required methods on existing capability traits.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -116,6 +120,52 @@ bindings still need rebuilding when runtime enablement is exposed to users.
 Disabling mirror removes its transform and declarations while tools remain usable.
 The editor's live registry check disables stale shell commands and toggles.
 
+## Gizmo and grid overlays
+
+`voxelite-plugin-gizmo-grid` (`dev.voxelite.gizmo-grid`) owns the existing six-ended
+camera orientation widget and ground grid. The repository's gizmo is a camera
+navigation widget, not a voxel transform tool: dragging orbits, clicking snaps to
+one of six signed axes, and double-clicking invokes the core isometric fit action.
+This extraction adds no new editing tool or voxel-transform behavior. Core retains
+camera ownership and navigation operations, including the existing view commands.
+
+The API already has render-pass insertion slots, so `Plugin::overlay(id)` binds an
+`Overlay` to a declared `RenderPassContribution` instead of adding another registry
+kind. The plugin contributes its grid at `BeforeScene` and orientation widget at
+`Overlay`. `OverlayCx` exposes displayed bounds, the displayed camera basis, only
+the owner's settings, and a primitive emission sink. It grants no document mutation,
+GUI, renderer resources, filesystem or access to other plugins. Drawing emits a
+world-space grid lattice or screen-space line/circle widget primitives. The lattice
+stays analytic for the GPU resolve; the CPU adapter paints the same ordered paths.
+Integer plane height and offset remain separate to preserve each backend's original
+floating-point operations. The shell resolves semantic colors through its theme.
+Changes to GPU-composited overlay data schedule a new frame and reject stale
+in-flight frames, including disablement without a document revision change.
+
+Pointer input uses local coordinates for circle hit-testing and window coordinates
+for incremental drag deltas. Outcomes contain transient drag/hover state and core
+camera requests. Any document edits can only be returned as typed core `Command`s;
+the host runs command transforms for nonempty edits and the editor admits the ordered
+batch through its existing human transaction path before adopting camera or gesture
+feedback. The built-in gizmo returns no document commands, so navigation never adds
+undo entries or changes `.voxl` bytes.
+
+The grid command retains `dev.voxelite.core.grid` as an explicit compatibility ID,
+now owned by the plugin. Its menu placement, label and lack of default binding are
+unchanged. The declared boolean `dev.voxelite.gizmo-grid.grid_enabled` defaults to
+true. The shell bridges it to the existing app-owned `Preferences.grid` JSON field;
+there is no settings-file or `.voxl` migration. Settings rows read the enabled
+registry. Disabling the plugin removes its command, setting, widget and grid while
+core navigation, editing, saving and undo remain available. The shell cancels a
+pending overlay gesture when its declaration disappears; enabling restores the
+host-retained setting and starts a fresh interaction.
+
+Overlay binding, drawing and interaction use the host's timing and panic isolation.
+A draw panic discards all output from that owner, including earlier passes, while
+other plugins continue drawing. Interaction errors expose no partial outcome;
+panics quarantine the plugin. The conformance harness exercises supplied overlay
+bindings across enable/disable/enable, alongside tools and command transforms.
+
 ## Crate layout and dependency rule
 
 Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
@@ -153,7 +203,7 @@ Repeated enable/disable requests are no-ops; transitions call their hook once.
 API compatibility ignores build metadata and requires exact version precedence
 for prereleases, which have no compatibility guarantee.
 
-Plugin entry points, including tool and transform binding and invocation, are
+Plugin entry points, including tool, transform and overlay binding and invocation, are
 guarded with `catch_unwind`. A hook panic marks the plugin
 `Faulted`, discards its declarations and prevents retries for that host's lifetime;
 a manifest panic is a registration rejection because no identity is established.
@@ -166,7 +216,8 @@ Transform panics abort the pending outcome before transaction admission and
 quarantine the plugin; later editing can proceed without that transform.
 The public `conformance::check` harness validates a plugin and exercises a full
 enable/disable/enable cycle, recollecting metadata to detect residue and checking
-that every declared tool and transform binds only while enabled. Required
+that every declared tool and transform and each supplied overlay binding is available
+only while enabled. Required
 plugins also have their cleanup hooks exercised without exposing a public bypass
 of their disablement policy. Panic isolation requires unwinding and cannot recover
 from aborts or roll back arbitrary plugin-owned external effects.
@@ -175,9 +226,9 @@ from aborts or roll back arbitrary plugin-owned external effects.
 
 The API and host have independent unit tests and a reusable conformance harness;
 the app's `app_host()` registers required `dev.voxelite.core`, then tools, mirror,
-palette, comments and agent built-ins, all enabled. These five plugin crates depend
+gizmo/grid, palette, comments and agent built-ins, all enabled. These six plugin crates depend
 only on the API outside their conformance tests. Core currently owns the remaining
-shell commands, including grid and the existing browser export entries.
+shell commands, including camera navigation and the existing browser export entries.
 
 The shell takes an immutable view of enabled command contributions, sorted by
 presentation order, for menus, Cmd-K, the shortcuts sheet and keybindings. English
@@ -202,3 +253,12 @@ Mirror characterization tests cover place/box/fill for every axis combination,
 translated and centered even/odd bounds, exact voxels and byte-identical undo/redo.
 Transform tests cover ordering, scoped settings, nested commands, disablement and
 panic isolation before palette, gesture or document changes are adopted.
+
+Gizmo/grid characterization passed on the original app path before migration:
+endpoint hit tests, overlap ordering, signed snap directions, incremental drag
+thresholds, unchanged document/history bytes, preference persistence and shortcut
+IDs. The migrated tests invoke registered behavior, and cover grid geometry/style,
+widget drawing, cancellation, disablement, restart, typed edit atomicity and
+byte-identical undo/redo. The unchanged shell golden still covers command placement,
+icons and shortcuts. Host tests exercise scoped settings, missing bindings, timing,
+partial-draw disposal, error handling and panic quarantine.

@@ -25,8 +25,9 @@ pub struct Style {
     pub background: [f32; 4],
     /// Draw voxel edge outlines.
     pub outline: bool,
-    /// Ground grid, composited behind the model.
-    pub grid: bool,
+    /// Optional world grid [height, minimum X/Z, maximum X/Z, spacing],
+    /// supplied by the host and composited behind the model.
+    pub grid: Option<[f32; 4]>,
     /// sRGB grid color and opacity.
     pub grid_color: [f32; 4],
 }
@@ -357,12 +358,7 @@ impl Viewport {
             ],
             background: style.background,
             inverse_projection: view_projection.inverse().to_cols_array_2d(),
-            grid: [
-                bounds.min[1] as f32 - 0.05,
-                bounds.min[0].min(bounds.min[2]) as f32 - 16.,
-                bounds.max[0].max(bounds.max[2]) as f32 + 16.,
-                f32::from(style.grid),
-            ],
+            grid: style.grid.unwrap_or([0.; 4]),
             grid_color: style.grid_color,
             shadow_settings: [
                 1.0 / SHADOW_SIZE as f32,

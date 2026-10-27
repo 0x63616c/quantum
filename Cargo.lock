@@ -5979,6 +5979,7 @@ dependencies = [
  "voxelite-plugin-agent",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
+ "voxelite-plugin-gizmo-grid",
  "voxelite-plugin-host",
  "voxelite-plugin-mirror",
  "voxelite-plugin-palette",
@@ -6075,6 +6076,14 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-example"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+]
+
+[[package]]
+name = "voxelite-plugin-gizmo-grid"
 version = "0.2.0"
 dependencies = [
  "voxelite-plugin-api",

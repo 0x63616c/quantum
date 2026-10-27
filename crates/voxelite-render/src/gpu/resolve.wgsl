@@ -28,7 +28,7 @@ fn backdrop(p: vec2<f32>) -> vec3<f32> {
     let ray = far4.xyz / far4.w - origin;
     let t = (globals.grid.x - origin.y) / select(0.000001, ray.y, abs(ray.y) > 0.000001);
     let world = (origin + ray * t).xz;
-    let cell = (world - globals.grid.y) / 4.0;
+    let cell = (world - globals.grid.y) / max(globals.grid.w, 1.0);
     let edge = abs(cell - round(cell)) / max(fwidth(cell), vec2(0.000001));
     let coverage = 1.0 - smoothstep(0.0, 0.8, min(edge.x, edge.y));
     let visible = globals.grid.w > 0.5 && t >= 0.0 && abs(ray.y) > 0.000001
