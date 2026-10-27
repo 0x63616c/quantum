@@ -31,9 +31,35 @@ pub struct PaletteState {
     pub slot: usize,
 }
 
-/// One project or preset choice supplied by the panel implementation.
+/// Origin and editing policy of a palette in the manager.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaletteKind {
+    /// Current document colors; edits in the manager create a custom copy.
+    Project,
+    /// Immutable bundled colors; edits in the manager create a custom copy.
+    BuiltIn,
+    /// Editable local library entry.
+    Custom,
+}
+
+/// Stable identity independent of a custom entry's position in the library.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaletteId {
+    /// Project (zero) or built-in index in the source choices.
+    Source(usize),
+    /// Local library identity.
+    Custom(Uuid),
+}
+
+/// One source or custom choice supplied by the panel implementation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaletteChoice {
+    /// Stable selection address.
+    pub id: PaletteId,
+    /// Palette origin.
+    pub kind: PaletteKind,
+    /// Whether editing requires an automatic custom copy.
+    pub read_only: bool,
     /// Display label.
     pub name: String,
     /// Exact swatches in source order.
@@ -43,11 +69,17 @@ pub struct PaletteChoice {
 /// Read-only presentation data, with no GUI objects or callbacks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaletteView {
+    /// Selected palette's stable identity.
+    pub selected: PaletteId,
+    /// Selected palette's origin.
+    pub kind: PaletteKind,
+    /// Whether editing the selection requires an automatic custom copy.
+    pub read_only: bool,
     /// Selected palette's display name.
     pub name: String,
     /// Selected palette's original colors.
     pub palette: Palette,
-    /// Project palette followed by immutable built-in presets.
+    /// Project, built-ins, then custom entries in persisted display order.
     pub choices: Vec<PaletteChoice>,
     /// Selected project/preset index, retained while a custom entry is selected.
     pub preset: usize,
@@ -99,6 +131,8 @@ pub enum PaletteAction {
     ChoosePreset(usize),
     /// Choose a custom entry without changing the brush or document.
     ChooseCustom(Uuid),
+    /// Choose any palette by its stable address, without changing the brush.
+    ChoosePalette(PaletteId),
     /// Select a manager swatch, without changing the brush.
     SelectSlot(usize),
     /// Select a brush swatch by display position.

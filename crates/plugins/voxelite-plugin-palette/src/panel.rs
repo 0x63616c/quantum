@@ -1,7 +1,8 @@
 use crate::{PRESET_SETTING, PalettePlugin, Preset, library};
 use voxelite_plugin_api::{
     Command, Palette, PaletteAction, PaletteChoice, PaletteCx, PaletteEdit, PaletteError,
-    PaletteOperation, PaletteOutcome, PalettePanel, PalettePresentation, PaletteView, SettingValue,
+    PaletteId, PaletteKind, PaletteOperation, PaletteOutcome, PalettePanel, PalettePresentation,
+    PaletteView, SettingValue,
 };
 
 const CHOICES: [(&str, &str, Option<Preset>); 8] = [
@@ -27,15 +28,36 @@ impl PalettePanel for PalettePlugin {
                 cx.setting(PRESET_SETTING) == Some(&SettingValue::Choice((*key).into()))
             })
             .unwrap_or(0);
-        let choices: Vec<_> = CHOICES
+        let mut choices: Vec<_> = CHOICES
             .iter()
-            .map(|(_, name, preset)| PaletteChoice {
+            .enumerate()
+            .map(|(index, (_, name, preset))| PaletteChoice {
+                id: PaletteId::Source(index),
+                kind: if index == 0 {
+                    PaletteKind::Project
+                } else {
+                    PaletteKind::BuiltIn
+                },
+                read_only: true,
                 name: (*name).into(),
                 palette: preset
                     .map(Preset::palette)
                     .unwrap_or_else(|| cx.palette().clone()),
             })
             .collect();
+        choices.extend(
+            cx.state()
+                .library
+                .entries
+                .iter()
+                .map(|entry| PaletteChoice {
+                    id: PaletteId::Custom(entry.id),
+                    kind: PaletteKind::Custom,
+                    read_only: false,
+                    name: entry.name.clone(),
+                    palette: entry.palette.clone(),
+                }),
+        );
         let selected = cx
             .state()
             .custom
@@ -51,6 +73,15 @@ impl PalettePanel for PalettePlugin {
         let mut state = cx.state().clone();
         state.slot = state.slot.min(palette.order.len() - 1);
         PaletteView {
+            selected: selected
+                .map(|e| PaletteId::Custom(e.id))
+                .unwrap_or(PaletteId::Source(preset)),
+            kind: if selected.is_some() {
+                PaletteKind::Custom
+            } else {
+                choices[preset].kind
+            },
+            read_only: selected.is_none(),
             name,
             palette,
             choices,
@@ -73,14 +104,16 @@ impl PalettePanel for PalettePlugin {
             PaletteAction::LoadLibrary(bytes) => {
                 out.state.library = library::load(bytes.as_deref())?
             }
-            PaletteAction::ChoosePreset(index) => {
+            PaletteAction::ChoosePreset(index)
+            | PaletteAction::ChoosePalette(PaletteId::Source(index)) => {
                 let choice = CHOICES
                     .get(index)
                     .ok_or_else(|| PaletteError::Message("Palette no longer exists".into()))?;
                 out.setting = Some((PRESET_SETTING.into(), SettingValue::Choice(choice.0.into())));
                 out.state.custom = None;
             }
-            PaletteAction::ChooseCustom(id) => {
+            PaletteAction::ChooseCustom(id)
+            | PaletteAction::ChoosePalette(PaletteId::Custom(id)) => {
                 out.state
                     .library
                     .entries

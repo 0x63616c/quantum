@@ -47,7 +47,7 @@ impl EditorView {
     pub(super) fn palette_choices(&self) -> Vec<voxelite_plugin_api::PaletteChoice> {
         self.editor
             .palette_view()
-            .map(|v| v.choices)
+            .map(|v| v.choices.into_iter().filter(|c| c.read_only).collect())
             .unwrap_or_default()
     }
     pub(super) fn palette_request(
@@ -417,6 +417,7 @@ impl EditorView {
         let Some(view) = self.editor.palette_view() else {
             return div().into_any_element();
         };
+        let choices: Vec<_> = view.choices.iter().filter(|c| c.read_only).collect();
         let palette = &view.palette;
         let state = &view.state;
         let custom = state.custom.is_some();
@@ -435,7 +436,7 @@ impl EditorView {
                     .id("library-scroll")
                     .overflow_y_scroll()
                     .h(px(350.0))
-                    .children(view.choices.iter().enumerate().map(|(i, choice)| {
+                    .children(choices.iter().enumerate().map(|(i, choice)| {
                         self.control(
                             ("library-preset", i),
                             "palette",

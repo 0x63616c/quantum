@@ -275,3 +275,47 @@ fn document_import_proposes_typed_commands_in_free_slot_order() {
             .is_err()
     );
 }
+
+#[test]
+fn choices_expose_origins_and_stable_selection_addresses() {
+    let mut host = Host::new(vec![Box::new(PalettePlugin)]);
+    let mut cx = Context::default();
+    let view = host.palette_view(PANEL_ID, &cx).unwrap().unwrap();
+    assert_eq!(view.kind, PaletteKind::Project);
+    assert!(view.read_only);
+    for (i, choice) in view.choices.iter().enumerate() {
+        assert_eq!(choice.id, PaletteId::Source(i));
+        assert!(choice.read_only);
+        assert_eq!(
+            choice.kind,
+            if i == 0 {
+                PaletteKind::Project
+            } else {
+                PaletteKind::BuiltIn
+            }
+        );
+    }
+    request(&mut host, &mut cx, edit(PaletteOperation::Create, "", ""));
+    let id = cx.state.custom.unwrap();
+    let view = host.palette_view(PANEL_ID, &cx).unwrap().unwrap();
+    assert_eq!(view.selected, PaletteId::Custom(id));
+    assert_eq!(view.kind, PaletteKind::Custom);
+    assert!(!view.read_only);
+    assert_eq!(view.choices.last().unwrap().id, PaletteId::Custom(id));
+    assert!(!view.choices.last().unwrap().read_only);
+    request(
+        &mut host,
+        &mut cx,
+        PaletteAction::ChoosePalette(PaletteId::Source(2)),
+    );
+    assert_eq!(
+        host.palette_view(PANEL_ID, &cx).unwrap().unwrap().kind,
+        PaletteKind::BuiltIn
+    );
+    request(
+        &mut host,
+        &mut cx,
+        PaletteAction::ChoosePalette(PaletteId::Custom(id)),
+    );
+    assert_eq!(cx.state.custom, Some(id));
+}
