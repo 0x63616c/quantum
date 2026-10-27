@@ -12,6 +12,7 @@ mod error;
 mod exports;
 mod files;
 mod images;
+mod palettes;
 mod session;
 mod transport;
 

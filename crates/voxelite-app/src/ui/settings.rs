@@ -17,7 +17,7 @@ pub(super) struct SettingsState {
 impl Global for SettingsState {}
 
 fn path() -> std::path::PathBuf {
-    voxelite_app::palettes::data_dir().join("settings.json")
+    voxelite_app::local_settings::data_dir().join("settings.json")
 }
 pub(super) fn init(override_theme: Option<Theme>, cx: &mut App) {
     if cx.has_global::<SettingsState>() {

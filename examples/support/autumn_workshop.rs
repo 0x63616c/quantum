@@ -156,8 +156,17 @@ pub fn build() -> FormatResult<Project> {
         },
     )?;
     // Earth, turf, stone, timber, plaster, roof, amber, autumn leaves, garden.
-    let palette = Palette::from_hex(
-        "3a3033\n59423a\n775642\n987759\n526343\n718250\n97a164\n48505a\n727c80\na5aaa0\n4b3330\n785044\na57551\nd9c5a0\nf4dfb5\n263a44\n365564\n50737b\n769497\n392e30\nf0a750\nffd78b\n8a4636\nbc5c38\ndf7d3f\nf3a44d\nf4bf65\n304d42\n49745a\n75936a\nb55259\ne58b73\nd0d7c2\n9eae83\n223942\n456a78",
+    let palette = Palette::from_colors(
+        [
+            0x3a3033, 0x59423a, 0x775642, 0x987759, 0x526343, 0x718250, 0x97a164, 0x48505a,
+            0x727c80, 0xa5aaa0, 0x4b3330, 0x785044, 0xa57551, 0xd9c5a0, 0xf4dfb5, 0x263a44,
+            0x365564, 0x50737b, 0x769497, 0x392e30, 0xf0a750, 0xffd78b, 0x8a4636, 0xbc5c38,
+            0xdf7d3f, 0xf3a44d, 0xf4bf65, 0x304d42, 0x49745a, 0x75936a, 0xb55259, 0xe58b73,
+            0xd0d7c2, 0x9eae83, 0x223942, 0x456a78,
+        ]
+        .into_iter()
+        .map(|rgb| Swatch::rgb((rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8))
+        .collect(),
     )?;
     let mut colors = Vec::new();
     for swatch in &palette.slots {

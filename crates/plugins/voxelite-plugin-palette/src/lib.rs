@@ -1,10 +1,24 @@
-//! Built-in palette command declarations; execution remains in the app.
+//! Built-in palettes, library management and portable panel behavior.
+mod import;
+mod library;
+mod panel;
+mod presets;
+
+pub use import::{from_gpl, from_hex};
+pub use library::{parse_color, step_swatch};
+pub use presets::Preset;
+
+/// Registered palette panel identity.
+pub const PANEL_ID: &str = "dev.voxelite.palette.panel";
+/// Transient project/preset choice, retained across disable/enable in one editor.
+pub const PRESET_SETTING: &str = "dev.voxelite.palette.preset";
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
+    API_VERSION, CommandContribution, Manifest, PalettePanel, PanelContribution, Plugin, PluginId,
+    Registrar, SettingContribution, SettingKind, SettingValue, Value, Version,
 };
 
-/// Metadata for the built-in palette commands.
+/// Standard palette plugin; all state and effects cross portable capabilities.
 pub struct PalettePlugin;
 
 impl Plugin for PalettePlugin {
@@ -22,6 +36,17 @@ impl Plugin for PalettePlugin {
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
+        registrar.panel(PanelContribution {
+            id: PANEL_ID.into(),
+            label_key: "Palette".into(),
+            icon: Some("palette".into()),
+        });
+        registrar.setting(SettingContribution {
+            key: PRESET_SETTING.into(),
+            label_key: "Palette".into(),
+            kind: SettingKind::Choice(panel::choices()),
+            default: SettingValue::Choice("project".into()),
+        });
         for (id, label, key, icon, menu, order) in [
             (
                 "dev.voxelite.palette.show_palette",
@@ -70,7 +95,14 @@ impl Plugin for PalettePlugin {
             });
         }
     }
+
+    fn palette_panel(&self, id: &str) -> Option<&dyn PalettePanel> {
+        (id == PANEL_ID).then_some(self)
+    }
 }
+
+#[cfg(test)]
+mod interchange_tests;
 
 #[cfg(test)]
 mod tests {
@@ -81,3 +113,8 @@ mod tests {
         voxelite_plugin_host::conformance::check(|| Box::new(PalettePlugin));
     }
 }
+
+#[cfg(test)]
+mod characterization;
+#[cfg(test)]
+mod panel_tests;

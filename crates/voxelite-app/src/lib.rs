@@ -7,6 +7,7 @@ pub use core_plugin::app_host;
 pub mod editor;
 pub mod frame_meter;
 pub mod history;
+pub mod local_settings;
 pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;

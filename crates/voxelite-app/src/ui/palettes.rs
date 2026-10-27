@@ -1,45 +1,80 @@
 //! Palette manager and native interchange dialogs.
 use super::*;
-use voxelite_app::palettes::{PaletteLibrary, data_dir, parse_color};
-use voxelite_core::{Swatch, Uuid};
+use voxelite_app::local_settings::data_dir;
+use voxelite_core::Swatch;
+use voxelite_plugin_api::{PaletteAction, PaletteOperation, PaletteOutcome, PalettePresentation};
+use voxelite_plugin_palette::parse_color;
 
 pub(super) struct PaletteManager {
-    pub library: PaletteLibrary,
-    pub custom: Option<Uuid>,
     pub open: bool,
-    pub slot: usize,
     pub name: Entity<crate::text_field::TextField>,
     pub hex: Entity<crate::text_field::TextField>,
 }
 impl PaletteManager {
     pub fn new(cx: &mut App) -> Self {
         Self {
-            library: PaletteLibrary::default(),
-            custom: None,
             open: false,
-            slot: 0,
             name: crate::text_field::TextField::new("Palette name", cx),
             hex: crate::text_field::TextField::new("#RRGGBB", cx),
         }
     }
 }
 impl EditorView {
+    pub(super) fn reconcile_palette_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.editor.palette_enabled() {
+            let focused = self.palette_focus.is_focused(window)
+                || self.palettes.name.read(cx).focused(window)
+                || self.palettes.hex.read(cx).focused(window);
+            self.palette_open = false;
+            self.palettes.open = false;
+            if focused {
+                window.focus(&self.focus, cx);
+            }
+        }
+    }
     pub(super) fn palette_name(&self) -> String {
-        self.palettes
-            .custom
-            .and_then(|id| self.palettes.library.entries.iter().find(|e| e.id == id))
-            .map(|e| e.name.clone())
-            .unwrap_or_else(|| PALETTES[self.palette_index].0.into())
+        self.editor
+            .palette_view()
+            .map(|v| v.name)
+            .unwrap_or_default()
+    }
+    pub(super) fn palette_index(&self) -> usize {
+        self.editor
+            .palette_view()
+            .map(|v| v.preset)
+            .unwrap_or_default()
+    }
+    pub(super) fn palette_choices(&self) -> Vec<voxelite_plugin_api::PaletteChoice> {
+        self.editor
+            .palette_view()
+            .map(|v| v.choices)
+            .unwrap_or_default()
+    }
+    pub(super) fn palette_request(
+        &mut self,
+        action: PaletteAction,
+        cx: &mut Context<Self>,
+    ) -> Option<PaletteOutcome> {
+        match self.editor.palette_action(action) {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                self.report::<()>(Err(error), "", cx);
+                None
+            }
+        }
     }
     fn sync_palette_fields(&mut self, cx: &mut Context<Self>) {
-        let p = self.active_palette();
-        self.palettes.slot = self.palettes.slot.min(p.order.len() - 1);
-        let color = p
-            .get(p.order[self.palettes.slot])
+        let Some(view) = self.editor.palette_view() else {
+            return;
+        };
+        // Clamp the manager cursor when its fields are synchronized, as before.
+        self.palette_request(PaletteAction::SelectSlot(view.state.slot), cx);
+        let color = view
+            .palette
+            .get(view.palette.order[view.state.slot])
             .expect("validated palette")
             .rgba;
-        let name = self.palette_name();
-        self.palettes.name.update(cx, |f, cx| f.set(name, cx));
+        self.palettes.name.update(cx, |f, cx| f.set(view.name, cx));
         self.palettes.hex.update(cx, |f, cx| {
             f.set(
                 format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]),
@@ -48,79 +83,26 @@ impl EditorView {
         });
     }
     pub(super) fn manage_palettes(&mut self, cx: &mut Context<Self>) {
-        self.palettes.open = true;
-        self.sync_palette_fields(cx);
+        if self
+            .palette_request(
+                PaletteAction::Command(Op::ManagePalettes.command_id().into()),
+                cx,
+            )
+            .is_some_and(|out| out.presentation == Some(PalettePresentation::Manage))
+        {
+            self.palettes.open = true;
+            self.sync_palette_fields(cx);
+        }
     }
-    fn palette_edit(&mut self, operation: &'static str, cx: &mut Context<Self>) {
-        let current = self.active_palette();
+    fn palette_edit(&mut self, operation: PaletteOperation, cx: &mut Context<Self>) {
         let name = self.palettes.name.read(cx).text.clone();
         let color = self.palettes.hex.read(cx).text.clone();
-        let slot = self.palettes.slot;
-        let index = self.palettes.custom.and_then(|id| {
-            self.palettes
-                .library
-                .entries
-                .iter()
-                .position(|p| p.id == id)
+        let result = self.editor.palette_action(PaletteAction::Edit {
+            operation,
+            name,
+            color,
         });
-        let mut selected = self.palettes.custom;
-        let result = self
-            .palettes
-            .library
-            .update(&data_dir().join("palettes.json"), |library| {
-                if matches!(operation, "Create" | "Duplicate") {
-                    selected = Some(library.create(
-                        if operation == "Create" {
-                            "Untitled palette".into()
-                        } else {
-                            format!("{} copy", name.chars().take(100).collect::<String>())
-                        },
-                        if operation == "Create" {
-                            Palette::default()
-                        } else {
-                            current.clone()
-                        },
-                    )?);
-                    return Ok(());
-                }
-                let i = index.ok_or_else(|| {
-                    voxelite_app::editor::EditorError::Gesture(
-                        "Duplicate this palette to customize it".into(),
-                    )
-                })?;
-                if operation == "Delete" {
-                    library.entries.remove(i);
-                    selected = None;
-                    return Ok(());
-                }
-                if operation == "Rename" {
-                    library.entries[i].name = name;
-                    return Ok(());
-                }
-                let mut colors: Vec<Swatch> = current
-                    .order
-                    .iter()
-                    .map(|s| current.get(*s).unwrap().clone())
-                    .collect();
-                match operation {
-                    "Apply color" => colors[slot] = parse_color(&color)?,
-                    "Add slot" => colors.push(parse_color(&color)?),
-                    "Remove slot" => {
-                        colors.remove(slot);
-                    }
-                    "Move left" if slot > 0 => colors.swap(slot, slot - 1),
-                    "Move right" if slot + 1 < colors.len() => colors.swap(slot, slot + 1),
-                    _ => {}
-                }
-                library.set_colors(i, colors)
-            });
-        if result.is_ok() {
-            self.palettes.custom = selected;
-            self.palettes.slot = match operation {
-                "Move left" => slot.saturating_sub(1),
-                "Move right" => (slot + 1).min(current.order.len() - 1),
-                _ => slot,
-            };
+        if result.as_ref().is_ok_and(|out| out.is_some()) {
             self.sync_palette_fields(cx);
         }
         self.report(result, "Palette library saved", cx);
@@ -176,6 +158,11 @@ impl EditorView {
         palette: Palette,
         name: String,
     ) -> EditorResult<Vec<u8>> {
+        if !self.editor.palette_enabled() {
+            return Err(voxelite_app::editor::EditorError::Gesture(
+                "Palette panel is unavailable".into(),
+            ));
+        }
         let format = self.editor.export_format(extension)?;
         let job = self.editor.prepare_export(&format.id)?;
         let mut snapshot = self.editor.snapshot().clone();
@@ -231,7 +218,7 @@ impl EditorView {
                         cx.background_executor()
                             .spawn(async move {
                                 if let Some(bytes) = bytes {
-                                    voxelite_app::palettes::write_local(&path, &bytes)?;
+                                    voxelite_app::local_settings::write_local(&path, &bytes)?;
                                     Ok(None)
                                 } else {
                                     if std::fs::metadata(&path)?.len() > 256 * 1024 {
@@ -240,22 +227,11 @@ impl EditorView {
                                         ));
                                     }
                                     let text = std::fs::read_to_string(&path)?;
-                                    let p = match path
+                                    let format = path
                                         .extension()
                                         .and_then(|e| e.to_str())
                                         .map(str::to_ascii_lowercase)
-                                        .as_deref()
-                                    {
-                                        Some("gpl") => Palette::from_gpl(&text)?,
-                                        Some("hex") => Palette::from_hex(&text)?,
-                                        _ => {
-                                            return Err(
-                                                voxelite_app::editor::EditorError::Gesture(
-                                                    "Choose a .hex or .gpl palette".into(),
-                                                ),
-                                            );
-                                        }
-                                    };
+                                        .unwrap_or_default();
                                     let name = path
                                         .file_stem()
                                         .and_then(|s| s.to_str())
@@ -263,7 +239,7 @@ impl EditorView {
                                         .chars()
                                         .take(100)
                                         .collect();
-                                    Ok(Some((name, p)))
+                                    Ok(Some((name, format, text)))
                                 }
                             })
                             .await
@@ -276,15 +252,12 @@ impl EditorView {
             let _ = this.update(cx, |this, cx| {
                 this.save_flow.finish_dialog();
                 let result = result.and_then(|import| {
-                    if let Some((name, palette)) = import {
-                        let mut id = None;
-                        this.palettes
-                            .library
-                            .update(&data_dir().join("palettes.json"), |lib| {
-                                id = Some(lib.create(name, palette)?);
-                                Ok(())
-                            })?;
-                        this.palettes.custom = id;
+                    if let Some((name, format, text)) = import {
+                        this.editor.palette_action(PaletteAction::ImportLibrary {
+                            name,
+                            format,
+                            text,
+                        })?;
                         this.sync_palette_fields(cx);
                     }
                     Ok(())
@@ -320,11 +293,12 @@ impl EditorView {
                         let text = std::str::from_utf8(&bytes).map_err(|e| {
                             voxelite_app::editor::EditorError::Gesture(e.to_string())
                         })?;
-                        let palette = if name.to_ascii_lowercase().ends_with(".gpl") {
-                            Palette::from_gpl(text)?
+                        let format = if name.to_ascii_lowercase().ends_with(".gpl") {
+                            "gpl"
                         } else {
-                            Palette::from_hex(text)?
-                        };
+                            "hex"
+                        }
+                        .into();
                         let name = name
                             .rsplit_once('.')
                             .map(|(stem, _)| stem)
@@ -332,23 +306,19 @@ impl EditorView {
                             .chars()
                             .take(100)
                             .collect::<String>();
-                        Ok((name, palette))
+                        Ok((name, format, text.to_owned()))
                     })
                     .transpose()
             });
             let _ = this.update(cx, |this, cx| {
                 this.save_flow.finish_dialog();
                 let result = result.and_then(|selection| {
-                    if let Some((name, palette)) = selection {
-                        let mut id = None;
-                        this.palettes.library.update(
-                            &data_dir().join("palettes.json"),
-                            |library| {
-                                id = Some(library.create(name, palette)?);
-                                Ok(())
-                            },
-                        )?;
-                        this.palettes.custom = id;
+                    if let Some((name, format, text)) = selection {
+                        this.editor.palette_action(PaletteAction::ImportLibrary {
+                            name,
+                            format,
+                            text,
+                        })?;
                         this.sync_palette_fields(cx);
                     }
                     Ok(())
@@ -444,68 +414,68 @@ impl EditorView {
     }
     pub(super) fn palette_manager(&self, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
-        let palette = self.active_palette();
-        let custom = self.palettes.custom.is_some();
-        let left =
-            div()
-                .w(px(200.0))
-                .flex_shrink_0()
-                .border_r_1()
-                .border_color(t.line())
-                .p(px(16.0))
-                .flex()
-                .flex_col()
-                .gap(px(6.0))
-                .child(section_title("Library"))
-                .child(
-                    div()
-                        .id("library-scroll")
-                        .overflow_y_scroll()
-                        .h(px(350.0))
-                        .children(PALETTES.iter().enumerate().map(|(i, (name, _))| {
-                            self.control(
-                                ("library-preset", i),
-                                "palette",
-                                *name,
-                                cx,
-                                move |this, _, cx| {
-                                    this.palette_index = i;
-                                    this.palettes.custom = None;
-                                    this.sync_palette_fields(cx);
-                                    cx.notify();
-                                },
-                            )
-                            .w_full()
-                            .mb(px(4.0))
-                            .when(!custom && i == self.palette_index, |d| d.bg(t.selected()))
-                        }))
-                        .children(self.palettes.library.entries.iter().enumerate().map(
-                            |(i, e)| {
-                                let id = e.id;
-                                self.control(
-                                    ("library-custom", i),
-                                    "palette",
-                                    e.name.clone(),
-                                    cx,
-                                    move |this, _, cx| {
-                                        this.palettes.custom = Some(id);
-                                        this.sync_palette_fields(cx);
-                                        cx.notify();
-                                    },
-                                )
-                                .w_full()
-                                .mb(px(4.0))
-                                .when(self.palettes.custom == Some(id), |d| d.bg(t.selected()))
+        let Some(view) = self.editor.palette_view() else {
+            return div().into_any_element();
+        };
+        let palette = &view.palette;
+        let state = &view.state;
+        let custom = state.custom.is_some();
+        let left = div()
+            .w(px(200.0))
+            .flex_shrink_0()
+            .border_r_1()
+            .border_color(t.line())
+            .p(px(16.0))
+            .flex()
+            .flex_col()
+            .gap(px(6.0))
+            .child(section_title("Library"))
+            .child(
+                div()
+                    .id("library-scroll")
+                    .overflow_y_scroll()
+                    .h(px(350.0))
+                    .children(view.choices.iter().enumerate().map(|(i, choice)| {
+                        self.control(
+                            ("library-preset", i),
+                            "palette",
+                            choice.name.clone(),
+                            cx,
+                            move |this, _, cx| {
+                                this.palette_request(PaletteAction::ChoosePreset(i), cx);
+                                this.sync_palette_fields(cx);
+                                cx.notify();
                             },
-                        )),
-                )
-                .child(self.control(
-                    "create-palette",
-                    "plus",
-                    "Create palette",
-                    cx,
-                    |this, _, cx| this.palette_edit("Create", cx),
-                ));
+                        )
+                        .w_full()
+                        .mb(px(4.0))
+                        .when(!custom && i == view.preset, |d| d.bg(t.selected()))
+                    }))
+                    .children(state.library.entries.iter().enumerate().map(|(i, e)| {
+                        let id = e.id;
+                        self.control(
+                            ("library-custom", i),
+                            "palette",
+                            e.name.clone(),
+                            cx,
+                            move |this, _, cx| {
+                                this.palette_request(PaletteAction::ChooseCustom(id), cx);
+                                this.sync_palette_fields(cx);
+                                cx.notify();
+                            },
+                        )
+                        .w_full()
+                        .mb(px(4.0))
+                        .when(state.custom == Some(id), |d| d.bg(t.selected()))
+                    })),
+            )
+            .child(self.control(
+                "create-palette",
+                "plus",
+                "Create palette",
+                cx,
+                |this, _, cx| this.palette_edit(PaletteOperation::Create, cx),
+            ));
         let right =
             div()
                 .flex_1()
@@ -523,7 +493,7 @@ impl EditorView {
                                 "place",
                                 "Rename",
                                 cx,
-                                |this, _, cx| this.palette_edit("Rename", cx),
+                                |this, _, cx| this.palette_edit(PaletteOperation::Rename, cx),
                             ))
                         }),
                 )
@@ -535,7 +505,7 @@ impl EditorView {
                             "copy",
                             "Duplicate",
                             cx,
-                            |this, _, cx| this.palette_edit("Duplicate", cx),
+                            |this, _, cx| this.palette_edit(PaletteOperation::Duplicate, cx),
                         ))
                         .when(custom, |d| {
                             d.child(
@@ -544,7 +514,7 @@ impl EditorView {
                                     "trash-2",
                                     "Delete",
                                     cx,
-                                    |this, _, cx| this.palette_edit("Delete", cx),
+                                    |this, _, cx| this.palette_edit(PaletteOperation::Delete, cx),
                                 )
                                 .text_color(t.danger()),
                             )
@@ -575,17 +545,17 @@ impl EditorView {
                                     .rounded(px(5.0))
                                     .bg(color_fill(c))
                                     .border_2()
-                                    .border_color(if i == self.palettes.slot {
+                                    .border_color(if i == state.slot {
                                         t.text()
                                     } else {
                                         t.swatch_edge()
                                     })
                                     .cursor_pointer()
-                                    .when(i == self.palettes.slot, |d| {
+                                    .when(i == state.slot, |d| {
                                         d.child(icon("check").text_color(swatch_ink(c)))
                                     })
                                     .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.palettes.slot = i;
+                                        this.palette_request(PaletteAction::SelectSlot(i), cx);
                                         this.sync_palette_fields(cx);
                                         cx.notify();
                                     }))
@@ -602,25 +572,30 @@ impl EditorView {
                                 "check",
                                 "Apply color",
                                 cx,
-                                |this, _, cx| this.palette_edit("Apply color", cx),
+                                |this, _, cx| this.palette_edit(PaletteOperation::ApplyColor, cx),
                             ))
                         }),
                 )
                 .when(custom, |d| {
                     d.child(
                         row().gap(px(6.0)).children(
-                            ["Add slot", "Remove slot", "Move left", "Move right"]
-                                .into_iter()
-                                .enumerate()
-                                .map(|(i, label)| {
-                                    self.control(
-                                        ("slot-op", i),
-                                        ["plus", "trash-2", "arrow-left", "arrow-right"][i],
-                                        label,
-                                        cx,
-                                        move |this, _, cx| this.palette_edit(label, cx),
-                                    )
-                                }),
+                            [
+                                ("Add slot", PaletteOperation::AddSlot),
+                                ("Remove slot", PaletteOperation::RemoveSlot),
+                                ("Move left", PaletteOperation::MoveLeft),
+                                ("Move right", PaletteOperation::MoveRight),
+                            ]
+                            .into_iter()
+                            .enumerate()
+                            .map(|(i, (label, operation))| {
+                                self.control(
+                                    ("slot-op", i),
+                                    ["plus", "trash-2", "arrow-left", "arrow-right"][i],
+                                    label,
+                                    cx,
+                                    move |this, _, cx| this.palette_edit(operation, cx),
+                                )
+                            }),
                         ),
                     )
                 })

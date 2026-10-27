@@ -4,7 +4,10 @@ use voxelite_plugin_api::{ExportCx, FormatContent, Snapshot};
 use voxelite_plugin_host::{Host, SnapshotExport};
 
 pub(crate) fn host() -> Host {
-    Host::new(vec![Box::new(voxelite_plugin_exporters::ExportersPlugin)])
+    Host::new(vec![
+        Box::new(voxelite_plugin_exporters::ExportersPlugin),
+        Box::new(voxelite_plugin_palette::PalettePlugin),
+    ])
 }
 
 pub(crate) fn extensions(host: &Host) -> Vec<String> {
@@ -54,6 +57,8 @@ pub(crate) fn tools(host: &Host) -> Vec<rmcp::model::Tool> {
                 host.registry()
                     .formats()
                     .any(|(_, f)| f.export && f.content == FormatContent::Palette)
+            } else if spec.tool.name.starts_with("voxelite_palette_") {
+                crate::palettes::enabled(host)
             } else {
                 true
             }

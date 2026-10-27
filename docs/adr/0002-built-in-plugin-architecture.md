@@ -5,7 +5,8 @@ Date: 2026-10-26
 Status: Accepted; the shell reads command metadata and the editor dispatches tools
 and command transforms through the host registry. Camera gizmo and grid drawing
 and interaction also dispatch through enabled overlay bindings. Export formats
-and byte encoding dispatch through the enabled exporters registry.
+and byte encoding dispatch through the enabled exporters registry. Palette state,
+library operations and palette commands dispatch through an enabled panel binding.
 
 ## Context
 
@@ -44,7 +45,7 @@ contribution identifiers within a plugin and setting defaults. IDs and setting
 keys are namespaced; data section names may also name existing `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx`,
-`TransformCx`, `OverlayCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
+`TransformCx`, `OverlayCx`, `PaletteCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
 service locator.
 `ActivateCx` scopes activation capabilities separately. `CommandCx` and
 `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
@@ -56,13 +57,13 @@ command/value types and the shared GLB/PNG byte encoders;
 plugin crates still depend only on the API.
 
 `Plugin` exposes `manifest`, `contribute`, default-unbound `tool(id)` and
-`command_transform(id)`, `overlay(id)` and `exporter(id)` implementation lookups, and default no-op
+`command_transform(id)`, `overlay(id)`, `palette_panel(id)` and `exporter(id)` implementation lookups, and default no-op
 `activate`/`deactivate` hooks. The host owns API compatibility checks, cross-plugin
 conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool lookup and invocation are admitted
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.5.0`, independently of plugin implementation versions and `.voxl` or
+is `0.5.1`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -77,6 +78,9 @@ contributions through a default-unbound lookup, without changing existing exhaus
 API enums or required methods on existing capability traits.
 The `0.5.0` bump adds required snapshot/render queries to `ExportCx` and a
 `FormatContent` category to public `FormatContribution` construction.
+The compatible `0.5.1` addition binds portable palette behavior to existing panel
+declarations through a default-unbound lookup and new palette capability/value
+types. Existing required trait methods and contribution construction are unchanged.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -229,6 +233,68 @@ callback errors and panics, worker completion after disablement or host replacem
 registry-driven lists, unchanged `.voxl`/history, and native saving with exporters
 disabled.
 
+## Palette panel and local library boundary
+
+`voxelite-plugin-palette` (`dev.voxelite.palette`) owns the exact built-in presets,
+HEX/GPL import, local library validation and serialization, swatch selection,
+add/remove/color/name edits, duplication, and display-order moves. Preset construction
+and manual left/right ordering are the existing generation/order behavior; this
+extraction introduces no new generator or sorting command. Core retains `Palette`,
+`PaletteSlot`, `Swatch`, their invariants and `Command::Palette` execution, undo and
+redo. The existing HEX/GPL export encoders remain on the exporters path.
+
+The plugin declares `dev.voxelite.palette.panel`, its three existing shell commands,
+and the Choice setting `dev.voxelite.palette.preset`. The choice drives the existing
+project/preset chooser and defaults to project colors; it remains transient per
+editor, with no new settings row or preferences-file migration. Custom library JSON
+retains the exact `entries` array, UUIDs, names, slots and order, the 128-entry limit,
+and the existing `palettes.json` location. Choosing a library or preset does not
+change the brush, document, dirty state or history. Selecting a brush swatch remains
+lazy: tools import it only as part of their next successful edit transaction.
+
+`Plugin::palette_panel(id)` binds a `PalettePanel` to the panel contribution.
+`PaletteCx` exposes the displayed project palette, active brush color, last admitted
+panel state and only the owner's declared settings. It supplies no engine, GPUI,
+filesystem or other plugin state. The plugin returns a portable `PaletteView` for
+the app to render and `PaletteOutcome` proposals for interactions. Outcomes contain
+selection, optional serialized library bytes, scoped setting changes, shell
+presentation requests and typed core commands. Document edits remain core-admitted
+transactions; a request cannot combine a library write with a document transaction.
+The host validates setting ownership and values before exposing an outcome.
+
+GPUI layout, text-field editing, focus, scrolling and platform file dialogs remain
+in the app. The sidebar renders the registered panel; the library manager and
+chooser use its supplied state and choices. Bounded native reads and atomic writes
+and browser origin-local storage remain host services in `local_settings`; neither
+settings nor saving depends on the optional palette plugin. The host persists a
+proposed library before adopting its state, so validation and I/O failures preserve
+the previous library and selection. Background imports recheck the enabled binding
+on completion. New/Open preserves the window's library/custom selection while
+resetting its project/preset choice, as before.
+
+MCP keeps the same palette tool names, schemas, slot mappings, errors and command
+batch structure. Set-slot, preset and import requests dispatch through the same
+binding against the live document palette, producing typed core commands only.
+Standalone MCP installs the standard palette plugin; attached MCP uses the editor's
+host and refreshes its tool list when palette availability changes. Palette export
+remains independently owned by exporters.
+
+Disabling the palette plugin removes its panel, commands and setting from the
+registry, closes stale palette surfaces, and filters menu/search entries. Tools
+remain usable with the core clay default (`#B48C64`); retained palette/brush selection
+returns when the plugin is enabled again. Document palette data, undo, saving and
+camera navigation remain available. Binding, view and interaction callbacks are
+timed and panic-isolated; a panic quarantines the owner and discards its declarations.
+Conformance exercises supplied panel bindings across enable/disable/enable.
+
+Characterization tests ran before extraction and pin every preset color and order,
+RGBA-based duplicate swatch selection, wraparound, library add/remove/order edits
+and exact persisted JSON. Migrated tests additionally cover registered commands and
+settings, invalid/oversized imports, bounded libraries, failed-write rollback,
+unchanged `.voxl` bytes during selection, typed edit undo/redo, disabled/absent
+palette fallback, scoped settings and panic isolation. The shell's existing golden
+continues to pin labels, icons, menus and shortcuts.
+
 ## Crate layout and dependency rule
 
 Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
@@ -266,7 +332,7 @@ Repeated enable/disable requests are no-ops; transitions call their hook once.
 API compatibility ignores build metadata and requires exact version precedence
 for prereleases, which have no compatibility guarantee.
 
-Plugin entry points, including tool, transform, overlay and export binding and invocation, are
+Plugin entry points, including tool, transform, overlay, palette and export binding and invocation, are
 guarded with `catch_unwind`. A hook panic marks the plugin
 `Faulted`, discards its declarations and prevents retries for that host's lifetime;
 a manifest panic is a registration rejection because no identity is established.
@@ -279,7 +345,7 @@ Transform panics abort the pending outcome before transaction admission and
 quarantine the plugin; later editing can proceed without that transform.
 The public `conformance::check` harness validates a plugin and exercises a full
 enable/disable/enable cycle, recollecting metadata to detect residue and checking
-that every declared tool, transform and exporter and each supplied overlay binding is available
+that every declared tool, transform and exporter and each supplied overlay/palette binding is available
 only while enabled. Required
 plugins also have their cleanup hooks exercised without exposing a public bypass
 of their disablement policy. Panic isolation requires unwinding and cannot recover
@@ -298,8 +364,8 @@ presentation order, for menus, Cmd-K, the shortcuts sheet and keybindings. Engli
 label keys are used directly for now. An exhaustive ID mapping retains `Op` as the
 GPUI dispatch type; existing availability checks now also consult the live registry. There is no
 plugin enablement UI yet; editor menus filter or rebuild from the live registry,
-while future enablement changes still need to rebuild the command-search/shortcut
-view and installed bindings. Agent connection and Extensions remain UI-only commands,
+command search also filters the live registry; future enablement changes still
+need to rebuild the shortcut view and installed bindings. Agent connection and Extensions remain UI-only commands,
 with `agent_visible = false`.
 
 A golden test captured the pre-migration Apple and non-Apple menus, icons,

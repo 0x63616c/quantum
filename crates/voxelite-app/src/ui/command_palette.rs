@@ -42,15 +42,24 @@ impl CommandPalette {
         &self.scroll
     }
 
-    pub(super) fn filtered_actions(&self) -> Vec<Op> {
+    pub(super) fn filtered_actions(&self, host: &voxelite_plugin_host::Host) -> Vec<Op> {
         actions::search(&self.query, self.tools_only)
+            .into_iter()
+            .filter(|op| host.registry().get(op.command_id()).is_some())
+            .collect()
     }
 
     // Escape and focus routing belong to the surrounding modal shell. Return
     // Enter's command without closing: invoke still owns availability checks.
-    fn key(&mut self, stroke: &Keystroke, platform: ShortcutPlatform) -> Option<Op> {
+    fn key(
+        &mut self,
+        stroke: &Keystroke,
+        platform: ShortcutPlatform,
+        host: &voxelite_plugin_host::Host,
+    ) -> Option<Op> {
         let key = navigation_key(stroke).unwrap_or_default();
-        let count = self.filtered_actions().len();
+        let count = self.filtered_actions(host).len();
+        self.index = self.index.min(count.saturating_sub(1));
         match key {
             "backspace" => {
                 self.query.pop();
@@ -58,7 +67,7 @@ impl CommandPalette {
             }
             "down" => self.index = (self.index + 1).min(count.saturating_sub(1)),
             "up" => self.index = self.index.saturating_sub(1),
-            "enter" => return self.filtered_actions().get(self.index).copied(),
+            "enter" => return self.filtered_actions(host).get(self.index).copied(),
             _ => {
                 if let Some(text) = &stroke.key_char
                     && self.query.len() + text.len() <= 128
@@ -85,7 +94,12 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if let Some(op) = self.commands.key(stroke, ShortcutPlatform::current()) {
+        let op = self.commands.key(
+            stroke,
+            ShortcutPlatform::current(),
+            &self.editor.plugin_host(),
+        );
+        if let Some(op) = op {
             self.invoke(op, window, cx);
         }
         // Invoking Commands/ToolPicker can reopen/reset the palette. Scroll
@@ -101,8 +115,33 @@ mod tests {
     use super::{CommandPalette, Op, ShortcutPlatform};
     use gpui::{Keystroke, Modifiers, point, px};
 
+    #[test]
+    fn disabled_palette_commands_disappear_from_search_and_keyboard_dispatch() {
+        let mut host = voxelite_app::app_host();
+        let mut palette = CommandPalette::default();
+        palette.open(false);
+        palette.query = "palette".into();
+        assert_eq!(palette.filtered_actions(&host).len(), 3);
+        host.disable("dev.voxelite.palette").unwrap();
+        assert!(palette.filtered_actions(&host).is_empty());
+        assert_eq!(
+            palette.key(
+                &Keystroke::parse("enter").unwrap(),
+                ShortcutPlatform::current(),
+                &host
+            ),
+            None
+        );
+        host.enable("dev.voxelite.palette").unwrap();
+        assert_eq!(palette.filtered_actions(&host).len(), 3);
+    }
+
     fn key(palette: &mut CommandPalette, key: &str) -> Option<Op> {
-        palette.key(&Keystroke::parse(key).unwrap(), ShortcutPlatform::current())
+        palette.key(
+            &Keystroke::parse(key).unwrap(),
+            ShortcutPlatform::current(),
+            &voxelite_app::app_host(),
+        )
     }
 
     fn text(
@@ -118,6 +157,7 @@ mod tests {
                 modifiers,
             },
             platform,
+            &voxelite_app::app_host(),
         );
     }
 
@@ -142,14 +182,17 @@ mod tests {
         assert_eq!(palette.query(), "");
         assert_eq!(palette.index(), 0);
         assert_eq!(palette.scroll().offset(), point(px(0.), px(-100.)));
-        assert_eq!(palette.filtered_actions(), crate::actions::search("", true));
+        assert_eq!(
+            palette.filtered_actions(&voxelite_app::app_host()),
+            crate::actions::search("", true)
+        );
     }
 
     #[test]
     fn navigation_clamps_and_enter_returns_registry_order_without_closing() {
         let mut palette = CommandPalette::default();
         palette.open(false);
-        let matches = palette.filtered_actions();
+        let matches = palette.filtered_actions(&voxelite_app::app_host());
         assert_eq!(matches, crate::actions::search("", false));
         key(&mut palette, "up");
         assert_eq!(palette.index(), 0);
@@ -176,7 +219,11 @@ mod tests {
             ShortcutPlatform::current(),
         );
         assert_eq!(palette.index(), 0);
-        assert!(palette.filtered_actions().is_empty());
+        assert!(
+            palette
+                .filtered_actions(&voxelite_app::app_host())
+                .is_empty()
+        );
         key(&mut palette, "down");
         key(&mut palette, "up");
         assert_eq!(palette.index(), 0);
@@ -185,7 +232,11 @@ mod tests {
             key(&mut palette, "backspace");
         }
         assert_eq!(palette.query(), "");
-        assert!(!palette.filtered_actions().is_empty());
+        assert!(
+            !palette
+                .filtered_actions(&voxelite_app::app_host())
+                .is_empty()
+        );
     }
 
     #[test]

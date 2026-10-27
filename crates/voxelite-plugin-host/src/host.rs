@@ -1,6 +1,8 @@
 #[path = "export.rs"]
 mod export;
 pub use export::{ExportCompletion, ExportJob, SnapshotExport};
+#[path = "palette.rs"]
+mod palette;
 
 use std::{
     any::Any,
@@ -83,6 +85,8 @@ pub enum Phase {
     Overlay,
     /// Binding or invoking a read-only exporter.
     Export,
+    /// Binding, viewing or interacting with a portable palette panel.
+    Palette,
 }
 
 impl Phase {
@@ -95,6 +99,7 @@ impl Phase {
             Self::CommandTransform => "command_transform",
             Self::Overlay => "overlay",
             Self::Export => "export",
+            Self::Palette => "palette",
         }
     }
 }
@@ -170,6 +175,9 @@ pub enum RegistrationError {
 /// A runtime lifecycle, setting, tool or command transform request failed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
+    /// Palette interaction failed without admitting state or document edits.
+    #[error(transparent)]
+    Palette(#[from] voxelite_plugin_api::PaletteError),
     /// Export encoding failed without changing the document.
     #[error("export failed: {message}")]
     Export {

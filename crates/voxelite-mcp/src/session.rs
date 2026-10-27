@@ -4,7 +4,7 @@ use crate::{
     catalog::Spec,
     edit,
     error::{Args, Failure, Result},
-    exports, files, images,
+    exports, files, images, palettes,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use rmcp::model::{CallToolResult, ContentBlock};
@@ -371,7 +371,7 @@ fn dispatch(
         "palette_list" => {
             return read(
                 engine,
-                json!({"palette":s.palette,"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"]}),
+                json!({"palette":s.palette,"presets":palettes::presets(host)?}),
             );
         }
         "palette_export" => {
@@ -454,35 +454,33 @@ fn dispatch(
                 locked: a.optional("locked")?,
             })
         }
-        "palette_set_slot" => {
-            let slot = a.get("slot")?;
-            let color = Swatch {
-                rgba: a.get("rgba")?,
-                name: a.optional("name")?,
+        "palette_set_slot" | "palette_apply_preset" | "palette_import" => {
+            use voxelite_plugin_api::PaletteAction;
+            let action = match name {
+                "palette_set_slot" => PaletteAction::SetSlot {
+                    slot: a.get("slot")?,
+                    color: Swatch {
+                        rgba: a.get("rgba")?,
+                        name: a.optional("name")?,
+                    },
+                },
+                "palette_apply_preset" => PaletteAction::AppendPreset(a.get("preset")?),
+                _ => PaletteAction::AppendImport {
+                    format: a.get("format")?,
+                    text: a.get("text")?,
+                },
             };
-            Command::Palette(if s.palette.get(slot).is_some() {
-                PaletteEdit::Set { slot, color }
+            let outcome = palettes::dispatch(host, &s.palette, action)?;
+            if name != "palette_set_slot" {
+                extras = json!({"slot_mapping": outcome.slot_mapping.iter().map(|(source, slot)| json!({"source":source,"slot":slot})).collect::<Vec<_>>()});
+            }
+            // Preserve the original command nesting and history serialization.
+            let mut commands = outcome.commands;
+            if name == "palette_set_slot" {
+                commands.remove(0)
             } else {
-                PaletteEdit::Add {
-                    slot: Some(slot),
-                    color,
-                }
-            })
-        }
-        "palette_apply_preset" | "palette_import" => {
-            let palette = if name == "palette_apply_preset" {
-                edit::preset(&a.get::<String>("preset")?)?
-            } else {
-                let text: String = a.get("text")?;
-                match a.get::<String>("format")?.as_str() {
-                    "hex" => Palette::from_hex(&text)?,
-                    "gpl" => Palette::from_gpl(&text)?,
-                    _ => unreachable!("validated format"),
-                }
-            };
-            let (command, mapping) = edit::append_palette(s, palette)?;
-            extras = mapping;
-            command
+                Command::Batch(commands)
+            }
         }
         "comments_list" => {
             let state: String = a.default("state", "all".into())?;
