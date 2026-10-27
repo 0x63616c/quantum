@@ -4,6 +4,7 @@ mod attachment;
 pub mod comments;
 pub mod core_plugin;
 pub use core_plugin::app_host;
+pub mod debug_overlay;
 pub mod editor;
 pub mod frame_meter;
 pub mod history;

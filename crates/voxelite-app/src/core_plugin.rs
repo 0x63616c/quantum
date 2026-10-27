@@ -187,6 +187,16 @@ impl Plugin for CorePlugin {
                 None,
             ),
             (
+                "dev.voxelite.core.debug_overlay",
+                "Toggle debug overlay",
+                Some("secondary-shift-d"),
+                Some("Editor"),
+                "settings",
+                "View",
+                162,
+                None,
+            ),
+            (
                 "dev.voxelite.core.fullscreen",
                 "Toggle Full Screen",
                 Some("ctrl-cmd-f"),

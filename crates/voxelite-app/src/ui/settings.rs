@@ -152,6 +152,7 @@ impl Section {
                     "Render performance",
                     "show viewport fps average frame time renderer statistics",
                 ),
+                ("Debug overlay", "cpu gpu timings chunks memory diagnostics"),
             ],
             Self::Shortcuts => {
                 return actions::shortcut_sheet(ShortcutPlatform::current())
@@ -712,6 +713,18 @@ impl SettingsView {
                             ),
                             t,
                         ),
+                        self.form_row(
+                            "Debug overlay",
+                            "Show renderer timings, chunks and memory over the viewport.",
+                            self.toggle(
+                                "debug-overlay",
+                                p.show_debug_overlay,
+                                |p| p.show_debug_overlay = !p.show_debug_overlay,
+                                t,
+                                cx,
+                            ),
+                            t,
+                        ),
                     ])
                     .collect(),
                 t,
@@ -1247,11 +1260,16 @@ impl EditorView {
         let rerender = self.preferences.antialiasing != next.antialiasing
             || self.preferences.viewport_ambient_occlusion() != next.viewport_ambient_occlusion()
             || (self.viewport.gpu_enabled()
-                && (self.theme != next_theme || self.preferences.grid != next.grid));
+                && (self.theme != next_theme
+                    || self.preferences.grid != next.grid
+                    || self.preferences.show_debug_overlay != next.show_debug_overlay));
         self.theme = next_theme;
         self.editor
             .set_grid(next.grid)
             .expect("declared boolean grid setting");
+        if self.preferences.show_debug_overlay != next.show_debug_overlay {
+            self.viewport.clear_diagnostics();
+        }
         self.preferences = next;
         if rerender {
             self.request_render(cx);

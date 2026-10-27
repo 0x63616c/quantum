@@ -106,6 +106,12 @@ impl Viewport {
     pub(super) fn display_camera(&self) -> OrbitCamera {
         self.display_camera
     }
+    pub(super) fn frame_stats(&self) -> Option<&voxelite_render::diagnostics::FrameStats> {
+        self.gpu.stats.as_ref()
+    }
+    pub(super) fn clear_diagnostics(&mut self) {
+        self.gpu.clear_diagnostics();
+    }
     pub(super) fn frame_meter(&self) -> &FrameMeter {
         &self.frame_meter
     }
@@ -121,6 +127,7 @@ impl Viewport {
     }
 
     pub(super) fn invalidate_preview(&mut self) {
+        self.gpu.clear_diagnostics();
         self.document_generation = self.document_generation.wrapping_add(1);
     }
 
@@ -575,6 +582,14 @@ mod tests {
             size(px(801.), px(601.)),
         ));
         (viewport, editor)
+    }
+
+    #[test]
+    fn clearing_surface_content_discards_diagnostics() {
+        let mut state = super::gpu_viewport::State::new();
+        state.stats = Some(voxelite_render::diagnostics::FrameStats::default());
+        state.clear_frame();
+        assert!(state.stats.is_none());
     }
 
     #[test]

@@ -16,6 +16,7 @@ mod history;
 mod keyboard_guide;
 mod viewport;
 use keyboard_guide::keyboard_guide;
+mod debug_overlay;
 mod overlays;
 use comments::Panel;
 mod palette_layout;
@@ -425,6 +426,7 @@ impl EditorView {
             Op::Box => self.editor.tool == Tool::Box,
             Op::Picker => self.editor.tool == Tool::Picker,
             Op::Grid => self.editor.grid(),
+            Op::DebugOverlay => self.preferences.show_debug_overlay,
             Op::Frame | Op::Front | Op::Right | Op::Top => self.camera_view == Some(op),
             Op::MirrorX => self.editor.mirror_axes()[0],
             Op::MirrorY => self.editor.mirror_axes()[1],
@@ -561,6 +563,7 @@ impl EditorView {
                 self.report(r, "Redone", cx);
             }
             Op::Grid => settings::change(cx, |p| p.grid = !p.grid),
+            Op::DebugOverlay => settings::change(cx, |p| p.show_debug_overlay = !p.show_debug_overlay),
             Op::Frame | Op::Front | Op::Right | Op::Top => {
                 self.agent.follow = false;
                 let b = self.viewport.bounds();
@@ -1173,6 +1176,9 @@ impl EditorView {
                             .border_0(),
                         ),
                 )
+            })
+            .when(self.preferences.show_debug_overlay, |d| {
+                d.child(self.debug_overlay())
             })
             .children(self.viewport_widgets(cx))
             .child(

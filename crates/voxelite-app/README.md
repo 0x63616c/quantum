@@ -54,6 +54,7 @@ Linux column denotes a macOS-only command.
 | Search commands… | ⌘K | Ctrl+K |
 | Settings… | ⌘, | Ctrl+, |
 | Frame model | F | F |
+| Toggle debug overlay | ⇧⌘D | Ctrl+Shift+D |
 | Toggle Full Screen | ⌃⌘F | F11 |
 | Place | B | B |
 | Erase | E | E |
