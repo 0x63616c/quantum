@@ -87,6 +87,7 @@ impl EditorView {
         if self.viewport.render_size.contains(&0) {
             return;
         }
+        self.viewport.sync_scene_grid(&self.editor);
         if !self.viewport.begin_render(cx.background_executor().now()) {
             return;
         }
@@ -97,12 +98,29 @@ impl EditorView {
         let snapshot = changed.then(|| self.editor.display_snapshot().clone());
         let mut renderer = self.viewport.gpu.renderer.take();
         let background = if self.theme == Theme::Light { 1. } else { 0. };
-        let grid_color: Rgba = self.theme.line().into();
+        let grid = self.viewport.scene_grid;
+        let grid_color: Rgba = grid
+            .map_or(self.theme.line(), |grid| {
+                overlays::color(self.theme, grid.color)
+            })
+            .into();
         let style = voxelite_render::gpu::Style {
             background: [background, background, background, 1.],
             outline: RenderOptions::default().outline,
-            grid: self.grid,
-            grid_color: [grid_color.r, grid_color.g, grid_color.b, 0.24],
+            grid: grid.map(|grid| {
+                [
+                    grid.plane as f32 + grid.offset as f32,
+                    grid.min as f32,
+                    grid.max as f32,
+                    grid.spacing as f32,
+                ]
+            }),
+            grid_color: [
+                grid_color.r,
+                grid_color.g,
+                grid_color.b,
+                grid.map_or(0., |g| g.opacity),
+            ],
         };
         cx.spawn(async move |this, cx| {
             let result = async {

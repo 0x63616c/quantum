@@ -12,6 +12,7 @@ mod gpu_viewport;
 struct FrameIdentity {
     generation: u64,
     revision: u64,
+    overlay_epoch: u64,
     preview: Option<voxelite_app::history::PreviewSource>,
     camera: OrbitCamera,
     size: [u32; 2],
@@ -19,6 +20,8 @@ struct FrameIdentity {
 
 pub(super) struct Viewport {
     gpu: gpu_viewport::State,
+    scene_grid: Option<voxelite_plugin_api::OverlayGrid>,
+    overlay_epoch: u64,
     image: Option<Arc<RenderImage>>,
     painted_image: Option<Arc<RenderImage>>,
     painted_frame: Rc<Cell<Option<FrameIdentity>>>,
@@ -45,6 +48,8 @@ impl Viewport {
         };
         Self {
             gpu,
+            scene_grid: None,
+            overlay_epoch: 0,
             image: None,
             painted_image: None,
             painted_frame: Rc::new(Cell::new(None)),
@@ -60,6 +65,29 @@ impl Viewport {
             interactive_render: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
         }
+    }
+
+    // GPU frames include their background overlays. A registry/setting change
+    // must schedule new pixels and reject older in-flight overlay content.
+    fn sync_scene_grid(&mut self, editor: &Editor) -> bool {
+        if !self.gpu.enabled {
+            return false;
+        }
+        let grid = editor
+            .overlays(editor.camera, None)
+            .into_iter()
+            .filter(|frame| frame.slot == voxelite_plugin_api::RenderPassSlot::BeforeScene)
+            .flat_map(|frame| frame.primitives)
+            .find_map(|primitive| match primitive {
+                voxelite_plugin_api::OverlayPrimitive::Grid(grid) => Some(grid),
+                _ => None,
+            });
+        if self.scene_grid == grid {
+            return false;
+        }
+        self.scene_grid = grid;
+        self.overlay_epoch = self.overlay_epoch.wrapping_add(1);
+        true
     }
 
     pub(super) fn gpu_enabled(&self) -> bool {
@@ -130,6 +158,7 @@ impl Viewport {
         FrameIdentity {
             generation: self.document_generation,
             revision: editor.engine.revision(),
+            overlay_epoch: self.overlay_epoch,
             preview: editor.preview.as_ref().map(|p| p.source),
             camera: editor.camera,
             size: self.render_size,
@@ -142,6 +171,7 @@ impl Viewport {
         let current = self.identity(editor);
         identity.generation == current.generation
             && identity.revision == current.revision
+            && identity.overlay_epoch == current.overlay_epoch
             && identity.preview == current.preview
             && identity.size == current.size
     }
@@ -330,6 +360,7 @@ impl EditorView {
         let dimensions = self
             .viewport
             .dimensions([width, height], window.scale_factor());
+        let overlays_changed = self.viewport.sync_scene_grid(&self.editor);
         if self.viewport.render_size != dimensions {
             if self.camera_fitted {
                 self.editor.camera = OrbitCamera::fit_view(
@@ -348,6 +379,8 @@ impl EditorView {
                 }
             }
             self.viewport.render_size = dimensions;
+            self.request_render(cx);
+        } else if overlays_changed {
             self.request_render(cx);
         }
         if self.viewport.render_pending && !self.viewport.rendering {
@@ -375,8 +408,16 @@ impl EditorView {
         let camera = self.viewport.display_camera;
         let frame_size = self.viewport.displayed.map(|_| self.viewport.display_size);
         let tool_region = self.editor.tool_preview(self.hover);
-        let grid = self.grid;
-        let doc_bounds = self.editor.display_snapshot().bounds;
+        let overlays = self.editor.overlays(camera, None);
+        let grids: Vec<_> = overlays
+            .into_iter()
+            .filter(|frame| frame.slot == voxelite_plugin_api::RenderPassSlot::BeforeScene)
+            .flat_map(|frame| frame.primitives)
+            .filter_map(|primitive| match primitive {
+                voxelite_plugin_api::OverlayPrimitive::Grid(grid) => Some(grid),
+                _ => None,
+            })
+            .collect();
         let comment_region = self
             .discussion
             .draft
@@ -416,19 +457,22 @@ impl EditorView {
                         bounds.origin.y + bounds.size.height * uv[1] as f32,
                     )
                 };
-                if grid && !gpu_active {
-                    let mut path = PathBuilder::stroke(px(0.6));
-                    let y = f64::from(doc_bounds.min[1]) - 0.05;
-                    let extent = doc_bounds.min[0].min(doc_bounds.min[2]) - 16;
-                    let end = doc_bounds.max[0].max(doc_bounds.max[2]) + 16;
-                    for a in (extent..=end).step_by(4) {
-                        path.move_to(project(DVec3::new(f64::from(a), y, f64::from(extent))));
-                        path.line_to(project(DVec3::new(f64::from(a), y, f64::from(end))));
-                        path.move_to(project(DVec3::new(f64::from(extent), y, f64::from(a))));
-                        path.line_to(project(DVec3::new(f64::from(end), y, f64::from(a))));
-                    }
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, t.line().opacity(0.24));
+                if !gpu_active {
+                    for grid in &grids {
+                        let mut path = PathBuilder::stroke(px(grid.width));
+                        let y = f64::from(grid.plane) + grid.offset;
+                        for a in (grid.min..=grid.max).step_by(grid.spacing.max(1) as usize) {
+                            path.move_to(project(DVec3::new(f64::from(a), y, f64::from(grid.min))));
+                            path.line_to(project(DVec3::new(f64::from(a), y, f64::from(grid.max))));
+                            path.move_to(project(DVec3::new(f64::from(grid.min), y, f64::from(a))));
+                            path.line_to(project(DVec3::new(f64::from(grid.max), y, f64::from(a))));
+                        }
+                        if let Ok(path) = path.build() {
+                            window.paint_path(
+                                path,
+                                overlays::color(t, grid.color).opacity(grid.opacity),
+                            );
+                        }
                     }
                 }
                 let mut presented = None;
@@ -594,6 +638,35 @@ mod tests {
         }
         viewport.invalidate_preview();
         assert!(!viewport.accepts(frame, &editor));
+    }
+
+    #[test]
+    fn disabling_grid_rejects_cached_gpu_overlay_content_without_affecting_cpu_frames() {
+        let (mut viewport, mut editor) = fixture();
+        let cpu = viewport.identity(&editor);
+        assert!(!viewport.sync_scene_grid(&editor));
+        assert!(viewport.accepts(cpu, &editor));
+        viewport.gpu.enabled = true;
+        assert!(viewport.sync_scene_grid(&editor));
+        let enabled = viewport.identity(&editor);
+        assert!(viewport.scene_grid.is_some());
+        assert!(!viewport.sync_scene_grid(&editor));
+        editor
+            .set_plugin_enabled("dev.voxelite.gizmo-grid", false)
+            .unwrap();
+        assert!(viewport.sync_scene_grid(&editor));
+        assert!(viewport.scene_grid.is_none());
+        assert!(!viewport.accepts(enabled, &editor));
+        let disabled = viewport.identity(&editor);
+        assert!(viewport.accepts(disabled, &editor));
+        editor
+            .set_plugin_enabled("dev.voxelite.gizmo-grid", true)
+            .unwrap();
+        assert!(viewport.sync_scene_grid(&editor));
+        assert!(!viewport.accepts(disabled, &editor));
+        editor.set_grid(false).unwrap();
+        assert!(viewport.sync_scene_grid(&editor));
+        assert!(viewport.scene_grid.is_none());
     }
 
     #[test]

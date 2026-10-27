@@ -8,6 +8,7 @@
 //! and no third-party code loading, WASM or scripting.
 mod context;
 mod id;
+mod overlay;
 mod registrar;
 mod spec;
 mod tool;
@@ -15,6 +16,7 @@ mod transform;
 
 pub use context::{ActivateCx, CommandCx, ExportCx, ToolCx, TransformCx};
 pub use id::{InvalidPluginId, PluginId};
+pub use overlay::*;
 pub use registrar::{Contributions, Registrar, ValidationError, validate_contributions};
 pub use semver::Version;
 pub use serde_json::Value;
@@ -36,7 +38,7 @@ pub use voxelite_core::{
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 4, 0);
+pub const API_VERSION: Version = Version::new(0, 4, 1);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -50,6 +52,10 @@ pub trait Plugin {
     }
     /// Bind a declared command transform. Hosts gate calls on enablement.
     fn command_transform(&self, _id: &str) -> Option<&dyn CommandTransform> {
+        None
+    }
+    /// Bind a declared render pass to portable overlay drawing and interaction.
+    fn overlay(&self, _id: &str) -> Option<&dyn Overlay> {
         None
     }
     /// Initialize plugin state using only capabilities supplied by the host.

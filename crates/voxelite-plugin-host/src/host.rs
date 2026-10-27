@@ -5,9 +5,10 @@ use std::{
 };
 
 use voxelite_plugin_api::{
-    API_VERSION, ActivateCx, Command, Contribution, Contributions, Manifest, Plugin, PluginId,
-    Region, Registrar, SettingKind, SettingValue, ToolCx, ToolError, ToolInput, ToolOutcome,
-    TransformCx, ValidationError, Version,
+    API_VERSION, ActivateCx, Command, Contribution, Contributions, Manifest, OverlayCx,
+    OverlayFrame, OverlayInput, OverlayOutcome, OverlayPrimitive, Plugin, PluginId, Region,
+    Registrar, SettingKind, SettingValue, ToolCx, ToolError, ToolInput, ToolOutcome, TransformCx,
+    ValidationError, Version,
 };
 
 use crate::{BudgetExceeded, Conflict, Registry, Timings, registry::find_conflicts};
@@ -74,6 +75,8 @@ pub enum Phase {
     Tool,
     /// Binding or invoking a pending command transform.
     CommandTransform,
+    /// Binding, drawing or interacting with a portable overlay.
+    Overlay,
 }
 
 impl Phase {
@@ -84,6 +87,7 @@ impl Phase {
             Self::Deactivate => "deactivate",
             Self::Tool => "tool",
             Self::CommandTransform => "command_transform",
+            Self::Overlay => "overlay",
         }
     }
 }
@@ -288,6 +292,103 @@ pub struct Host {
 }
 
 impl Host {
+    /// Draw enabled render-pass overlay bindings in registration order.
+    /// A fault discards that plugin's entire frame; other plugins keep drawing.
+    pub fn draw_overlays(
+        &mut self,
+        bounds: Region,
+        camera_basis: [[f64; 3]; 3],
+        hovered: Option<(&str, u32)>,
+    ) -> Vec<OverlayFrame> {
+        let passes: Vec<_> = self
+            .registry()
+            .render_passes()
+            .map(|(_, pass)| pass.clone())
+            .collect();
+        let mut frames = Vec::new();
+        for pass in passes {
+            let Some(index) = self.overlay_owner(&pass.id) else {
+                continue;
+            };
+            let mut cx = OverlayContext {
+                bounds,
+                camera_basis,
+                settings: self.plugins[index].settings.clone(),
+                primitives: Vec::new(),
+            };
+            let target = hovered
+                .filter(|(id, _)| *id == pass.id)
+                .map(|(_, target)| target);
+            let drawn = self.invoke(index, Phase::Overlay, |plugin| {
+                plugin
+                    .overlay(&pass.id)
+                    .map(|overlay| overlay.draw(&mut cx, target))
+                    .is_some()
+            });
+            if matches!(drawn, Ok(true)) {
+                frames.push(OverlayFrame {
+                    id: pass.id,
+                    slot: pass.slot,
+                    primitives: cx.primitives,
+                });
+            }
+        }
+        // A later pass can fault the same owner after an earlier pass succeeded.
+        frames.retain(|frame| self.overlay_owner(&frame.id).is_some());
+        frames
+    }
+
+    /// Dispatch a declared enabled overlay's pointer input without document mutation.
+    pub fn dispatch_overlay(
+        &mut self,
+        id: &str,
+        bounds: Region,
+        camera_basis: [[f64; 3]; 3],
+        input: OverlayInput,
+    ) -> Result<Option<OverlayOutcome>, HostError> {
+        let Some(index) = self.overlay_owner(id) else {
+            return Ok(None);
+        };
+        let cx = OverlayContext {
+            bounds,
+            camera_basis,
+            settings: self.plugins[index].settings.clone(),
+            primitives: Vec::new(),
+        };
+        let mut outcome = self
+            .invoke(index, Phase::Overlay, |plugin| {
+                plugin
+                    .overlay(id)
+                    .map(|overlay| overlay.interact(&cx, input))
+            })?
+            .transpose()?;
+        if let Some(outcome) = &mut outcome
+            && !outcome.commands.is_empty()
+        {
+            outcome.commands =
+                self.transform_commands(bounds, std::mem::take(&mut outcome.commands))?;
+        }
+        Ok(outcome)
+    }
+
+    /// Whether an enabled render-pass declaration has a portable overlay binding.
+    pub fn has_overlay(&mut self, id: &str) -> Result<bool, HostError> {
+        let Some(index) = self.overlay_owner(id) else {
+            return Ok(false);
+        };
+        self.invoke(index, Phase::Overlay, |plugin| plugin.overlay(id).is_some())
+    }
+
+    fn overlay_owner(&self, id: &str) -> Option<usize> {
+        self.plugins.iter().position(|plugin| {
+            plugin.state == PluginState::Enabled
+                && plugin
+                    .contributions
+                    .iter()
+                    .any(|c| matches!(c, Contribution::RenderPass(pass) if pass.id == id))
+        })
+    }
+
     /// Resolve and invoke a declared, enabled tool. Missing or disabled tools are inert.
     /// Transforms run on each returned outcome before any commands reach the app.
     /// Binding and execution are timed and panic-isolated like lifecycle hooks.
@@ -750,5 +851,26 @@ fn panic_message(payload: Box<dyn Any + Send>) -> String {
         (*message).to_owned()
     } else {
         "non-string panic payload".to_owned()
+    }
+}
+
+struct OverlayContext {
+    bounds: Region,
+    camera_basis: [[f64; 3]; 3],
+    settings: BTreeMap<String, SettingValue>,
+    primitives: Vec<OverlayPrimitive>,
+}
+impl OverlayCx for OverlayContext {
+    fn bounds(&self) -> Region {
+        self.bounds
+    }
+    fn camera_basis(&self) -> [[f64; 3]; 3] {
+        self.camera_basis
+    }
+    fn setting(&self, key: &str) -> Option<&SettingValue> {
+        self.settings.get(key)
+    }
+    fn emit(&mut self, primitive: OverlayPrimitive) {
+        self.primitives.push(primitive);
     }
 }

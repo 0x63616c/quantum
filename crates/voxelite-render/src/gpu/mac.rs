@@ -613,7 +613,7 @@ mod tests {
                 let style = Style {
                     background: [1., 0., 0., 1.],
                     outline: false,
-                    grid: false,
+                    grid: None,
                     grid_color: [0.; 4],
                 };
                 let mut frames = Vec::new();

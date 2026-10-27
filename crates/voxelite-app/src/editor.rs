@@ -14,7 +14,8 @@ use voxelite_format::{
     session::{DocumentSession, SessionError},
 };
 use voxelite_plugin_api::{
-    SettingValue, ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
+    OverlayFrame, OverlayInput, OverlayNavigation, OverlayOutcome, SettingValue, ToolCx, ToolError,
+    ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
 };
 use voxelite_plugin_host::{Host, HostError};
 use voxelite_render::{Camera, PresetView, Projection};
@@ -191,6 +192,11 @@ impl OrbitCamera {
         // Derive right from yaw so exact top view has no pole singularity.
         let right = DVec3::new(self.yaw.cos(), 0.0, -self.yaw.sin());
         (right, back.cross(right).normalize(), back)
+    }
+    /// Portable camera vectors for plugin overlay queries.
+    pub fn overlay_basis(self) -> [[f64; 3]; 3] {
+        let (right, up, back) = self.basis();
+        [right.to_array(), up.to_array(), back.to_array()]
     }
     /// Renderer camera; no hidden fit or projection adjustments.
     pub fn camera(self) -> Camera {
@@ -579,6 +585,67 @@ impl Editor {
     /// Enabled declarations, lifecycle state and tool invocation timings.
     pub fn plugin_host(&self) -> Ref<'_, Host> {
         self.plugins.borrow()
+    }
+    /// Draw the enabled portable overlays against the displayed document and camera.
+    pub fn overlays(&self, camera: OrbitCamera, hovered: Option<(&str, u32)>) -> Vec<OverlayFrame> {
+        self.plugins.borrow_mut().draw_overlays(
+            self.display_snapshot().bounds,
+            camera.overlay_basis(),
+            hovered,
+        )
+    }
+    /// Resolve a pointer input without applying edits or camera feedback.
+    pub fn overlay_outcome(
+        &self,
+        id: &str,
+        camera: OrbitCamera,
+        input: OverlayInput,
+    ) -> EditorResult<Option<OverlayOutcome>> {
+        Ok(self.plugins.borrow_mut().dispatch_overlay(
+            id,
+            self.display_snapshot().bounds,
+            camera.overlay_basis(),
+            input,
+        )?)
+    }
+    /// Admit typed overlay edits through the same transaction boundary as voxel tools.
+    /// Navigation is adopted only after a successful transaction. Isometric fitting
+    /// remains a shell action because it also needs viewport dimensions.
+    pub fn interact_overlay(
+        &mut self,
+        id: &str,
+        camera: OrbitCamera,
+        input: OverlayInput,
+    ) -> EditorResult<Option<OverlayOutcome>> {
+        let Some(outcome) = self.overlay_outcome(id, camera, input)? else {
+            return Ok(None);
+        };
+        if !outcome.commands.is_empty() {
+            self.execute(&outcome.label, Command::Batch(outcome.commands.clone()))?;
+        }
+        match &outcome.navigation {
+            Some(OverlayNavigation::Orbit([dx, dy])) => self.camera.orbit(*dx, *dy),
+            Some(OverlayNavigation::Orient { yaw, pitch, .. }) => {
+                self.camera.yaw = *yaw;
+                self.camera.pitch = *pitch;
+            }
+            _ => {}
+        }
+        Ok(Some(outcome))
+    }
+    /// Synchronize the existing persisted grid preference into plugin-scoped state.
+    pub fn set_grid(&mut self, enabled: bool) -> EditorResult<bool> {
+        Ok(self.plugins.get_mut().set_setting(
+            voxelite_plugin_gizmo_grid::GRID_SETTING,
+            SettingValue::Bool(enabled),
+        )?)
+    }
+    /// Effective grid setting; disabled or absent plugins expose no grid.
+    pub fn grid(&self) -> bool {
+        self.plugins
+            .borrow()
+            .setting(voxelite_plugin_gizmo_grid::GRID_SETTING)
+            == Some(&SettingValue::Bool(true))
     }
     /// Enabled mirror axis settings, owned by the mirror plugin and local to this editor.
     pub fn mirror_axes(&self) -> [bool; 3] {
@@ -1199,3 +1266,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod overlay_tests;

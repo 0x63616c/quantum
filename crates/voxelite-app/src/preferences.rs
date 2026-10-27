@@ -84,6 +84,21 @@ mod tests {
     }
 
     #[test]
+    fn grid_toggle_preserves_the_existing_persistence_key_and_default() {
+        let mut preferences = Preferences::default();
+        assert!(preferences.grid);
+        preferences.grid = !preferences.grid;
+        assert_eq!(
+            serde_json::to_string(&preferences).unwrap(),
+            r#"{"appearance":"system","grid":false,"antialiasing":true,"show_performance":true,"navigation_hints":true}"#
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        preferences.save(&path).unwrap();
+        assert!(!Preferences::load(&path).unwrap().grid);
+    }
+
+    #[test]
     fn corrupt_settings_and_failed_writes_are_reported() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
