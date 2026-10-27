@@ -1,5 +1,6 @@
 //! Palette manager and native interchange dialogs.
 use super::*;
+#[cfg(not(target_family = "wasm"))]
 use voxelite_app::local_settings::data_dir;
 use voxelite_core::Swatch;
 use voxelite_plugin_api::{PaletteAction, PaletteOperation, PaletteOutcome, PalettePresentation};
@@ -118,7 +119,11 @@ impl EditorView {
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
         let t = self.theme;
-        let mut button = Button::new(id, text, t);
+        let mut button = Button::new(id, text, t).variant(if name == "send" {
+            ButtonVariant::Primary
+        } else {
+            ButtonVariant::Ghost
+        });
         if !name.is_empty() {
             button = button.icon(name);
         }

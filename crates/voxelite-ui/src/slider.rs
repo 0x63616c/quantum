@@ -59,7 +59,16 @@ impl SliderRange {
         })
     }
 }
+type ChangeListener = Rc<dyn Fn(&f64, &mut Window, &mut App)>;
+
+struct SliderInteraction {
+    bounds: Rc<Cell<Bounds<Pixels>>>,
+    dragging: Rc<Cell<bool>>,
+    focus: FocusHandle,
+}
+
 /// Controlled slider. The caller owns the value and receives changes in `on_change`.
+#[derive(IntoElement)]
 pub struct Slider {
     id: ElementId,
     label: SharedString,
@@ -67,6 +76,7 @@ pub struct Slider {
     range: SliderRange,
     value: f64,
     track: Option<Background>,
+    change: Option<ChangeListener>,
 }
 impl Slider {
     /// Create a slider from a label, range and current value.
@@ -84,6 +94,7 @@ impl Slider {
             range,
             value: range.clamp(value),
             track: None,
+            change: None,
         }
     }
     /// Use any GPUI background, including a linear gradient, for the track.
@@ -91,18 +102,22 @@ impl Slider {
         self.track = Some(background.into());
         self
     }
-    /// Build the interactive track. Put a value label beside it using `labelled`.
-    pub fn on_change(
-        self,
-        change: impl Fn(&f64, &mut Window, &mut App) + 'static,
-    ) -> Stateful<Div> {
-        let bounds = Rc::new(Cell::new(Bounds::<Pixels>::default()));
+    /// Receive pointer and keyboard changes. Put a value label beside the slider
+    /// using `labelled`. Drag state survives the parent's value-change renders.
+    pub fn on_change(mut self, change: impl Fn(&f64, &mut Window, &mut App) + 'static) -> Self {
+        self.change = Some(Rc::new(change));
+        self
+    }
+    fn build(self, interaction: &SliderInteraction) -> Stateful<Div> {
+        let bounds = interaction.bounds.clone();
         let painted = bounds.clone();
-        let dragging = Rc::new(Cell::new(false));
+        let dragging = interaction.dragging.clone();
+        let focus = interaction.focus.clone();
+        let pointer_focus = focus.clone();
         let down = dragging.clone();
         let up = dragging.clone();
         let up_out = dragging.clone();
-        let change = Rc::new(change);
+        let change = self.change.unwrap_or_else(|| Rc::new(|_, _, _| {}));
         let pointer_change = change.clone();
         let move_change = change.clone();
         let move_bounds = bounds.clone();
@@ -112,6 +127,7 @@ impl Slider {
         row()
             .id(self.id)
             .tab_index(0)
+            .track_focus(&focus)
             .role(Role::Slider)
             .aria_label(self.label)
             .aria_numeric_value(value)
@@ -124,7 +140,7 @@ impl Slider {
             .min_w(px(space::XXXL))
             .px(px(space::MD))
             .cursor_pointer()
-            .focus_visible(move |d| d.shadow(tokens::focus_ring(t)))
+            .focus_visible(move |d| d.bg(t.surface()).shadow(tokens::focus_ring(t)))
             .child(
                 div()
                     .relative()
@@ -153,6 +169,7 @@ impl Slider {
             )
             .on_mouse_down(MouseButton::Left, move |event, window, cx| {
                 down.set(true);
+                window.focus(&pointer_focus, cx);
                 let b = bounds.get();
                 pointer_change(
                     &range.at(f64::from(
@@ -196,6 +213,17 @@ impl Slider {
             .child(div().flex_shrink_0().child(label))
     }
 }
+impl RenderOnce for Slider {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let interaction = window.use_keyed_state(self.id.clone(), cx, |_, cx| SliderInteraction {
+            bounds: Rc::new(Cell::new(Bounds::default())),
+            dragging: Rc::new(Cell::new(false)),
+            focus: cx.focus_handle(),
+        });
+        self.build(interaction.read(cx))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::SliderRange;

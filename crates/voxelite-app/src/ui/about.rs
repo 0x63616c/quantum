@@ -31,8 +31,7 @@ fn attribution(license: &str) -> String {
 }
 
 fn licenses() -> Vec<(&'static str, &'static str)> {
-    #[allow(unused_mut)]
-    let mut licenses = vec![
+    vec![
         (
             "Geist · SIL Open Font License 1.1",
             include_str!("../../assets/fonts/OFL-Geist.txt"),
@@ -53,13 +52,12 @@ fn licenses() -> Vec<(&'static str, &'static str)> {
             "GPUI / Zed · Apache-2.0",
             include_str!("../../../../vendor/gpui-apple/LICENSE-APACHE"),
         ),
-    ];
-    #[cfg(target_os = "macos")]
-    licenses.push((
-        "Sparkle · MIT (macOS)",
-        include_str!("../../assets/licenses/Sparkle-LICENSE.txt"),
-    ));
-    licenses
+        #[cfg(target_os = "macos")]
+        (
+            "Sparkle · MIT (macOS)",
+            include_str!("../../assets/licenses/Sparkle-LICENSE.txt"),
+        ),
+    ]
 }
 
 impl EditorView {

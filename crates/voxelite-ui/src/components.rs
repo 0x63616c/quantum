@@ -136,7 +136,16 @@ impl Button {
             .when(!self.disabled, |d| {
                 d.tab_index(self.tab_index)
                     .cursor_pointer()
-                    .focus_visible(move |d| d.shadow(tokens::focus_ring(t)))
+                    .focus_visible(move |d| {
+                        d.bg(if primary {
+                            t.text()
+                        } else if self.selected {
+                            t.selected()
+                        } else {
+                            t.surface_raised()
+                        })
+                        .shadow(tokens::focus_ring(t))
+                    })
                     .hover(move |d| {
                         d.bg(if primary {
                             t.text().opacity(0.88)
@@ -475,8 +484,19 @@ impl SidebarItem {
                 d.hover(move |d| d.bg(theme.surface_raised()))
             })
             .cursor_pointer()
-            .focus_visible(move |d| d.shadow(tokens::focus_ring(theme)))
-            .child(icon(glyph))
+            .focus_visible(move |d| {
+                d.bg(if selected {
+                    theme.tint()
+                } else {
+                    theme.surface_raised()
+                })
+                .shadow(tokens::focus_ring(theme))
+            })
+            .child(icon(glyph).text_color(if selected {
+                theme.accent_fg()
+            } else {
+                theme.muted()
+            }))
             .child(
                 div()
                     .flex_1()
@@ -662,6 +682,7 @@ impl Toggle {
             .id(id)
             .tab_index(0)
             .role(Role::Switch)
+            .aria_toggled(if value { Toggled::True } else { Toggled::False })
             .aria_label(label)
             .aria_value(if value { "On" } else { "Off" })
             .w(px(metrics::SWITCH))
