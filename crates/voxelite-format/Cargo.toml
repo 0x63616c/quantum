@@ -28,4 +28,4 @@ name = "demo-history"
 path = "../../examples/demo_history.rs"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-tempfile = "3"
+tempfile.workspace = true

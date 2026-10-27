@@ -19,15 +19,15 @@ path = "src/main.rs"
 required-features = ["native"]
 
 [dependencies]
-voxelite-ui = { path = "../voxelite-ui", optional = true }
+voxelite-ui = { workspace = true, optional = true }
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
 voxelite-plugin-host.workspace = true
-voxelite-plugins-builtin = { path = "../voxelite-plugins-builtin" }
-voxelite-plugin-mirror = { path = "../plugins/voxelite-plugin-mirror" }
-voxelite-plugin-gizmo-grid = { path = "../plugins/voxelite-plugin-gizmo-grid" }
-voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
-voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
+voxelite-plugins-builtin.workspace = true
+voxelite-plugin-mirror.workspace = true
+voxelite-plugin-gizmo-grid.workspace = true
+voxelite-plugin-palette.workspace = true
+voxelite-plugin-comments.workspace = true
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 glam.workspace = true
@@ -36,7 +36,7 @@ serde_json.workspace = true
 serde.workspace = true
 anyhow = "1"
 web-time = "1"
-gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
+gpui = { workspace = true, optional = true }
 gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
 image = { version = "0.25", default-features = false, optional = true }
 
@@ -54,18 +54,18 @@ version = "0.11"
 optional = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-voxelite-mcp = { path = "../voxelite-mcp", default-features = false }
-tempfile = "3"
+voxelite-mcp.workspace = true
+tempfile.workspace = true
 png.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
-objc2 = "0.6.5"
+objc2.workspace = true
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSButton", "NSControl", "NSColor", "NSColorSpace", "NSColorSampler", "objc2-core-foundation", "NSPanel", "NSPopUpButton", "NSResponder", "NSSavePanel", "NSTextField", "NSView", "NSWindow", "block2", "objc2-uniform-type-identifiers"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
 objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
 block2 = "0.6.2"
-futures-channel = "0.3"
+futures-channel.workspace = true
 libloading = "0.8.9"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
@@ -73,7 +73,7 @@ gpui_web = { package = "gpui-web-gpui-unofficial", version = "=1.25.3", default-
 wasm-bindgen = { version = "0.2.120", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
-futures-channel = { version = "0.3", optional = true }
+futures-channel = { workspace = true, optional = true }
 web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "HtmlInputElement", "HtmlAnchorElement", "FileList", "File", "Blob", "BlobPropertyBag", "Url", "Storage", "Event", "EventTarget", "Location", "BeforeUnloadEvent"] }
 uuid = { workspace = true, features = ["js"] }
 
@@ -82,6 +82,6 @@ workspace = true
 features = ["gpu"]
 
 [dev-dependencies]
-voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
-voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
-voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }
+voxelite-plugin-tools.workspace = true
+voxelite-plugin-exporters.workspace = true
+voxelite-plugin-shadows-lighting.workspace = true

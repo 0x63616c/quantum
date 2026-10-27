@@ -12,7 +12,7 @@ voxelite-plugin-api.workspace = true
 [dev-dependencies]
 voxelite-plugin-host.workspace = true
 voxelite-render.workspace = true
-voxelite-plugin-exporters = { path = "../voxelite-plugin-exporters" }
+voxelite-plugin-exporters.workspace = true
 
 [lints]
 workspace = true

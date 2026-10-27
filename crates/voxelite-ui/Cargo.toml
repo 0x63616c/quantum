@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false }
+gpui.workspace = true
 
 unicode-segmentation = "=1.13.3"
 
