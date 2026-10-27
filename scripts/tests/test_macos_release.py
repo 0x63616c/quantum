@@ -62,7 +62,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("scripts/package-macos.sh --skip-build", workflow_step("Sign and package"))
         notes = workflow.index("      - name: Generate release notes")
         appcast = workflow.index("      - name: Generate signed update feed")
-        self.assertLess(package, notes)  # Packaging clears dist/.
+        self.assertLess(package, notes)  # Packaging clears dist/ and writes .notarized.
         self.assertLess(notes, appcast)
 
     def test_tag_must_match_cargo_before_building(self):
@@ -166,7 +166,8 @@ class ReleaseNotesTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(prefix="voxelite-release-test-")
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
-        for name in ("scripts/generate-macos-release-notes.py", "packaging/macos/RELEASE_NOTES.md"):
+        for name in ("scripts/generate-macos-release-notes.py", "packaging/macos/RELEASE_NOTES.md",
+                     "packaging/macos/RELEASE_NOTES.unnotarized.md"):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, path)
@@ -187,17 +188,39 @@ class ReleaseNotesTests(unittest.TestCase):
         self.git("commit", "--allow-empty", "-m", subject, "-m", "Private commit body")
         return self.git("rev-parse", "--short", "HEAD")
 
-    def notes(self, tag):
+    def notes(self, tag, notarized=False):
         result = subprocess.run(
             ["bash", "-euo", "pipefail", "-c", workflow_step("Generate release notes")],
             cwd=self.root, env=self.env | {"TAG": tag}, capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         notes = (self.root / "dist/RELEASE_NOTES.md").read_text()
-        self.assertTrue(notes.startswith((ROOT / "packaging/macos/RELEASE_NOTES.md").read_text().rstrip() + "\n\n"))
+        template = "RELEASE_NOTES.md" if notarized else "RELEASE_NOTES.unnotarized.md"
+        self.assertTrue(notes.startswith((ROOT / "packaging/macos" / template).read_text().rstrip() + "\n\n"))
         for private in ("Private Author", "Private Committer", "@example.invalid", "Private commit body"):
             self.assertNotIn(private, notes)
         return notes
+
+    def test_installation_notes_follow_current_notarization_marker(self):
+        self.git("tag", "v0.3.0")
+        # A fresh checkout, a notarized package, then an unnotarized rebuild.
+        unnotarized = self.notes("v0.3.0")
+        self.assertIn("not notarized", unnotarized)
+        self.assertIn("right-click", unnotarized)
+        self.assertIn("Open Anyway", unnotarized)
+        self.assertNotIn("notarized by Apple", unnotarized)
+        marker = self.root / "dist/.notarized"
+        marker.touch()
+        notarized = self.notes("v0.3.0", notarized=True)
+        self.assertIn("Developer ID signed and notarized by Apple", notarized)
+        self.assertIn("0.3.0", notarized)
+        self.assertIn("updates automatically through Sparkle", notarized)
+        for workaround in ("not notarized", "right-click", "Open Anyway"):
+            self.assertNotIn(workaround, notarized)
+        self.assertEqual(notarized.split("## Changes since ")[1],
+                         unnotarized.split("## Changes since ")[1])
+        marker.unlink()
+        self.assertEqual(self.notes("v0.3.0"), unnotarized)
 
     def test_previous_stable_tag_and_release_boundary(self):
         self.git("tag", "-a", "v0.1.0", "-m", "First release")

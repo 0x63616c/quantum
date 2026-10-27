@@ -26,7 +26,7 @@ Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, 
 | Browser editor | Trying the editor and downloading projects          | Not yet available                          |
 | Headless MCP   | Scripted creation and CPU renders without a display | Stdio, with a project directory            |
 
-These docs describe the implementation on the development branch. The [native Mac download](https://voxelite.worldwidewebb.co/download/) isn't notarized yet; see the first-launch instructions. Linux builds and Chromium software graphics are verified; Safari/Firefox qualification remains pending.
+These docs describe the implementation on the development branch. The [native Mac download](https://voxelite.worldwidewebb.co/download/) is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Linux builds and Chromium software graphics are verified; Safari/Firefox qualification remains pending.
 
 Everything stays local. No account, cloud relay, or model-provider key is required by Voxelite, and your projects never leave your machine. This website uses cookie-free Vercel Web Analytics and Speed Insights for anonymous page-view and performance counts; nothing you build is collected. Your chosen agent host may have its own requirements.
 
@@ -55,7 +55,7 @@ cargo build --locked --release \
 ./target/release/voxelite
 ```
 
-[Download the native Mac app](https://voxelite.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation and first-launch instructions. This build isn't notarized yet. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
+[Download the native Mac app](https://voxelite.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
 
 Linux build and desktop dependencies (Debian / Ubuntu)
 

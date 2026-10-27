@@ -134,6 +134,8 @@ class PackagingTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for name in ["scripts/package-macos.sh", "scripts/generate-macos-appcast.sh",
+                     "scripts/generate-macos-release-notes.py", "packaging/macos/RELEASE_NOTES.md",
+                     "packaging/macos/RELEASE_NOTES.unnotarized.md",
                      "scripts/check-macos-appcast.py", "scripts/macos_appcast.py", "site/appcast.xml",
                      "packaging/macos/sparkle_public_ed_key.txt",
                      "packaging/macos/Info.plist", "packaging/macos/Voxelite.entitlements"]:
@@ -179,6 +181,31 @@ class PackagingTests(unittest.TestCase):
 
     def events(self):
         return [json.loads(line) for line in (self.root / "calls").read_text().splitlines()]
+
+    def generate_notes(self):
+        # Use the real notes generator after packaging, as the release workflow does.
+        if not (self.root / ".git").exists():
+            for args in (["init", "--initial-branch=main"],
+                         ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                          "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m",
+                          'Fix <script>alert("x")</script> & café </pre> ]]>'],
+                         ["-c", "tag.gpgsign=false", "tag", self.env["TAG"]]):
+                subprocess.run(["git", *args], cwd=self.root, env=self.env,
+                               check=True, capture_output=True)
+        subprocess.run(["python3", "scripts/generate-macos-release-notes.py"],
+                       cwd=self.root, env=self.env, check=True, capture_output=True)
+        return (self.root / "dist/RELEASE_NOTES.md").read_text(encoding="utf-8")
+
+    def test_release_notes_match_packaging_notarization(self):
+        for credentials, notarized in [(CERT | NOTARY, True), (CERT, False),
+                                       (CERT | NOTARY, True),
+                                       (CERT | NOTARY | {"MACOS_SIGNING_MODE": "adhoc"}, False)]:
+            with self.subTest(credentials=list(credentials), notarized=notarized):
+                self.run_script(overrides=credentials)
+                notes = self.generate_notes()
+                self.assertEqual("Developer ID signed and notarized by Apple" in notes, notarized)
+                self.assertEqual("right-click" in notes, not notarized)
+                self.assertEqual("Open Anyway" in notes, not notarized)
 
     def test_no_secrets_reach_build_or_tools(self):
         result = self.run_script(overrides=CERT | NOTARY | {"SPARKLE_ED_PRIVATE_KEY": "unused fixture"}, trace=True)
@@ -312,9 +339,7 @@ class PackagingTests(unittest.TestCase):
         output = self.root / "outputs"
         credentials = {"SPARKLE_ED_PRIVATE_KEY": "fixture private key", "GITHUB_OUTPUT": str(output)}
         notes = self.root / "dist/RELEASE_NOTES.md"
-        notes.write_text('Install **Voxelite.dmg**.\n\n## Changes since v1.2.2\n\n'
-                         '- Fix <script>alert("x")</script> & café </pre> ]]> (abc1234)\n',
-                         encoding="utf-8")
+        self.assertIn("Developer ID signed and notarized by Apple", self.generate_notes())
         for overrides, success in [({}, True), ({"TAG": "v9.9.9"}, False),
                                    ({"UNSIGNED_FEED": "1"}, False), ({"WRONG_URL": "1"}, False),
                                    ({"UNSIGNED_METADATA": "1"}, False), ({"GENERATOR_FAILURE": "1"}, False),

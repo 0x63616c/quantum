@@ -27,7 +27,9 @@ def main():
     revision_range = f"refs/tags/{previous}..{release}" if previous else release
     changes = git("log", "--no-merges", "--no-show-signature", "--no-color",
                   "--pretty=- %s (%h)", revision_range, "--")
-    base = Path("packaging/macos/RELEASE_NOTES.md").read_text(encoding="utf-8").rstrip()
+    # Packaging writes this marker only after notarization and validation succeed.
+    template = "RELEASE_NOTES.md" if Path("dist/.notarized").is_file() else "RELEASE_NOTES.unnotarized.md"
+    base = (Path("packaging/macos") / template).read_text(encoding="utf-8").rstrip()
     heading = f"## Changes since {previous or 'the beginning'}"
     Path("dist").mkdir(exist_ok=True)
     Path("dist/RELEASE_NOTES.md").write_text(
