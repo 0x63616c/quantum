@@ -23,3 +23,13 @@ Never commit local sets or Linux software-renderer results as Metal goldens.
 `scenes/autumn-workshop.voxl` is the single tracked scene file: a pinned copy of
 `examples/autumn-workshop.voxl`. Procedural scenes (terrain, sponge) are generated
 deterministically and verified by scene hash.
+
+## Recorded M2 baseline status
+
+`bench/baseline/apple-m2-metal.json` was recorded by the `bench-baseline` workflow
+dispatch (run 40458839504, 3 runs, commit 5361cca) while the shared runner was still
+settling from other CI jobs (load average 8.4 -> 2.9 across the run; see `meta.load_average`
+and `meta.run_load`). Treat it as **provisional**: GPU timings are stable between runs but
+CPU-bound phases (cold, recolor, large edits) can be inflated. Re-record it on an idle
+mini (`gh workflow run render-checks.yml -f command=bench-baseline`) before using bench
+comparison as a hard gate. Visual goldens are unaffected by load.
