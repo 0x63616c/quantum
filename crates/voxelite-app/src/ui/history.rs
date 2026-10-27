@@ -9,9 +9,20 @@ pub(super) struct Timeline {
     pub playback_task: Option<Task<()>>,
 }
 impl Timeline {
-    pub fn new(cx: &mut App) -> Self {
+    pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
+        let name = crate::text_field::TextField::new("Name this version…", cx);
+        cx.subscribe_in(
+            &name,
+            window,
+            |this, _, event: &voxelite_ui::TextFieldEvent, window, cx| {
+                if matches!(event, voxelite_ui::TextFieldEvent::Committed) {
+                    this.save_named_version(window, cx);
+                }
+            },
+        )
+        .detach();
         Self {
-            name: crate::text_field::TextField::new("Name this version…", cx),
+            name,
             dragging: false,
             scroll: ScrollHandle::new(),
             playback_task: None,
@@ -19,6 +30,17 @@ impl Timeline {
     }
 }
 impl EditorView {
+    fn save_named_version(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let name = self.timeline.name.read(cx).text().trim().to_string();
+        let result = self.editor.save_version(name);
+        if result.is_ok() {
+            self.timeline
+                .name
+                .update(cx, |field, cx| field.set(String::new(), cx));
+        }
+        window.focus(&self.focus, cx);
+        self.report(result, "Named version saved", cx);
+    }
     pub(super) fn pause_history(&mut self, cx: &mut Context<Self>) {
         self.editor.pause_history();
         self.timeline.playback_task = None;
@@ -402,17 +424,7 @@ impl EditorView {
                             "save",
                             "Save",
                             cx,
-                            |this, window, cx| {
-                                let name = this.timeline.name.read(cx).text.trim().to_string();
-                                let r = this.editor.save_version(name);
-                                if r.is_ok() {
-                                    this.timeline
-                                        .name
-                                        .update(cx, |f, cx| f.set(String::new(), cx));
-                                }
-                                window.focus(&this.focus, cx);
-                                this.report(r, "Named version saved", cx);
-                            },
+                            Self::save_named_version,
                         )),
                 )
             })

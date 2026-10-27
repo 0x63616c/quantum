@@ -13,10 +13,22 @@ pub(super) struct Discussion {
     pub text: Entity<crate::text_field::TextField>,
 }
 impl Discussion {
-    pub fn new(cx: &mut App) -> Self {
+    pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
+        let text = crate::text_field::TextField::new("Write a comment…", cx);
+        cx.subscribe_in(
+            &text,
+            window,
+            |this, _, event: &voxelite_ui::TextFieldEvent, window, cx| {
+                if matches!(event, voxelite_ui::TextFieldEvent::Committed) {
+                    this.post_comment(cx);
+                    window.focus(&this.focus, cx);
+                }
+            },
+        )
+        .detach();
         Self {
             scroll: ScrollHandle::new(),
-            text: crate::text_field::TextField::new("Write a comment…", cx),
+            text,
         }
     }
 }
@@ -73,7 +85,7 @@ impl EditorView {
         self.discussion_outcome(result, cx);
     }
     fn post_comment(&mut self, cx: &mut Context<Self>) {
-        let text = self.discussion.text.read(cx).text.clone();
+        let text = self.discussion.text.read(cx).text().to_owned();
         match self.editor.comments_action(CommentsAction::Post(text)) {
             Ok(Some(outcome)) if !outcome.commands.is_empty() => {
                 self.discussion_outcome(Ok(Some(outcome)), cx);

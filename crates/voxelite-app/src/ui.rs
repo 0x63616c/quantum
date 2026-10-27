@@ -99,6 +99,7 @@ pub struct EditorView {
     menu: Option<usize>,
     menu_index: usize,
     commands: command_palette::CommandPalette,
+    command_input: Entity<crate::text_field::TextField>,
     palette_open: bool,
     palette_cursor: usize,
     palette_scroll: ScrollHandle,
@@ -212,7 +213,55 @@ impl EditorView {
             cx.notify();
         })
         .detach();
+        let command_input = crate::text_field::TextField::new("Type a command…", cx);
+        command_input.update(cx, |field, _| field.embed());
+        cx.subscribe_in(
+            &command_input,
+            window,
+            |this, field, event, window, cx| match event {
+                voxelite_ui::TextFieldEvent::Changed => {
+                    this.commands.set_query(field.read(cx).text());
+                    cx.notify();
+                }
+                voxelite_ui::TextFieldEvent::Committed => {
+                    this.command_palette_key(
+                        &Keystroke::parse("enter").expect("constant keystroke"),
+                        window,
+                        cx,
+                    );
+                }
+                _ => {}
+            },
+        )
+        .detach();
         let palettes = palettes::PaletteManager::new(cx);
+        for (field, operation) in [
+            (
+                &palettes.name,
+                voxelite_plugin_api::PaletteOperation::Rename,
+            ),
+            (
+                &palettes.hex,
+                voxelite_plugin_api::PaletteOperation::ApplyColor,
+            ),
+        ] {
+            cx.subscribe(
+                field,
+                move |this, _, event: &voxelite_ui::TextFieldEvent, cx| {
+                    if matches!(event, voxelite_ui::TextFieldEvent::Committed)
+                        && this.palettes.open
+                        && this
+                            .editor
+                            .palette_view()
+                            .is_some_and(|view| view.state.custom.is_some())
+                    {
+                        this.palette_edit(operation, cx);
+                    }
+                    cx.notify();
+                },
+            )
+            .detach();
+        }
         let library_error = editor
             .load_palette_library()
             .err()
@@ -240,9 +289,9 @@ impl EditorView {
         Self {
             agent,
             palettes,
-            discussion: comments::Discussion::new(cx),
+            discussion: comments::Discussion::new(window, cx),
             panel: Panel::Session,
-            timeline: history::Timeline::new(cx),
+            timeline: history::Timeline::new(window, cx),
             cursor: editor.snapshot().bounds.min,
             camera_view: Some(Op::Frame),
             camera_fitted: true,
@@ -269,6 +318,7 @@ impl EditorView {
             menu: None,
             menu_index: 0,
             commands: command_palette::CommandPalette::default(),
+            command_input,
             palette_open: false,
             palette_cursor: 0,
             palette_scroll: ScrollHandle::new(),
@@ -462,6 +512,11 @@ impl EditorView {
             }
             _ => self.run(op, cx),
         }
+        if self.commands.is_open() {
+            self.command_input
+                .update(cx, |field, cx| field.focus(window, cx));
+            return;
+        }
         window.focus(
             if self.info.is_some() {
                 &self.modal_focus
@@ -567,6 +622,13 @@ impl EditorView {
             }
             Op::Commands | Op::ToolPicker => {
                 self.commands.open(op == Op::ToolPicker);
+                self.command_input.update(cx, |field, cx| {
+                    field.placeholder(
+                        if self.commands.tools_only() { "Search tools…" } else { "Type a command…" },
+                        cx,
+                    );
+                    field.set(String::new(), cx);
+                });
             }
             Op::Agent => {
                 self.agent.open = true;
@@ -675,13 +737,18 @@ impl EditorView {
             return;
         }
         let key = navigation_key(&e.keystroke).unwrap_or_default();
+        // Shared editors own their keys and native text input, including fields
+        // created inside controlled NumericField elements.
+        if crate::text_field::focused(window) {
+            return;
+        }
 
-        if key == "tab"
-            && !self.save_flow.needs_confirmation()
-            && !self.commands.is_open()
-            && self.menu.is_none()
-        {
-            if self.palettes.open || self.agent.open || self.info.is_some() {
+        if key == "tab" && !self.save_flow.needs_confirmation() && self.menu.is_none() {
+            if self.palettes.open
+                || self.agent.open
+                || self.info.is_some()
+                || self.commands.is_open()
+            {
                 Dialog::trap_tab(&self.modal_focus, e.keystroke.modifiers.shift, window, cx);
             } else if e.keystroke.modifiers.shift {
                 window.focus_prev(cx);
@@ -699,7 +766,10 @@ impl EditorView {
         {
             return;
         }
-        if !self.focus.is_focused(window) && matches!(key, "enter" | "space") {
+        if !self.focus.is_focused(window)
+            && !self.commands.is_open()
+            && matches!(key, "enter" | "space")
+        {
             return;
         }
         if key == "escape" {
@@ -1973,41 +2043,15 @@ impl EditorView {
                             .flex()
                             .flex_col()
                             .child(
-                                voxelite_ui::TextField::search_row(t, true)
+                                voxelite_ui::FieldFrame::search_row(t, true)
                                     .h(px(52.0))
                                     .flex_shrink_0()
                                     .child(icon("search").text_color(t.muted()))
                                     .child(
-                                        row()
+                                        div()
                                             .flex_1()
-                                            .min_w(px(0.0))
-                                            .overflow_hidden()
-                                            .text_size(px(16.0))
-                                            .when(self.commands.query().is_empty(), |d| {
-                                                d.text_color(t.muted()).child(
-                                                    if self.commands.tools_only() {
-                                                        "Search tools…"
-                                                    } else {
-                                                        "Type a command…"
-                                                    },
-                                                )
-                                            })
-                                            .when(!self.commands.query().is_empty(), |d| {
-                                                d.child(
-                                                    div()
-                                                        .min_w(px(0.0))
-                                                        .overflow_hidden()
-                                                        .text_ellipsis()
-                                                        .child(self.commands.query().to_owned()),
-                                                )
-                                                .child(
-                                                    div()
-                                                        .flex_shrink_0()
-                                                        .w(px(1.5))
-                                                        .h(px(18.0))
-                                                        .bg(t.text()),
-                                                )
-                                            }),
+                                            .min_w(px(0.))
+                                            .child(self.command_input.clone()),
                                     )
                                     .child(shortcut("escape").text_color(t.muted())),
                             )
@@ -2044,7 +2088,13 @@ impl EditorView {
                                     .text_size(px(12.0))
                                     .border_t_1()
                                     .border_color(t.line())
-                                    .child(
+                                    .child(if self.command_input.read(cx).focused(window) {
+                                        HintText::default()
+                                            .key("enter")
+                                            .text(" to run   ·   ")
+                                            .key("escape")
+                                            .text(" to browse results")
+                                    } else {
                                         HintText::default()
                                             .key("up")
                                             .text(" ")
@@ -2053,8 +2103,8 @@ impl EditorView {
                                             .key("enter")
                                             .text(" to run   ·   ")
                                             .key("escape")
-                                            .text(" to close"),
-                                    ),
+                                            .text(" to close")
+                                    }),
                             ),
                     )
                     .into_any_element(),
@@ -2244,6 +2294,16 @@ impl Render for EditorView {
         self.timeline
             .name
             .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.command_input
+            .update(cx, |field, cx| field.appearance(self.theme, cx));
+        for field in [&self.palettes.name, &self.palettes.hex, &self.command_input] {
+            field.update(cx, |field, _| {
+                field.focus_policy(Some(self.modal_focus.clone()), self.modal_focus.clone())
+            });
+        }
+        for field in [&self.discussion.text, &self.timeline.name] {
+            field.update(cx, |field, _| field.focus_policy(None, self.focus.clone()));
+        }
         let size = window.viewport_size();
         self.layout_viewport(window, cx);
         let title = format!(
@@ -2269,7 +2329,10 @@ impl Render for EditorView {
                 &self.editor.plugin_host(),
                 window.is_fullscreen(),
                 |op| self.selected(op),
-                |op| self.enabled(op),
+                |op| {
+                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
+                        || self.enabled(op)
+                },
             ));
         }
         #[cfg(target_family = "wasm")]
@@ -2293,7 +2356,8 @@ impl Render for EditorView {
             .id("editor-root")
             .key_context(if settings_open {
                 "Settings"
-            } else if self.palettes.name.read(cx).focused(window)
+            } else if self.command_input.read(cx).focused(window)
+                || self.palettes.name.read(cx).focused(window)
                 || self.palettes.hex.read(cx).focused(window)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window)
@@ -2346,6 +2410,9 @@ impl Render for EditorView {
                 }),
             )
             .on_action(cx.listener(|this, op: &Op, window, cx| {
+                if crate::text_field::route_history(*op, window, cx) {
+                    return;
+                }
                 this.invoke(*op, window, cx);
             }))
             .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))

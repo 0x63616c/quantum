@@ -763,7 +763,9 @@ impl Render for SettingsView {
         let state = cx.global::<SettingsState>().clone();
         let t = theme(state.values.appearance, window);
         self.search.update(cx, |field, cx| field.appearance(t, cx));
-        let query = self.search.read(cx).text.clone();
+        self.search
+            .update(cx, |field, _| field.focus_policy(None, self.focus.clone()));
+        let query = self.search.read(cx).text().to_owned();
         let mut results = search_sections(&query);
         if self.grid_setting(cx).is_none() {
             for result in &mut results {
@@ -824,10 +826,12 @@ impl Render for SettingsView {
                 window.is_fullscreen(),
                 |_| false,
                 |op| {
-                    op.availability(actions::CommandContext::Settings {
-                        updates_available: super::updates_available(),
-                    })
-                    .is_ok()
+                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
+                        || op
+                            .availability(actions::CommandContext::Settings {
+                                updates_available: super::updates_available(),
+                            })
+                            .is_ok()
                 },
             ));
         }
@@ -852,6 +856,9 @@ impl Render for SettingsView {
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
+                if crate::text_field::route_history(*op, window, cx) {
+                    return;
+                }
                 if op
                     .availability(actions::CommandContext::Settings {
                         updates_available: super::updates_available(),
@@ -1002,7 +1009,7 @@ impl Render for SettingsView {
                                 .border_color(t.separator())
                                 .bg(t.sidebar())
                                 .child(
-                                    voxelite_ui::TextField::search_row(
+                                    voxelite_ui::FieldFrame::search_row(
                                         t,
                                         self.search.read(cx).focused(window),
                                     )

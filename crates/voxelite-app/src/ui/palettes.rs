@@ -14,7 +14,11 @@ pub(super) struct PaletteManager {
 impl PaletteManager {
     pub fn new(cx: &mut App) -> Self {
         let hex = crate::text_field::TextField::new("#RRGGBB", cx);
-        hex.update(cx, |field, _| field.numeric(7));
+        hex.update(cx, |field, _| {
+            field.numeric(7);
+            field.escape_policy(voxelite_ui::editing::EscapePolicy::Revert);
+            field.validate_commit(|text| parse_color(text).is_ok());
+        });
         Self {
             open: false,
             name: crate::text_field::TextField::new("Palette name", cx),
@@ -97,9 +101,9 @@ impl EditorView {
             self.sync_palette_fields(cx);
         }
     }
-    fn palette_edit(&mut self, operation: PaletteOperation, cx: &mut Context<Self>) {
-        let name = self.palettes.name.read(cx).text.clone();
-        let color = self.palettes.hex.read(cx).text.clone();
+    pub(super) fn palette_edit(&mut self, operation: PaletteOperation, cx: &mut Context<Self>) {
+        let name = self.palettes.name.read(cx).text().to_owned();
+        let color = self.palettes.hex.read(cx).text().to_owned();
         let result = self.editor.palette_action(PaletteAction::Edit {
             operation,
             name,
@@ -313,88 +317,57 @@ impl EditorView {
         .detach();
     }
     fn color_channel(&self, channel: usize, cx: &Context<Self>) -> Div {
-        let color = parse_color(&self.palettes.hex.read(cx).text)
+        let color = parse_color(self.palettes.hex.read(cx).text())
             .unwrap_or_else(|_| Swatch::rgb(128, 128, 128))
             .rgba;
-        let bounds = Rc::new(Cell::new(Bounds::<Pixels>::default()));
-        let paint_bounds = bounds.clone();
-        let drag_bounds = bounds.clone();
-        let update = move |this: &mut Self,
-                           position: Point<Pixels>,
-                           b: Bounds<Pixels>,
-                           cx: &mut Context<Self>| {
-            let mut c = parse_color(&this.palettes.hex.read(cx).text)
+        let update = cx.listener(move |this, value: &f64, _, cx| {
+            let mut color = parse_color(this.palettes.hex.read(cx).text())
                 .unwrap_or_else(|_| Swatch::rgb(128, 128, 128))
                 .rgba;
-            c[channel] = (f32::from(position.x - b.left()) / f32::from(b.size.width).max(1.0)
-                * 255.0)
-                .clamp(0.0, 255.0)
-                .round() as u8;
-            this.palettes.hex.update(cx, |f, cx| {
-                f.set(format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]), cx)
+            color[channel] = *value as u8;
+            this.palettes.hex.update(cx, |field, cx| {
+                field.set(
+                    format!("#{:02X}{:02X}{:02X}", color[0], color[1], color[2]),
+                    cx,
+                );
             });
             cx.notify();
-        };
+        });
+        let update = Rc::new(update);
+        let slider_update = update.clone();
+        let mut low = color;
+        let mut high = color;
+        low[channel] = 0;
+        high[channel] = 255;
         row()
-            .gap(px(8.0))
-            .child(mono(["R", "G", "B"][channel]).w(px(16.0)))
+            .gap(px(space::SM))
+            .child(mono(["R", "G", "B"][channel]).w(px(16.)))
             .child(
-                div()
-                    .id(("color-channel", channel))
-                    .relative()
-                    .h(px(12.0))
-                    .flex_1()
-                    .rounded(px(4.0))
-                    .overflow_hidden()
-                    .cursor_pointer()
-                    .child(
-                        canvas(
-                            move |b, _, _| paint_bounds.set(b),
-                            move |b, _, window, _| {
-                                for i in 0..64 {
-                                    let mut c = color;
-                                    c[channel] = (i * 255 / 63) as u8;
-                                    window.paint_quad(fill(
-                                        Bounds::new(
-                                            point(
-                                                b.left() + b.size.width * (i as f32 / 64.0),
-                                                b.top(),
-                                            ),
-                                            size(b.size.width / 64.0 + px(1.0), b.size.height),
-                                        ),
-                                        color_fill(c),
-                                    ));
-                                }
-                                window.paint_quad(fill(
-                                    Bounds::new(
-                                        point(
-                                            b.left()
-                                                + b.size.width
-                                                    * (f32::from(color[channel]) / 255.0),
-                                            b.top(),
-                                        ),
-                                        size(px(2.0), b.size.height),
-                                    ),
-                                    rgb(0xffffff),
-                                ));
-                            },
-                        )
-                        .size_full(),
-                    )
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |this, e: &MouseDownEvent, _, cx| {
-                            update(this, e.position, bounds.get(), cx);
-                            cx.stop_propagation();
-                        }),
-                    )
-                    .on_mouse_move(cx.listener(move |this, e: &MouseMoveEvent, _, cx| {
-                        if e.pressed_button == Some(MouseButton::Left) {
-                            update(this, e.position, drag_bounds.get(), cx);
-                        }
-                    })),
+                voxelite_ui::Slider::new(
+                    ("color-channel", channel),
+                    ["Red", "Green", "Blue"][channel],
+                    self.theme,
+                    voxelite_ui::SliderRange::new(0., 255., 1.),
+                    f64::from(color[channel]),
+                )
+                .track(linear_gradient(
+                    90.,
+                    linear_color_stop(color_fill(low), 0.),
+                    linear_color_stop(color_fill(high), 1.),
+                ))
+                .on_change(move |value, window, cx| slider_update(value, window, cx)),
             )
-            .child(mono(color[channel].to_string()).w(px(28.0)))
+            .child(
+                voxelite_ui::NumericField::new(
+                    ("color-number", channel),
+                    ["Red value", "Green value", "Blue value"][channel],
+                    self.theme,
+                    voxelite_ui::editing::NumericPolicy::integer(0., 255.),
+                    f64::from(color[channel]),
+                )
+                .focus_policy(Some(self.modal_focus.clone()), self.modal_focus.clone())
+                .on_change(move |value, window, cx| update(value, window, cx)),
+            )
     }
     pub(super) fn palette_manager(&self, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
