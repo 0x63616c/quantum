@@ -4,7 +4,7 @@
 # alias is added. In particular, installed commands and integration paths are public.
 
 [product]
-# The application displays Quantum; the site and release titles still say Voxelite.
+# The application and website display Quantum; release titles and asset names still say Voxelite.
 display_name = { current = "Quantum", stable = false }
 tagline = { current = "An Aseprite-style 3D voxel editor for people and agents.", stable = false }
 
