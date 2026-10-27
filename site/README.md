@@ -65,10 +65,11 @@ available without JavaScript or clipboard access. The sitemap includes the LLM
 indexes and one canonical Markdown URL per page; robots.txt allows crawling and
 advertises the indexes in comments.
 
-An optional `site/appcast.xml` is passed through unchanged by the Rust generator
-when building to another output directory, and preserved by the normal in-place
-site build. If it is absent, no feed is created. Supply a real release feed when
-available; the build does not invent update metadata.
+`site/appcast.xml` starts as a valid empty feed with no installable items. The
+deployment fetches the highest stable signed release feed before building. The
+Rust generator copies it unchanged to another output directory and preserves it
+in place. Do not edit a generated feed: its signature covers the exact bytes.
+See [automatic updates](../docs/releasing-macos.md#automatic-updates-sparkle).
 
 Verification:
 
@@ -113,10 +114,14 @@ packaging remain untested here; guides disclose those boundaries.
 ## Deployment
 
 `.github/workflows/deploy-site.yml` builds the complete site and wasm editor on
-GitHub-hosted Ubuntu runners for pushes to `main`, pull requests, and manual runs.
-It includes the latest release's `appcast.xml` when available and runs the local
-site checks. Pull requests only build and verify. Pushes and manual runs on `main`
-publish only when triggered by `0x63616c` in `0x63616c/voxelite`.
+GitHub-hosted Ubuntu runners for pushes to `main`, pull requests, manual runs,
+and successful owner-triggered **Release macOS** workflow completions. It fetches
+the highest numeric stable release containing an appcast, validates its asset
+URLs and sizes, and runs the local site checks. Confirmed absence of a release
+feed uses the empty checked-in RSS; API/download/validation failures stop the
+deployment. Pull requests only build and verify. Production publishes from
+`main` only when triggered by `0x63616c` in `0x63616c/voxelite`. A manual run
+on `main` retries a failed post-release deployment without replacing any assets.
 
 The workflow publishes the built files at the root of `site-dist`, excluding this
 README, `PROGRESS.md`, and `content/` sources. It preserves deployment history and
