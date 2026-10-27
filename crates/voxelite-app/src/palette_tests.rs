@@ -231,3 +231,228 @@ fn picker_preview_and_recent_colors_are_adopted_only_after_successful_persistenc
     assert_eq!(editor.snapshot().palette, original.palette);
     assert_eq!(editor.engine.history().count(), 0);
 }
+
+#[test]
+fn manager_copy_cancel_commit_and_interchange_keep_the_document_and_brush_untouched() {
+    use voxelite_plugin_api::{PaletteId, RecentColorTarget};
+    let mut editor = Editor::blank().unwrap();
+    let document = editor.project().to_bytes().unwrap();
+    let brush = editor.color.clone();
+    editor
+        .palette_action(PaletteAction::ChoosePalette(PaletteId::Source(1)))
+        .unwrap();
+    let original = editor.palette_view().unwrap();
+    let preview = editor
+        .palette_action_with(
+            PaletteAction::SetColor {
+                rgb: [29, 132, 218],
+                commit: false,
+            },
+            |_| panic!("preview must not persist"),
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(preview.copied_from.as_deref(), Some(original.name.as_str()));
+    assert!(!editor.palette_view().unwrap().read_only);
+    editor
+        .palette_action_with(PaletteAction::CancelColor, |_| {
+            panic!("cancel must not persist")
+        })
+        .unwrap();
+    assert_eq!(editor.palette_view().unwrap(), original);
+
+    let mut persisted = Vec::new();
+    let mut request = |editor: &mut Editor, action| {
+        editor
+            .palette_action_with(action, |bytes| {
+                persisted = bytes.to_vec();
+                Ok(())
+            })
+            .unwrap()
+            .unwrap()
+    };
+    let copy = request(
+        &mut editor,
+        PaletteAction::SetColor {
+            rgb: [29, 132, 218],
+            commit: true,
+        },
+    );
+    assert_eq!(copy.copied_from.as_deref(), Some(original.name.as_str()));
+    let custom = editor.palette_view().unwrap();
+    request(
+        &mut editor,
+        PaletteAction::DuplicateSwatch(custom.state.slot),
+    );
+    let duplicated = editor.palette_view().unwrap();
+    assert_eq!(duplicated.state.slot, custom.state.slot + 1);
+    request(
+        &mut editor,
+        PaletteAction::UseRecentColor {
+            index: 0,
+            target: RecentColorTarget::NewSwatch { at: None },
+        },
+    );
+    let added = editor.palette_view().unwrap();
+    assert_eq!(added.palette.order.len(), original.palette.order.len() + 2);
+    assert_eq!(added.state.slot, added.palette.order.len() - 1);
+    assert_eq!(added.state.recent_colors, [[29, 132, 218]]);
+    request(
+        &mut editor,
+        PaletteAction::UseRecentColor {
+            index: 0,
+            target: RecentColorTarget::SelectedSwatch,
+        },
+    );
+    for format in &added.formats {
+        let export = request(
+            &mut editor,
+            PaletteAction::ExportLibrary {
+                format: format.id.into(),
+            },
+        )
+        .export
+        .unwrap();
+        request(
+            &mut editor,
+            PaletteAction::ImportLibrary {
+                name: format!("Imported {}", format.label),
+                format: format.id.into(),
+                text: export.text,
+            },
+        );
+        let imported = editor.palette_view().unwrap();
+        let colors = |palette: &voxelite_plugin_api::Palette| {
+            palette
+                .order
+                .iter()
+                .map(|slot| palette.get(*slot).unwrap().rgba)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(colors(&imported.palette), colors(&added.palette));
+        request(&mut editor, PaletteAction::ChoosePalette(added.selected));
+    }
+    let mut restarted = Editor::blank().unwrap();
+    restarted
+        .palette_action(PaletteAction::LoadLibrary(Some(persisted)))
+        .unwrap();
+    restarted
+        .palette_action(PaletteAction::ChoosePalette(added.selected))
+        .unwrap();
+    assert_eq!(restarted.palette_view().unwrap().palette, added.palette);
+    assert_eq!(
+        restarted.palette_view().unwrap().state.recent_colors,
+        added.state.recent_colors
+    );
+    assert_eq!(editor.project().to_bytes().unwrap(), document);
+    assert_eq!(editor.color, brush);
+    assert_eq!(editor.engine.history().count(), 0);
+}
+
+#[test]
+fn manager_selection_tracks_identity_through_every_remove_and_move() {
+    let mut editor = Editor::blank().unwrap();
+    let mut saved = Vec::new();
+    editor
+        .palette_action_with(
+            PaletteAction::ImportLibrary {
+                name: "Order study".into(),
+                format: "hex".into(),
+                text: "110000\n220000\n330000\n440000\n550000\n660000\n770000".into(),
+            },
+            |bytes| {
+                saved = bytes.to_vec();
+                Ok(())
+            },
+        )
+        .unwrap();
+    let original = editor.palette_view().unwrap();
+    let reset = |editor: &mut Editor, selected| {
+        editor
+            .palette_action(PaletteAction::LoadLibrary(Some(saved.clone())))
+            .unwrap();
+        editor
+            .palette_action(PaletteAction::ChoosePalette(original.selected))
+            .unwrap();
+        editor
+            .palette_action(PaletteAction::SelectSlot(selected))
+            .unwrap();
+    };
+    for selected in 0..7 {
+        for from in 0..7 {
+            for to in 0..=8 {
+                reset(&mut editor, selected);
+                editor
+                    .palette_action_with(PaletteAction::MoveSwatch { from, to }, |_| Ok(()))
+                    .unwrap();
+                let view = editor.palette_view().unwrap();
+                assert_eq!(
+                    view.palette.order[view.state.slot],
+                    original.palette.order[selected]
+                );
+                let mut expected = original.palette.order.clone();
+                let moved = expected.remove(from);
+                expected.insert(to.min(6), moved);
+                assert_eq!(view.palette.order, expected);
+                assert_eq!(view.palette.slots, original.palette.slots);
+            }
+            reset(&mut editor, selected);
+            editor
+                .palette_action_with(PaletteAction::RemoveSwatch(from), |_| Ok(()))
+                .unwrap();
+            let view = editor.palette_view().unwrap();
+            if selected == from {
+                assert_eq!(view.state.slot, from.min(5));
+            } else {
+                assert_eq!(
+                    view.palette.order[view.state.slot],
+                    original.palette.order[selected]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn manager_capacity_and_last_swatch_errors_are_atomic() {
+    let mut editor = Editor::blank().unwrap();
+    editor
+        .palette_action_with(edit(PaletteOperation::Create, "Single", "#123456"), |_| {
+            Ok(())
+        })
+        .unwrap();
+    let single = editor.palette_view().unwrap();
+    let error = editor
+        .palette_action_with(PaletteAction::RemoveSwatch(0), |_| {
+            panic!("invalid edit must not write")
+        })
+        .unwrap_err();
+    assert!(error.to_string().contains("Cannot remove the last swatch"));
+    assert_eq!(editor.palette_view().unwrap(), single);
+    editor
+        .palette_action_with(
+            PaletteAction::ImportLibrary {
+                name: "Full".into(),
+                format: "hex".into(),
+                text: (0..=255)
+                    .map(|v| format!("{v:02X}{v:02X}{v:02X}\n"))
+                    .collect(),
+            },
+            |_| Ok(()),
+        )
+        .unwrap();
+    let full = editor.palette_view().unwrap();
+    for action in [
+        PaletteAction::AddSwatch {
+            rgb: [1, 2, 3],
+            at: None,
+        },
+        PaletteAction::DuplicateSwatch(0),
+    ] {
+        let error = editor
+            .palette_action_with(action, |_| panic!("capacity error must not write"))
+            .unwrap_err();
+        assert!(error.to_string().contains("256 swatches maximum"));
+        assert_eq!(editor.palette_view().unwrap(), full);
+    }
+}
