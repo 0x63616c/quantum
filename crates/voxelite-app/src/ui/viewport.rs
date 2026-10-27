@@ -4,6 +4,7 @@
 //! owns render state. Picking and playback use the same displayed-frame identity.
 use super::*;
 use voxelite_app::frame_meter::{FrameMeter, RendererKind};
+use voxelite_render::AmbientOcclusionStrength;
 mod gpu_viewport;
 
 /// Image identity includes the editor incarnation, since reopening the same ID
@@ -13,6 +14,7 @@ struct FrameIdentity {
     generation: u64,
     revision: u64,
     overlay_epoch: u64,
+    ambient_occlusion_strength: AmbientOcclusionStrength,
     preview: Option<voxelite_app::history::PreviewSource>,
     camera: OrbitCamera,
     size: [u32; 2],
@@ -22,6 +24,7 @@ pub(super) struct Viewport {
     gpu: gpu_viewport::State,
     scene_grid: Option<voxelite_plugin_api::OverlayGrid>,
     overlay_epoch: u64,
+    ambient_occlusion_strength: AmbientOcclusionStrength,
     image: Option<Arc<RenderImage>>,
     painted_image: Option<Arc<RenderImage>>,
     painted_frame: Rc<Cell<Option<FrameIdentity>>>,
@@ -52,6 +55,7 @@ impl Viewport {
             gpu,
             scene_grid: None,
             overlay_epoch: 0,
+            ambient_occlusion_strength: AmbientOcclusionStrength::default(),
             image: None,
             painted_image: None,
             painted_frame: Rc::new(Cell::new(None)),
@@ -166,6 +170,7 @@ impl Viewport {
             generation: self.document_generation,
             revision: editor.engine.revision(),
             overlay_epoch: self.overlay_epoch,
+            ambient_occlusion_strength: self.ambient_occlusion_strength,
             preview: editor.preview.as_ref().map(|p| p.source),
             camera: editor.camera,
             size: self.render_size,
@@ -179,6 +184,7 @@ impl Viewport {
         identity.generation == current.generation
             && identity.revision == current.revision
             && identity.overlay_epoch == current.overlay_epoch
+            && identity.ambient_occlusion_strength == current.ambient_occlusion_strength
             && identity.preview == current.preview
             && identity.size == current.size
     }
@@ -199,6 +205,7 @@ impl Viewport {
             supersampling: if interactive || !antialiasing { 1 } else { 2 },
             view: View::Camera(camera.camera()),
             background: [0; 4],
+            ambient_occlusion_strength: self.ambient_occlusion_strength,
             ..Default::default()
         }
     }
@@ -285,6 +292,7 @@ impl Viewport {
 
 impl EditorView {
     pub(super) fn request_render(&mut self, cx: &mut Context<Self>) {
+        self.viewport.ambient_occlusion_strength = self.preferences.viewport_ambient_occlusion();
         #[cfg(target_os = "macos")]
         if self.viewport.gpu.enabled {
             self.request_gpu_render(cx);
@@ -701,6 +709,24 @@ mod tests {
         assert!(!viewport.settle_navigation(interrupted));
         assert!(!viewport.interactive_render);
         assert!(viewport.navigation_settle.is_none());
+    }
+
+    #[test]
+    fn ao_changes_reject_in_flight_frames_and_reach_cpu_options() {
+        let (mut viewport, editor) = fixture();
+        for strength in [0.0, 0.5, 1.0, 2.0] {
+            let old = viewport.identity(&editor);
+            viewport.ambient_occlusion_strength =
+                voxelite_render::AmbientOcclusionStrength::new(strength).unwrap();
+            assert!(!viewport.accepts(old, &editor));
+            assert!(viewport.accepts(viewport.identity(&editor), &editor));
+            assert_eq!(
+                viewport
+                    .cpu_options(editor.camera, true)
+                    .ambient_occlusion_strength,
+                viewport.ambient_occlusion_strength
+            );
+        }
     }
 
     #[test]

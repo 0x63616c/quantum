@@ -9,6 +9,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "docs/screenshots".into());
+    if output == "--ao-comparisons" {
+        return ao_comparisons();
+    }
     std::fs::create_dir_all(&output)?;
     let project = autumn_workshop::build()?;
     std::fs::write("examples/autumn-workshop.voxl", project.to_bytes()?)?;
@@ -50,5 +53,55 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         project.document.content.composite().len(),
         project.semantic_hash()?
     );
+    Ok(())
+}
+
+// Render checked-in models at one fixed camera/size per pair. The single voxel
+// is an unoccluded control: changing AO must not change its lighting.
+fn ao_comparisons() -> Result<(), Box<dyn std::error::Error>> {
+    let output = std::env::args()
+        .nth(2)
+        .unwrap_or_else(|| "docs/screenshots/ao".into());
+    std::fs::create_dir_all(&output)?;
+    let autumn =
+        voxelite_format::from_bytes(include_bytes!("../bench/scenes/autumn-workshop.voxl"))?
+            .document
+            .content;
+    let step = serde_json::from_slice(include_bytes!(
+        "../crates/voxelite-export/tests/golden/scene.json"
+    ))?;
+    let voxel = voxelite_format::from_bytes(include_bytes!(
+        "../spec/voxl/1.0/fixtures/populated.canonical.voxl"
+    ))?
+    .document
+    .content;
+    for (name, snapshot) in [
+        ("autumn-workshop", autumn),
+        ("step", step),
+        ("single-voxel", voxel),
+    ] {
+        let camera = Camera::fit(&snapshot, PresetView::Iso, 1.0, false)?;
+        for (suffix, strength) in [
+            ("off", AmbientOcclusionStrength::OFF),
+            ("default", AmbientOcclusionStrength::default()),
+        ] {
+            let image = render(
+                &snapshot,
+                &RenderOptions {
+                    width: 384,
+                    height: 384,
+                    view: View::Camera(camera),
+                    background: [235, 235, 230, 255],
+                    ambient_occlusion_strength: strength,
+                    ..Default::default()
+                },
+            )?;
+            let png = voxelite_export::png_rgba(image.width, image.height, &image.rgba)?;
+            assert!(png.len() < 400_000, "keep documentation images small");
+            let path = Path::new(&output).join(format!("{name}-{suffix}.png"));
+            std::fs::write(&path, &png)?;
+            eprintln!("{}: {} bytes", path.display(), png.len());
+        }
+    }
     Ok(())
 }

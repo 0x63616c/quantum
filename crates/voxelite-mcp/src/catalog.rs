@@ -189,6 +189,10 @@ fn render_fields() -> Vec<Field> {
         opt("perspective", boolean()),
         opt("background", array(integer(0, 255), 4, 4)),
         opt(
+            "ambient_occlusion_strength",
+            json!({"type":"number","minimum":0,"maximum":2,"default":1,"description":"Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences."}),
+        ),
+        opt(
             "image_mode",
             choice(&["contact_sheet", "individual", "both"]),
         ),
