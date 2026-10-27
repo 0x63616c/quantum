@@ -605,6 +605,11 @@ impl Dialog {
             .border_color(theme.separator())
             .rounded(px(radius::XL))
             .shadow(tokens::panel_shadow())
+            // GPUI 1.25 only masks a rectangle, inside the border. Inset
+            // controls (including their focus rings) and round flush child
+            // backgrounds explicitly. The panel shadow paints before this mask;
+            // native tooltips paint separately at the window root.
+            .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }
     /// Title bar; append a close button.

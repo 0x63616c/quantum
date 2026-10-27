@@ -44,7 +44,9 @@ inside the panel. Small About panels use the quiet scrim. Tooltips share the
 
 StatusBar and StatusSegment reserve physical widths using Geist Mono's advance.
 `fixed_slot` uses nonbreaking padding, an em-dash placeholder, and `+` on overflow;
-coordinates, dimensions and full box counts have explicit tested cell budgets.
+coordinates use five left-aligned cells (sign plus four digits), with exact values
+in a tooltip. Other segments remain right-aligned; dimensions and full box counts
+have explicit tested cell budgets.
 Keep telemetry in fixed slots and the message in a middle `flex_1` region.
 
 ## Native visual checks

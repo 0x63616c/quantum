@@ -1,7 +1,7 @@
 //! Menu presentation. Open state, focus, dismissal and actions belong to the caller.
 use crate::{
     Button, Theme, icon, row,
-    tokens::{self, radius, space},
+    tokens::{self, metrics, radius, space},
 };
 use gpui::{prelude::*, *};
 
@@ -34,6 +34,7 @@ impl Menu {
             .border_color(theme.separator())
             .bg(theme.card())
             .shadow(tokens::panel_shadow())
+            .overflow_hidden()
     }
     /// A full-width menu entry with a visible keyboard selection.
     pub fn item(
@@ -50,7 +51,10 @@ impl Menu {
             .tab_index(0)
             .h(px(32.))
             .px(px(space::LG))
-            .rounded(px(radius::SM))
+            .rounded(px(radius::concentric(
+                radius::LG,
+                metrics::EDGE + space::XS,
+            )))
             .cursor_pointer()
             .text_color(theme.text())
             .when(selected, |d| d.bg(theme.selected()))

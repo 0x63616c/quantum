@@ -172,6 +172,9 @@ impl EditorView {
             .flex()
             .flex_col()
             .bg(t.sidebar())
+            // This background meets the dialog's bottom-left border. GPUI's
+            // overflow mask is rectangular, so it needs its own inner corner.
+            .rounded_bl(px(radius::concentric(radius::XL, metrics::EDGE)))
             .border_r_1()
             .border_color(t.separator())
             .child(
@@ -538,6 +541,7 @@ impl EditorView {
                                             .flex_1()
                                             .h_full()
                                             .bg(rgb_fill(self.palettes.before))
+                                            .rounded_l(px(radius::MD))
                                             .cursor_pointer()
                                             .focus_visible(move |d| {
                                                 d.border_2().border_color(t.accent())
@@ -566,7 +570,8 @@ impl EditorView {
                                             .h_full()
                                             .border_l_1()
                                             .border_color(t.swatch_edge())
-                                            .bg(rgb_fill(current)),
+                                            .bg(rgb_fill(current))
+                                            .rounded_r(px(radius::MD)),
                                     ),
                             ),
                     ),

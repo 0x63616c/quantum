@@ -38,7 +38,7 @@ use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos};
 use voxelite_plugin_api::{PaletteAction, PalettePresentation};
 use voxelite_render::{PresetView, RenderOptions, View};
-use voxelite_ui::tokens::{focus_ring, metrics, space, type_size};
+use voxelite_ui::tokens::{focus_ring, metrics, radius, space, type_size};
 use voxelite_ui::{Button, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row};
 
 // Keep render sizing and native layout on the same logical-pixel metrics.
@@ -310,6 +310,7 @@ impl EditorView {
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.pause_history(cx);
         self.timeline.dragging = false;
+        self.timeline.expanded = false;
         self.zoom_reference_span = editor.camera.span;
         #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
@@ -1665,42 +1666,6 @@ impl EditorView {
             .border_color(t.line())
             .flex()
             .flex_col()
-            .child(
-                row()
-                    .h(px(if compact { 52.0 } else { 72.0 }))
-                    .flex_shrink_0()
-                    .px(px(PANEL_GUTTER))
-                    .gap(px(12.0))
-                    .border_b_1()
-                    .border_color(t.line())
-                    .child(
-                        row()
-                            .size(px(32.0))
-                            .justify_center()
-                            .rounded(px(8.0))
-                            .bg(t.hover())
-                            .child(icon("spark").text_color(t.muted())),
-                    )
-                    .child(
-                        div().flex_1().child(section_title("Local session")).child(
-                            div()
-                                .mt(px(2.0))
-                                .text_size(px(12.0))
-                                .text_color(t.muted())
-                                .child(if self.agent.clients > 0 {
-                                    format!(
-                                        "{} agent connection{}",
-                                        self.agent.clients,
-                                        if self.agent.clients == 1 { "" } else { "s" }
-                                    )
-                                } else if !self.agent.events.is_empty() {
-                                    "Agent disconnected".into()
-                                } else {
-                                    "Editing on this device".into()
-                                }),
-                        ),
-                    ),
-            )
             .child(self.panel_tabs(cx))
             .child(match self.panel {
                 Panel::Comments => self.comments_panel(cx),
@@ -1975,10 +1940,15 @@ impl EditorView {
                     .child(
                         Dialog::panel("command-palette", "Search commands", t, &self.modal_focus)
                             .h(px(440.0))
+                            .p(px(space::SM))
                             .flex()
                             .flex_col()
                             .child(
                                 voxelite_ui::TextField::search_row(t, true)
+                                    .rounded(px(radius::concentric(
+                                        radius::XL,
+                                        metrics::EDGE + space::SM,
+                                    )))
                                     .h(px(52.0))
                                     .flex_shrink_0()
                                     .child(icon("search").text_color(t.muted()))
