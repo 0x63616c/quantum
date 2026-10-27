@@ -3282,7 +3282,7 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       }
     }
   ]
-}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_export_png"><h3 id="voxelite_export_png">voxelite_export_png</h3><p>Render and atomically write one PNG under project root. Default contact sheet; for individual image use one view. Existing paths reject. Returns size, SHA-256 and camera metadata; document/history unchanged.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>views</code></td><td>Optional</td><td>array; minItems: 1; maxItems: 6</td></tr><tr><td><code>camera</code></td><td>Optional</td><td>object</td></tr><tr><td><code>width</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>height</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>perspective</code></td><td>Optional</td><td>boolean</td></tr><tr><td><code>background</code></td><td>Optional</td><td>array; minItems: 4; maxItems: 4</td></tr><tr><td><code>image_mode</code></td><td>Optional</td><td>string; enum: [&quot;contact_sheet&quot;,&quot;individual&quot;]</td></tr><tr><td><code>path</code></td><td>Yes</td><td>string; maxLength: 1024</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
+}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_export_png"><h3 id="voxelite_export_png">voxelite_export_png</h3><p>Render and atomically write one PNG under project root. Default contact sheet; for individual image use one view. Existing paths reject. Returns size, SHA-256 and camera metadata; document/history unchanged.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>views</code></td><td>Optional</td><td>array; minItems: 1; maxItems: 6</td></tr><tr><td><code>camera</code></td><td>Optional</td><td>object</td></tr><tr><td><code>width</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>height</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>perspective</code></td><td>Optional</td><td>boolean</td></tr><tr><td><code>background</code></td><td>Optional</td><td>array; minItems: 4; maxItems: 4</td></tr><tr><td><code>ambient_occlusion_strength</code></td><td>Optional</td><td>number; default: 1; minimum: 0; maximum: 2. Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.</td></tr><tr><td><code>image_mode</code></td><td>Optional</td><td>string; enum: [&quot;contact_sheet&quot;,&quot;individual&quot;]</td></tr><tr><td><code>path</code></td><td>Yes</td><td>string; maxLength: 1024</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
   &quot;type&quot;: &quot;object&quot;,
   &quot;properties&quot;: {
     &quot;model_id&quot;: {
@@ -3423,6 +3423,13 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       },
       &quot;minItems&quot;: 4,
       &quot;maxItems&quot;: 4
+    },
+    &quot;ambient_occlusion_strength&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;minimum&quot;: 0,
+      &quot;maximum&quot;: 2,
+      &quot;default&quot;: 1,
+      &quot;description&quot;: &quot;Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.&quot;
     },
     &quot;image_mode&quot;: {
       &quot;type&quot;: &quot;string&quot;,
@@ -8395,7 +8402,7 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       }
     }
   ]
-}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_render"><h3 id="voxelite_render">voxelite_render</h3><p>Render CPU PNG image content from one immutable revision. Default four views [iso,front,right,back] at 512², transparent background, orthographic, 2x AA, labeled contact sheet. Up to six views or one explicit camera; &lt;=4,194,304 combined image/sheet pixels. image_mode=contact_sheet|individual|both. Returns camera metadata and hashes; no GPU/display required.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>views</code></td><td>Optional</td><td>array; minItems: 1; maxItems: 6</td></tr><tr><td><code>camera</code></td><td>Optional</td><td>object</td></tr><tr><td><code>width</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>height</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>perspective</code></td><td>Optional</td><td>boolean</td></tr><tr><td><code>background</code></td><td>Optional</td><td>array; minItems: 4; maxItems: 4</td></tr><tr><td><code>image_mode</code></td><td>Optional</td><td>string; enum: [&quot;contact_sheet&quot;,&quot;individual&quot;,&quot;both&quot;]</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
+}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_render"><h3 id="voxelite_render">voxelite_render</h3><p>Render CPU PNG image content from one immutable revision. Default four views [iso,front,right,back] at 512², transparent background, orthographic, 2x AA, labeled contact sheet. Up to six views or one explicit camera; &lt;=4,194,304 combined image/sheet pixels. image_mode=contact_sheet|individual|both. Returns camera metadata and hashes; no GPU/display required.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>views</code></td><td>Optional</td><td>array; minItems: 1; maxItems: 6</td></tr><tr><td><code>camera</code></td><td>Optional</td><td>object</td></tr><tr><td><code>width</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>height</code></td><td>Optional</td><td>integer; minimum: 1; maximum: 1024</td></tr><tr><td><code>perspective</code></td><td>Optional</td><td>boolean</td></tr><tr><td><code>background</code></td><td>Optional</td><td>array; minItems: 4; maxItems: 4</td></tr><tr><td><code>ambient_occlusion_strength</code></td><td>Optional</td><td>number; default: 1; minimum: 0; maximum: 2. Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.</td></tr><tr><td><code>image_mode</code></td><td>Optional</td><td>string; enum: [&quot;contact_sheet&quot;,&quot;individual&quot;,&quot;both&quot;]</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
   &quot;type&quot;: &quot;object&quot;,
   &quot;properties&quot;: {
     &quot;model_id&quot;: {
@@ -8536,6 +8543,13 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       },
       &quot;minItems&quot;: 4,
       &quot;maxItems&quot;: 4
+    },
+    &quot;ambient_occlusion_strength&quot;: {
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;minimum&quot;: 0,
+      &quot;maximum&quot;: 2,
+      &quot;default&quot;: 1,
+      &quot;description&quot;: &quot;Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences.&quot;
     },
     &quot;image_mode&quot;: {
       &quot;type&quot;: &quot;string&quot;,
