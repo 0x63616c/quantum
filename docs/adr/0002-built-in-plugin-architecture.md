@@ -60,6 +60,25 @@ Third-party plugins and WASM are deferred to a later design; dynamic loading and
 scripting are also out of scope. This is a statically linked Rust API, not a stable
 binary ABI or an external code loader.
 
+## Crate layout and dependency rule
+
+Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
+`crates/plugins` is a tracked container with a README, not a package. The workspace
+includes both globs and excludes only `crates/plugins/Cargo.toml`, because excluding
+the container directory would also exclude the plugin packages beneath it.
+
+Plugin packages may depend only on `voxelite-plugin-api` and external crates in
+normal and build dependencies. This includes optional, renamed and target-specific
+dependencies. Direct dependencies on any other workspace crate, including
+`voxelite-core`, are forbidden; shared core types must be exposed through the API
+crate. Dev-dependencies are exempt so tests can use the host's conformance harness.
+`scripts/check-plugin-deps.py` enforces this boundary from Cargo metadata in CI,
+trying locked offline resolution first and retrying without offline mode if needed.
+
+`voxelite-plugin-example` is a minimal template (`dev.voxelite.example`,
+`builtin = false`) with one command declaration and a conformance test. It is not
+linked into the app and adds no built-in feature or command execution.
+
 ## Host
 
 `voxelite-plugin-host` is pure Rust and depends on the API without GPUI. It validates

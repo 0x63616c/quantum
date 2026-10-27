@@ -6050,6 +6050,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "voxelite-plugin-example"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+]
+
+[[package]]
 name = "voxelite-plugin-host"
 version = "0.2.0"
 dependencies = [
