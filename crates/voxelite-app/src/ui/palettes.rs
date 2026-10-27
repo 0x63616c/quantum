@@ -12,10 +12,12 @@ pub(super) struct PaletteManager {
 }
 impl PaletteManager {
     pub fn new(cx: &mut App) -> Self {
+        let hex = crate::text_field::TextField::new("#RRGGBB", cx);
+        hex.update(cx, |field, _| field.numeric(7));
         Self {
             open: false,
             name: crate::text_field::TextField::new("Palette name", cx),
-            hex: crate::text_field::TextField::new("#RRGGBB", cx),
+            hex,
         }
     }
 }
@@ -116,37 +118,12 @@ impl EditorView {
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
         let t = self.theme;
-        row()
-            .id(id)
-            .tab_index(0)
-            .focus_visible(move |d| {
-                d.bg(if name == "send" { t.text() } else { t.hover() })
-                    .shadow(focus_ring(t))
-            })
-            .active(move |d| d.bg(t.selected()).text_color(t.accent()))
-            .h(px(34.0))
-            .px(px(10.0))
-            .gap(px(6.0))
-            .rounded(px(6.0))
-            .border_1()
-            .border_color(t.line())
-            .cursor_pointer()
-            .hover(move |d| d.bg(t.hover()))
-            .when(!name.is_empty(), |d| {
-                d.child(icon(name).text_color(if matches!(name, "send") {
-                    t.background()
-                } else {
-                    t.muted()
-                }))
-            })
-            .child(
-                div()
-                    .min_w(px(0.0))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .child(text.into()),
-            )
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        let mut button = Button::new(id, text, t);
+        if !name.is_empty() {
+            button = button.icon(name);
+        }
+        button
+            .build()
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus, cx);
                 callback(this, window, cx)
@@ -538,18 +515,15 @@ impl EditorView {
                         .child(div().flex().flex_wrap().gap(px(6.0)).children(
                             palette.order.iter().enumerate().map(|(i, s)| {
                                 let c = palette.get(*s).unwrap().rgba;
-                                row()
+                                voxelite_ui::Swatch::new(t, color_fill(c))
+                                    .selected(i == state.slot)
+                                    .build()
                                     .id(("manager-swatch", i))
-                                    .size(px(32.0))
-                                    .justify_center()
-                                    .rounded(px(5.0))
-                                    .bg(color_fill(c))
-                                    .border_2()
-                                    .border_color(if i == state.slot {
-                                        t.text()
-                                    } else {
-                                        t.swatch_edge()
-                                    })
+                                    .role(Role::Button)
+                                    .aria_label(format!("Color {}", i + 1))
+                                    .aria_selected(i == state.slot)
+                                    .tab_index(0)
+                                    .focus_visible(move |d| d.shadow(focus_ring(t)))
                                     .cursor_pointer()
                                     .when(i == state.slot, |d| {
                                         d.child(icon("check").text_color(swatch_ink(c)))
@@ -678,41 +652,26 @@ impl EditorView {
                 .child(div().text_size(px(12.0)).text_color(t.muted()).child(
                     "Palette selection applies to new voxels. Existing colors stay intact.",
                 ));
-        div()
-            .absolute()
-            .size_full()
-            .flex()
-            .items_center()
-            .justify_center()
-            .bg(rgba(0x00000060))
+        Dialog::scrim(t, false)
             .child(
-                self.floating()
+                Dialog::panel("palette-manager", "Palettes", t, &self.modal_focus)
                     .w(px(780.0))
                     .h(px(620.0))
                     .max_h(relative(0.95))
                     .flex()
                     .flex_col()
                     .p(px(0.0))
-                    .child(
-                        row()
-                            .px(px(24.0))
-                            .py(px(16.0))
-                            .justify_between()
-                            .border_b_1()
-                            .border_color(t.line())
-                            .child(section_title("Palettes"))
-                            .child(self.control(
-                                "close-palettes",
-                                "check",
-                                "Done",
-                                cx,
-                                |this, window, cx| {
-                                    this.palettes.open = false;
-                                    window.focus(&this.focus, cx);
-                                    cx.notify();
-                                },
-                            )),
-                    )
+                    .child(Dialog::title("Palettes", t).child(self.control(
+                        "close-palettes",
+                        "check",
+                        "Done",
+                        cx,
+                        |this, window, cx| {
+                            this.palettes.open = false;
+                            window.focus(&this.focus, cx);
+                            cx.notify();
+                        },
+                    )))
                     .child(
                         row()
                             .flex_1()
