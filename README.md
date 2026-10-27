@@ -32,9 +32,9 @@ in light mode. These are real earlier review captures: their toolbar Save/Share
 controls and status copy predate the current shell. Current Save actions live in
 the File menu, and hosted sharing is not implemented.
 
-![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](screenshots/polish-3/agent-dark.png)
+![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](docs/images/agent-dark.png)
 
-![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](screenshots/polish-2/main-light.png)
+![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](docs/images/main-light.png)
 
 ## What is implemented
 
@@ -229,8 +229,8 @@ only a container.
 | Top-level directory | Contents |
 | --- | --- |
 | [bench/](bench/) | Pinned scenes, machine identity, GPU goldens and performance baselines. |
-| [docs/](docs/) | Architecture, implementation guides, performance notes and reviews. |
-| [design/](design/) | Art direction, design assets, concepts and historical plans/reviews. |
+| [docs/](docs/) | Architecture, implementation guides, performance notes, reviews and retained images. |
+| [Art checklist](design/ART-CHECKLIST.md) | Visual direction for app and site work. |
 | [examples/](examples/) | Sample `.voxl` projects and Rust scene/history generators. |
 | [integrations/](integrations/) | Generated MCP configuration examples for supported agent hosts. |
 | [packaging/](packaging/) | macOS bundle metadata, icon, entitlements, public update key and release-note base. |
@@ -241,7 +241,6 @@ only a container.
 | [vendor/](vendor/) | Pinned GPUI Apple surface-lifetime patch and its upstream notices. |
 | [web/](web/) | Browser bootstrap HTML and ignored generated wasm bundle. |
 | [xtask/](xtask/) | Cargo launcher for the independent `bench` and `visual` tools. |
-| [screenshots/](screenshots/) | Checked-in native/web/site review captures and verification artifacts. |
 
 ## Architecture
 
@@ -436,7 +435,7 @@ failed site deployment rather than replacing published release assets.
 | [Core architecture](docs/architecture/core.md), [built-in plugins](crates/plugins/README.md) | Model invariants and extension boundaries. |
 | [Format specification](spec/voxl/1.0/README.md), [MCP contract](spec/mcp/v1/contract.md) | File and protocol contracts. |
 | [Product direction](docs/adr/0003-product-direction.md) | Product scope, core and built-in plugin boundaries, and deferred work. |
-| [design/](design/), [art checklist](design/ART-CHECKLIST.md) | Visual direction and design history. |
+| [Art checklist](design/ART-CHECKLIST.md), [private archive](https://github.com/0x63616c/quantum-archive) | Visual direction; historical concepts, review captures and design history. |
 | [Rendering harness](docs/perf/rendering-harness.md), [release guide](docs/releasing-macos.md) | Pixel/performance gates and distribution. |
 | [AGENTS.md](AGENTS.md) | Coding conventions, commands, UI rules and PR workflow. |
 
