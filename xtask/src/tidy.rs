@@ -13,6 +13,7 @@ const ROOT_ENTRIES: &[&str] = &[
     "LICENSE",
     "README.md",
     "bench",
+    "brand.toml",
     "crates",
     "deny.toml",
     "design",
