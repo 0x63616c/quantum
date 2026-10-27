@@ -1,5 +1,7 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "crates/plugins/*"]
+# Exclude only the container manifest; excluding the directory also excludes plugins.
+exclude = ["crates/plugins/Cargo.toml"]
 resolver = "2"
 
 [workspace.package]
