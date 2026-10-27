@@ -99,6 +99,38 @@ fn pre_plugin_export_bytes() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/golden")
             .join(name);
-        assert_eq!(bytes, std::fs::read(path).unwrap(), "{name}");
+        let expected = std::fs::read(path).unwrap();
+        if name.ends_with(".glb") {
+            assert_glb_matches(&bytes, &expected, name);
+        } else {
+            assert_eq!(bytes, expected, "{name}");
+        }
+    }
+}
+
+/// libm differences across platforms may move linearised colours by one ulp; everything else is exact.
+fn assert_glb_matches(actual: &[u8], expected: &[u8], name: &str) {
+    assert_eq!(actual.len(), expected.len(), "{name} length");
+    // GLB header (12) + JSON chunk header (8) + JSON; the BIN chunk follows.
+    let json_len = u32::from_le_bytes(expected[12..16].try_into().unwrap()) as usize;
+    let bin_start = 20 + json_len + 8;
+    assert_eq!(&actual[..bin_start], &expected[..bin_start], "{name} json");
+    for (index, (a, e)) in actual[bin_start..]
+        .chunks_exact(4)
+        .zip(expected[bin_start..].chunks_exact(4))
+        .enumerate()
+    {
+        if a == e {
+            continue;
+        }
+        let (a, e) = (
+            u32::from_le_bytes(a.try_into().unwrap()),
+            u32::from_le_bytes(e.try_into().unwrap()),
+        );
+        let (fa, fe) = (f32::from_bits(a), f32::from_bits(e));
+        assert!(
+            fa.is_normal() && fe.is_normal() && fa.abs() > 1e-3 && a.abs_diff(e) <= 1,
+            "{name} word {index}: {a:#x} != {e:#x}"
+        );
     }
 }
