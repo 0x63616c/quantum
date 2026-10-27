@@ -31,7 +31,7 @@ pub enum SessionError {
     #[error("Save to a regular file, not a directory or symbolic link")]
     InvalidDestination,
     /// The destination no longer matches the observed baseline.
-    #[error("File changed outside Voxelite. Save As to a new file, or reopen it.")]
+    #[error("File changed outside Quantum. Save As to a new file, or reopen it.")]
     ExternalChange,
     /// Create-only saves cannot replace an existing destination.
     #[error("destination exists; choose a new path")]

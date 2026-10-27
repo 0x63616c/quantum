@@ -4,7 +4,7 @@ xdotool windowsize "$window" 1440 900 windowfocus "$window"
 xdotool mousemove --window "$window" 96 836 click 1
 settings_window=''
 for attempt in {1..50}; do
-  settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Voxelite Settings$' 2>/dev/null | head -1 || true)"
+  settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Quantum Settings$' 2>/dev/null | head -1 || true)"
   [[ -n "$settings_window" ]] && break
   sleep 0.2
 done
@@ -20,7 +20,7 @@ capture_settings() {
 capture_settings general
 # One settings window per editor, including repeated shortcut invocation.
 xdotool key --clearmodifiers ctrl+comma
-[[ "$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Voxelite Settings$' | wc -l)" == 1 ]]
+[[ "$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Quantum Settings$' | wc -l)" == 1 ]]
 # Search supports text selection and native clipboard actions.
 xdotool mousemove --window "$settings_window" 110 90 click 1
 xdotool type --clearmodifiers 'appearance'
@@ -94,7 +94,7 @@ xdotool windowfocus "$window"
 timeout 15s import -window "$window" "$VOXELITE_CAPTURE_DIR/cog-without-guide-$theme.png"
 xdotool mousemove --window "$window" 96 836 click 1
 sleep 0.5
-settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Voxelite Settings$' | head -1)"
+settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Quantum Settings$' | head -1)"
 xdotool windowfocus "$settings_window"
 capture_settings reopened
 xdotool mousemove --window "$settings_window" 816 177 click 1

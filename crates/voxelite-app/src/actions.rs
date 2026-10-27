@@ -128,7 +128,7 @@ impl ShellCommands {
             Op::Quit | Op::Minimize | Op::ZoomWindow | Op::FullScreen => {
                 !cfg!(target_family = "wasm")
             }
-            _ if self.command(op).menu.as_deref() == Some("Voxelite") => {
+            _ if self.command(op).menu.as_deref() == Some("Quantum") => {
                 !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
             }
             _ => true,
@@ -202,7 +202,7 @@ fn label(command: &CommandContribution) -> &str {
 
 fn command_menu(command: &CommandContribution, apple: bool) -> &str {
     if apple && command.application_section.is_some() {
-        "Voxelite"
+        "Quantum"
     } else {
         command.menu.as_deref().unwrap_or_default()
     }
@@ -557,7 +557,7 @@ impl ShellCommands {
                     ));
                 }
             }
-            menus.push(Menu::new("Voxelite").items(items));
+            menus.push(Menu::new("Quantum").items(items));
         }
         for (name, ops) in self.menu_groups() {
             let mut items: Vec<_> = ops
@@ -1302,7 +1302,7 @@ mod tests {
                 .map(|menu| menu.name.as_ref())
                 .collect::<Vec<_>>(),
             [
-                "Voxelite",
+                "Quantum",
                 "File",
                 "Edit",
                 "View",
