@@ -2,10 +2,10 @@
 #![allow(unsafe_code)]
 use super::*;
 use block2::RcBlock;
-use std::cell::Cell;
 use futures_channel::oneshot;
 use objc2::{MainThreadMarker, runtime::AnyClass};
 use objc2_app_kit::{NSColor, NSColorSampler, NSColorSpace};
+use std::cell::Cell;
 
 type Sample = Result<Option<[u8; 3]>, ()>;
 fn available() -> bool {
