@@ -11,12 +11,11 @@ pub use interchange::{FORMATS, export, format, import, to_pal};
 pub use library::{parse_color, step_swatch};
 pub use presets::Preset;
 
-/// Registered palette panel identity.
-pub const PANEL_ID: &str = "dev.voxelite.palette.panel";
+pub use voxelite_plugin_api::{
+    PALETTE_PANEL_ID as PANEL_ID, PALETTE_PRESET_SETTING as PRESET_SETTING,
+};
 /// JASC-PAL export identity in the host format registry.
 pub const PAL: &str = "dev.voxelite.palette.pal";
-/// Transient project/preset choice, retained across disable/enable in one editor.
-pub const PRESET_SETTING: &str = "dev.voxelite.palette.preset";
 
 use voxelite_plugin_api::{
     API_VERSION, CommandContribution, Manifest, PalettePanel, PanelContribution, Plugin, PluginId,

@@ -30,7 +30,12 @@ impl Agent {
                 dir.join(format!("session-{}.sock", std::process::id()))
             }
         };
-        let session = AttachedSession::bind(&std::env::current_dir()?, editor.project(), &path)?;
+        let session = AttachedSession::bind(
+            &std::env::current_dir()?,
+            editor.project(),
+            &path,
+            voxelite_plugins_builtin::mcp_host,
+        )?;
         Ok(Self {
             session: Some(session),
             events: VecDeque::new(),

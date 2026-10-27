@@ -6,13 +6,21 @@ rust-version.workspace = true
 license.workspace = true
 description = "Agent-first Voxelite MCP server over stdio"
 
+[features]
+default = ["standalone"]
+standalone = ["dep:voxelite-plugins-builtin"]
+
+[[bin]]
+name = "voxelite-mcp"
+path = "src/main.rs"
+required-features = ["standalone"]
+
 [dependencies]
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
 voxelite-plugin-host.workspace = true
-voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
-voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
-voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
+# Used only by the binary composition root; the library receives a host factory.
+voxelite-plugins-builtin = { path = "../voxelite-plugins-builtin", optional = true }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 png.workspace = true
@@ -24,6 +32,8 @@ base64 = "0.22"
 jsonschema = { version = "0.37", default-features = false }
 
 [dev-dependencies]
+voxelite-plugins-builtin = { path = "../voxelite-plugins-builtin" }
+voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
 tempfile = "3"
 
 [lints]

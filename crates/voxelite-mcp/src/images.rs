@@ -303,6 +303,7 @@ fn label(canvas: &mut [u8], stride: u32, tile: [u32; 4], text: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use voxelite_plugins_builtin::mcp_host;
 
     #[test]
     fn feedback_png_matches_straight_alpha_characterization() {
@@ -336,7 +337,7 @@ mod tests {
         let args = json!({"width":80,"height":64,"views":["iso","front"]});
         let images = render(&snapshot, &Args(&args)).unwrap();
         assert_eq!(images.pngs[0], include_bytes!("../tests/contact-sheet.png"));
-        let exported = export(&snapshot, &Args(&args), &mut crate::exports::host()).unwrap();
+        let exported = export(&snapshot, &Args(&args), &mut mcp_host()).unwrap();
         assert_eq!(exported.pngs, images.pngs);
         assert_eq!(exported.metadata, images.metadata);
     }
@@ -357,7 +358,7 @@ mod tests {
             assert_ne!(original.pngs, rendered.pngs);
             assert_eq!(
                 rendered.pngs,
-                export(&snapshot, &Args(&args), &mut crate::exports::host())
+                export(&snapshot, &Args(&args), &mut mcp_host())
                     .unwrap()
                     .pngs
             );

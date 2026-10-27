@@ -2,6 +2,9 @@
 use crate::{Anchor, Command, Comment, Pos, Region, Snapshot, ToolError, Uuid};
 use std::collections::BTreeMap;
 
+/// Registered discussion panel shared by shell and MCP adapters.
+pub const COMMENTS_PANEL_ID: &str = "dev.voxelite.comments.panel";
+
 /// Transient discussion state retained by the shell, never saved in a project.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CommentsState {

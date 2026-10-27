@@ -1,11 +1,10 @@
 //! Typed palette requests resolved through the editor's enabled plugin registry.
 use crate::error::{Failure, Result};
 use voxelite_plugin_api::{
-    Palette, PaletteAction, PaletteCx, PaletteError, PaletteOutcome, PaletteState, SettingKind,
-    SettingValue, Swatch,
+    PALETTE_PANEL_ID as PANEL_ID, PALETTE_PRESET_SETTING as PRESET_SETTING, Palette, PaletteAction,
+    PaletteCx, PaletteError, PaletteOutcome, PaletteState, SettingKind, SettingValue, Swatch,
 };
 use voxelite_plugin_host::{Host, HostError};
-use voxelite_plugin_palette::{PANEL_ID, PRESET_SETTING};
 
 pub(crate) fn enabled(host: &Host) -> bool {
     host.registry().panels().any(|(_, p)| p.id == PANEL_ID)

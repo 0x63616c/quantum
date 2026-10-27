@@ -134,12 +134,19 @@ pub struct AttachedSession {
 }
 impl AttachedSession {
     /// Bind a private socket. Existing paths are never removed or replaced.
-    pub fn bind(root: &Path, project: Project, path: &Path) -> io::Result<Self> {
+    /// The factory supplies initial declarations and the default polling host.
+    /// Editors use [`Self::poll_with_host`] to dispatch through their live host.
+    pub fn bind(
+        root: &Path,
+        project: Project,
+        path: &Path,
+        host_factory: fn() -> voxelite_plugin_host::Host,
+    ) -> io::Result<Self> {
         let root = root.canonicalize()?;
         if !root.is_dir() {
             return Err(io::Error::other("Session root must be a directory"));
         }
-        let mut session = Session::new(root);
+        let mut session = Session::new(root, host_factory);
         session
             .attach(project)
             .map_err(|e| io::Error::other(e.message.to_string()))?;
@@ -152,7 +159,7 @@ impl AttachedSession {
         let worker_path = path.clone();
         let clients = Arc::new(AtomicUsize::new(0));
         let worker_clients = clients.clone();
-        let host = crate::exports::host();
+        let host = host_factory();
         let export_formats = host.registry().formats().map(|(_, f)| f.clone()).collect();
         let palette_enabled = crate::palettes::enabled(&host);
         let comments_enabled = crate::comments::enabled(&host);
@@ -213,7 +220,7 @@ impl AttachedSession {
     /// Process a bounded number of requests on the engine's owner thread.
     /// No request executes after its awaiting protocol caller has cancelled.
     pub fn poll(&mut self, document: &mut DocumentSession) -> Vec<SessionEvent> {
-        self.poll_with_host(document, &mut crate::exports::host())
+        self.poll_with_host(document, &mut (self.session.host_factory)())
     }
     /// Process requests using the editor's live feature bindings.
     pub fn poll_with_host(

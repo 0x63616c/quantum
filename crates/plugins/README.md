@@ -19,6 +19,18 @@ geometry, but no GLB/PNG encoding module or renderer dependency. The built-in
 other plugins implement their own callbacks using the API and external crates.
 MCP render-feedback PNGs use `png` directly.
 
+The API also owns `COMMENTS_PANEL_ID`, `PALETTE_PANEL_ID` and
+`PALETTE_PRESET_SETTING`, the stable IDs shared with shell/MCP adapters. Plugins
+re-export their existing constant names for compatibility.
+
+`crates/voxelite-plugins-builtin` is a composition crate outside this plugin
+directory. It supplies the app's ordered built-ins and the standalone MCP host.
+The MCP library receives a host factory and has no concrete plugin imports.
+Its binary stays in the same Cargo package to preserve build/release commands;
+the default `standalone` feature enables the composition dependency. Library
+consumers disable default features. Check that boundary with
+`cargo check -p voxelite-mcp --locked --lib --no-default-features`.
+
 Run the dependency rule and its fixture tests with:
 
 ```sh

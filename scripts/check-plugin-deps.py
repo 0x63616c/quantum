@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce the workspace dependency boundary for crates/plugins packages."""
+"""Enforce plugin and MCP adapter dependency boundaries."""
 
 import json
 from pathlib import Path, PurePath
@@ -24,8 +24,27 @@ def dependency_violations(metadata):
     violations = []
     for package in metadata["packages"]:
         manifest = PurePath(package["manifest_path"])
-        if not manifest.is_relative_to(plugins):
+        is_mcp = manifest.parent == root / "crates/voxelite-mcp"
+        if manifest.is_relative_to(plugins):
+            allowed = {"voxelite-plugin-api"}
+            rule = "only voxelite-plugin-api is allowed outside dev-dependencies"
+        elif is_mcp:
+            # Cargo shares dependencies between library and binary targets. The
+            # binary may compose built-ins; the adapter must not import them.
+            allowed = {
+                "voxelite-core", "voxelite-format", "voxelite-render",
+                "voxelite-plugin-api", "voxelite-plugin-host",
+            }
+            rule = "MCP must receive plugins from its composition root"
+        else:
             continue
+        allowed_edges = {(kind, name) for kind in [None, "build"] for name in allowed}
+        if is_mcp and any(
+            dependency["name"] == "voxelite-plugins-builtin"
+            and dependency["kind"] is None and dependency["optional"]
+            for dependency in package["dependencies"]
+        ):
+            allowed_edges.add((None, "voxelite-plugins-builtin"))
         forbidden = set()
         # Inspect declarations, not just resolved edges: disabled optional and
         # target-specific dependencies must obey the same rule. Cargo's path is
@@ -34,20 +53,22 @@ def dependency_violations(metadata):
             if dependency["kind"] == "dev" or "path" not in dependency:
                 continue
             name = workspace_crates.get(PurePath(dependency["path"]))
-            if name is not None and name != "voxelite-plugin-api":
+            if name is not None and (
+                (dependency["kind"], name) not in allowed_edges
+                or (is_mcp and name == "voxelite-plugins-builtin" and not dependency["optional"])
+            ):
                 forbidden.add((dependency["kind"] or "normal", name))
         # A registry dependency can also resolve to a workspace crate via a
         # Cargo patch, without a path in its declaration.
         for dependency in nodes.get(package["id"], {}).get("deps", []):
             name = workspace_names.get(dependency["pkg"])
-            if name is not None and name != "voxelite-plugin-api":
+            if name is not None:
                 for kind in dependency["dep_kinds"]:
-                    if kind["kind"] != "dev":
+                    if kind["kind"] != "dev" and (kind["kind"], name) not in allowed_edges:
                         forbidden.add((kind["kind"] or "normal", name))
         for kind, name in sorted(forbidden):
             violations.append(
-                f"{manifest.relative_to(root)}: {kind} dependency on {name}; "
-                "only voxelite-plugin-api is allowed outside dev-dependencies"
+                f"{manifest.relative_to(root)}: {kind} dependency on {name}; {rule}"
             )
     return violations
 

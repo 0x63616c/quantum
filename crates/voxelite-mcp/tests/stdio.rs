@@ -1,4 +1,5 @@
 //! Real process tests: no SDK client can accidentally mask wire regressions.
+#![cfg(feature = "standalone")]
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use std::{

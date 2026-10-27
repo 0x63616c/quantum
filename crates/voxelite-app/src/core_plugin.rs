@@ -325,16 +325,9 @@ impl Plugin for CorePlugin {
 /// Construct the app's statically linked plugin host in a fixed registration order.
 /// All built-ins start enabled; the shell does not expose enablement preferences yet.
 pub fn app_host() -> voxelite_plugin_host::Host {
-    voxelite_plugin_host::Host::new(vec![
-        Box::new(CorePlugin),
-        Box::new(voxelite_plugin_tools::ToolsPlugin),
-        Box::new(voxelite_plugin_mirror::MirrorPlugin),
-        Box::new(voxelite_plugin_gizmo_grid::GizmoGridPlugin),
-        Box::new(voxelite_plugin_palette::PalettePlugin),
-        Box::new(voxelite_plugin_comments::CommentsPlugin),
-        Box::new(voxelite_plugin_agent::AgentPlugin),
-        Box::new(voxelite_plugin_exporters::ExportersPlugin),
-    ])
+    let mut host = voxelite_plugin_host::Host::new(vec![Box::new(CorePlugin)]);
+    voxelite_plugins_builtin::register_all(&mut host);
+    host
 }
 
 #[cfg(test)]
