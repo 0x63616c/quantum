@@ -441,6 +441,11 @@ impl EditorView {
             }
             Op::Minimize => window.minimize_window(),
             Op::ZoomWindow => window.zoom_window(),
+            Op::FullScreen => {
+                #[cfg(not(target_family = "wasm"))]
+                window.toggle_fullscreen();
+                cx.notify();
+            }
             Op::ShowPalette => {
                 if !self
                     .palette_request(PaletteAction::Command(op.command_id().into()), cx)
@@ -461,7 +466,7 @@ impl EditorView {
     }
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
-            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
+            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
             Op::About => self.info = Some(("About Voxelite", InfoContent::Text(format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION"))))),
             Op::CheckUpdates => {
                 let message = check_for_updates();
@@ -1728,38 +1733,45 @@ impl EditorView {
         op: Op,
         index: usize,
         selected: bool,
+        window: &Window,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let t = self.theme;
         let enabled = self.enabled(op);
-        voxelite_ui::SidebarItem::row(("action-row", index), op.label(), op.icon(), false, t)
-            .tab_stop(false)
-            .role(Role::MenuItem)
-            .aria_selected(selected)
-            .aria_keyshortcuts(op.shortcut())
-            .when(selected, |d| d.bg(t.hover()).aria_active_descendant())
-            .text_color(if enabled { t.text() } else { t.disabled() })
-            .when(self.selected(op), |d| {
-                d.child(
-                    icon("check")
-                        .size(px(metrics::ICON_SM))
-                        .text_color(t.accent()),
-                )
-            })
-            .child(
-                div()
-                    .max_w(px(240.))
-                    .text_size(px(type_size::CAPTION))
-                    .text_color(t.muted())
-                    .when(enabled, |d| d.child(action_shortcut(op)))
-                    .when(!enabled, |d| {
-                        d.whitespace_normal().child(self.disabled_reason(op))
-                    }),
+        voxelite_ui::SidebarItem::row(
+            ("action-row", index),
+            op.display_label(window.is_fullscreen()),
+            op.icon(),
+            false,
+            t,
+        )
+        .tab_stop(false)
+        .role(Role::MenuItem)
+        .aria_selected(selected)
+        .aria_keyshortcuts(op.shortcut())
+        .when(selected, |d| d.bg(t.hover()).aria_active_descendant())
+        .text_color(if enabled { t.text() } else { t.disabled() })
+        .when(self.selected(op), |d| {
+            d.child(
+                icon("check")
+                    .size(px(metrics::ICON_SM))
+                    .text_color(t.accent()),
             )
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.invoke(op, window, cx);
-            }))
+        })
+        .child(
+            div()
+                .max_w(px(240.))
+                .text_size(px(type_size::CAPTION))
+                .text_color(t.muted())
+                .when(enabled, |d| d.child(action_shortcut(op)))
+                .when(!enabled, |d| {
+                    d.whitespace_normal().child(self.disabled_reason(op))
+                }),
+        )
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_click(cx.listener(move |this, _, window, cx| {
+            this.invoke(op, window, cx);
+        }))
     }
     fn floating(&self) -> Stateful<Div> {
         Dialog::panel("floating-panel", "Dialog", self.theme, &self.modal_focus)
@@ -1767,7 +1779,7 @@ impl EditorView {
             .p(px(space::SM))
     }
 
-    fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
+    fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
         #[cfg(target_family = "wasm")]
         if let Some(settings) = &self.settings_modal {
@@ -2002,7 +2014,13 @@ impl EditorView {
                                     .overflow_y_scroll()
                                     .py(px(6.0))
                                     .children(matches.iter().enumerate().map(|(i, op)| {
-                                        self.action_row(*op, i, self.commands.index() == i, cx)
+                                        self.action_row(
+                                            *op,
+                                            i,
+                                            self.commands.index() == i,
+                                            window,
+                                            cx,
+                                        )
                                     }))
                                     .when(matches.is_empty(), |d| {
                                         d.child(
@@ -2182,7 +2200,9 @@ impl EditorView {
                         crate::actions::menu_items(i, &self.editor.plugin_host())
                             .iter()
                             .enumerate()
-                            .map(|(j, op)| self.action_row(*op, j, j == self.menu_index, cx)),
+                            .map(|(j, op)| {
+                                self.action_row(*op, j, j == self.menu_index, window, cx)
+                            }),
                     ),
                 )
                 .into_any_element()
@@ -2242,6 +2262,7 @@ impl Render for EditorView {
         if cfg!(target_os = "macos") && window.is_window_active() {
             cx.set_menus(crate::actions::menus_from_host(
                 &self.editor.plugin_host(),
+                window.is_fullscreen(),
                 |op| self.selected(op),
                 |op| self.enabled(op),
             ));
@@ -2262,7 +2283,7 @@ impl Render for EditorView {
             self.overlay_hover = self.overlay_hit(window.mouse_position());
         }
         self.reconcile_palette_panel(window, cx);
-        let overlay = self.overlay(cx);
+        let overlay = self.overlay(window, cx);
         div()
             .id("editor-root")
             .key_context(if settings_open {

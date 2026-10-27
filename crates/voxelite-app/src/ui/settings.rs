@@ -839,7 +839,8 @@ impl Render for SettingsView {
             );
         }
         if window.is_window_active() && cfg!(target_os = "macos") {
-            cx.set_menus(actions::menus(
+            cx.set_menus(actions::menus_for_window(
+                window.is_fullscreen(),
                 |_| false,
                 |op| {
                     op.availability(actions::CommandContext::Settings {
@@ -891,6 +892,10 @@ impl Render for SettingsView {
                     Op::ShowAll => cx.unhide_other_apps(),
                     Op::Minimize => window.minimize_window(),
                     Op::ZoomWindow => window.zoom_window(),
+                    Op::FullScreen => {
+                        #[cfg(not(target_family = "wasm"))]
+                        window.toggle_fullscreen();
+                    }
                     Op::Quit => this.editor_action(Op::Quit, cx),
                     _ => {}
                 }
