@@ -94,8 +94,8 @@ if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.f
 Fork pull requests never schedule this self-hosted job. Do not change the event to
 `pull_request_target` or remove the guard. The release job has the same guard.
 
-Both workflows use `[self-hosted, macOS, ARM64, xcode]`, targeting the
-`homelab-voxelite` runner, with
+All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
+`[self-hosted, macOS, ARM64, xcode]`, which select the self-hosted Apple Silicon runner, with
 `DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer`. There are no
 GitHub-hosted macOS jobs. The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,

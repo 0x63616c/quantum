@@ -170,7 +170,7 @@ Earlier branch verification and platform constraints:
   the previous session. That artifact was removed and the check repeated; this
   is not a successful complete macOS build. Rust checking with that artifact
   had reached the app and GPUI patch, but did not validate Metal shaders/linking.
-- Workflow configuration targets `[self-hosted, homelab-voxelite]` on pushes to
+- Workflow configuration targeted `[self-hosted, homelab-voxelite]` at the time of this note (the workflows now use `[self-hosted, macOS, ARM64, xcode]`) on pushes to
   `main` and `perf/**`, plus manual dispatch. It runs `scripts/package-macos.sh`
   and uploads `dist/Voxelite.dmg` as the `Voxelite.dmg` artifact. No release or
   push was performed from this worktree; the workflow itself was not executed.
