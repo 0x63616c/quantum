@@ -2,6 +2,11 @@ use crate::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
 
+#[cfg(test)]
+mod compare_tests;
+#[cfg(all(test, feature = "unbounded-voxels"))]
+mod measurements;
+
 /// Runtime history provenance. Only the role is portable project content.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Actor {
@@ -119,7 +124,8 @@ pub struct Checkpoint {
 }
 /// Shared human/agent authority for one validated document.
 ///
-/// Every mutation is prepared privately and validated in full before installation.
+/// Every mutation is prepared privately and validated before installation, reusing
+/// voxel checks for unchanged chunks from the already-validated current document.
 /// Revisions are monotonic, including undo/redo. Hosts add epoch/durability guards.
 pub struct Engine {
     document: Arc<Document>,
@@ -256,7 +262,7 @@ impl Engine {
             self.head(),
             &mut work,
         )?;
-        staged.validate()?;
+        staged.validate_against(&self.document)?;
         let mut changes = compare(&self.document.content, &staged.content);
         changes.metadata_changed |= self.document.extensions != staged.extensions;
         let changed = staged != *self.document;
@@ -635,21 +641,10 @@ pub fn compare(a: &Snapshot, b: &Snapshot) -> Changes {
             continue;
         }
         out.layers.insert(id);
-        let coords: BTreeSet<_> = before
-            .into_iter()
-            .flat_map(|l| l.voxels.iter().map(|(p, _)| p))
-            .chain(
-                after
-                    .into_iter()
-                    .flat_map(|l| l.voxels.iter().map(|(p, _)| p)),
-            )
-            .collect();
-        for p in coords {
-            let old = before.map_or(0, |l| l.voxels.get(p));
-            let new = after.map_or(0, |l| l.voxels.get(p));
-            if old == new {
-                continue;
-            }
+        let empty = Volume::default();
+        let previous = before.map_or(&empty, |l| &l.voxels);
+        let current = after.map_or(&empty, |l| &l.voxels);
+        for (p, old, new) in current.changed_cells(previous) {
             if old == 0 {
                 out.added += 1;
             } else if new == 0 {
