@@ -198,7 +198,9 @@ fn editing_checks_hit_layer_before_active_layer_and_preserves_box_on_failure() {
 fn every_edit_tool_retains_centered_mirrors_and_atomic_undo() {
     for tool in [Tool::Place, Tool::Erase, Tool::Paint, Tool::Fill, Tool::Box] {
         let mut e = Editor::blank().unwrap();
-        e.mirror = [true; 3];
+        for axis in 0..3 {
+            e.set_mirror_axis(axis, true).unwrap();
+        }
         e.apply_at([2, 2, 2]).unwrap();
         let before = e.project().to_bytes().unwrap();
         let history = e.engine.history().count();
@@ -229,6 +231,231 @@ fn every_edit_tool_retains_centered_mirrors_and_atomic_undo() {
         e.redo().unwrap();
         assert_eq!(e.project().to_bytes().unwrap(), after, "{tool:?}");
     }
+}
+
+#[test]
+fn mirror_axis_combinations_preserve_place_box_and_fill_results() {
+    use std::collections::BTreeSet;
+
+    // Even, odd, translated and origin-centered bounds, including cells on a plane.
+    for (min, max, at) in [
+        ([0; 3], [32; 3], [2, 3, 4]),
+        ([-4; 3], [4; 3], [-3, -2, -1]),
+        ([-4; 3], [5; 3], [0; 3]),
+        ([-7, 10, -3], [2, 19, 6], [-6, 11, -2]),
+    ] {
+        let bounds = Region::new(min, max).unwrap();
+        for mask in 0..8 {
+            let axes: [bool; 3] = std::array::from_fn(|a| mask & (1 << a) != 0);
+            for tool in [Tool::Place, Tool::Box, Tool::Fill] {
+                let mut document = Document::new(Uuid::new_v4(), Uuid::new_v4());
+                document.content.bounds = bounds;
+                let mut e = Editor::new(Project::new(document).unwrap(), None).unwrap();
+                let end = [at[0] + 1, at[1], at[2]];
+                if tool == Tool::Fill {
+                    // The connected source is filled, then reflected into empty space.
+                    e.apply_at(at).unwrap();
+                    e.apply_at(end).unwrap();
+                }
+                let before = e.project().to_bytes().unwrap();
+                let history = e.engine.history().count();
+                for (axis, enabled) in axes.into_iter().enumerate() {
+                    e.set_mirror_axis(axis, enabled).unwrap();
+                }
+                e.tool = tool;
+                e.color = Swatch::rgb(17, 34, 51);
+                if tool == Tool::Box {
+                    assert!(!e.apply_at(end).unwrap());
+                }
+                assert!(e.apply_at(at).unwrap(), "{tool:?}, {axes:?}, {bounds:?}");
+
+                let sources = if tool == Tool::Place {
+                    vec![at]
+                } else {
+                    vec![at, end]
+                };
+                let mut expected = BTreeSet::new();
+                for source in sources {
+                    for reflection in 0..8 {
+                        if reflection & !mask == 0 {
+                            expected.insert(std::array::from_fn(|a| {
+                                if reflection & (1 << a) == 0 {
+                                    source[a]
+                                } else {
+                                    min[a] + max[a] - source[a] - 1
+                                }
+                            }));
+                        }
+                    }
+                }
+                assert_eq!(
+                    e.snapshot().layers[0]
+                        .voxels
+                        .iter()
+                        .collect::<BTreeSet<_>>(),
+                    expected.into_iter().map(|at| (at, 2)).collect(),
+                    "{tool:?}, {axes:?}, {bounds:?}"
+                );
+                let (_, Command::Batch(commands)) = e.last_command.as_ref().unwrap() else {
+                    panic!("one tool transaction");
+                };
+                assert!(matches!(commands[0], Command::Palette(_)));
+                let mirror = match commands.last().unwrap() {
+                    Command::SetVoxels { mirror, .. }
+                    | Command::Primitive { mirror, .. }
+                    | Command::FloodFill { mirror, .. } => mirror,
+                    other => panic!("unexpected command: {other:?}"),
+                };
+                assert_eq!(
+                    mirror.plane2,
+                    std::array::from_fn(|a| axes[a].then_some(min[a] + max[a]))
+                );
+                assert_eq!(e.engine.history().count(), history + 1);
+                let entry = e.engine.history().next_back().unwrap();
+                assert_eq!(entry.label, tool.name());
+                assert_eq!(entry.actor.origin, Origin::Human);
+                let after = e.project().to_bytes().unwrap();
+                e.undo().unwrap();
+                assert_eq!(e.project().to_bytes().unwrap(), before);
+                e.redo().unwrap();
+                assert_eq!(e.project().to_bytes().unwrap(), after);
+            }
+        }
+    }
+}
+
+#[test]
+fn mirror_axes_are_editor_state_outside_document_and_preferences() {
+    let mut e = Editor::blank().unwrap();
+    let before = e.project().to_bytes().unwrap();
+    e.set_mirror_axis(0, true).unwrap();
+    e.set_mirror_axis(2, true).unwrap();
+    assert_eq!(e.project().to_bytes().unwrap(), before);
+    assert!(!e.engine.is_dirty());
+    assert_eq!(e.engine.history().count(), 0);
+    let reopened = Editor::new(e.project(), None).unwrap();
+    assert_eq!(reopened.mirror_axes(), [false; 3]);
+    let preferences = serde_json::to_value(crate::preferences::Preferences::default()).unwrap();
+    assert!(
+        !preferences
+            .as_object()
+            .unwrap()
+            .keys()
+            .any(|key| key.contains("mirror"))
+    );
+}
+
+#[test]
+fn disabled_or_absent_mirror_keeps_tools_editable_and_reenable_restores_axes() {
+    for absent in [false, true] {
+        for tool in [Tool::Place, Tool::Box, Tool::Fill] {
+            let mut e = Editor::blank().unwrap();
+            if tool == Tool::Fill {
+                e.apply_at([2; 3]).unwrap();
+            }
+            for axis in 0..3 {
+                e.set_mirror_axis(axis, true).unwrap();
+            }
+            if absent {
+                e.plugins = RefCell::new(Host::new(vec![Box::new(
+                    voxelite_plugin_tools::ToolsPlugin,
+                )]));
+            } else {
+                e.set_plugin_enabled("dev.voxelite.mirror", false).unwrap();
+            }
+            assert_eq!(e.mirror_axes(), [false; 3]);
+            assert_eq!(e.plugin_host().registry().command_transforms().count(), 0);
+            for command in ["mirror_x", "mirror_y", "mirror_z"] {
+                assert!(
+                    e.plugin_host()
+                        .registry()
+                        .get(&format!("dev.voxelite.mirror.{command}"))
+                        .is_none()
+                );
+            }
+            for axis in 0..3 {
+                assert!(!e.set_mirror_axis(axis, false).unwrap());
+            }
+            let before = e.project().to_bytes().unwrap();
+            let history = e.engine.history().count();
+            e.tool = tool;
+            e.color = Swatch::rgb(17, 34, 51);
+            if tool == Tool::Box {
+                assert!(!e.apply_at([2; 3]).unwrap());
+            }
+            assert!(e.apply_at([2; 3]).unwrap());
+            assert_eq!(
+                e.snapshot().layers[0].voxels.iter().collect::<Vec<_>>(),
+                [([2; 3], 2)]
+            );
+            assert_eq!(e.engine.history().count(), history + 1);
+            let after = e.project().to_bytes().unwrap();
+            e.undo().unwrap();
+            assert_eq!(e.project().to_bytes().unwrap(), before);
+            e.redo().unwrap();
+            assert_eq!(e.project().to_bytes().unwrap(), after);
+            if !absent {
+                e.set_plugin_enabled("dev.voxelite.mirror", true).unwrap();
+                assert_eq!(e.mirror_axes(), [true; 3]);
+                e.color = Swatch::rgb(51, 34, 17);
+                if tool == Tool::Box {
+                    assert!(!e.apply_at([2; 3]).unwrap());
+                }
+                assert!(e.apply_at([2; 3]).unwrap());
+                assert_eq!(e.snapshot().layers[0].voxels.len(), 8);
+                e.undo().unwrap();
+                assert_eq!(e.project().to_bytes().unwrap(), after);
+            }
+        }
+    }
+}
+
+#[test]
+fn failed_transform_preserves_pending_box_palette_and_history() {
+    use voxelite_plugin_api::{
+        CommandTransform, CommandTransformContribution, Manifest, Plugin, Registrar, TransformCx,
+    };
+    struct FailedTransform;
+    impl Plugin for FailedTransform {
+        fn manifest(&self) -> Manifest {
+            voxelite_plugin_mirror::MirrorPlugin.manifest()
+        }
+        fn contribute(&self, registrar: &mut Registrar) {
+            registrar.command_transform(CommandTransformContribution {
+                id: "dev.voxelite.mirror.failed".into(),
+                order: 0,
+            });
+        }
+        fn command_transform(&self, _: &str) -> Option<&dyn CommandTransform> {
+            Some(self)
+        }
+    }
+    impl CommandTransform for FailedTransform {
+        fn transform(&self, _: &dyn TransformCx, commands: Vec<Command>) -> Vec<Command> {
+            assert!(commands.is_empty(), "failed transform");
+            commands
+        }
+    }
+    let mut e = Editor::blank().unwrap();
+    e.plugins = RefCell::new(Host::new(vec![
+        Box::new(voxelite_plugin_tools::ToolsPlugin),
+        Box::new(FailedTransform),
+    ]));
+    let before = e.project().to_bytes().unwrap();
+    e.tool = Tool::Box;
+    e.color = Swatch::rgb(17, 34, 51);
+    assert!(!e.apply_at([1; 3]).unwrap());
+    assert!(e.apply_at([2; 3]).is_err());
+    assert_eq!(e.box_start, Some([1; 3]));
+    assert_eq!(e.color, Swatch::rgb(17, 34, 51));
+    assert_eq!(e.project().to_bytes().unwrap(), before);
+    assert_eq!(e.engine.history().count(), 0);
+    assert_eq!(e.last_command, None);
+    // The faulty transform is quarantined; the original gesture can still complete.
+    assert!(e.apply_at([2; 3]).unwrap());
+    assert_eq!(e.snapshot().layers[0].voxels.len(), 8);
+    e.undo().unwrap();
+    assert_eq!(e.project().to_bytes().unwrap(), before);
 }
 
 #[test]

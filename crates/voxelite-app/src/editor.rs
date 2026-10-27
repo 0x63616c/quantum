@@ -14,7 +14,7 @@ use voxelite_format::{
     session::{DocumentSession, SessionError},
 };
 use voxelite_plugin_api::{
-    ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
+    SettingValue, ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
 };
 use voxelite_plugin_host::{Host, HostError};
 use voxelite_render::{Camera, PresetView, Projection};
@@ -368,8 +368,6 @@ pub struct Editor {
     pub layer: Uuid,
     /// Selected editing tool.
     pub tool: Tool,
-    /// Independent centered mirror axes.
-    pub mirror: [bool; 3],
     /// Selected brush color; imported lazily as part of the edit transaction.
     pub color: Swatch,
     /// Camera state, unaffected by undo/redo.
@@ -420,7 +418,6 @@ impl Editor {
             playback: None,
             layer,
             tool: Tool::Place,
-            mirror: [false; 3],
             color,
             camera,
             box_start: None,
@@ -583,6 +580,23 @@ impl Editor {
     pub fn plugin_host(&self) -> Ref<'_, Host> {
         self.plugins.borrow()
     }
+    /// Enabled mirror axis settings, owned by the mirror plugin and local to this editor.
+    pub fn mirror_axes(&self) -> [bool; 3] {
+        let host = self.plugins.borrow();
+        voxelite_plugin_mirror::AXIS_SETTINGS
+            .map(|key| host.setting(key) == Some(&SettingValue::Bool(true)))
+    }
+    /// Change one plugin setting without affecting the document or undo history.
+    /// Missing or disabled mirror commands are inert.
+    pub fn set_mirror_axis(&mut self, axis: usize, enabled: bool) -> EditorResult<bool> {
+        let Some(key) = voxelite_plugin_mirror::AXIS_SETTINGS.get(axis) else {
+            return Ok(false);
+        };
+        Ok(self
+            .plugins
+            .get_mut()
+            .set_setting(key, SettingValue::Bool(enabled))?)
+    }
     /// Enable or disable an optional feature without changing document history.
     pub fn set_plugin_enabled(&mut self, id: &str, enabled: bool) -> EditorResult<()> {
         let host = self.plugins.get_mut();
@@ -660,15 +674,10 @@ impl Editor {
         };
         self.apply_tool_outcome(outcome)
     }
-    fn apply_tool_outcome(&mut self, mut outcome: ToolOutcome) -> EditorResult<bool> {
+    fn apply_tool_outcome(&mut self, outcome: ToolOutcome) -> EditorResult<bool> {
         let changed = if outcome.commands.is_empty() {
             false
         } else {
-            // Mirroring remains host-owned until the mirror plugin migration.
-            let mirror = Mirror::centered(self.snapshot().bounds, self.mirror);
-            for command in &mut outcome.commands {
-                mirror_tool_command(command, mirror);
-            }
             self.execute(&outcome.label, Command::Batch(outcome.commands))?
         };
         // Failed transactions leave the pending gesture and palette selection intact.
@@ -734,20 +743,6 @@ impl ToolCx for EditorToolCx<'_> {
     }
 }
 
-fn mirror_tool_command(command: &mut Command, settings: Mirror) {
-    match command {
-        Command::SetVoxels { mirror, .. }
-        | Command::FloodFill { mirror, .. }
-        | Command::Primitive { mirror, .. } => *mirror = settings,
-        Command::Batch(commands) => {
-            for command in commands {
-                mirror_tool_command(command, settings);
-            }
-        }
-        _ => {}
-    }
-}
-
 #[cfg(test)]
 #[path = "editor/tool_tests.rs"]
 mod tool_tests;
@@ -762,7 +757,9 @@ mod tests {
     fn tools_and_mirror_are_atomic_and_reversible() {
         let mut e = editor();
         let original = e.engine.document().clone();
-        e.mirror = [true; 3];
+        for axis in 0..3 {
+            e.set_mirror_axis(axis, true).unwrap();
+        }
         e.color = Swatch::rgb(2, 5, 8);
         assert!(e.apply_at([1, 2, 3]).unwrap());
         assert_eq!(e.snapshot().layers[0].voxels.len(), 8);

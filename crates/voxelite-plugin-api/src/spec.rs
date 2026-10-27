@@ -74,6 +74,15 @@ pub struct ToolContribution {
     pub icon: Option<String>,
 }
 
+/// Metadata for a rewrite of pending tool commands before transaction admission.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CommandTransformContribution {
+    /// Stable namespaced ID; see [`Contribution::id`].
+    pub id: String,
+    /// Execution order across plugins; ties retain registration order.
+    pub order: i32,
+}
+
 /// Metadata for a panel whose presentation is supplied by the host.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PanelContribution {
@@ -131,7 +140,7 @@ pub enum SettingKind {
     Number,
 }
 
-/// A typed setting value, used for defaults.
+/// A typed setting value, used for defaults and plugin-scoped runtime state.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SettingValue {
     /// A boolean value.
@@ -176,6 +185,8 @@ pub enum Contribution {
     Command(CommandContribution),
     /// An interactive tool declaration.
     Tool(ToolContribution),
+    /// A pending command transform declaration.
+    CommandTransform(CommandTransformContribution),
     /// A panel declaration.
     Panel(PanelContribution),
     /// A file format declaration.
@@ -199,6 +210,7 @@ impl Contribution {
         match self {
             Self::Command(spec) => &spec.id,
             Self::Tool(spec) => &spec.id,
+            Self::CommandTransform(spec) => &spec.id,
             Self::Panel(spec) => &spec.id,
             Self::Format(spec) => &spec.id,
             Self::RenderPass(spec) => &spec.id,

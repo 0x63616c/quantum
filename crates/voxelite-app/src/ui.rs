@@ -404,16 +404,19 @@ impl EditorView {
             .unwrap_or_else(|| self.editor.display_snapshot().palette.clone())
     }
     fn availability(&self, op: Op) -> Result<(), &'static str> {
-        op.availability(CommandContext::Editor(EditorState {
-            dialog_open: self.save_flow.dialog_open(),
-            pending_confirmation: self.save_flow.needs_confirmation(),
-            modal_open: self.info.is_some() || self.palettes.open,
-            preview: self.editor.preview.is_some(),
-            history_playing: self.editor.history_playing(),
-            can_undo: self.editor.engine.head().is_some(),
-            can_redo: self.editor.engine.redo_head().is_some(),
-            updates_available: updates_available(),
-        }))
+        op.availability_in(
+            &self.editor.plugin_host(),
+            CommandContext::Editor(EditorState {
+                dialog_open: self.save_flow.dialog_open(),
+                pending_confirmation: self.save_flow.needs_confirmation(),
+                modal_open: self.info.is_some() || self.palettes.open,
+                preview: self.editor.preview.is_some(),
+                history_playing: self.editor.history_playing(),
+                can_undo: self.editor.engine.head().is_some(),
+                can_redo: self.editor.engine.redo_head().is_some(),
+                updates_available: updates_available(),
+            }),
+        )
     }
     fn enabled(&self, op: Op) -> bool {
         self.availability(op).is_ok()
@@ -431,9 +434,9 @@ impl EditorView {
             Op::Picker => self.editor.tool == Tool::Picker,
             Op::Grid => self.grid,
             Op::Frame | Op::Front | Op::Right | Op::Top => self.camera_view == Some(op),
-            Op::MirrorX => self.editor.mirror[0],
-            Op::MirrorY => self.editor.mirror[1],
-            Op::MirrorZ => self.editor.mirror[2],
+            Op::MirrorX => self.editor.mirror_axes()[0],
+            Op::MirrorY => self.editor.mirror_axes()[1],
+            Op::MirrorZ => self.editor.mirror_axes()[2],
             _ => false,
         }
     }
@@ -582,7 +585,10 @@ impl EditorView {
                     Op::MirrorY => 1,
                     _ => 2,
                 };
-                self.editor.mirror[a] = !self.editor.mirror[a];
+                if let Err(error) = self.editor.set_mirror_axis(a, !self.editor.mirror_axes()[a]) {
+                    self.status = error.to_string().into();
+                    self.error = true;
+                }
             }
             Op::AddLayer => {
                 let r = self.editor.add_layer();
