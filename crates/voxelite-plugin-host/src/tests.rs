@@ -4,6 +4,9 @@ use voxelite_plugin_api::*;
 
 use super::*;
 
+#[path = "transform_tests.rs"]
+mod transform_tests;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Hook {
     Manifest,
@@ -153,6 +156,10 @@ fn all_kinds() -> Vec<Contribution> {
         Contribution::DataSection(DataSectionContribution {
             section_name: "comments".into(),
             schema_version: 1,
+        }),
+        Contribution::CommandTransform(CommandTransformContribution {
+            id: "dev.example.transform".into(),
+            order: 10,
         }),
     ]
 }
@@ -311,13 +318,13 @@ fn all_queries_filter_enabled_plugins_and_preserve_both_registration_orders() {
     assert_eq!(
         before
             .iter()
-            .take(7)
+            .take(declarations.len())
             .map(|(_, value)| value.clone())
             .collect::<Vec<_>>(),
         declarations
     );
     assert_eq!(before[0].0, "dev.zeta");
-    assert_eq!(before[7].0, "dev.alpha");
+    assert_eq!(before[declarations.len()].0, "dev.alpha");
     assert_eq!(
         host.plugins()
             .map(|(manifest, _)| manifest.id.as_str())
@@ -328,6 +335,10 @@ fn all_queries_filter_enabled_plugins_and_preserve_both_registration_orders() {
         let registry = host.registry();
         assert_eq!(registry.commands().count(), 2);
         assert_eq!(registry.tools().next().unwrap().1.id, "dev.example.tool");
+        assert_eq!(
+            registry.command_transforms().next().unwrap().1.id,
+            "dev.example.transform"
+        );
         assert_eq!(registry.panels().next().unwrap().1.id, "dev.example.panel");
         assert_eq!(registry.formats().next().unwrap().1.extensions, ["png"]);
         assert_eq!(
@@ -356,6 +367,7 @@ fn all_queries_filter_enabled_plugins_and_preserve_both_registration_orders() {
         assert_eq!(registry.iter().count(), 1);
         assert_eq!(registry.commands().count(), 1);
         assert_eq!(registry.tools().count(), 0);
+        assert_eq!(registry.command_transforms().count(), 0);
         assert_eq!(registry.panels().count(), 0);
         assert_eq!(registry.formats().count(), 0);
         assert_eq!(registry.render_passes().count(), 0);
@@ -631,6 +643,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Activate => "activate",
                         Phase::Deactivate => "deactivate",
                         Phase::Tool => "tool",
+                        Phase::CommandTransform => "command_transform",
                     }
                 )
                 .unwrap()
@@ -797,9 +810,9 @@ impl Tool for ToolPlugin {
     }
 }
 
-// Dispatch/lifecycle tests have no document queries; any accidental query is a failure.
-struct NoQueries;
-impl ToolCx for NoQueries {
+// Only live bounds are needed to dispatch transforms; other queries are a failure.
+struct BoundsOnly;
+impl ToolCx for BoundsOnly {
     fn hovered_hit(&self) -> Option<ToolHit> {
         panic!("unexpected query")
     }
@@ -825,7 +838,7 @@ impl ToolCx for NoQueries {
         panic!("unexpected query")
     }
     fn bounds(&self) -> Region {
-        panic!("unexpected query")
+        Region::new([-4; 3], [4; 3]).unwrap()
     }
 }
 fn tool_input() -> ToolInput {
@@ -843,7 +856,7 @@ fn tool_dispatch_requires_an_enabled_declared_binding() {
     for id in ["dev.missing", "dev.tool.command"] {
         assert!(!host.has_tool(id).unwrap());
         assert_eq!(
-            host.dispatch_tool(id, &NoQueries, tool_input()).unwrap(),
+            host.dispatch_tool(id, &BoundsOnly, tool_input()).unwrap(),
             None
         );
     }
@@ -854,7 +867,7 @@ fn tool_dispatch_requires_an_enabled_declared_binding() {
         ..Default::default()
     });
     assert_eq!(
-        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+        host.dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input())
             .unwrap(),
         expected
     );
@@ -862,14 +875,14 @@ fn tool_dispatch_requires_an_enabled_declared_binding() {
     host.disable("dev.tool").unwrap();
     assert!(!host.has_tool("dev.tool.brush").unwrap());
     assert_eq!(
-        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+        host.dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input())
             .unwrap(),
         None
     );
     assert_eq!(calls.get(), 2);
     host.enable("dev.tool").unwrap();
     assert_eq!(
-        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+        host.dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input())
             .unwrap(),
         expected
     );
@@ -879,7 +892,7 @@ fn tool_dispatch_requires_an_enabled_declared_binding() {
     assert!(!unbound.has_tool("dev.tool.brush").unwrap());
     assert_eq!(
         unbound
-            .dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+            .dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input())
             .unwrap(),
         None
     );
@@ -899,7 +912,7 @@ fn tool_panics_quarantine_bindings_but_gesture_errors_do_not() {
             Box::new(TestPlugin::new("dev.good")),
         ]);
         host.drain_events();
-        let result = host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input());
+        let result = host.dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input());
         if failure == ToolFailure::Gesture {
             assert!(
                 matches!(result, Err(HostError::Tool(ToolError::Gesture(message))) if message == "invalid gesture")
@@ -924,7 +937,7 @@ fn tool_panics_quarantine_bindings_but_gesture_errors_do_not() {
             ));
             let count = calls.get();
             assert_eq!(
-                host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+                host.dispatch_tool("dev.tool.brush", &BoundsOnly, tool_input())
                     .unwrap(),
                 None
             );

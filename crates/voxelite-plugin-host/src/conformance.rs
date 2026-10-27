@@ -9,7 +9,7 @@ use crate::{EnabledSet, Host, HostError, HostEvent, PluginState};
 /// The factory must return a fresh plugin. The harness checks local validation,
 /// conflicts in an otherwise empty host, idempotent lifecycle requests, removal
 /// while disabled and identical declarations after an enable/disable/enable cycle.
-/// Every declared tool must bind while enabled and be unavailable while disabled.
+/// Every declared tool and transform must bind only while enabled.
 /// It recollects declarations to detect plugin state leaking into metadata rather
 /// than merely comparing the host's cached declarations. Activation and
 /// deactivation must complete without panicking, including final cleanup.
@@ -72,6 +72,18 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
             "unbound tool: {tool}"
         );
     }
+    let transforms: Vec<_> = host
+        .registry()
+        .command_transforms()
+        .map(|(_, t)| t.id.clone())
+        .collect();
+    for transform in &transforms {
+        assert!(
+            host.has_command_transform(transform)
+                .expect("transform binding panicked"),
+            "unbound transform: {transform}"
+        );
+    }
     host.enable(id).expect("repeated enable must be a no-op");
     assert_eq!(host.timings().get(id, "activate").unwrap().count, 1);
 
@@ -100,6 +112,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         );
     }
     assert_eq!(host.timings().get(id, "deactivate").unwrap().count, 1);
+    for transform in &transforms {
+        assert!(
+            !host.has_command_transform(transform).unwrap(),
+            "disabled transform remains bound: {transform}"
+        );
+    }
     assert_eq!(
         host.collect(0)
             .expect("contribute panicked after disable")
@@ -109,6 +127,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    for transform in &transforms {
+        assert!(
+            host.has_command_transform(transform)
+                .expect("transform binding panicked after reenable")
+        );
+    }
     for tool in &tools {
         assert!(
             host.has_tool(tool)

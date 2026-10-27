@@ -75,8 +75,8 @@ pub enum ToolError {
 /// Editing behavior available only through the host's enabled tool registry.
 ///
 /// Implementations only query capabilities and return proposed commands. Undo,
-/// transaction admission, mirroring and preview rendering remain host concerns.
-/// Proposed voxel commands must leave their mirror settings disabled.
+/// transaction admission and preview rendering remain host concerns. Proposed
+/// voxel commands leave mirror settings disabled for registered transforms.
 pub trait Tool {
     /// Resolve one input without mutating the document or UI.
     fn interact(&self, cx: &dyn ToolCx, input: ToolInput) -> Result<ToolOutcome, ToolError>;

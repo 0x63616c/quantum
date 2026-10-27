@@ -111,7 +111,7 @@ impl BuiltinTool {
             }));
             slot
         };
-        // Mirror settings belong to the host; tools always propose an unmirrored edit.
+        // Registered transforms handle mirroring; tools propose an unmirrored edit.
         let mirror = Mirror::default();
         outcome.commands.push(match self {
             Self::Fill => Command::FloodFill {
