@@ -6,9 +6,10 @@ with `cargo run -p voxelite-mcp -- --schema > spec/mcp/v1/tools.json`; the catal
 snapshot test must pass. Breaking changes require a new API major. Application
 version, MCP protocol version, and `.voxl` version evolve independently.
 
-This is the standalone **MCP stage** requested for `voxelite-mcp`, not completion
-of PLAN.md's full application/session/plugin inventory. Tool names follow the
-stage's document/voxels/layers naming and have the `voxelite_` prefix. The response
+This contract describes the standalone **MCP stage** for `voxelite-mcp`.
+See [product direction](../../../docs/adr/0003-product-direction.md) for the broader
+scope. Tool names follow the stage's document/voxels/layers naming and have the
+`voxelite_` prefix. The response
 API version is `voxelite.v1`. It builds on core, format, render, the portable plugin
 API/host, built-in plugins and rmcp. Built-in exporters own GLB/PNG encoding;
 render feedback uses `png` directly. There is no GUI, HTTP listener, live editor attachment, plugin runtime,

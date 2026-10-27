@@ -2,7 +2,8 @@
 """Report potential identity/path/credential leaks without reproducing values.
 
 Read tracked and unignored files (including design), generated web bundles, and
-all blobs/commits reachable through local refs or reflogs. Never modify history.
+all blobs/commits reachable through local refs or reflogs. Print the redacted
+report to stdout without writing files or modifying history.
 """
 from pathlib import Path
 import collections
@@ -57,7 +58,7 @@ for directory in ('site/app', 'web/dist'):
 current = []
 for name in sorted(files):
     path = ROOT / name
-    if not path.is_file() or path.is_symlink() or name == 'docs/reviews/pii-scan.md':
+    if not path.is_file() or path.is_symlink():
         continue
     for kind, lines in scan(path.read_bytes()):
         current.append((name, kind, lines))
@@ -95,8 +96,6 @@ for name, kind, lines in current:
     disposition = 'Inspect; do not reproduce matched value.'
     if 'LICENSE' in name and kind == 'Git identity name/username':
         disposition = 'Required upstream attribution; retain license notice.'
-    elif name == 'PLAN.md' and kind == 'Git identity name/username':
-        disposition = 'Personal display-name example in spec; retained because requested automatic fixes are limited to path leaks.'
     elif kind == 'email' and ('OFL' in name or 'LICENSE' in name):
         disposition = 'Upstream license attribution; retain required notice.'
     elif name.endswith('.ttf') and kind == 'email':
@@ -126,6 +125,6 @@ if not message_findings:
     report.append('No pattern matches in commit messages.')
 report += ['', '## Outcome', '',
     'No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. No trivially safe authored working-tree path leak was found outside the read-only design boundary; Git plumbing and generated compiler paths must not be blindly replaced. This report does not certify the repository as free of personal information.', '']
-(ROOT / 'docs/reviews/pii-scan.md').write_text('\n'.join(report))
+print('\n'.join(report))
 print(f'Scanned {len(files)} files, {len(commits)} commits, {blobs} historical blobs; {len(current)} current and {len(history)} historic location/category findings. Values redacted.')
 print('Current categories:', dict(collections.Counter(kind for _, kind, _ in current)))

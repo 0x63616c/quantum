@@ -105,10 +105,9 @@ the matched-camera detail comparison, with SHA-256 provenance. Build
 source model remains intact. The original native-session hero and newly recorded
 headless comparison are different sessions and have distinct revision labels.
 
-Review findings and scores are in `PROGRESS.md` and `docs/reviews/site-review-*.md`
-at repository root. `python3 scripts/scan-pii.py` scans source/assets and reachable
-Git history, writing redacted locations to `docs/reviews/pii-scan.md`; it takes a
-few minutes and does not rewrite history. Host application loading and macOS
+`python3 scripts/scan-pii.py` scans source/assets and reachable Git history,
+printing the report with redacted findings to stdout; it takes a few minutes
+and does not rewrite history. Host application loading and macOS
 packaging remain untested here; guides disclose those boundaries.
 
 ## Deployment
@@ -124,8 +123,8 @@ deployment. Pull requests only build and verify. Production publishes from
 on `main` retries a failed post-release deployment without replacing any assets.
 
 The workflow publishes the built files at the root of `site-dist`, excluding this
-README, `PROGRESS.md`, and `content/` sources. It preserves deployment history and
-skips unchanged output. Set Vercel's production branch to `site-dist`, framework
+README and `content/` sources. It preserves deployment history and skips unchanged
+output. Set Vercel's production branch to `site-dist`, framework
 preset to **Other**, Build Command override to empty, and output directory to `.`
 ([static build settings](https://vercel.com/docs/builds/configure-a-build#skip-build-step)).
 Vercel deploys that branch; GitHub needs no Vercel secrets.
