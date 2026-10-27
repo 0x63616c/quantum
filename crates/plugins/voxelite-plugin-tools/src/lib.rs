@@ -1,13 +1,24 @@
-//! Built-in tools command declarations; execution remains in the app.
+//! Built-in editing tools. All document mutations are proposed as core commands.
+
+mod behavior;
+use behavior::BuiltinTool;
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
+    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Tool,
+    ToolContribution, Value, Version,
 };
 
-/// Metadata for the built-in tools commands.
+/// Declarations and behavior for the standard editing tools.
 pub struct ToolsPlugin;
 
 impl Plugin for ToolsPlugin {
+    fn tool(&self, id: &str) -> Option<&dyn Tool> {
+        BuiltinTool::ALL
+            .iter()
+            .find(|tool| tool.id() == id)
+            .map(|tool| tool as &dyn Tool)
+    }
+
     fn manifest(&self) -> Manifest {
         Manifest {
             id: PluginId::new("dev.voxelite.tools").unwrap(),
@@ -100,6 +111,13 @@ impl Plugin for ToolsPlugin {
                 application_section: None,
                 agent_visible: false,
             });
+            if id != "dev.voxelite.tools.tool_picker" {
+                registrar.tool(ToolContribution {
+                    id: format!("{id}.tool"),
+                    label_key: label.into(),
+                    icon: Some(icon.into()),
+                });
+            }
         }
     }
 }

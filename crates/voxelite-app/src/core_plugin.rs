@@ -311,8 +311,8 @@ impl Plugin for CorePlugin {
     }
 }
 
-/// Construct the app's statically linked metadata host in a fixed registration order.
-/// All built-ins start enabled; this step does not expose enablement preferences.
+/// Construct the app's statically linked plugin host in a fixed registration order.
+/// All built-ins start enabled; the shell does not expose enablement preferences yet.
 pub fn app_host() -> voxelite_plugin_host::Host {
     voxelite_plugin_host::Host::new(vec![
         Box::new(CorePlugin),

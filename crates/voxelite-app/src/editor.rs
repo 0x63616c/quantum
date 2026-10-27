@@ -1,5 +1,6 @@
 //! Human tool gestures translated into atomic shared-core commands.
 use glam::DVec3;
+use std::cell::{Ref, RefCell};
 #[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 use std::path::PathBuf;
@@ -12,6 +13,10 @@ use voxelite_format::{
     Project,
     session::{DocumentSession, SessionError},
 };
+use voxelite_plugin_api::{
+    ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
+};
+use voxelite_plugin_host::{Host, HostError};
 use voxelite_render::{Camera, PresetView, Projection};
 
 /// Failures presented by the shell without dropping the current document.
@@ -39,6 +44,14 @@ impl From<SessionError> for EditorError {
         }
     }
 }
+impl From<HostError> for EditorError {
+    fn from(error: HostError) -> Self {
+        match error {
+            HostError::Tool(ToolError::Core(error)) => Self::Core(error),
+            error => Self::Gesture(error.to_string()),
+        }
+    }
+}
 /// Result of an editor operation.
 pub type EditorResult<T> = std::result::Result<T, EditorError>;
 
@@ -60,6 +73,17 @@ pub enum Tool {
     Picker,
 }
 impl Tool {
+    /// Stable implementation ID in the enabled plugin registry.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Place => "dev.voxelite.tools.place.tool",
+            Self::Erase => "dev.voxelite.tools.erase.tool",
+            Self::Paint => "dev.voxelite.tools.paint.tool",
+            Self::Fill => "dev.voxelite.tools.fill.tool",
+            Self::Box => "dev.voxelite.tools.box.tool",
+            Self::Picker => "dev.voxelite.tools.picker.tool",
+        }
+    }
     /// Display order for the tool picker.
     pub const ALL: [Self; 6] = [
         Self::Place,
@@ -333,6 +357,8 @@ pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
 /// One open project, with UI preferences separate from portable document content.
 pub struct Editor {
     pub(crate) session: DocumentSession,
+    // Hover/preview queries also record host timings and isolate plugin panics.
+    plugins: RefCell<Host>,
     /// Persistent software viewport occupancy, shared with background render tasks.
     pub raster: voxelite_render::RasterCache,
     /// Read-only preview, separate from the live authority.
@@ -350,6 +376,8 @@ pub struct Editor {
     pub camera: OrbitCamera,
     /// First corner of an uncommitted box.
     pub box_start: Option<Pos>,
+    #[cfg(test)]
+    last_command: Option<(String, Command)>,
 }
 // Preserve the shell's engine/path access while the shared session owns both.
 impl std::ops::Deref for Editor {
@@ -368,7 +396,8 @@ impl Editor {
     pub fn new(project: Project, path: Option<PathBuf>) -> EditorResult<Self> {
         Self::from_session(DocumentSession::new(project, path, Limits::default())?)
     }
-    fn from_session(session: DocumentSession) -> EditorResult<Self> {
+    /// Attach UI-thread plugins to a session that may have been loaded in the background.
+    pub fn from_session(session: DocumentSession) -> EditorResult<Self> {
         let s = &session.engine.document().content;
         let layer = s
             .layers
@@ -385,6 +414,7 @@ impl Editor {
         let camera = OrbitCamera::fit(s, 1.3);
         Ok(Self {
             session,
+            plugins: RefCell::new(crate::app_host()),
             raster: voxelite_render::RasterCache::default(),
             preview: None,
             playback: None,
@@ -394,6 +424,8 @@ impl Editor {
             color,
             camera,
             box_start: None,
+            #[cfg(test)]
+            last_command: None,
         })
     }
     /// Load the bundled diorama, independent of the current working directory.
@@ -452,6 +484,10 @@ impl Editor {
     /// Execute a single attributed, atomic command.
     pub fn execute(&mut self, label: &str, command: Command) -> EditorResult<bool> {
         self.ensure_live()?;
+        #[cfg(test)]
+        {
+            self.last_command = Some((label.into(), command.clone()));
+        }
         let receipt = self.session.engine.execute(Transaction {
             expected_revision: self.session.engine.revision(),
             id: Uuid::new_v4(),
@@ -543,20 +579,124 @@ impl Editor {
         )?;
         Ok(())
     }
+    /// Enabled declarations, lifecycle state and tool invocation timings.
+    pub fn plugin_host(&self) -> Ref<'_, Host> {
+        self.plugins.borrow()
+    }
+    /// Enable or disable an optional feature without changing document history.
+    pub fn set_plugin_enabled(&mut self, id: &str, enabled: bool) -> EditorResult<()> {
+        let host = self.plugins.get_mut();
+        if enabled {
+            host.enable(id)?;
+        } else {
+            host.disable(id)?;
+        }
+        if !host.has_tool(self.tool.id())? {
+            self.box_start = None;
+        }
+        Ok(())
+    }
+    /// Region outlined for a tool hover or an unfinished box.
+    pub fn tool_preview(&self, hover: Option<Pos>) -> Option<Region> {
+        self.tool_outcome(self.tool, None, ToolGesture::Preview(hover))
+            .ok()
+            .flatten()
+            .and_then(|outcome| outcome.preview)
+    }
     /// Locate a tool target, using visible faces or the document's bottom work plane.
     pub fn target(&self, ray: Ray) -> Option<Pos> {
-        if let Some(hit) = raycast(self.snapshot(), ray) {
-            let p = if matches!(self.tool, Tool::Place | Tool::Box) {
-                std::array::from_fn(|a| hit.at[a] + hit.normal[a])
-            } else {
-                hit.at
-            };
-            return self.snapshot().bounds.contains(p).then_some(p);
+        self.tool_outcome(self.tool, Some(ray), ToolGesture::Hover)
+            .ok()
+            .flatten()
+            .and_then(|outcome| outcome.target)
+    }
+    fn tool_outcome(
+        &self,
+        tool: Tool,
+        ray: Option<Ray>,
+        gesture: ToolGesture,
+    ) -> EditorResult<Option<ToolOutcome>> {
+        let hit = ray
+            .and_then(|ray| raycast(self.snapshot(), ray))
+            .map(|hit| ToolHit {
+                at: hit.at,
+                normal: hit.normal,
+                layer: hit.layer,
+                slot: hit.slot,
+            });
+        let cx = EditorToolCx {
+            editor: self,
+            ray,
+            hit,
+        };
+        Ok(self.plugins.borrow_mut().dispatch_tool(
+            tool.id(),
+            &cx,
+            ToolInput {
+                gesture,
+                anchor: self.box_start,
+            },
+        )?)
+    }
+    /// Apply a pointer click, sampling without mutation when the picker is active.
+    pub fn click(&mut self, ray: Ray, sample_only: bool) -> EditorResult<bool> {
+        self.pause_history();
+        let tool = if sample_only { Tool::Picker } else { self.tool };
+        let Some(outcome) = self.tool_outcome(tool, Some(ray), ToolGesture::Click)? else {
+            self.box_start = None;
+            return Ok(false);
+        };
+        if tool != Tool::Picker && outcome.target.is_some() {
+            self.ensure_live()?;
         }
-        if !matches!(self.tool, Tool::Place | Tool::Box) || ray.direction.y.abs() < 1e-12 {
+        self.apply_tool_outcome(outcome)
+    }
+    /// Apply a tool at an explicit integer coordinate, also used by the keyboard cursor.
+    pub fn apply_at(&mut self, at: Pos) -> EditorResult<bool> {
+        self.ensure_live()?;
+        let Some(outcome) = self.tool_outcome(self.tool, None, ToolGesture::ApplyAt(at))? else {
+            self.box_start = None;
+            return Ok(false);
+        };
+        self.apply_tool_outcome(outcome)
+    }
+    fn apply_tool_outcome(&mut self, mut outcome: ToolOutcome) -> EditorResult<bool> {
+        let changed = if outcome.commands.is_empty() {
+            false
+        } else {
+            // Mirroring remains host-owned until the mirror plugin migration.
+            let mirror = Mirror::centered(self.snapshot().bounds, self.mirror);
+            for command in &mut outcome.commands {
+                mirror_tool_command(command, mirror);
+            }
+            self.execute(&outcome.label, Command::Batch(outcome.commands))?
+        };
+        // Failed transactions leave the pending gesture and palette selection intact.
+        self.box_start = outcome.anchor;
+        if let Some(color) = outcome.sampled_color {
+            self.color = color;
+        }
+        Ok(changed)
+    }
+}
+
+// Only read-only, mirror-agnostic queries cross the tool boundary.
+struct EditorToolCx<'a> {
+    editor: &'a Editor,
+    ray: Option<Ray>,
+    hit: Option<ToolHit>,
+}
+impl ToolCx for EditorToolCx<'_> {
+    fn hovered_hit(&self) -> Option<ToolHit> {
+        self.hit
+    }
+    fn ground_target(&self) -> Option<Pos> {
+        let ray = self.ray?;
+        let bounds = self.bounds();
+        if ray.direction.y.abs() < 1e-12 {
             return None;
         }
-        let t = (f64::from(self.snapshot().bounds.min[1]) - ray.origin.y) / ray.direction.y;
+        let t = (f64::from(bounds.min[1]) - ray.origin.y) / ray.direction.y;
         if !t.is_finite() || t < 0.0 {
             return None;
         }
@@ -564,130 +704,53 @@ impl Editor {
             .floor()
             .as_ivec3()
             .to_array();
-        p[1] = self.snapshot().bounds.min[1];
-        self.snapshot().bounds.contains(p).then_some(p)
+        p[1] = bounds.min[1];
+        bounds.contains(p).then_some(p)
     }
-    /// Apply a pointer click, sampling without mutation when the picker is active.
-    pub fn click(&mut self, ray: Ray, sample_only: bool) -> EditorResult<bool> {
-        self.pause_history();
-        let hit = raycast(self.snapshot(), ray);
-        if sample_only || self.tool == Tool::Picker {
-            if let Some(hit) = hit {
-                self.color = self
-                    .snapshot()
-                    .palette
-                    .get(hit.slot)
-                    .expect("valid slot")
-                    .clone();
-            }
-            return Ok(false);
-        }
-        if let Some(hit) = hit
-            && hit.layer != self.layer
-            && matches!(self.tool, Tool::Paint | Tool::Erase | Tool::Fill)
-        {
-            return Err(EditorError::Gesture(
-                "Select the hit voxel’s layer to edit it".into(),
-            ));
-        }
-        let Some(at) = self.target(ray) else {
-            return Ok(false);
-        };
-        self.apply_at(at)
+    fn sample(&self, at: Pos) -> Option<(u16, Uuid)> {
+        self.editor.snapshot().sample(at)
     }
-    /// Apply a tool at an explicit integer coordinate, also used by the keyboard cursor.
-    pub fn apply_at(&mut self, at: Pos) -> EditorResult<bool> {
-        self.ensure_live()?;
-        if !self.snapshot().bounds.contains(at) {
-            return Err(EditorError::Gesture("Outside document bounds".into()));
-        }
-        if self.tool == Tool::Picker {
-            if let Some((slot, _)) = self.snapshot().sample(at) {
-                self.color = self
-                    .snapshot()
-                    .palette
-                    .get(slot)
-                    .expect("valid slot")
-                    .clone();
-            }
-            return Ok(false);
-        }
-        let layer = self.snapshot().layer(self.layer)?;
-        if layer.locked || !layer.visible {
-            return Err(EditorError::Gesture(
-                "The active layer is locked or hidden".into(),
-            ));
-        }
-        if self.tool == Tool::Box && self.box_start.is_none() {
-            self.box_start = Some(at);
-            return Ok(false);
-        }
-        // A no-op brush must not add unused palette entries.
-        if matches!(self.tool, Tool::Paint | Tool::Erase | Tool::Fill) && layer.voxels.get(at) == 0
-        {
-            return Ok(false);
-        }
-        let mut commands = Vec::new();
-        let slot = if self.tool == Tool::Erase {
-            0
-        } else if let Some(s) = self
-            .snapshot()
-            .palette
-            .slots
-            .iter()
-            .find(|s| s.color.rgba == self.color.rgba)
-        {
-            s.index
-        } else {
-            let slot = (1..=256)
-                .find(|s| self.snapshot().palette.get(*s).is_none())
-                .ok_or_else(|| EditorError::Gesture("Palette is full (256 colors)".into()))?;
-            commands.push(Command::Palette(PaletteEdit::Add {
-                slot: Some(slot),
-                color: self.color.clone(),
-            }));
-            slot
-        };
-        let mirror = Mirror::centered(self.snapshot().bounds, self.mirror);
-        commands.push(match self.tool {
-            Tool::Fill => Command::FloodFill {
-                layer: self.layer,
-                seed: at,
-                slot,
-                region: None,
-                cap: 1_048_576,
-                mirror,
-            },
-            Tool::Box => {
-                let start = self.box_start.expect("box start established");
-                Command::Primitive {
-                    layer: self.layer,
-                    shape: Shape::Box {
-                        region: Region {
-                            min: std::array::from_fn(|a| start[a].min(at[a])),
-                            max: std::array::from_fn(|a| start[a].max(at[a]) + 1),
-                        },
-                        hollow: false,
-                    },
-                    mode: Mode::Place,
-                    slot: Some(slot),
-                    mirror,
-                }
-            }
-            _ => Command::SetVoxels {
-                layer: self.layer,
-                voxels: vec![Voxel { at, slot }],
-                mode: match self.tool {
-                    Tool::Erase => Mode::Erase,
-                    Tool::Paint => Mode::Paint,
-                    _ => Mode::Place,
-                },
-                mirror,
-            },
-        });
-        self.execute(self.tool.name(), Command::Batch(commands))
+    fn voxel(&self, layer: Uuid, at: Pos) -> voxelite_core::Result<u16> {
+        Ok(self.editor.snapshot().layer(layer)?.voxels.get(at))
+    }
+    fn palette(&self) -> &Palette {
+        &self.editor.snapshot().palette
+    }
+    fn active_color(&self) -> &Swatch {
+        &self.editor.color
+    }
+    fn active_layer(&self) -> Uuid {
+        self.editor.layer
+    }
+    fn layer(&self, id: Uuid) -> voxelite_core::Result<ToolLayer> {
+        let layer = self.editor.snapshot().layer(id)?;
+        Ok(ToolLayer {
+            visible: layer.visible,
+            locked: layer.locked,
+        })
+    }
+    fn bounds(&self) -> Region {
+        self.editor.snapshot().bounds
     }
 }
+
+fn mirror_tool_command(command: &mut Command, settings: Mirror) {
+    match command {
+        Command::SetVoxels { mirror, .. }
+        | Command::FloodFill { mirror, .. }
+        | Command::Primitive { mirror, .. } => *mirror = settings,
+        Command::Batch(commands) => {
+            for command in commands {
+                mirror_tool_command(command, settings);
+            }
+        }
+        _ => {}
+    }
+}
+
+#[cfg(test)]
+#[path = "editor/tool_tests.rs"]
+mod tool_tests;
 
 #[cfg(test)]
 mod tests {

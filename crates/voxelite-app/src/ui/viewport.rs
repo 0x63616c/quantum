@@ -374,10 +374,9 @@ impl EditorView {
         let identity = self.viewport.displayed;
         let camera = self.viewport.display_camera;
         let frame_size = self.viewport.displayed.map(|_| self.viewport.display_size);
-        let hover = self.hover;
+        let tool_region = self.editor.tool_preview(self.hover);
         let grid = self.grid;
         let doc_bounds = self.editor.display_snapshot().bounds;
-        let box_start = self.editor.box_start;
         let comment_region = self
             .discussion
             .draft
@@ -471,15 +470,9 @@ impl EditorView {
                         });
                     });
                 }
-                if let Some(at) = comment_region.map(|r| r.min).or(hover).or(box_start) {
-                    let lo = box_start
-                        .map(|s| std::array::from_fn(|a| s[a].min(at[a])))
-                        .unwrap_or(at);
-                    let hi: Pos = box_start
-                        .map(|s| std::array::from_fn(|a| s[a].max(at[a]) + 1))
-                        .unwrap_or(at.map(|v| v + 1));
+                if let Some(region) = comment_region.or(tool_region) {
                     let mut path = PathBuilder::stroke(px(1.4));
-                    let (lo, hi) = comment_region.map(|r| (r.min, r.max)).unwrap_or((lo, hi));
+                    let (lo, hi) = (region.min, region.max);
                     for bits in 0..8 {
                         for a in 0..3 {
                             if bits & (1 << a) == 0 {
