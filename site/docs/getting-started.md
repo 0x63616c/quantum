@@ -19,7 +19,7 @@ cargo build --locked --release \
 ./target/release/voxelite
 ```
 
-[Download the native Mac app](https://voxelite.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation and first-launch instructions. This build isn't notarized yet. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
+[Download the native Mac app](https://voxelite.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
 
 Linux build and desktop dependencies (Debian / Ubuntu)
 

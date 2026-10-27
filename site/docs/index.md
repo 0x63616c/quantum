@@ -18,6 +18,6 @@ Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, 
 | Browser editor | Trying the editor and downloading projects          | Not yet available                          |
 | Headless MCP   | Scripted creation and CPU renders without a display | Stdio, with a project directory            |
 
-These docs describe the implementation on the development branch. The [native Mac download](https://voxelite.worldwidewebb.co/download/) isn't notarized yet; see the first-launch instructions. Linux builds and Chromium software graphics are verified; Safari/Firefox qualification remains pending.
+These docs describe the implementation on the development branch. The [native Mac download](https://voxelite.worldwidewebb.co/download/) is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Linux builds and Chromium software graphics are verified; Safari/Firefox qualification remains pending.
 
 Everything stays local. No account, cloud relay, or model-provider key is required by Voxelite, and your projects never leave your machine. This website uses cookie-free Vercel Web Analytics and Speed Insights for anonymous page-view and performance counts; nothing you build is collected. Your chosen agent host may have its own requirements.
