@@ -598,10 +598,7 @@ impl EditorView {
                     })
                     .when(cfg!(target_os = "macos"), |d| {
                         #[cfg(target_os = "macos")]
-                        {
-                            return d.child(self.palette_eyedropper(cx));
-                        }
-                        #[cfg(not(target_os = "macos"))]
+                        let d = d.child(self.palette_eyedropper(cx));
                         d
                     }),
             )
