@@ -2,6 +2,8 @@
 #[cfg(unix)]
 mod attachment;
 pub mod comments;
+pub mod core_plugin;
+pub use core_plugin::app_host;
 pub mod editor;
 pub mod frame_meter;
 pub mod gizmo;

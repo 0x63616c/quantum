@@ -21,5 +21,8 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
 
 `voxelite-plugin-example` is a minimal template with ID `dev.voxelite.example`,
 `builtin = false` and one command declaration. It is not linked into the app and
-implements no feature or command execution. Future built-in feature plugins live
-alongside it; this layout does not add third-party loading, WASM or scripting.
+implements no feature or command execution. The tools, mirror, palette, comments
+and agent built-ins live alongside it and currently contribute command metadata
+only; execution remains in the app. They ship enabled and can be disabled by the
+host, though the shell does not expose enablement preferences yet. This layout
+does not add third-party loading, WASM or scripting.
