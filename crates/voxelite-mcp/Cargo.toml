@@ -23,7 +23,13 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "signa
 base64 = "0.22"
 jsonschema = { version = "0.37", default-features = false }
 
+[target.'cfg(unix)'.dependencies]
+# Safe effective-UID lookup for the socket directory check; already in the graph.
+rustix = { version = "1", features = ["process"] }
+
 [dev-dependencies]
+# Match the site's catalog key order in standalone and workspace test runs.
+serde_json = { workspace = true, features = ["preserve_order"] }
 tempfile = "3"
 png.workspace = true
 

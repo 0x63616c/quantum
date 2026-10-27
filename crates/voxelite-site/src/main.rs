@@ -1,8 +1,7 @@
-//! Static documentation generator. Discovery schemas come directly from the MCP
-//! server, so API names, required arguments and constraints cannot drift by hand.
+//! Static documentation generator. Discovery schemas come from the versioned MCP
+//! catalog, which the server's tests keep in sync with its tools.
 use serde_json::Value;
 use std::{error::Error, fmt::Write as _, fs, path::Path};
-use voxelite_mcp::VoxeliteServer;
 
 mod install;
 mod markdown;
@@ -259,10 +258,7 @@ fn article_body(page: &DocPage, tools: &[Value]) -> Result<String, Box<dyn Error
 fn main() -> Result<(), Box<dyn Error>> {
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);
-    let tools: Vec<Value> = VoxeliteServer::tools()
-        .into_iter()
-        .map(serde_json::to_value)
-        .collect::<Result<_, _>>()?;
+    let tools: Vec<Value> = serde_json::from_str(include_str!("../../../spec/mcp/v1/tools.json"))?;
     fs::create_dir_all(root.join("assets"))?;
     install::write_integrations(&root.join("assets/integrations"))?;
     if std::env::args().nth(2).as_deref() == Some("--write-integrations") {
