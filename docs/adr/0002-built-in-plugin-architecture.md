@@ -69,7 +69,7 @@ conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool loo
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.7.0`, independently of plugin implementation versions and `.voxl` or
+is `0.8.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -95,7 +95,7 @@ actions, recent colors, and import/export metadata to public palette types.
 The `0.6.0` bump adds the `Pin` variant to the exhaustive `OverlayPrimitive` enum,
 portable discussion panel types and a default-unbound `comments_panel` lookup.
 Optional overlay projection/picking/discussion queries default to no capability.
-The `0.7.0` bump extends the exhaustive `RenderPassSlot` enum with Geometry,
+The `0.8.0` bump extends the exhaustive `RenderPassSlot` enum with Geometry,
 Lighting and PostProcess. It adds default-unbound `render_pass` lookup and the
 new `RenderPass`/`PassCx` contract. Existing BeforeScene, AfterScene and Overlay
 declarations retain their meanings.
