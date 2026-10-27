@@ -1,6 +1,6 @@
 # Connect an agent
 
-Install Voxelite for Mac in `/Applications`. The app bundles its MCP executable at
+Install Quantum for Mac in `/Applications`. The app bundles its MCP executable at
 `{command}`. For a source build, run `cargo build --release --locked -p voxelite-mcp`
 and replace the command path with your built binary's absolute path.
 
