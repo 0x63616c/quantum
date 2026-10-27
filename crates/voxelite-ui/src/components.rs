@@ -272,7 +272,9 @@ impl FieldFrame {
                 d.w(px(cells as f32
                     * type_size::BODY_LG
                     * type_size::MONO_ADVANCE
-                    + space::LG * 2.))
+                    + space::LG * 2.
+                    // Border plus the caret edge, so an exactly full field does not scroll.
+                    + 4.))
                     .flex_shrink_0()
                     .font_family(type_size::MONO)
             })
@@ -464,6 +466,30 @@ impl SidebarItem {
         theme: Theme,
     ) -> Stateful<Div> {
         let label = label.into();
+        Self::custom(id, label.clone(), selected, theme)
+            .child(icon(glyph).text_color(if selected {
+                theme.accent_fg()
+            } else {
+                theme.muted()
+            }))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(label),
+            )
+    }
+    /// Build the navigation frame for custom content such as a palette thumbnail.
+    /// The label names the complete row for assistive technology.
+    pub fn custom(
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        selected: bool,
+        theme: Theme,
+    ) -> Stateful<Div> {
+        let label = label.into();
         row()
             .id(id)
             .tab_index(0)
@@ -493,19 +519,6 @@ impl SidebarItem {
                 })
                 .shadow(tokens::focus_ring(theme))
             })
-            .child(icon(glyph).text_color(if selected {
-                theme.accent_fg()
-            } else {
-                theme.muted()
-            }))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .child(label),
-            )
     }
 }
 /// Quiet sidebar group label.

@@ -811,7 +811,7 @@ impl Render for TextField {
                                 this.scroll_x =
                                     this.scroll_x.min(caret_x).max(caret_x - width).max(px(0.));
                             }
-                            if this.text().is_empty() {
+                            if this.text().is_empty() || (!focused && this.drag.is_none()) {
                                 this.scroll_x = px(0.);
                             }
                             let origin = point(bounds.left() - this.scroll_x, bounds.top());
