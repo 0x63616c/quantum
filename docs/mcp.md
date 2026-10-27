@@ -278,6 +278,12 @@ history, and completed calls appear in the Session feed with actual differences.
 Exact mutation retries retain their original receipts. New/Open in the app
 rotates the epoch. Pause rejects new agent mutations while leaving reads enabled.
 
+Attached file tools are rooted at the folder containing the current `.voxl` file.
+Untitled projects use `~/Documents/Voxelite`, created when attaching if missing;
+the process working directory is never used. Save As, Open and New update the
+root before queued requests run, without disconnecting clients. If the app cannot
+resolve or create the root, attachment setup or request processing fails.
+
 The attached catalog excludes document create/open/save: the app owns file
 lifecycle and its external-file conflict checks. Other existing tools retain
 the standalone validation and transaction behavior. Changes are in memory until
