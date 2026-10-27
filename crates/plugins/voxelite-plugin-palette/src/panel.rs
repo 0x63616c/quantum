@@ -200,13 +200,14 @@ fn edit_library(
     use PaletteOperation::*;
     let slot = out.state.slot;
     if matches!(operation, Create | Duplicate) {
+        let name = if operation == Create {
+            "Untitled palette".into()
+        } else {
+            library::copy_name(&out.state.library, &name)?
+        };
         out.state.custom = Some(library::create(
             &mut out.state.library,
-            if operation == Create {
-                "Untitled palette".into()
-            } else {
-                format!("{} copy", name.chars().take(100).collect::<String>())
-            },
+            name,
             if operation == Create {
                 Palette::default()
             } else {
@@ -214,13 +215,20 @@ fn edit_library(
             },
         )?);
     } else {
+        if view.read_only && operation != Delete {
+            let name = library::copy_name(&out.state.library, &view.name)?;
+            out.state.custom = Some(library::create(
+                &mut out.state.library,
+                name,
+                view.palette.clone(),
+            )?);
+            out.copied_from = Some(view.name.clone());
+        }
         let i = out
             .state
             .custom
             .and_then(|id| out.state.library.entries.iter().position(|e| e.id == id))
-            .ok_or_else(|| {
-                PaletteError::Message("Duplicate this palette to customize it".into())
-            })?;
+            .ok_or_else(|| PaletteError::Message("Only custom palettes can be deleted".into()))?;
         match operation {
             Delete => {
                 out.state.library.entries.remove(i);

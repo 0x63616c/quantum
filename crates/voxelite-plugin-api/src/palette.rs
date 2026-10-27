@@ -193,6 +193,8 @@ pub enum PalettePresentation {
 /// Proposed state and typed edits; only the host can admit these effects.
 #[derive(Clone, Debug, Default)]
 pub struct PaletteOutcome {
+    /// Source name when this interaction automatically copied a read-only palette.
+    pub copied_from: Option<String>,
     /// Next panel state, installed after successful persistence/edit admission.
     pub state: PaletteState,
     /// Replacement library bytes in the existing settings format, if changed.

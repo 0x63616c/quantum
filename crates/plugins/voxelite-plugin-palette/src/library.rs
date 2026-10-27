@@ -39,12 +39,35 @@ pub(crate) fn encode(library: &PaletteLibrary) -> Result<Vec<u8>> {
 pub(crate) fn create(library: &mut PaletteLibrary, name: String, palette: Palette) -> Result<Uuid> {
     validate_name(&name)?;
     palette.validate()?;
-    if library.entries.len() == 128 {
+    if library.entries.len() >= 128 {
         return Err(PaletteError::Message("128 custom palettes maximum".into()));
     }
     let id = Uuid::new_v4();
     library.entries.push(LibraryPalette { id, name, palette });
     Ok(id)
+}
+
+/// Reserve suffix space in UTF-8 bytes, keeping the portable name limit.
+pub(crate) fn copy_name(library: &PaletteLibrary, source: &str) -> Result<String> {
+    validate_name(source)?;
+    for number in 1..=library.entries.len() + 1 {
+        let suffix = if number == 1 {
+            " copy".into()
+        } else {
+            format!(" copy {number}")
+        };
+        let mut end = source.len().min(128 - suffix.len());
+        while !source.is_char_boundary(end) {
+            end -= 1;
+        }
+        let name = format!("{}{suffix}", &source[..end]);
+        if !library.entries.iter().any(|entry| entry.name == name) {
+            return Ok(name);
+        }
+    }
+    Err(PaletteError::Message(
+        "Cannot find an unused palette name".into(),
+    ))
 }
 
 pub(crate) fn set_colors(
