@@ -6,7 +6,7 @@ The macOS editor defaults to a wgpu Metal viewport presented with GPUI's
 `Window::paint_surface`. `VOXELITE_CPU_VIEWPORT=1` forces the software viewport.
 The software rasterizer remains the export/thumbnail renderer and the automatic
 fallback. Its existing interactive resolution/refinement behavior is retained;
-the active GPU path always uses the same full-quality render settings.
+GPU supersampling adapts to surface limits while MSAA, AO and shadows are retained.
 
 The separate browser canvas, wasm viewport dependencies, browser harness and
 GPUI web/wgpu patches have been removed. `crates/voxelite-app/src/web.rs` matches
@@ -24,15 +24,18 @@ selection feedback, comments and the orientation gizmo remain GPUI overlays.
 The presentation sequence is:
 
 1. Multiply the laid-out viewport bounds by the window scale factor to obtain
-   physical display pixels. Render the scene at twice those dimensions, with
-   4x MSAA, ambient occlusion, exact voxel shadows and an opaque background/grid.
+   physical display pixels. Prefer twice those dimensions, then 1.5x or 1x if
+   needed to fit the surface budget and device texture limit. Round up to even
+   dimensions for NV12. Retain 4x MSAA, ambient occlusion, exact voxel shadows
+   and an opaque background/grid at every size.
    Outlines follow the CPU viewport default (disabled).
 2. Resolve linear shading to nonlinear RGB in an RGBA8Unorm target. Convert it
    with the exact inverse of GPUI 1.25.3's full-range BT.601 matrix, including
    its four-decimal coefficients and 0.5 chroma center.
 3. Write full-size luma and half-width/half-height interleaved CbCr directly into
    the IOSurface planes of a `420YpCbCr8BiPlanarFullRange` CVPixelBuffer. Chroma
-   averages each 2x2 RGB block, retaining one chroma sample per display pixel.
+   averages each 2x2 RGB block, retaining one chroma sample per display pixel at
+   2x supersampling, with fewer samples at the reduced factors.
 4. Wait for wgpu's submitted-work completion callback on the worker before
    transferring the completed buffer to GPUI. No production pixel readback or
    CPU upload occurs in this handoff.
@@ -120,8 +123,9 @@ checks exercise shading; they do not validate Metal or GPUI presentation.
 
 - **Actual supersampling:** the earlier implementation only doubled the NV12
   planes and repeated luma texels. All scene/MSAA/resolve targets now render at
-  2x device dimensions. Checked multiplication handles zero, overflow, device
-  texture limits and the allocation budget without silently lowering GPU quality.
+  the selected 2x, 1.5x or 1x device dimensions. Admission handles zero, overflow,
+  device texture limits and the allocation budget before allocating targets.
+  The display aspect ratio is preserved even when NV12 requires even rounding.
 - **Color and layout:** the converter matches the pinned Metal shader rather
   than using BT.709 or video-range YCbCr. Tests evaluate the actual WGSL expression
   and Metal matrix, including 8-bit quantization. CoreVideo allocation checks
@@ -201,8 +205,11 @@ unverified at runtime. No speedup or responsiveness measurement is claimed.
 
 The 2x scene plus 4x MSAA costs roughly 85 bytes per supersampled pixel before
 mesh/shadow allocations. A 24-million-supersampled-pixel admission limit bounds
-those targets to roughly 2 GiB; large Retina/external-display viewports can fall
-back to CPU. Old-size leased surfaces and driver allocation overhead can briefly
+those targets to roughly 2 GiB. Large Retina/external-display viewports step down
+to 1.5x or 1x supersampling. If even 1x cannot fit, CPU rendering is used at that
+size; the next physical resize (including a display-scale change) retries GPU
+rendering. Device and mesh failures still disable GPU rendering for the session.
+Old-size leased surfaces and driver allocation overhead can briefly
 increase memory during resizing. NV12 remains 8-bit and chroma-subsampled; the
 matrix test bounds uniform-color quantization error, not every edge or display
 color-profile artifact. Wide-gamut/HDR output is not implemented.

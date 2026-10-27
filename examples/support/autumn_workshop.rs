@@ -668,12 +668,12 @@ pub fn build() -> FormatResult<Project> {
             locked: None,
         }),
     )?;
-    build.step("Review the finished composition", Command::CreateComment {
+    build.step("Add a composition review note", Command::CreateComment {
         id: id(20), anchor: Anchor::Voxel { at: [-2, 35, 0] }, layer: Some(id(3)), message: id(21),
         text: "Slate roof, amber windows, and an autumn crown. Check the silhouette from all six views.".into(),
     })?;
     build.step(
-        "Save Autumn Workshop",
+        "Create named version",
         Command::SaveVersion {
             id: id(30),
             name: "Autumn Workshop · finished".into(),
