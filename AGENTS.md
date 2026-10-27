@@ -14,6 +14,9 @@
 - Keep changes scoped to the task. Preserve unrelated work, identifiers,
   file-format compatibility and published release assets.
 
+Brand-bearing identifiers live in [brand.toml](brand.toml), with current values
+and planned display/internal names. Stable ones must not change without a migration.
+
 ## Architecture and ownership
 
 Read [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) before moving feature

@@ -220,13 +220,18 @@ class PackagingTests(unittest.TestCase):
 
     def test_default_public_key_and_matching_override(self):
         raw = (ROOT / "packaging/macos/sparkle_public_ed_key.txt").read_text()
+        # The macOS runner's python3 predates tomllib, so read the one value directly.
+        feed_url = re.search(
+            r'^sparkle_appcast_url\s*=\s*\{\s*current\s*=\s*"([^"]+)"',
+            (ROOT / "brand.toml").read_text(), re.M,
+        ).group(1)
         self.assertEqual(raw, raw.strip() + "\n")
         self.assertEqual(len(base64.b64decode(raw.strip(), validate=True)), 32)
         for overrides in ({}, PUBLIC):
             self.run_script(overrides=overrides)
             info = plistlib.loads((self.root / "dist/Voxelite.app/Contents/Info.plist").read_bytes())
             self.assertEqual(info['SUPublicEDKey'], raw.strip())
-            self.assertEqual(info['SUFeedURL'], 'https://voxelite.worldwidewebb.co/appcast.xml')
+            self.assertEqual(info['SUFeedURL'], feed_url)
             self.assertIs(info['SUEnableAutomaticChecks'], True)
             self.assertIs(info['SUAutomaticallyUpdate'], False)
             signatures = [args for name, args, _ in self.events()

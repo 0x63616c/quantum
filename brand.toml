@@ -1,0 +1,66 @@
+# Branding inventory for the later mechanical rename; this file changes no runtime values.
+# `current` records the implementation. `next` is a planned display/internal rename.
+# `stable = true` means keep the current value unless a migration or compatibility
+# alias is added. In particular, installed commands and integration paths are public.
+
+[product]
+# README/AGENTS already say Quantum; the application and site still display Voxelite.
+display_name = { current = "Voxelite", next = "Quantum", stable = false }
+tagline = { current = "An Aseprite-style 3D voxel editor for people and agents.", stable = false }
+
+[identifiers]
+# packaging/macos/Info.plist
+bundle_id = { current = "co.worldwidewebb.voxelite", stable = true }
+bundle_name = { current = "Voxelite", next = "Quantum", stable = false }
+bundle_display_name = { current = "Voxelite", next = "Quantum", stable = false }
+bundle_executable = { current = "Voxelite", next = "Quantum", stable = false }
+bundle_icon = { current = "Voxelite", next = "Quantum", stable = false }
+# GPUI windows use voxelite_app::APP_ID (crates/voxelite-app/src/lib.rs), which
+# must equal bundle_id; ui/{welcome,settings}.rs reference the constant.
+window_app_id = { current = "co.worldwidewebb.voxelite", stable = true }
+# Current Info.plist declares no custom UTIs or document types. Do not invent IDs.
+exported_utis = { current = [], stable = true }
+imported_utis = { current = [], stable = true }
+document_type_ids = { current = [], stable = true }
+
+# Cargo manifests and scripts/package-macos.sh. Keep installed paths/CLI invocations
+# working; changing the display name does not require changing these paths.
+app_binary = { current = "voxelite", stable = true }
+mcp_binary = { current = "voxelite-mcp", stable = true }
+app_bundle = { current = "Voxelite.app", stable = true }
+release_asset = { current = "Voxelite.dmg", stable = true }
+crate_name_prefix = { current = "voxelite-", next = "quantum-", stable = false }
+
+# crates/voxelite-mcp/src/{catalog,session,lib}.rs and voxelite-site/src/install.rs
+# Tool names currently use literals in catalog/dispatch, not a prefix constant.
+mcp_tool_prefix = { current = "voxelite_", stable = true }
+mcp_api_version = { current = "voxelite.v1", stable = true }
+mcp_server_name = { current = "voxelite", stable = true }
+# Installed skill names and plugin namespaces can be referenced by workflows/data.
+skills_name_prefix = { current = "voxelite-", stable = true }
+plugin_id_prefix = { current = "dev.voxelite.", stable = true }
+
+# The .voxl format is JSON, with a `format` discriminator rather than binary magic.
+# Its schema has no $id; the versioned specification lives at the path below.
+file_extension = { current = ".voxl", stable = true }
+format_magic = { current = "voxelite", stable = true }
+format_spec = { current = "spec/voxl/1.0", stable = true }
+format_mime_type = { current = "application/vnd.voxelite.project+json", stable = true }
+document_label = { current = "Voxelite Project (.voxl)", next = "Quantum Project (.voxl)", stable = false }
+
+# SUFeedURL is injected into the built Info.plist by scripts/package-macos.sh.
+sparkle_appcast_url = { current = "https://voxelite.worldwidewebb.co/appcast.xml", stable = true }
+# SITE_BASE_URL in crates/voxelite-site/src/main.rs is the site configuration.
+site_domain = { current = "voxelite.worldwidewebb.co", stable = true }
+github_repo_url = { current = "https://github.com/0x63616c/voxelite", stable = true }
+
+[storage]
+# crates/voxelite-app/src/{attachment,local_settings}.rs. The desktop uses this
+# XDG layout on macOS too; there is currently no Application Support directory.
+# settings.json, palettes.json, recents.json, thumbnails and session-<pid>.sock
+# live under the data directory. Browser storage keys use the same relative paths.
+documents_directory = { current = "~/Documents/Voxelite", stable = true }
+data_directory_name = { current = "voxelite", stable = true }
+xdg_data_directory = { current = "$XDG_DATA_HOME/voxelite", stable = true }
+fallback_data_directory = { current = "~/.local/share/voxelite", stable = true }
+data_directory_env = { current = "VOXELITE_DATA_DIR", stable = true }
