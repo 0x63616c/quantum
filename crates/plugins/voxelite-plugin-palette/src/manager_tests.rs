@@ -437,3 +437,98 @@ fn manager_exports_formats_and_registry_pal_encoder_use_the_same_bytes() {
     assert!(host.dispatch_export(PAL, &export_cx).unwrap().is_none());
     assert_eq!(host.registry().formats().count(), 0);
 }
+
+#[test]
+fn unchanged_source_color_and_rename_still_create_custom_copies() {
+    let mut cx = Context::default();
+    let out = cx.apply(PaletteAction::SetColor {
+        rgb: [180, 140, 100],
+        commit: true,
+    });
+    assert_eq!(out.copied_from.as_deref(), Some("Project colors"));
+    assert_eq!(cx.view().palette, cx.palette);
+    cx.apply(PaletteAction::ChoosePreset(0));
+    let out = cx.apply(PaletteAction::Edit {
+        operation: PaletteOperation::Rename,
+        name: "Project colors".into(),
+        color: String::new(),
+    });
+    assert!(out.copied_from.is_some());
+    assert_eq!(cx.view().name, "Project colors");
+    assert_eq!(cx.state.library.entries.len(), 2);
+}
+
+#[test]
+fn library_serialization_never_emits_bytes_that_the_bounded_reader_rejects() {
+    let color = Swatch {
+        rgba: [1, 2, 3, 255],
+        name: Some("n".repeat(128)),
+    };
+    let palette = Palette::from_colors(vec![color; 256]).unwrap();
+    let mut state = PaletteState::default();
+    for _ in 0..64 {
+        library::create(&mut state.library, "Large".into(), palette.clone()).unwrap();
+    }
+    for recent in [vec![], vec![[1, 2, 3]]] {
+        state.recent_colors = recent;
+        let bytes = library::encode_state(&state).unwrap();
+        assert!(bytes.len() <= 4 * 1024 * 1024);
+        assert!(!bytes.contains(&b'\n'));
+        assert_eq!(library::load_state(Some(&bytes)).unwrap(), state);
+    }
+    for _ in 0..64 {
+        library::create(&mut state.library, "Large".into(), palette.clone()).unwrap();
+    }
+    assert!(
+        library::encode_state(&state)
+            .unwrap_err()
+            .to_string()
+            .contains("too large")
+    );
+}
+
+#[test]
+fn unicode_import_names_are_truncated_on_byte_boundaries() {
+    let mut cx = Context::default();
+    cx.apply(PaletteAction::ImportLibrary {
+        name: "色".repeat(100),
+        format: "hex".into(),
+        text: "112233".into(),
+    });
+    assert_eq!(cx.view().name, "色".repeat(42));
+    validate_name(&cx.view().name).unwrap();
+}
+
+#[test]
+fn full_library_rejects_automatic_copies_atomically_and_duplicate_preserves_exact_slots() {
+    let mut cx = Context::default();
+    for _ in 0..128 {
+        library::create(&mut cx.state.library, "Entry".into(), Palette::default()).unwrap();
+    }
+    let before = cx.state.clone();
+    for commit in [false, true] {
+        cx.rejects(
+            PaletteAction::SetColor {
+                rgb: [1; 3],
+                commit,
+            },
+            "128 custom palettes",
+        );
+        assert_eq!(cx.state, before);
+    }
+    cx.rejects(PaletteAction::RemoveSwatch(0), "last swatch");
+    assert_eq!(cx.state, before);
+    let mut palette = Palette::from_colors(vec![Swatch::default(); 3]).unwrap();
+    palette.slots[1].index = 42;
+    palette.order = vec![3, 42, 1];
+    let mut cx = Context::custom(palette.clone());
+    let original = cx.state.custom;
+    cx.apply(PaletteAction::Edit {
+        operation: PaletteOperation::Duplicate,
+        name: "Test".into(),
+        color: String::new(),
+    });
+    assert_ne!(cx.state.custom, original);
+    assert_eq!(cx.view().palette, palette);
+    assert_eq!(cx.view().name, "Test copy");
+}

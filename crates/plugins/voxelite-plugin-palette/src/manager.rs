@@ -96,7 +96,7 @@ pub(crate) fn edit(
         }
         Edit::Rename(name) => {
             validate_name(&name)?;
-            if name != view.name {
+            if view.read_only || name != view.name {
                 let index = editable(view, out)?;
                 out.state.library.entries[index].name = name;
             }
@@ -104,6 +104,7 @@ pub(crate) fn edit(
         }
         _ => {}
     }
+    let copy_unchanged_color = view.read_only && matches!(edit, Edit::SetColor(_));
     let mut palette = view.palette.clone();
     let mut selected = slot_at(&palette, view.state.slot)?;
     let mut recent = None;
@@ -150,7 +151,7 @@ pub(crate) fn edit(
         }
         _ => unreachable!("non-swatch operations return above"),
     }
-    if palette != view.palette {
+    if palette != view.palette || copy_unchanged_color {
         let index = editable(view, out)?;
         palette.validate()?;
         out.state.slot = palette

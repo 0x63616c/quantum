@@ -176,7 +176,7 @@ impl PalettePanel for PalettePlugin {
                 let palette = import(&format, &text)?;
                 out.state.custom = Some(library::create(
                     &mut out.state.library,
-                    name.chars().take(100).collect(),
+                    library::import_name(&name),
                     palette.clone(),
                 )?);
                 out.state.slot = out.state.slot.min(palette.order.len().saturating_sub(1));

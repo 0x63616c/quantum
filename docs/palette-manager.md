@@ -17,7 +17,7 @@ describe the current selection. `preset` retains the source choice while a custo
 palette is selected. `ChoosePalette(id)` selects either kind; the existing
 `ChoosePreset(index)` and `ChooseCustom(uuid)` actions still work.
 
-Project and built-in palettes are source palettes in the manager. An effective
+Project and built-in palettes are source palettes in the manager. An
 edit creates and selects a custom copy first. Its name is `<Name> copy`, then
 `<Name> copy 2`, etc., using the first unused custom name. The source is truncated
 at a UTF-8 boundary to reserve the suffix within the existing 128-byte name limit.
@@ -90,7 +90,8 @@ The existing `palettes.json` object retains its `entries` array, UUIDs, names,
 means empty, and an empty list is omitted on serialization. Old files and the
 old byte-exact fixture remain valid. Readers reject malformed recent colors,
 duplicates and more than sixteen values. The library file remains bounded at
-4 MiB. Loading never requests a write or serializes transient selection/preview.
+4 MiB for both loading and saving. Large libraries use compact JSON if necessary;
+an edit that still exceeds the bound is rejected before adoption. Loading never requests a write or serializes transient selection/preview.
 No new setting or core document schema is introduced.
 
 ## Interchange

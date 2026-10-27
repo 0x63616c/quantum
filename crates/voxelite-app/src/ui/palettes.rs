@@ -1,5 +1,6 @@
 //! Palette manager and native interchange dialogs.
 use super::*;
+#[cfg(not(target_family = "wasm"))]
 use voxelite_app::local_settings::data_dir;
 use voxelite_core::Swatch;
 use voxelite_plugin_api::{PaletteAction, PaletteOperation, PaletteOutcome, PalettePresentation};

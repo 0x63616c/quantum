@@ -8,7 +8,11 @@ pub fn from_hex(input: &str) -> Result<Palette, CoreError> {
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty())
-        .map(|l| {
+        .enumerate()
+        .map(|(index, l)| {
+            if index == 256 {
+                return Err(Error::Limit("palette needs 1..=256 slots".into()));
+            }
             let l = l.strip_prefix('#').unwrap_or(l);
             if l.len() != 6 || !l.bytes().all(|b| b.is_ascii_hexdigit()) {
                 return Err(Error::Invalid(
@@ -40,6 +44,9 @@ pub fn from_gpl(input: &str) -> Result<Palette, CoreError> {
                 .parse::<u16>()
                 .map_err(|_| Error::Invalid("GPL columns".into()))?;
             continue;
+        }
+        if colors.len() == 256 {
+            return Err(Error::Limit("palette needs 1..=256 slots".into()));
         }
         let mut rgb = [0; 3];
         for c in &mut rgb {

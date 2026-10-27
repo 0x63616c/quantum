@@ -115,7 +115,7 @@ pub struct PaletteView {
     pub read_only: bool,
     /// Selected palette's display name.
     pub name: String,
-    /// Selected palette's original colors.
+    /// Selected palette's working colors, including the active preview.
     pub palette: Palette,
     /// Project, built-ins, then custom entries in persisted display order.
     pub choices: Vec<PaletteChoice>,
@@ -146,7 +146,7 @@ pub enum PaletteOperation {
     Duplicate,
     /// Delete a custom entry.
     Delete,
-    /// Rename a custom entry.
+    /// Rename the selection, automatically copying a source palette first.
     Rename,
     /// Replace the selected swatch.
     ApplyColor,
@@ -238,7 +238,7 @@ pub enum PaletteAction {
     },
     /// Import a custom library entry from bounded HEX/GPL/JASC-PAL text.
     ImportLibrary {
-        /// Filename stem, truncated by the implementation as before.
+        /// Filename stem, truncated to at most 100 characters and 128 UTF-8 bytes.
         name: String,
         /// Lowercase file extension.
         format: String,

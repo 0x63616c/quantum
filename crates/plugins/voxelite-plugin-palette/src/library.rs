@@ -3,6 +3,8 @@ use voxelite_plugin_api::{
     validate_name,
 };
 
+const MAX_LIBRARY_BYTES: usize = 4 * 1024 * 1024;
+
 type Result<T> = std::result::Result<T, PaletteError>;
 
 #[cfg(test)]
@@ -14,7 +16,7 @@ pub(crate) fn load_state(bytes: Option<&[u8]>) -> Result<PaletteState> {
     let Some(bytes) = bytes else {
         return Ok(PaletteState::default());
     };
-    if bytes.len() > 4 * 1024 * 1024 {
+    if bytes.len() > MAX_LIBRARY_BYTES {
         return Err(PaletteError::Message("Settings file too large".into()));
     }
     let value: json::Value = json::from_slice(bytes).map_err(json_error)?;
@@ -68,7 +70,27 @@ pub(crate) fn encode_state(state: &PaletteState) -> Result<Vec<u8>> {
     validate(&state.library)?;
     let mut value = json::to_value(&state.library).map_err(json_error)?;
     value["recent_colors"] = json::to_value(&state.recent_colors).map_err(json_error)?;
-    json::to_vec_pretty(&value).map_err(json_error)
+    bounded_bytes(json::to_vec_pretty(&value).map_err(json_error)?, || {
+        json::to_vec(&value)
+    })
+}
+
+// A valid in-memory library can exceed the bounded reader once pretty-printed.
+// Preserve the legacy formatting when possible; compact large files, then reject
+// anything that could not be loaded again before the host adopts the edit.
+fn bounded_bytes(
+    pretty: Vec<u8>,
+    compact: impl FnOnce() -> std::result::Result<Vec<u8>, json::Error>,
+) -> Result<Vec<u8>> {
+    let bytes = if pretty.len() > MAX_LIBRARY_BYTES {
+        compact().map_err(json_error)?
+    } else {
+        pretty
+    };
+    if bytes.len() > MAX_LIBRARY_BYTES {
+        return Err(PaletteError::Message("Settings file too large".into()));
+    }
+    Ok(bytes)
 }
 
 pub(crate) fn validate(library: &PaletteLibrary) -> Result<()> {
@@ -88,7 +110,9 @@ pub(crate) fn validate(library: &PaletteLibrary) -> Result<()> {
 
 pub(crate) fn encode(library: &PaletteLibrary) -> Result<Vec<u8>> {
     validate(library)?;
-    json::to_vec_pretty(library).map_err(|e| PaletteError::Message(e.to_string()))
+    bounded_bytes(json::to_vec_pretty(library).map_err(json_error)?, || {
+        json::to_vec(library)
+    })
 }
 
 pub(crate) fn create(library: &mut PaletteLibrary, name: String, palette: Palette) -> Result<Uuid> {
@@ -102,6 +126,20 @@ pub(crate) fn create(library: &mut PaletteLibrary, name: String, palette: Palett
     Ok(id)
 }
 
+/// Bound filename stems in both characters and portable UTF-8 bytes.
+pub(crate) fn import_name(source: &str) -> String {
+    let source: String = source.chars().take(100).collect();
+    prefix(&source, 128).to_owned()
+}
+
+fn prefix(source: &str, max_bytes: usize) -> &str {
+    let mut end = source.len().min(max_bytes);
+    while !source.is_char_boundary(end) {
+        end -= 1;
+    }
+    &source[..end]
+}
+
 /// Reserve suffix space in UTF-8 bytes, keeping the portable name limit.
 pub(crate) fn copy_name(library: &PaletteLibrary, source: &str) -> Result<String> {
     validate_name(source)?;
@@ -111,11 +149,7 @@ pub(crate) fn copy_name(library: &PaletteLibrary, source: &str) -> Result<String
         } else {
             format!(" copy {number}")
         };
-        let mut end = source.len().min(128 - suffix.len());
-        while !source.is_char_boundary(end) {
-            end -= 1;
-        }
-        let name = format!("{}{suffix}", &source[..end]);
+        let name = format!("{}{suffix}", prefix(source, 128 - suffix.len()));
         if !library.entries.iter().any(|entry| entry.name == name) {
             return Ok(name);
         }
@@ -152,6 +186,7 @@ pub fn parse_color(text: &str) -> Result<Swatch> {
 }
 
 /// Step through display order, matching duplicate swatches by their original RGBA.
+/// The caller must provide a palette that passes `Palette::validate`.
 pub fn step_swatch(palette: &Palette, color: &Swatch, delta: isize) -> (usize, Swatch) {
     let current = palette
         .order
