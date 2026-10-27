@@ -13,6 +13,8 @@ mod overlay_tests;
 #[path = "transform_tests.rs"]
 mod transform_tests;
 
+#[path = "data_tests.rs"]
+mod data_tests;
 #[path = "palette_tests.rs"]
 mod palette_tests;
 
@@ -364,7 +366,15 @@ fn all_queries_filter_enabled_plugins_and_preserve_both_registration_orders() {
             "comments"
         );
         for declaration in &declarations {
-            assert_eq!(registry.get(declaration.id()).unwrap().1, declaration);
+            if let Contribution::DataSection(spec) = declaration {
+                assert_eq!(
+                    registry.data_section("dev.zeta", declaration.id()),
+                    Some(spec)
+                );
+                assert!(registry.get(declaration.id()).is_none());
+            } else {
+                assert_eq!(registry.get(declaration.id()).unwrap().1, declaration);
+            }
         }
         assert!(registry.get("dev.missing").is_none());
     }
@@ -545,8 +555,11 @@ fn cross_plugin_conflicts_are_structured_and_hot_enable_can_recover() {
 }
 
 #[test]
-fn every_contribution_kind_participates_in_cross_plugin_id_conflicts() {
-    for declaration in all_kinds() {
+fn globally_named_contributions_participate_in_cross_plugin_id_conflicts() {
+    for declaration in all_kinds()
+        .into_iter()
+        .filter(|c| !matches!(c, Contribution::DataSection(_)))
+    {
         let mut first = TestPlugin::new("dev.first");
         first.declarations = vec![declaration.clone()];
         let mut second = TestPlugin::new("dev.second");
@@ -649,6 +662,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                 .get(
                     "dev.bad",
                     match phase {
+                        Phase::Data => "data",
                         Phase::Contribute => "contribute",
                         Phase::Activate => "activate",
                         Phase::Deactivate => "deactivate",

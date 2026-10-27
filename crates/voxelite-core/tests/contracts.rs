@@ -52,6 +52,97 @@ fn defaults_and_bounds() {
     assert!(Region::new([i32::MIN; 3], [i32::MAX; 3]).is_err());
     assert!(Region::new([32767; 3], [32768; 3]).is_ok());
 }
+
+#[test]
+fn project_extensions_follow_runtime_history_but_not_named_voxel_snapshots() {
+    let mut e = engine();
+    let actor = Actor::new(Origin::Human);
+    let mut extensions = Extensions::default();
+    extensions
+        .insert(
+            "org.example",
+            "state",
+            DataSection::bytes(1, &[0, 255]).unwrap(),
+        )
+        .unwrap();
+    e.set_extensions(0, id(10), actor.clone(), extensions.clone())
+        .unwrap();
+    e.checkpoint(id(11), "Plugin data".into()).unwrap();
+    run(
+        &mut e,
+        12,
+        Command::SaveVersion {
+            id: id(13),
+            name: "Geometry".into(),
+            parent: None,
+        },
+    );
+    e.set_extensions(e.revision(), id(14), actor.clone(), Extensions::default())
+        .unwrap();
+    let head = e.head();
+    run(
+        &mut e,
+        15,
+        Command::RestoreVersion {
+            id: id(13),
+            expected_head: head,
+        },
+    );
+    assert!(e.document().extensions.is_empty());
+    e.restore_checkpoint(e.revision(), e.head(), id(11), id(16), actor.clone())
+        .unwrap();
+    assert_eq!(e.document().extensions, extensions);
+    let (branch, _) = e.branch(id(13), id(17), "Branch".into()).unwrap();
+    assert_eq!(branch.extensions, extensions);
+    e.restore_history(e.revision(), e.head(), None, id(18), actor)
+        .unwrap();
+    assert!(e.document().extensions.is_empty());
+}
+
+#[test]
+fn extension_edits_obey_revision_noop_and_history_budget_guards() {
+    let mut e = engine();
+    let actor = Actor::new(Origin::Human);
+    let mut extensions = Extensions::default();
+    extensions
+        .insert(
+            "org.example",
+            "state",
+            DataSection::bytes(1, &[42]).unwrap(),
+        )
+        .unwrap();
+    assert!(
+        e.set_extensions(1, id(10), actor.clone(), extensions.clone())
+            .is_err()
+    );
+    assert_eq!(e.revision(), 0);
+    let receipt = e
+        .set_extensions(0, id(10), actor.clone(), extensions.clone())
+        .unwrap();
+    assert!(receipt.changes.metadata_changed);
+    assert!(
+        e.set_extensions(1, id(11), actor.clone(), extensions.clone())
+            .unwrap()
+            .entry
+            .is_none()
+    );
+    let snapshot = e.snapshot();
+    let mut bounded = Engine::with_limits(
+        snapshot.as_ref().clone(),
+        Limits {
+            history_bytes: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(
+        bounded
+            .set_extensions(0, id(12), actor, Extensions::default())
+            .is_err()
+    );
+    assert_eq!(bounded.document(), snapshot.as_ref());
+    assert!(!bounded.is_dirty());
+}
 #[test]
 fn negative_chunk_coordinates() {
     assert_eq!(chunk_address([-1, -16, -17]), ([-1, -1, -2], 3855));

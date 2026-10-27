@@ -31,13 +31,15 @@ pub struct BuildStep {
 }
 
 impl BuildHistory {
-    pub(crate) fn replay(&self, document: Uuid, limits: Limits) -> FormatResult<Engine> {
+    pub(crate) fn replay(&self, document: &Document, limits: Limits) -> FormatResult<Engine> {
         if self.version != 1 || self.steps.is_empty() || self.steps.len() > 64 {
             return Err(FormatError::Invalid(
                 "build history requires version 1 and 1..=64 steps".into(),
             ));
         }
-        let mut engine = Engine::with_limits(Document::new(document, self.base_layer), limits)?;
+        let mut initial = Document::new(document.id, self.base_layer);
+        initial.extensions = document.extensions.clone();
+        let mut engine = Engine::with_limits(initial, limits)?;
         let mut elapsed = None;
         let mut work = 0;
         let mut ids = BTreeSet::new();
@@ -71,7 +73,7 @@ impl BuildHistory {
 impl Project {
     /// Attach a recipe only after real command replay reproduces the entire document.
     pub fn set_build_history(&mut self, history: BuildHistory) -> FormatResult<()> {
-        let engine = history.replay(self.document.id, Limits::default())?;
+        let engine = history.replay(&self.document, Limits::default())?;
         if !engine.initial_retained() {
             return Err(FormatError::Invalid(
                 "build exceeds the default history budget".into(),
@@ -100,7 +102,7 @@ impl Project {
     /// Smaller host budgets may evict early entries, as with ordinary edits.
     pub fn open_engine(&self, limits: Limits) -> FormatResult<Engine> {
         match self.build_history() {
-            Some(history) => history.replay(self.document.id, limits),
+            Some(history) => history.replay(&self.document, limits),
             None => Ok(Engine::with_limits(self.document.clone(), limits)?),
         }
     }

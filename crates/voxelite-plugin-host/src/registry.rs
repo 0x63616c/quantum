@@ -64,10 +64,12 @@ impl<'a> Registry<'a> {
             })
     }
 
-    /// Look up an enabled declaration by its ID, setting key or section name.
+    /// Look up an enabled declaration by its globally unique ID or setting key.
+    /// Data sections are plugin-scoped; use `for_plugin` or `data_sections` instead.
     pub fn get(&self, id: &str) -> Option<(&'a PluginId, &'a Contribution)> {
-        self.iter()
-            .find(|(_, contribution)| contribution.id() == id)
+        self.iter().find(|(_, contribution)| {
+            !matches!(contribution, Contribution::DataSection(_)) && contribution.id() == id
+        })
     }
 
     /// Get all declarations of an enabled plugin, including an empty collection.
@@ -163,6 +165,13 @@ impl<'a> Registry<'a> {
                 _ => None,
             })
     }
+
+    /// Look up a section by its owning plugin and local name.
+    pub fn data_section(&self, plugin_id: &str, name: &str) -> Option<&'a DataSectionContribution> {
+        self.data_sections()
+            .find(|(owner, spec)| owner.as_str() == plugin_id && spec.section_name == name)
+            .map(|(_, spec)| spec)
+    }
 }
 
 pub(crate) fn find_conflicts<'a>(
@@ -177,6 +186,10 @@ pub(crate) fn find_conflicts<'a>(
                 plugin_id: plugin_id.clone(),
                 contribution_id: contribution.id().to_owned(),
             };
+            // Section names belong to their plugin namespace, not the global registry.
+            if matches!(contribution, Contribution::DataSection(_)) {
+                continue;
+            }
             if let Some(first) = ids.get(contribution.id()) {
                 conflicts.push(Conflict::DuplicateContributionId {
                     id: contribution.id().to_owned(),

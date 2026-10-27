@@ -65,15 +65,5 @@ impl TryFrom<String> for PluginId {
 }
 
 pub(crate) fn is_namespaced(id: &str) -> bool {
-    id.len() <= 253
-        && id.contains('.')
-        && id.split('.').all(|segment| {
-            let bytes = segment.as_bytes();
-            (1..=63).contains(&bytes.len())
-                && bytes.first().is_some_and(u8::is_ascii_lowercase)
-                && bytes.last().is_some_and(u8::is_ascii_alphanumeric)
-                && bytes
-                    .iter()
-                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
-        })
+    voxelite_core::valid_plugin_namespace(id)
 }

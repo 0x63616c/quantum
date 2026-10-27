@@ -6,18 +6,19 @@ One project. One readable JSON file.
 
 ## Top-level structure
 
-| Field               | Contract                                                                                            |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| `format`            | Required literal `"voxelite"`.                                                                      |
-| `version`           | Required `major` and `minor` unsigned 16-bit integers. Major must be 1. A newer minor is preserved. |
-| `required_features` | Required array of strings. Only an empty array is currently supported.                              |
-| `document`          | Required `id`, `name`, `bounds`.                                                                    |
-| `palette`           | Required `slots` and `order`.                                                                       |
-| `layers`            | Required array, bottom to top; 1 to 64 entries.                                                     |
-| `comments`          | Optional thread array, omitted when empty.                                                          |
-| `versions`          | Optional named snapshot array, omitted when empty.                                                  |
-| `lineage`           | Optional source `document` and `version` UUIDs for an independent branch.                           |
-| `view`              | Optional portable view metadata, excluded from the project semantic hash.                           |
+| Field               | Contract                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `format`            | Required literal `"voxelite"`.                                                                                          |
+| `version`           | Required `major` and `minor` unsigned 16-bit integers. Major must be 1. A newer minor is preserved.                     |
+| `required_features` | Required array of strings. Only an empty array is currently supported.                                                  |
+| `document`          | Required `id`, `name`, `bounds`.                                                                                        |
+| `palette`           | Required `slots` and `order`.                                                                                           |
+| `layers`            | Required array, bottom to top; 1 to 64 entries.                                                                         |
+| `comments`          | Optional thread array, omitted when empty.                                                                              |
+| `versions`          | Optional named snapshot array, omitted when empty.                                                                      |
+| `lineage`           | Optional source `document` and `version` UUIDs for an independent branch.                                               |
+| `extensions`        | Optional plugin ID → section name map; each section has `schema_version`, `encoding` and `payload`. Omitted when empty. |
+| `view`              | Optional portable view metadata, excluded from the project semantic hash.                                               |
 
 ## Coordinates and layers
 
@@ -31,12 +32,12 @@ A slot has `index` (1 to 256), `rgba` (four bytes, alpha exactly 255), and an op
 
 ## Canonical bytes and hashes
 
-*   Object keys sort lexicographically. Output uses two-space indentation, LF newlines, and one final newline.
+*   Object keys sort lexicographically. Output uses two-space indentation, LF newlines, and one final newline, except raw plugin section envelopes described below.
 *   Each voxel occupies one compact line, e.g. `[0, 0, 0, 1]`. Rows sort lexicographically by X, then Y, then Z.
 *   Palette slots sort by index; comments and named versions sort by UUID. Layer order, palette display order and message order are meaningful and preserved.
 *   UUIDs in validated ID fields use lowercase, hyphenated strings. Names are nonempty, at most 128 UTF-8 bytes, without control characters.
-*   Outside `view`, numbers must use integer representation; fractional/exponent/negative-zero representations reject. Finite floating-point values are permitted inside `view`.
-*   `Project::semantic_hash()` is SHA-256 of canonical file bytes with only the top-level `view` removed. Unknown optional metadata remains in that hash.
+*   Outside `view` and plugin section envelopes, numbers must use integer representation; fractional/exponent/negative-zero representations reject. Finite floating-point values are permitted inside `view` and plugin section envelopes.
+*   `Project::semantic_hash()` is SHA-256 of canonical file bytes with top-level `view` and `build_history` removed. Unknown optional metadata and exact extension section bytes remain in that hash.
 
 The project semantic hash differs from a named version's `content_hash`, which hashes the canonical core snapshot serialization. Use the Rust API to compute these hashes; do not substitute a generic pretty-printed JSON hash.
 
@@ -62,7 +63,28 @@ Duplicate object keys reject at every level. Parsing validates all layers and sn
 
 ## Forward compatibility
 
-Bounded unknown optional fields are preserved as inert data and merged by stable IDs or palette indices, not array position. Optional extension values accept strings, booleans, null, signed 64-bit integers, arrays and objects within depth limits. They are never interpreted as executable code or remote resources. Known fields always come from current validated content.
+Bounded unknown optional fields are preserved as inert data and merged by stable IDs or palette indices, not array position. Generic optional values accept strings, booleans, null, signed 64-bit integers, arrays and objects within depth limits. They are never interpreted as executable code or remote resources. Known fields always come from current validated content.
+
+## Plugin extension data
+
+`extensions[plugin_id][section_name]` stores an envelope with a positive 32-bit `schema_version`, `encoding` (`json` or `bytes`), and required `payload`. JSON payloads may contain any bounded JSON value, including finite fractional numbers. Byte payloads use arrays of integer octets, 0–255.
+
+```json
+"extensions": {
+  "dev.voxelite.example": {
+    "state": {"schema_version": 2, "encoding": "json", "payload": {"scale": 1.25}},
+    "cache": {"schema_version": 1, "encoding": "bytes", "payload": [0, 255, 128]}
+  }
+}
+```
+
+Plugin IDs follow the lowercase reverse-DNS grammar (2+ labels, 1–63 bytes per label, 253 bytes total). Section names are plugin-local, at most 253 bytes, with dot-separated segments matching `[a-z][a-z0-9_-]*`. Raw envelopes, from opening to closing brace, retain their exact whitespace, key order, escapes and number spelling. Namespace keys sort and use compact JSON. Unknown owners, disabled plugins and undeclared sections remain opaque, including unknown envelope fields.
+
+The namespace shares the existing 4 MiB non-comment metadata budget, counting raw whitespace and envelopes. Section nesting is at most 28 below its root, within the file's 32-level limit. Duplicate keys, malformed envelopes, invalid byte arrays and excessive size/depth reject with a section path. The previous editor and original file remain intact if an open fails.
+
+Enabled owners declare their schema versions and forward migration callbacks. The host stages migrations and validation through `DataCx`, which reads/writes only that owner's declared sections. Missing paths, newer stored versions or callback errors reject without modifying the document. Successful changes form one undoable edit and are saved only on a subsequent save.
+
+The format remains 1.0. Old files without extensions load unchanged; an empty namespace is omitted and preserves existing canonical output. Older builds do not guarantee raw-byte retention. Existing core comments and palette data stay in place. Extensions are project data outside named voxel snapshots; runtime history and build-recipe replay preserve them.
 
 ## A complete example
 

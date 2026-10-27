@@ -172,6 +172,7 @@ fn nearest_surface_wins_and_hidden_back_cells_do_not_bleed() {
         content: s,
         versions: Default::default(),
         lineage: None,
+        extensions: Default::default(),
     })
     .unwrap();
     e.execute(Transaction {
