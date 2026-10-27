@@ -6210,6 +6210,7 @@ name = "voxelite-ui"
 version = "0.3.0"
 dependencies = [
  "gpui-unofficial",
+ "unicode-segmentation",
 ]
 
 [[package]]

@@ -167,10 +167,16 @@ impl ShellCommands {
 
     fn binding(&self, op: Op, platform: ShortcutPlatform) -> Option<KeyBinding> {
         let command = self.command(op);
-        command
-            .default_keybinding
-            .as_deref()
-            .map(|key| KeyBinding::new(&platform.binding_key(key), op, command.context.as_deref()))
+        command.default_keybinding.as_deref().map(|key| {
+            // Nested numeric fields cannot change an ancestor's context.
+            // Exclude the focused editor at binding resolution so printable
+            // tool shortcuts still reach the platform text input handler.
+            let context = match command.context.as_deref() {
+                Some("Editor") => Some("Editor && !SharedTextInput"),
+                other => other,
+            };
+            KeyBinding::new(&platform.binding_key(key), op, context)
+        })
     }
 }
 
@@ -455,15 +461,7 @@ pub fn keyboard_guide_sections(platform: ShortcutPlatform) -> [Vec<GuideSection>
     ]
 }
 
-/// Clipboard commands are handled by the focused text editor, never by a hidden view.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
-#[action(no_json)]
-pub enum ClipboardOp {
-    Cut,
-    Copy,
-    Paste,
-    SelectAll,
-}
+pub use voxelite_ui::ClipboardOp;
 
 /// Build both initial and live menus from the same action list.
 pub fn menus(selected: impl Fn(Op) -> bool, enabled: impl Fn(Op) -> bool) -> Vec<Menu> {
@@ -583,6 +581,7 @@ pub fn install(cx: &mut App) {
         ));
     }
     cx.bind_keys(key_bindings(platform));
+    voxelite_ui::install_text_field_bindings_for_platform(platform == ShortcutPlatform::Apple, cx);
 }
 
 fn key_bindings(platform: ShortcutPlatform) -> Vec<KeyBinding> {
@@ -1341,6 +1340,22 @@ mod tests {
                     }
                     assert!(!pending);
                 }
+            }
+            for binding in &bindings {
+                let (matches, _) = keymap.bindings_for_input(
+                    binding.keystrokes(),
+                    &[
+                        KeyContext::parse("Editor").unwrap(),
+                        KeyContext::parse("TextField SharedTextInput").unwrap(),
+                    ],
+                );
+                assert!(
+                    matches.iter().all(|binding| {
+                        binding.predicate().is_none()
+                            || binding.action().as_any().is::<ClipboardOp>()
+                    }),
+                    "document binding leaked into a nested field: {matches:?}"
+                );
             }
             for op in Op::ALL {
                 assert_eq!(

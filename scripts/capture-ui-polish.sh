@@ -94,6 +94,8 @@ VERIFY
 xdotool key --clearmodifiers Escape ctrl+k
 xdotool type --clearmodifiers --delay 70 'fullscreen'
 shot command-palette-fullscreen || true
+xdotool key --clearmodifiers ctrl+a
+shot textfield-command-selection
 xdotool key --clearmodifiers Return
 sleep 1
 xprop -id "$window" _NET_WM_STATE >"$OUT/fullscreen-state.txt" || true
@@ -133,6 +135,12 @@ if [[ -n "$settings" ]]; then
   xdotool mousemove --window "$settings" 100 134 click 1
   xdotool mousemove 1500 980
   shot settings-updates "$settings" || true
+  xdotool mousemove --window "$settings" 100 90 click 1
+  # Return through keyboard focus: the field must be a Tab stop and select all.
+  xdotool key --clearmodifiers shift+Tab
+  sleep 0.3
+  xdotool key --clearmodifiers Tab
+  shot textfield-settings-selection "$settings"
 else
   printf '%s\n' 'Settings did not open; inspect app.log (the baseline may panic).' >"$OUT/settings-unavailable.txt"
 fi

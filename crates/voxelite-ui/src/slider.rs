@@ -218,7 +218,7 @@ impl RenderOnce for Slider {
         let interaction = window.use_keyed_state(self.id.clone(), cx, |_, cx| SliderInteraction {
             bounds: Rc::new(Cell::new(Bounds::default())),
             dragging: Rc::new(Cell::new(false)),
-            focus: cx.focus_handle(),
+            focus: cx.focus_handle().tab_stop(true),
         });
         self.build(interaction.read(cx))
     }

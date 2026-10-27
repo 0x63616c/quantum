@@ -210,13 +210,13 @@ pub type Segmented = ButtonGroup;
 
 /// Presentation wrapper for a native editor entity or custom input content.
 /// The editor retains clipboard, IME, selection and focus ownership.
-pub struct TextField {
+pub struct FieldFrame {
     theme: Theme,
     focused: bool,
     embedded: bool,
     cells: Option<usize>,
 }
-impl TextField {
+impl FieldFrame {
     /// Standard field frame.
     pub fn new(theme: Theme) -> Self {
         Self {
@@ -272,7 +272,9 @@ impl TextField {
                 d.w(px(cells as f32
                     * type_size::BODY_LG
                     * type_size::MONO_ADVANCE
-                    + space::LG * 2.))
+                    + space::LG * 2.
+                    // Border plus the caret edge, so an exactly full field does not scroll.
+                    + 4.))
                     .flex_shrink_0()
                     .font_family(type_size::MONO)
             })
@@ -291,6 +293,7 @@ impl TextField {
                 theme.separator()
             })
             .bg(theme.surface_raised())
+            .when(focused, |d| d.shadow(tokens::focus_ring(theme)))
             .font_family(type_size::UI)
             .text_size(px(type_size::BODY_LG))
     }

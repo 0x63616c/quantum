@@ -738,7 +738,7 @@ impl EditorView {
                             .min_w(px(0.))
                             .when(view.read_only, |d| {
                                 d.child(
-                                    voxelite_ui::TextField::new(t)
+                                    voxelite_ui::FieldFrame::new(t)
                                         .build()
                                         .flex()
                                         .items_center()
