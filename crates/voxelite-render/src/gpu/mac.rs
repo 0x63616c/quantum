@@ -510,7 +510,7 @@ impl Surfaces {
         for (view, pipeline) in [(&y, &self.y_pipeline), (&chroma, &self.chroma_pipeline)] {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("NV12 plane"),
-                color_attachments: &[Some(color_attachment(view, None))],
+                color_attachments: &[Some(color_attachment(view, None, false))],
                 ..Default::default()
             });
             pass.set_pipeline(pipeline);
