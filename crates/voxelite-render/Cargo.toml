@@ -42,9 +42,9 @@ features = ["derive"]
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = { version = "0.6", optional = true }
+objc2 = { workspace = true, optional = true }
 pollster = { version = "0.4", optional = true }
-futures-channel = { version = "0.3", optional = true }
+futures-channel = { workspace = true, optional = true }
 objc2-core-foundation = { version = "0.3.2", optional = true }
 objc2-core-video = { version = "0.3.2", optional = true, features = ["objc2-metal", "objc2-io-surface"] }
 objc2-metal = { version = "0.3.2", optional = true }
