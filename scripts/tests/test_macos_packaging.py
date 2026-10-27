@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import tomllib
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -220,13 +221,14 @@ class PackagingTests(unittest.TestCase):
 
     def test_default_public_key_and_matching_override(self):
         raw = (ROOT / "packaging/macos/sparkle_public_ed_key.txt").read_text()
+        brand = tomllib.loads((ROOT / "brand.toml").read_text())
         self.assertEqual(raw, raw.strip() + "\n")
         self.assertEqual(len(base64.b64decode(raw.strip(), validate=True)), 32)
         for overrides in ({}, PUBLIC):
             self.run_script(overrides=overrides)
             info = plistlib.loads((self.root / "dist/Voxelite.app/Contents/Info.plist").read_bytes())
             self.assertEqual(info['SUPublicEDKey'], raw.strip())
-            self.assertEqual(info['SUFeedURL'], 'https://voxelite.worldwidewebb.co/appcast.xml')
+            self.assertEqual(info['SUFeedURL'], brand['identifiers']['sparkle_appcast_url']['current'])
             self.assertIs(info['SUEnableAutomaticChecks'], True)
             self.assertIs(info['SUAutomaticallyUpdate'], False)
             signatures = [args for name, args, _ in self.events()
