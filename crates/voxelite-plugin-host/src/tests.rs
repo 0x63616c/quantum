@@ -13,6 +13,9 @@ mod overlay_tests;
 #[path = "transform_tests.rs"]
 mod transform_tests;
 
+#[path = "palette_tests.rs"]
+mod palette_tests;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Hook {
     Manifest,
@@ -653,6 +656,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::CommandTransform => "command_transform",
                         Phase::Overlay => "overlay",
                         Phase::Export => "export",
+                        Phase::Palette => "palette",
                     }
                 )
                 .unwrap()

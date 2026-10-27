@@ -121,6 +121,7 @@ pub struct AttachedSession {
     session: Session,
     tools: Arc<RwLock<Vec<Tool>>>,
     export_formats: Vec<voxelite_plugin_api::FormatContribution>,
+    palette_enabled: bool,
     requests: mpsc::Receiver<Request>,
     stop: Option<oneshot::Sender<()>>,
     worker: Option<std::thread::JoinHandle<()>>,
@@ -152,6 +153,7 @@ impl AttachedSession {
         let worker_clients = clients.clone();
         let host = crate::exports::host();
         let export_formats = host.registry().formats().map(|(_, f)| f.clone()).collect();
+        let palette_enabled = crate::palettes::enabled(&host);
         let tools = Arc::new(RwLock::new(crate::exports::tools(&host)));
         let worker_tools = tools.clone();
         let (sender, requests) = mpsc::sync_channel(16);
@@ -181,6 +183,7 @@ impl AttachedSession {
             session,
             tools,
             export_formats,
+            palette_enabled,
             requests,
             stop: Some(stop),
             worker: Some(worker),
@@ -209,19 +212,21 @@ impl AttachedSession {
     pub fn poll(&mut self, document: &mut DocumentSession) -> Vec<SessionEvent> {
         self.poll_with_host(document, &mut crate::exports::host())
     }
-    /// Process requests using the editor's live format registry and export bindings.
+    /// Process requests using the editor's live palette and export bindings.
     pub fn poll_with_host(
         &mut self,
         document: &mut DocumentSession,
         host: &mut voxelite_plugin_host::Host,
     ) -> Vec<SessionEvent> {
-        // Most ticks do not change formats; avoid cloning the full schema catalog.
+        // Most ticks do not change feature availability; avoid cloning the schema catalog.
         if !host
             .registry()
             .formats()
             .map(|(_, f)| f)
             .eq(self.export_formats.iter())
+            || self.palette_enabled != crate::palettes::enabled(host)
         {
+            self.palette_enabled = crate::palettes::enabled(host);
             self.export_formats = host.registry().formats().map(|(_, f)| f.clone()).collect();
             if let Ok(mut tools) = self.tools.write() {
                 *tools = crate::exports::tools(host);

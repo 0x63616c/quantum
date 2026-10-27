@@ -6048,6 +6048,7 @@ dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-exporters",
  "voxelite-plugin-host",
+ "voxelite-plugin-palette",
  "voxelite-render",
 ]
 
@@ -6064,6 +6065,7 @@ name = "voxelite-plugin-api"
 version = "0.2.0"
 dependencies = [
  "semver",
+ "serde",
  "serde_json",
  "thiserror 2.0.21",
  "voxelite-core",

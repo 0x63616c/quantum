@@ -10,6 +10,7 @@ voxelite-core.workspace = true
 voxelite-export = { path = "../voxelite-export" }
 semver.workspace = true
 serde_json.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 
 [lints]

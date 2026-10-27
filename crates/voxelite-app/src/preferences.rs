@@ -1,7 +1,7 @@
 //! Portable application preferences, separate from project documents.
 use crate::{
     editor::{EditorError, EditorResult},
-    palettes,
+    local_settings,
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -48,7 +48,7 @@ impl Default for Preferences {
 impl Preferences {
     /// Load preferences; missing and newly introduced fields use defaults.
     pub fn load(path: &Path) -> EditorResult<Self> {
-        let Some(bytes) = palettes::read_local(path)? else {
+        let Some(bytes) = local_settings::read_local(path)? else {
             return Ok(Self::default());
         };
         serde_json::from_slice(&bytes).map_err(|e| EditorError::Gesture(e.to_string()))
@@ -57,7 +57,7 @@ impl Preferences {
     pub fn save(&self, path: &Path) -> EditorResult<()> {
         let bytes =
             serde_json::to_vec_pretty(self).map_err(|e| EditorError::Gesture(e.to_string()))?;
-        palettes::write_local(path, &bytes)
+        local_settings::write_local(path, &bytes)
     }
 }
 
