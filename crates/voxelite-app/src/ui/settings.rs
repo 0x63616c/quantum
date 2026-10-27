@@ -8,6 +8,8 @@ use crate::{
 };
 use gpui::{prelude::*, *};
 use voxelite_app::preferences::{Appearance, Preferences};
+use voxelite_ui::tokens::{space, type_size};
+use voxelite_ui::{Button, Card, FormRow, IconButton, SidebarItem, SidebarSection, Toggle};
 
 #[derive(Clone)]
 pub(super) struct SettingsState {
@@ -272,19 +274,6 @@ impl SectionHistory {
     }
 }
 
-fn settings_color(t: Theme, dark: u32, light: u32) -> Hsla {
-    rgb(if t == Theme::Dark { dark } else { light }).into()
-}
-fn blue() -> Hsla {
-    rgb(0x007aff).into()
-}
-fn hairline(t: Theme) -> Hsla {
-    settings_color(t, 0x393939, 0xd7d7db)
-}
-fn control_bg(t: Theme) -> Hsla {
-    settings_color(t, 0x353535, 0xe6e6e9)
-}
-
 #[cfg(target_family = "wasm")]
 pub(super) struct Dismiss;
 pub(super) struct SettingsView {
@@ -295,7 +284,6 @@ pub(super) struct SettingsView {
     focus: FocusHandle,
     owner: WeakEntity<EditorView>,
     owner_window: AnyWindowHandle,
-    message: Option<String>,
 }
 #[cfg(target_family = "wasm")]
 impl EventEmitter<Dismiss> for SettingsView {}
@@ -326,7 +314,6 @@ impl SettingsView {
             focus,
             owner,
             owner_window,
-            message: None,
         }
     }
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -365,7 +352,6 @@ impl SettingsView {
     }
     fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
         self.history.visit(section);
-        self.message = None;
         self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
         cx.notify();
     }
@@ -375,7 +361,6 @@ impl SettingsView {
         } else {
             self.history.back();
         }
-        self.message = None;
         self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
         cx.notify();
     }
@@ -387,34 +372,12 @@ impl SettingsView {
         enabled: bool,
         t: Theme,
     ) -> Stateful<Div> {
-        row()
-            .id(id)
-            .role(Role::Button)
-            .aria_label(label)
-            .size(px(30.0))
-            .justify_center()
-            .rounded_full()
-            .text_color(if enabled {
-                t.text()
-            } else {
-                t.muted().opacity(0.35)
-            })
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .when(enabled, |d| {
-                d.tab_index(0)
-                    .cursor_pointer()
-                    .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-                    .hover(move |d| d.bg(t.text().opacity(0.08)))
-                    .active(move |d| d.bg(t.text().opacity(0.14)))
-            })
-            .when(!enabled, |d| d.tab_stop(false))
+        IconButton::button(id, glyph, label, t)
+            .disabled(!enabled)
+            .build()
             .tooltip(super::hint(label, t))
-            .child(icon(glyph).size(px(18.0)).text_color(if enabled {
-                t.text()
-            } else {
-                t.muted().opacity(0.35)
-            }))
     }
+
     fn sidebar_row(
         &self,
         section: Section,
@@ -425,44 +388,25 @@ impl SettingsView {
     ) -> Stateful<Div> {
         let selected = setting.is_none() && section == self.history.current();
         let label = setting.unwrap_or(section.title());
-        row()
-            .id(("settings-result", index))
-            .tab_index(0)
-            .role(Role::Button)
-            .aria_label(label)
-            .aria_selected(selected)
-            .min_h(px(if setting.is_some() { 30.0 } else { 36.0 }))
-            .px(px(10.0))
-            .gap(px(10.0))
-            .mb(px(2.0))
-            .rounded(px(8.0))
-            .when(setting.is_some(), |d| d.ml(px(22.0)).text_size(px(11.0)))
-            .when(selected, |d| d.bg(blue()).text_color(rgb(0xffffff)))
-            .when(!selected, |d| {
-                d.hover(move |d| d.bg(t.text().opacity(0.06)))
-            })
-            .cursor_pointer()
-            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-            .active(move |d| d.bg(blue().opacity(0.6)))
-            .child(
-                icon(if setting.is_some() {
-                    "chevron-right"
-                } else {
-                    section.icon()
-                })
-                .size(px(if setting.is_some() { 12.0 } else { 17.0 }))
-                .text_color(if selected {
-                    rgb(0xffffff).into()
-                } else {
-                    t.muted()
-                })
-                .flex_shrink_0(),
-            )
-            .child(div().min_w(px(0.0)).child(label))
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.navigate(section, cx);
-                window.focus(&this.focus, cx);
-            }))
+        SidebarItem::row(
+            ("settings-result", index),
+            label,
+            if setting.is_some() {
+                "chevron-right"
+            } else {
+                section.icon()
+            },
+            selected,
+            t,
+        )
+        .mb(px(space::XXS))
+        .when(setting.is_some(), |d| {
+            d.ml(px(space::XXL)).text_size(px(type_size::CAPTION))
+        })
+        .on_click(cx.listener(move |this, _, window, cx| {
+            this.navigate(section, cx);
+            window.focus(&this.focus, cx);
+        }))
     }
     fn form_row(
         &self,
@@ -471,38 +415,10 @@ impl SettingsView {
         control: impl IntoElement,
         t: Theme,
     ) -> Div {
-        row()
-            .min_h(px(68.0))
-            .px(px(16.0))
-            .py(px(12.0))
-            .gap(px(20.0))
-            .child(div().flex_1().min_w(px(0.0)).child(label.into()).when(
-                !detail.is_empty(),
-                |d| {
-                    d.child(
-                        div()
-                            .mt(px(3.0))
-                            .text_size(px(12.0))
-                            .text_color(t.muted())
-                            .child(detail),
-                    )
-                },
-            ))
-            .child(control)
+        FormRow::row(label, detail, control, t)
     }
     fn group(&self, rows: Vec<Div>, t: Theme) -> Div {
-        let count = rows.len();
-        div()
-            .rounded(px(12.0))
-            .border_1()
-            .border_color(hairline(t).opacity(0.55))
-            .overflow_hidden()
-            .bg(settings_color(t, 0x262626, 0xffffff))
-            .children(rows.into_iter().enumerate().map(|(i, row)| {
-                div().child(row).when(i + 1 < count, |d| {
-                    d.child(div().mx(px(16.0)).h(px(1.0)).bg(hairline(t).opacity(0.7)))
-                })
-            }))
+        Card::new(t).rows(rows)
     }
     fn toggle(
         &self,
@@ -512,56 +428,12 @@ impl SettingsView {
         t: Theme,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
-        row()
-            .id(id)
-            .tab_index(0)
-            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-            .active(move |d| d.bg(t.selected()))
-            .aria_label(id)
-            .focus(move |d| d.border_2().border_color(t.accent()))
-            .w(px(38.0))
-            .h(px(23.0))
-            .flex_shrink_0()
-            .p(px(3.0))
-            .rounded(px(20.0))
-            .bg(if value {
-                blue()
-            } else {
-                t.muted().opacity(0.28)
-            })
-            .when(value, |d| d.justify_end())
-            .cursor_pointer()
+        Toggle::switch(id, id, value, t)
             .tooltip(super::hint(if value { "On" } else { "Off" }, t))
-            .child(
-                div()
-                    .size(px(17.0))
-                    .rounded_full()
-                    .bg(rgb(0xffffff))
-                    .shadow_sm(),
-            )
             .on_click(cx.listener(move |_, _, _, cx| change(cx, edit)))
     }
     fn button(&self, id: &'static str, label: &'static str, t: Theme) -> Stateful<Div> {
-        row()
-            .id(id)
-            .tab_index(0)
-            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-            .active(move |d| d.bg(t.selected()))
-            .aria_label(label)
-            .focus(move |d| d.border_color(t.accent()))
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .h(px(30.0))
-            .px(px(12.0))
-            .justify_center()
-            .flex_shrink_0()
-            .rounded(px(7.0))
-            .border_1()
-            .border_color(hairline(t))
-            .bg(control_bg(t))
-            .text_size(px(12.0))
-            .cursor_pointer()
-            .hover(move |d| d.bg(t.text().opacity(0.12)))
-            .child(label)
+        Button::new(id, label, t).build()
     }
     fn appearance_preview(appearance: Appearance) -> Div {
         let fill: Background = match appearance {
@@ -654,7 +526,7 @@ impl SettingsView {
                     ),
                     self.form_row(
                         "Voxelite",
-                        "A small workspace for building in voxels.",
+                        "A voxel workspace by Calum",
                         mono(format!("v{}", env!("CARGO_PKG_VERSION"))),
                         t,
                     ),
@@ -692,17 +564,17 @@ impl SettingsView {
                                         .min_w(px(0.0))
                                         .p(px(7.0))
                                         .rounded(px(10.0))
-                                        .when(selected, |d| d.bg(blue().opacity(0.08)))
+                                        .when(selected, |d| d.bg(t.tint().opacity(0.08)))
                                         .cursor_pointer()
                                         .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-                                        .hover(move |d| d.bg(blue().opacity(0.1)))
+                                        .hover(move |d| d.bg(t.tint().opacity(0.1)))
                                         .child(
                                             Self::appearance_preview(appearance)
                                                 .border_2()
                                                 .border_color(if selected {
-                                                    blue()
+                                                    t.tint()
                                                 } else {
-                                                    hairline(t)
+                                                    t.separator()
                                                 }),
                                         )
                                         .child(
@@ -711,7 +583,7 @@ impl SettingsView {
                                                 .text_center()
                                                 .font_weight(FontWeight::SEMIBOLD)
                                                 .text_color(if selected {
-                                                    blue()
+                                                    t.tint()
                                                 } else {
                                                     t.text()
                                                 })
@@ -789,25 +661,19 @@ impl SettingsView {
                                         .px(px(8.0))
                                         .justify_center()
                                         .rounded(px(6.0))
-                                        .bg(control_bg(t))
+                                        .bg(t.control())
                                         .child(super::shortcut_hint::sheet_shortcut(op)),
                                 )
                                 // The registry exposes fixed bindings, all already at their defaults.
                                 .child(
-                                    row()
-                                        .id(("reset-shortcut", i))
-                                        .tab_stop(false)
+                                    Button::new(("reset-shortcut", i), "Reset", t)
+                                        .disabled(true)
+                                        .build()
                                         .aria_label("Reset shortcut")
-                                        .h(px(30.0))
-                                        .px(px(10.0))
-                                        .rounded(px(6.0))
-                                        .bg(control_bg(t).opacity(0.5))
-                                        .text_color(t.muted().opacity(0.5))
                                         .tooltip(super::hint(
                                             "This shortcut already uses its built-in default.",
                                             t,
-                                        ))
-                                        .child("Reset"),
+                                        )),
                                 ),
                             t,
                         )
@@ -839,24 +705,28 @@ impl SettingsView {
                 #[cfg(not(target_family = "wasm"))]
                 let updates_available = super::updates_available();
                 #[cfg(not(target_family = "wasm"))]
-                rows.push(self.form_row(
-                    "Software updates",
-                    if updates_available {
-                        "Check for the latest version of Voxelite."
-                    } else {
-                        "Automatic updates are not available in this build."
-                    },
-                    div().when(updates_available, |d| {
-                        d.child(
-                            self.button("check-updates", "Check for Updates…", t)
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.message = super::check_for_updates().map(str::to_owned);
-                                    cx.notify();
-                                })),
-                        )
-                    }),
-                    t,
-                ));
+                rows.push(
+                    self.form_row(
+                        "Software updates",
+                        if updates_available {
+                            "Check for the latest version of Voxelite."
+                        } else {
+                            "Updates are unavailable in this build."
+                        },
+                        Button::new("check-updates", "Check for Updates…", t)
+                            .disabled(!updates_available)
+                            .build()
+                            .aria_description(if updates_available {
+                                "Check for a new version"
+                            } else {
+                                "Updates are unavailable in this build."
+                            })
+                            .when(updates_available, |d| {
+                                d.on_click(cx.listener(|_, _, _, _| super::check_for_updates()))
+                            }),
+                        t,
+                    ),
+                );
                 #[cfg(target_family = "wasm")]
                 rows.push(self.form_row(
                     "Browser edition",
@@ -925,16 +795,7 @@ impl Render for SettingsView {
         for result in &results {
             if query.trim().is_empty() && result.section.group() != previous_group {
                 previous_group = result.section.group();
-                sidebar_rows = sidebar_rows.child(
-                    div()
-                        .px(px(10.0))
-                        .pt(px(17.0))
-                        .pb(px(7.0))
-                        .text_size(px(10.0))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(t.muted())
-                        .child(previous_group.to_uppercase()),
-                );
+                sidebar_rows = sidebar_rows.child(SidebarSection::header(previous_group, t));
             }
             sidebar_rows = sidebar_rows.child(self.sidebar_row(result.section, None, index, t, cx));
             index += 1;
@@ -959,7 +820,8 @@ impl Render for SettingsView {
             );
         }
         if window.is_window_active() && cfg!(target_os = "macos") {
-            cx.set_menus(actions::menus(
+            cx.set_menus(actions::menus_for_window(
+                window.is_fullscreen(),
                 |_| false,
                 |op| {
                     op.availability(actions::CommandContext::Settings {
@@ -978,7 +840,7 @@ impl Render for SettingsView {
             .key_context("Settings")
             .track_focus(&self.focus)
             .size_full()
-            .bg(settings_color(t, 0x1e1e1e, 0xf5f5f7))
+            .bg(t.surface())
             .font(gpui::font(if cfg!(target_os = "macos") {
                 ".AppleSystemUIFont"
             } else {
@@ -1000,17 +862,21 @@ impl Render for SettingsView {
                 }
                 match op {
                     Op::Settings => window.activate_window(),
-                    Op::About => this.navigate(Section::General, cx),
+                    Op::About => this.editor_action(Op::About, cx),
                     Op::Help => this.navigate(Section::Shortcuts, cx),
                     Op::CheckUpdates => {
                         this.navigate(Section::Updates, cx);
-                        this.message = super::check_for_updates().map(str::to_owned);
+                        super::check_for_updates();
                     }
                     Op::Hide => cx.hide(),
                     Op::HideOthers => cx.hide_other_apps(),
                     Op::ShowAll => cx.unhide_other_apps(),
                     Op::Minimize => window.minimize_window(),
                     Op::ZoomWindow => window.zoom_window(),
+                    Op::FullScreen => {
+                        #[cfg(not(target_family = "wasm"))]
+                        window.toggle_fullscreen();
+                    }
                     Op::Quit => this.editor_action(Op::Quit, cx),
                     _ => {}
                 }
@@ -1048,8 +914,8 @@ impl Render for SettingsView {
                             .gap(px(2.0))
                             .rounded_full()
                             .border_1()
-                            .border_color(hairline(t))
-                            .bg(settings_color(t, 0x282828, 0xebebed))
+                            .border_color(t.separator())
+                            .bg(t.surface_raised())
                             .child(
                                 self.chrome_button(
                                     "settings-sidebar-toggle",
@@ -1133,36 +999,25 @@ impl Render for SettingsView {
                                 .flex_col()
                                 .rounded(px(12.0))
                                 .border_1()
-                                .border_color(hairline(t))
-                                .bg(settings_color(t, 0x191919, 0xebebed))
+                                .border_color(t.separator())
+                                .bg(t.sidebar())
                                 .child(
-                                    row()
-                                        .h(px(34.0))
-                                        .flex_shrink_0()
-                                        .px(px(9.0))
-                                        .gap(px(6.0))
-                                        .mb(px(4.0))
-                                        .rounded_full()
-                                        .bg(settings_color(t, 0x2b2b2b, 0xe0e0e3))
-                                        .border_1()
-                                        .border_color(if self.search.read(cx).focused(window) {
-                                            blue()
-                                        } else {
-                                            transparent_black()
-                                        })
-                                        .child(
-                                            icon("search")
-                                                .size(px(15.0))
-                                                .flex_shrink_0()
-                                                .text_color(t.muted()),
-                                        )
-                                        .child(
-                                            div()
-                                                .flex_1()
-                                                .min_w(px(0.0))
-                                                .child(self.search.clone()),
-                                        )
-                                        .when(!query.is_empty(), |d| {
+                                    voxelite_ui::TextField::search_row(
+                                        t,
+                                        self.search.read(cx).focused(window),
+                                    )
+                                    .flex_shrink_0()
+                                    .mb(px(space::XS))
+                                    .child(
+                                        icon("search")
+                                            .size(px(15.0))
+                                            .flex_shrink_0()
+                                            .text_color(t.muted()),
+                                    )
+                                    .child(div().flex_1().min_w(px(0.0)).child(self.search.clone()))
+                                    .when(
+                                        !query.is_empty(),
+                                        |d| {
                                             d.child(
                                                 self.chrome_button(
                                                     "clear-settings-search",
@@ -1179,7 +1034,8 @@ impl Render for SettingsView {
                                                     window.focus(&this.search.focus_handle(cx), cx);
                                                 })),
                                             )
-                                        }),
+                                        },
+                                    ),
                                 )
                                 .child(sidebar_rows),
                         )
@@ -1209,7 +1065,7 @@ impl Render for SettingsView {
                                     )
                                     .child(self.content(section, t, cx)),
                             )
-                            .when_some(state.error.or(self.message.clone()), |d, message| {
+                            .when_some(state.error, |d, message| {
                                 d.child(
                                     div()
                                         .px(px(28.0))
@@ -1235,46 +1091,58 @@ impl EditorView {
         let owner_window = window.window_handle();
         #[cfg(not(target_family = "wasm"))]
         {
-            if let Some(handle) = self.settings_window
-                && handle
-                    .update(cx, |view, window, cx| {
-                        view.navigate(section, cx);
-                        cx.notify();
-                        window.activate_window();
-                    })
-                    .is_ok()
-            {
-                return;
-            }
-            let bounds = Bounds::centered(None, size(px(880.0), px(640.0)), cx);
-            match cx.open_window(
-                WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(bounds)),
-                    app_owns_titlebar_drag: cfg!(target_os = "macos"),
-                    window_min_size: Some(size(px(760.0), px(520.0))),
-                    titlebar: Some(TitlebarOptions {
-                        title: Some("Voxelite Settings".into()),
-                        appears_transparent: true,
-                        traffic_light_position: Some(point(px(18.0), px(23.0))),
-                    }),
-                    window_background: if cfg!(target_os = "macos") {
-                        WindowBackgroundAppearance::Blurred
-                    } else {
-                        WindowBackgroundAppearance::Opaque
-                    },
-                    app_id: Some("dev.voxelite.editor".into()),
-                    ..Default::default()
-                },
-                |window, cx| {
-                    cx.new(|cx| SettingsView::new(section, owner, owner_window, window, cx))
-                },
-            ) {
-                Ok(handle) => self.settings_window = Some(handle),
-                Err(error) => {
-                    self.status = format!("Could not open settings: {error}").into();
-                    self.error = true;
+            let existing = self.settings_window;
+            // open_window paints its first frame immediately. Defer until this
+            // EditorView update ends: settings reads the owner's live registry.
+            cx.defer(move |cx| {
+                if let Some(handle) = existing
+                    && handle
+                        .update(cx, |view, window, cx| {
+                            view.navigate(section, cx);
+                            window.activate_window();
+                            cx.notify();
+                        })
+                        .is_ok()
+                {
+                    return;
                 }
-            }
+                let bounds = Bounds::centered(None, size(px(880.0), px(640.0)), cx);
+                let view_owner = owner.clone();
+                let result = cx.open_window(
+                    WindowOptions {
+                        window_bounds: Some(WindowBounds::Windowed(bounds)),
+                        app_owns_titlebar_drag: cfg!(target_os = "macos"),
+                        window_min_size: Some(size(px(760.0), px(520.0))),
+                        titlebar: Some(TitlebarOptions {
+                            title: Some("Voxelite Settings".into()),
+                            appears_transparent: true,
+                            traffic_light_position: Some(point(px(18.0), px(23.0))),
+                        }),
+                        window_background: if cfg!(target_os = "macos") {
+                            WindowBackgroundAppearance::Blurred
+                        } else {
+                            WindowBackgroundAppearance::Opaque
+                        },
+                        app_id: Some("dev.voxelite.editor".into()),
+                        ..Default::default()
+                    },
+                    |window, cx| {
+                        cx.new(|cx| {
+                            SettingsView::new(section, view_owner, owner_window, window, cx)
+                        })
+                    },
+                );
+                let _ = owner.update(cx, |this, cx| {
+                    match result {
+                        Ok(handle) => this.settings_window = Some(handle),
+                        Err(error) => {
+                            this.status = format!("Could not open settings: {error}").into();
+                            this.error = true;
+                        }
+                    }
+                    cx.notify();
+                });
+            });
         }
         #[cfg(target_family = "wasm")]
         {

@@ -34,6 +34,7 @@ menu View
   Top | Top view | icon=square | shortcut= | os= | checked=false | disabled=false
   Grid | Toggle grid | icon=grid | shortcut= | os= | checked=false | disabled=false
   Theme | Appearance… | icon=sun | shortcut= | os= | checked=false | disabled=false
+  FullScreen | Enter Full Screen | icon=fit | shortcut=⌃⌘F | os= | checked=false | disabled=false
 menu Tools
   Place | Place | icon=place | shortcut=B | os= | checked=false | disabled=false
   Erase | Erase | icon=erase | shortcut=E | os= | checked=false | disabled=false
@@ -64,7 +65,7 @@ menu Help
 in-window menus
   File: [New, Open, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
-  View: [Frame, Front, Right, Top, Grid, Theme]
+  View: [Frame, Front, Right, Top, Grid, Theme, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
   Layers: [AddLayer]
   Palette: [ShowPalette, Palette, ManagePalettes]
@@ -87,6 +88,7 @@ Cmd-K
   Top | Top view | square | 
   Grid | Toggle grid | grid | 
   Theme | Appearance… | sun | 
+  FullScreen | Toggle Full Screen | fit | ⌃⌘F
   Place | Place | place | B
   Erase | Erase | erase | E
   Paint | Paint | paint | P
@@ -128,6 +130,7 @@ shortcut sheet
   Top | View | 
   Grid | View | 
   Theme | View | 
+  FullScreen | View | ⌃⌘F
   Place | Tools | B
   Erase | Tools | E
   Paint | Tools | P
@@ -164,6 +167,7 @@ bindings
   Commands | super-k | Editor
   Settings | super-, | global
   Frame | f | Editor
+  FullScreen | ctrl-super-f | global
   Place | b | Editor
   Erase | e | Editor
   Paint | p | Editor
@@ -206,6 +210,7 @@ menu View
   Top | Top view | icon=square | shortcut= | os= | checked=false | disabled=false
   Grid | Toggle grid | icon=grid | shortcut= | os= | checked=false | disabled=false
   Theme | Appearance… | icon=sun | shortcut= | os= | checked=false | disabled=false
+  FullScreen | Enter Full Screen | icon=fit | shortcut=F11 | os= | checked=false | disabled=false
 menu Tools
   Place | Place | icon=place | shortcut=B | os= | checked=false | disabled=false
   Erase | Erase | icon=erase | shortcut=E | os= | checked=false | disabled=false
@@ -237,7 +242,7 @@ menu Help
 in-window menus
   File: [New, Open, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
-  View: [Frame, Front, Right, Top, Grid, Theme]
+  View: [Frame, Front, Right, Top, Grid, Theme, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
   Layers: [AddLayer]
   Palette: [ShowPalette, Palette, ManagePalettes]
@@ -260,6 +265,7 @@ Cmd-K
   Top | Top view | square | 
   Grid | Toggle grid | grid | 
   Theme | Appearance… | sun | 
+  FullScreen | Toggle Full Screen | fit | F11
   Place | Place | place | B
   Erase | Erase | erase | E
   Paint | Paint | paint | P
@@ -297,6 +303,7 @@ shortcut sheet
   Top | View | 
   Grid | View | 
   Theme | View | 
+  FullScreen | View | F11
   Place | Tools | B
   Erase | Tools | E
   Paint | Tools | P
@@ -329,6 +336,7 @@ bindings
   Commands | ctrl-k | Editor
   Settings | ctrl-, | global
   Frame | f | Editor
+  FullScreen | f11 | global
   Place | b | Editor
   Erase | e | Editor
   Paint | p | Editor

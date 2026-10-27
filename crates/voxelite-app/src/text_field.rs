@@ -2,6 +2,7 @@
 use crate::{actions::ClipboardOp, shortcuts::ShortcutPlatform, theme::Theme};
 use gpui::{prelude::*, *};
 use std::ops::Range;
+use voxelite_ui::tokens::{metrics, space, type_size};
 
 pub struct TextField {
     pub text: String,
@@ -14,6 +15,7 @@ pub struct TextField {
     placeholder: &'static str,
     theme: Theme,
     embedded: bool,
+    numeric_cells: Option<usize>,
     layout: Option<ShapedLine>,
     bounds: Bounds<Pixels>,
 }
@@ -30,6 +32,7 @@ impl TextField {
             placeholder,
             theme: Theme::Dark,
             embedded: false,
+            numeric_cells: None,
             layout: None,
             bounds: Bounds::default(),
         })
@@ -50,6 +53,10 @@ impl TextField {
     /// Let a surrounding search control provide the background and focus border.
     pub fn embed(&mut self) {
         self.embedded = true;
+    }
+    /// Use fixed-width numeric/hex presentation while retaining the native editor.
+    pub fn numeric(&mut self, cells: usize) {
+        self.numeric_cells = Some(cells);
     }
     pub fn focused(&self, window: &Window) -> bool {
         self.focus.is_focused(window)
@@ -270,28 +277,24 @@ impl Render for TextField {
         let entity = cx.entity();
         let focus = self.focus.clone();
         let focused = self.focused(window);
-        div()
+        let frame = voxelite_ui::TextField::new(t)
+            .focused(focused)
+            .embedded(self.embedded);
+        let frame = if let Some(cells) = self.numeric_cells {
+            frame.numeric(cells)
+        } else {
+            frame
+        };
+        frame
+            .build()
             .id("text-field")
+            .role(Role::TextInput)
+            .aria_label(self.placeholder)
+            .aria_placeholder(self.placeholder)
+            .aria_value(self.text.clone())
             .tab_index(0)
             .track_focus(&self.focus)
             .key_context("TextField")
-            .h(px(38.0))
-            .w_full()
-            .px(px(10.0))
-            .py(px(9.0))
-            .rounded(px(6.0))
-            .border_1()
-            .border_color(if focused { t.accent() } else { t.line() })
-            .bg(t.background())
-            .when(self.embedded, |d| {
-                d.h(px(30.0))
-                    .px(px(0.0))
-                    .py(px(5.0))
-                    .border_0()
-                    .bg(transparent_black())
-            })
-            .overflow_hidden()
-            .cursor_text()
             .on_key_down(cx.listener(Self::key))
             .on_action(cx.listener(|this, op: &ClipboardOp, _, cx| {
                 this.clipboard(*op, cx);
@@ -378,7 +381,7 @@ impl Render for TextField {
                             };
                             let line = window.text_system().shape_line(
                                 content.clone(),
-                                px(13.0),
+                                px(type_size::BODY_LG),
                                 &[TextRun {
                                     len: content.len(),
                                     font: style.font(),
@@ -396,7 +399,8 @@ impl Render for TextField {
                             };
                             let caret_x = line.x_for_index(caret);
                             if focused {
-                                let width = (bounds.size.width - px(2.0)).max(px(1.0));
+                                let width =
+                                    (bounds.size.width - px(space::XXS)).max(px(metrics::EDGE));
                                 this.scroll_x =
                                     this.scroll_x.min(caret_x).max(caret_x - width).max(px(0.0));
                             }
@@ -411,14 +415,21 @@ impl Render for TextField {
                                     Bounds::new(
                                         point(origin.x + a, bounds.top()),
                                         size(
-                                            if a == b { px(1.0) } else { b - a },
+                                            if a == b { px(metrics::EDGE) } else { b - a },
                                             bounds.size.height,
                                         ),
                                     ),
                                     t.accent().opacity(if a == b { 1.0 } else { 0.25 }),
                                 ));
                             }
-                            let _ = line.paint(origin, px(19.0), TextAlign::Left, None, window, cx);
+                            let _ = line.paint(
+                                origin,
+                                px(type_size::LINE),
+                                TextAlign::Left,
+                                None,
+                                window,
+                                cx,
+                            );
                             this.layout = Some(line);
                             this.bounds = bounds;
                         });
