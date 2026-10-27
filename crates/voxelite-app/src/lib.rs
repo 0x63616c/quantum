@@ -12,6 +12,7 @@ pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;
 pub mod preferences;
+pub mod reduce_motion;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;
 

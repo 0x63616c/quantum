@@ -18,7 +18,7 @@ use voxelite_plugin_api::{
     SettingValue, ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
 };
 use voxelite_plugin_host::{Host, HostError};
-use voxelite_render::{Camera, PresetView, Projection, RenderOptions};
+use voxelite_render::{Camera, OrbitPose, PresetView, Projection, RenderOptions};
 
 /// Supply the CPU-rendered view selected by the app to a snapshot exporter.
 pub fn render_view(
@@ -140,13 +140,33 @@ pub struct OrbitCamera {
     pub target: DVec3,
     /// Azimuth in radians.
     pub yaw: f64,
-    /// Elevation in radians; clamped away from pole singularities.
+    /// Elevation in radians; direct orbit gestures clamp away from the poles.
     pub pitch: f64,
     /// Vertical world-space viewport extent.
     pub span: f64,
     distance: f64,
 }
 impl OrbitCamera {
+    /// Complete pose for interpolation, including the private eye distance.
+    pub fn pose(self) -> OrbitPose {
+        OrbitPose {
+            target: self.target.to_array(),
+            yaw: self.yaw,
+            pitch: self.pitch,
+            span: self.span,
+            distance: self.distance,
+        }
+    }
+    /// Restore a pose unchanged, preserving exact top views and endpoints.
+    pub fn from_pose(pose: OrbitPose) -> Self {
+        Self {
+            target: pose.target.into(),
+            yaw: pose.yaw,
+            pitch: pose.pitch,
+            span: pose.span,
+            distance: pose.distance,
+        }
+    }
     /// Fit visible content with a comfortable margin.
     pub fn fit(snapshot: &Snapshot, aspect: f64) -> Self {
         Self::fit_view(snapshot, aspect, PresetView::Iso)
@@ -1073,6 +1093,30 @@ mod tests {
         e.undo().unwrap();
         assert_eq!(e.layer, first);
         e.apply_at([1, 1, 1]).unwrap();
+    }
+    #[test]
+    fn camera_pose_roundtrips_and_interpolation_preserves_destination() {
+        let e = editor();
+        let a = OrbitCamera::fit_view(e.snapshot(), 1.3, PresetView::Left);
+        let b = OrbitCamera::fit_view(e.snapshot(), 0.8, PresetView::Top);
+        assert_eq!(OrbitCamera::from_pose(a.pose()), a);
+        assert_eq!(OrbitCamera::from_pose(b.pose()), b);
+        assert_eq!(OrbitCamera::from_pose(a.pose().lerp(b.pose(), 1.0)), b);
+        assert_eq!(b.pitch, std::f64::consts::FRAC_PI_2);
+    }
+    #[test]
+    fn edits_undo_and_redo_leave_the_camera_unchanged() {
+        let mut e = editor();
+        e.camera.orbit(23.0, -7.0);
+        e.camera.pan(20.0, -10.0, 600.0);
+        e.camera.zoom(30.0);
+        let camera = e.camera;
+        e.apply_at([2, 3, 4]).unwrap();
+        assert_eq!(e.camera, camera);
+        e.undo().unwrap();
+        assert_eq!(e.camera, camera);
+        e.redo().unwrap();
+        assert_eq!(e.camera, camera);
     }
     #[test]
     fn rays_hit_nearest_visible_layer_and_placement_face() {

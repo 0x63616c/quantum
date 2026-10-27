@@ -7,6 +7,7 @@ mod agent;
 mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
+mod camera_anim;
 #[cfg(target_os = "linux")]
 mod capture;
 mod command_palette;
@@ -91,6 +92,8 @@ pub struct EditorView {
     zoom_reference_span: f64,
     camera_view: Option<Op>,
     camera_fitted: bool,
+    camera_anim: voxelite_render::CameraAnimator,
+    anim_epoch: web_time::Instant,
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
@@ -269,6 +272,8 @@ impl EditorView {
             cursor: editor.snapshot().bounds.min,
             camera_view: Some(Op::Frame),
             camera_fitted: true,
+            camera_anim: voxelite_render::CameraAnimator::new(),
+            anim_epoch: web_time::Instant::now(),
             zoom_reference_span: editor.camera.span,
             viewport: viewport::Viewport::new(editor.camera),
             editor,
@@ -331,6 +336,7 @@ impl EditorView {
         cx.notify();
     }
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
+        self.cancel_camera_animation();
         self.pause_history(cx);
         self.timeline.dragging = false;
         self.zoom_reference_span = editor.camera.span;
@@ -546,12 +552,12 @@ impl EditorView {
                     Op::Top => PresetView::Top,
                     _ => PresetView::Iso,
                 };
-                self.editor.camera =
+                let destination =
                     OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
-                self.zoom_reference_span = self.editor.camera.span;
+                self.zoom_reference_span = destination.span;
                 self.camera_view = Some(op);
                 self.camera_fitted = true;
-                self.request_render(cx);
+                self.animate_camera_to(destination, cx);
             }
             Op::Place | Op::Erase | Op::Paint | Op::Fill | Op::Box | Op::Picker => {
                 self.editor.tool = match op {
@@ -640,6 +646,7 @@ impl EditorView {
             Some(MouseButton::Right | MouseButton::Middle)
         ) {
             if let Some(previous) = self.drag {
+                self.cancel_camera_animation();
                 let dx = f64::from(f32::from(e.position.x - previous.x));
                 let dy = f64::from(f32::from(e.position.y - previous.y));
                 if e.pressed_button == Some(MouseButton::Middle) || e.modifiers.shift {
@@ -1280,6 +1287,7 @@ impl EditorView {
                     ScrollDelta::Pixels(p) => f64::from(f32::from(p.y)),
                     ScrollDelta::Lines(p) => f64::from(p.y) * 40.0,
                 };
+                this.cancel_camera_animation();
                 this.agent.follow = false;
                 this.editor.camera.zoom(delta);
                 this.camera_fitted = false;
