@@ -9,8 +9,9 @@ version, MCP protocol version, and `.voxl` version evolve independently.
 This is the standalone **MCP stage** requested for `voxelite-mcp`, not completion
 of PLAN.md's full application/session/plugin inventory. Tool names follow the
 stage's document/voxels/layers naming and have the `voxelite_` prefix. The response
-API version is `voxelite.v1`. It builds exclusively on core, format, export, render,
-and rmcp. There is no GUI, HTTP listener, live editor attachment, plugin runtime,
+API version is `voxelite.v1`. It builds on core, format, render, the portable plugin
+API/host, built-in plugins and rmcp. Built-in exporters own GLB/PNG encoding;
+render feedback uses `png` directly. There is no GUI, HTTP listener, live editor attachment, plugin runtime,
 upload/artifact store, durable session journal, or recovery daemon in this stage.
 
 ## Protocol

@@ -55,9 +55,10 @@ service locator.
 voxel and face normal, bounded work-plane intersection, visible composite sample,
 layer voxel lookup, palette, selected color, active layer, visibility/lock state
 and document bounds. It exposes no engine, mutations, mirror settings or GUI.
-The API depends on `voxelite-core` and `voxelite-export` and re-exports the core
-command/value types and the shared GLB/PNG byte encoders;
-plugin crates still depend only on the API.
+The API depends on `voxelite-core` and `voxelite-mesh` and re-exports the core
+command/value types and portable greedy geometry. It defines export errors without
+a renderer or built-in exporter dependency; plugin crates still depend only on the API
+and external crates.
 
 `Plugin` exposes `manifest`, `contribute`, default-unbound `tool(id)` and
 `command_transform(id)`, `overlay(id)`, `palette_panel(id)`, `comments_panel(id)` and `exporter(id)` implementation lookups, and default no-op
@@ -66,7 +67,7 @@ conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool loo
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.7.0`, independently of plugin implementation versions and `.voxl` or
+is `0.8.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -92,6 +93,9 @@ actions, recent colors, and import/export metadata to public palette types.
 The `0.6.0` bump adds the `Pin` variant to the exhaustive `OverlayPrimitive` enum,
 portable discussion panel types and a default-unbound `comments_panel` lookup.
 Optional overlay projection/picking/discussion queries default to no capability.
+The `0.8.0` bump removes the shared `encoding` module: GLB/PNG encoders now belong
+to `voxelite-plugin-exporters::encoding`. Export errors are defined in the API with
+the same variants and messages; export callbacks, images and capabilities are unchanged.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -198,11 +202,13 @@ remain core operations and are never dependent on a format contribution.
 `ExportCx` exposes an immutable captured `Snapshot` (content, palette and bounds)
 and rendering of only the host-selected view or contact sheet to RGBA8 pixels.
 It supplies no engine, undo history, GUI, filesystem or general service access.
-The core-side `voxelite-export` encoders remain unchanged. The plugin accesses GLB
-and PNG encoding only through `voxelite-plugin-api::encoding`; HEX/GPL use the
-API's existing palette type. No extra workspace dependency is allowed for plugins.
-The dependency-rule tests explicitly reject direct `voxelite-export` dependencies
-and permit the API to depend on it, without widening the allowed plugin set.
+The GLB and PNG encoders live in `voxelite-plugin-exporters::encoding`, with
+byte-stable characterization fixtures alongside them. Geometry is supplied through
+`voxelite-plugin-api`; HEX/GPL use the API's existing palette type. No extra workspace
+dependency is allowed for plugins. The dependency-rule tests explicitly reject
+direct `voxelite-mesh` dependencies and permit the API to depend on it, without
+widening the allowed plugin set. MCP render feedback encodes PNG directly with
+`png`, independently of exporter enablement.
 
 The host admits callback lookup only for enabled declarations with `export = true`.
 A sendable `ExportJob` captures the stateless callback so native rendering/encoding

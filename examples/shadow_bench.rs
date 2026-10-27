@@ -1,5 +1,5 @@
 //! Reproducible CPU shadow timings and optional wide/close demo PNGs.
-//! Run: cargo run --release -p voxelite-export --example shadow_bench -- /tmp/shadows
+//! Run: cargo run --release -p voxelite-plugin-exporters --example shadow_bench -- /tmp/shadows
 //! Occupancy internals: cargo test -p voxelite-render --release --locked occupancy_timings -- --ignored --nocapture
 //! Uses 1024x640 because the public CPU renderer caps either dimension at 1024.
 use std::{hint::black_box, path::Path, time::Instant};

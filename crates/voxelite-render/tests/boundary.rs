@@ -33,6 +33,7 @@ fn normal_workspace_dependencies_preserve_renderer_boundary() {
         .iter()
         .map(|package| package["name"].as_str().unwrap())
         .collect();
+    assert!(!workspace_names.contains("voxelite-export"));
     let normal_dependencies = |name: &str| -> BTreeSet<&str> {
         packages
             .iter()
@@ -53,7 +54,6 @@ fn normal_workspace_dependencies_preserve_renderer_boundary() {
         BTreeSet::from(["voxelite-core", "voxelite-mesh"])
     );
     for name in [
-        "voxelite-export",
         "voxelite-plugin-host",
         "voxelite-plugin-exporters",
         "voxelite-plugin-api",

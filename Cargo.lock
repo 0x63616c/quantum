@@ -6018,21 +6018,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "voxelite-export"
-version = "0.3.1"
-dependencies = [
- "gltf",
- "png 0.18.1",
- "proptest",
- "serde_json",
- "thiserror 2.0.21",
- "voxelite-core",
- "voxelite-format",
- "voxelite-mesh",
- "voxelite-render",
-]
-
-[[package]]
 name = "voxelite-format"
 version = "0.3.1"
 dependencies = [
@@ -6058,7 +6043,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "voxelite-core",
- "voxelite-export",
  "voxelite-format",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
@@ -6090,12 +6074,13 @@ dependencies = [
 name = "voxelite-plugin-api"
 version = "0.3.1"
 dependencies = [
+ "png 0.18.1",
  "semver",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "voxelite-core",
- "voxelite-export",
+ "voxelite-mesh",
 ]
 
 [[package]]
@@ -6118,7 +6103,12 @@ dependencies = [
 name = "voxelite-plugin-exporters"
 version = "0.3.1"
 dependencies = [
+ "gltf",
+ "png 0.18.1",
+ "proptest",
  "serde_json",
+ "voxelite-core",
+ "voxelite-format",
  "voxelite-plugin-api",
  "voxelite-plugin-host",
  "voxelite-render",
