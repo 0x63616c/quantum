@@ -6037,6 +6037,7 @@ dependencies = [
  "jsonschema",
  "png 0.18.1",
  "rmcp",
+ "rustix",
  "serde",
  "serde_json",
  "tempfile",
@@ -6204,10 +6205,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "url",
- "uuid",
  "voxelite-format",
- "voxelite-mcp",
- "voxelite-plugins-builtin",
 ]
 
 [[package]]

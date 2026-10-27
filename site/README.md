@@ -29,14 +29,22 @@ previews, structured data and crawl files. `sitemap.xml` lists the homepage,
 download page, docs and editor; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
-from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
+from the committed [tool catalog](../spec/mcp/v1/tools.json), without linking the
+MCP server. The MCP crate checks that catalog against `VoxeliteServer::tools()`.
+After changing tool metadata or schemas, refresh it with:
+
+```sh
+UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog
+```
+
+Commit the refreshed catalog; do not edit generated `docs/` or schema copies.
 
 Commit the sources, not the built site. CI builds the site on every PR and push
 to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
 `index.html`, `404.html`, `download/`, `docs/`, `docs.md`, `llms*.txt`,
 `sitemap.xml`, `robots.txt`, `assets/mcp-tools.json`, `assets/integrations/`,
 `assets/skills/`, `assets/voxelite-skills.zip` and `app/`. Keep `content/`, this
-README, `PROGRESS.md`, `vercel.json`, `appcast.xml` and the remaining assets
+README, `vercel.json`, `appcast.xml` and the remaining assets
 (styles, scripts, fonts, images, badges, licenses and sample project) tracked:
 the site build does not recreate them. The appcast is also a generator input.
 
@@ -100,8 +108,9 @@ node scripts/check-site-install.mjs
 The site checks verify both Markdown aliases, discovery links, local links and
 fragments, exact code/schema parity, and inclusion in both LLM indexes. The Rust
 tests validate fresh generator output, Markdown aliases, LLM indexes, navigation
-and the live MCP catalog. Browser checks cover complete Markdown copying,
-download/clipboard failures, and viewing raw Markdown without JavaScript.
+and the versioned MCP catalog. The MCP crate tests catalog freshness and runs the
+published tutorial against the server. Browser checks cover complete Markdown
+copying, download/clipboard failures, and viewing raw Markdown without JavaScript.
 
 Capture output is ignored by Git. Historical captures and verification records
 are in the [private archive](https://github.com/0x63616c/quantum-archive).

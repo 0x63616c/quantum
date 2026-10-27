@@ -137,6 +137,9 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
 | All Python regressions | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
+| Dependency licenses, advisories and sources | `cargo deny check` |
+| Unused dependencies | `cargo machete` |
 | Render harness help | `cargo xtask --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
@@ -285,7 +288,12 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 - Edit site templates in `crates/voxelite-site/templates/`, article bodies in
   `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
   in `skills/`. Run `scripts/build-site.sh`, or `--skip-web` with a verified bundle.
-- Generated site pages, Markdown/LLM exports, crawl files, MCP schemas and
+- The site reads the committed `spec/mcp/v1/tools.json` catalog without linking
+  `voxelite-mcp`. After changing MCP tool metadata or schemas, refresh and commit
+  it with `UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
+  The MCP test checks exact bytes against `VoxeliteServer::tools()`; the site
+  preserves that tool and JSON key order in its generated references.
+- Generated site pages, Markdown/LLM exports, crawl files, MCP catalog copies and
   downloadable skill/integration copies are ignored. Do not commit them: CI
   builds the site on PRs and `main`, then publishes trusted `main` builds to
   `site-dist`. Keep authored assets, `site/content/`, `site/vercel.json` and the

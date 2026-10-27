@@ -10,8 +10,8 @@ use std::{
     borrow::Cow,
     io,
     os::unix::{
-        fs::{MetadataExt, PermissionsExt},
-        net::UnixListener,
+        fs::{DirBuilderExt, MetadataExt, PermissionsExt},
+        net::{SocketAddr, UnixListener},
     },
     path::{Path, PathBuf},
     sync::{
@@ -116,6 +116,92 @@ impl ServerHandler for Bridge {
         }
     }
 }
+
+fn bind_private_socket(path: &Path) -> io::Result<(UnixListener, std::fs::Metadata)> {
+    bind_private_socket_with(path, |_, _| {})
+}
+
+fn check_socket_parent(mode: u32, owner: u32, uid: u32) -> io::Result<()> {
+    // A shared parent needs sticky-bit protection against other writers. Its
+    // owner can still replace our staging directory; trust only ourselves and
+    // root (which can already bypass these permissions), including normal /tmp.
+    if mode & 0o022 != 0 && (mode & 0o1000 == 0 || (owner != uid && owner != 0)) {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "Shared session socket parent must be sticky and owned by the current user or root",
+        ));
+    }
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SocketStage {
+    Created,
+    Bound,
+    Secured,
+}
+
+// Tests inspect each publication boundary without timing-dependent polling.
+fn bind_private_socket_with(
+    path: &Path,
+    mut observe: impl FnMut(SocketStage, &Path),
+) -> io::Result<(UnixListener, std::fs::Metadata)> {
+    SocketAddr::from_pathname(path).map_err(|error| {
+        io::Error::new(
+            error.kind(),
+            format!("Invalid session socket address: {error}"),
+        )
+    })?;
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let parent_metadata = std::fs::metadata(parent)?;
+    check_socket_parent(
+        parent_metadata.permissions().mode(),
+        parent_metadata.uid(),
+        rustix::process::geteuid().as_raw(),
+    )?;
+    // Never change the process-global umask: other threads may be creating files.
+    let dir = parent.join(format!(".m{:08x}", Uuid::new_v4().as_fields().0));
+    let staged = dir.join("s");
+    SocketAddr::from_pathname(&staged).map_err(|error| {
+        io::Error::new(
+            error.kind(),
+            format!("Invalid staging socket address: {error}"),
+        )
+    })?;
+    std::fs::DirBuilder::new().mode(0o700).create(&dir)?;
+    let result = (|| {
+        observe(SocketStage::Created, &staged);
+        let listener = UnixListener::bind(&staged)?;
+        observe(SocketStage::Bound, &staged);
+        std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o600))?;
+        let metadata = std::fs::symlink_metadata(&staged)?;
+        if metadata.permissions().mode() & 0o777 != 0o600 {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Session socket permissions must be 0600",
+            ));
+        }
+        listener.set_nonblocking(true)?;
+        // Publish only the secured inode, atomically and without replacing any path.
+        // A sibling staging directory keeps both names on the same filesystem.
+        observe(SocketStage::Secured, &staged);
+        std::fs::hard_link(&staged, path).map_err(|error| {
+            if error.kind() == io::ErrorKind::AlreadyExists {
+                io::Error::new(io::ErrorKind::AddrInUse, error)
+            } else {
+                error
+            }
+        })?;
+        Ok((listener, metadata))
+    })();
+    let _ = std::fs::remove_file(&staged);
+    let _ = std::fs::remove_dir(&dir);
+    result
+}
+
 /// Owner-thread half of a running MCP attachment. Dropping stops the socket worker.
 pub struct AttachedSession {
     session: Session,
@@ -135,8 +221,11 @@ pub struct AttachedSession {
 }
 impl AttachedSession {
     /// Bind a private socket. Existing paths are never removed or replaced.
-    /// The file root must be absolute and is created if missing. The factory
-    /// supplies initial declarations and the default polling host; editors use
+    /// The file root must be absolute and is created if missing.
+    /// Shared writable parents must be sticky and owned by the current user or root.
+    /// The parent path must leave room for a 13-byte staging suffix within the
+    /// platform's Unix socket address limit. The factory supplies initial
+    /// declarations and the default polling host; editors use
     /// [`Self::poll_with_host`] to dispatch through their live host.
     pub fn bind(
         root: &Path,
@@ -150,10 +239,7 @@ impl AttachedSession {
         session
             .attach(project)
             .map_err(|e| io::Error::other(e.message.to_string()))?;
-        let listener = UnixListener::bind(path)?;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-        listener.set_nonblocking(true)?;
-        let metadata = std::fs::symlink_metadata(path)?;
+        let (listener, metadata) = bind_private_socket(path)?;
         let identity = (metadata.dev(), metadata.ino());
         let path = path.to_path_buf();
         let worker_path = path.clone();

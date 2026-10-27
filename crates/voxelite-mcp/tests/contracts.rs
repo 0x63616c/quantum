@@ -79,13 +79,10 @@ impl Fixture {
     }
 }
 #[test]
-fn catalog_is_frozen_sorted_and_strict() {
+fn catalog_is_sorted_and_strict() {
     let tools = VoxeliteServer::tools();
     assert_eq!(tools.len(), 38);
     assert!(tools.windows(2).all(|w| w[0].name < w[1].name));
-    let frozen: Value =
-        serde_json::from_str(include_str!("../../../spec/mcp/v1/tools.json")).unwrap();
-    assert_eq!(serde_json::to_value(&tools).unwrap(), frozen);
     for t in tools {
         assert_eq!(t.input_schema["additionalProperties"], false);
         assert!(t.description.unwrap().len() > 60);
