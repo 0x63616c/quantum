@@ -3475,6 +3475,13 @@
           "minItems": 4,
           "maxItems": 4
         },
+        "ambient_occlusion_strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 1,
+          "description": "Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences."
+        },
         "image_mode": {
           "type": "string",
           "enum": [
@@ -8791,6 +8798,13 @@
           },
           "minItems": 4,
           "maxItems": 4
+        },
+        "ambient_occlusion_strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 1,
+          "description": "Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences."
         },
         "image_mode": {
           "type": "string",

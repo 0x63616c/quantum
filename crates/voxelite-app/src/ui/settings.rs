@@ -8,8 +8,11 @@ use crate::{
 };
 use gpui::{prelude::*, *};
 use voxelite_app::preferences::{Appearance, Preferences};
+use voxelite_render::AmbientOcclusionStrength;
 use voxelite_ui::tokens::{space, type_size};
-use voxelite_ui::{Button, Card, FormRow, IconButton, SidebarItem, SidebarSection, Toggle};
+use voxelite_ui::{
+    Button, Card, FormRow, IconButton, SidebarItem, SidebarSection, Slider, SliderRange, Toggle,
+};
 
 #[derive(Clone)]
 pub(super) struct SettingsState {
@@ -142,6 +145,10 @@ impl Section {
                 ("Ground grid", "spatial reference beneath model"),
                 ("Antialiasing", "smooth edges camera quality rendering"),
                 (
+                    "Ambient occlusion",
+                    "ao voxel contact shading shadows strength",
+                ),
+                (
                     "Render performance",
                     "show viewport fps average frame time renderer statistics",
                 ),
@@ -192,7 +199,9 @@ impl Section {
         match self {
             Self::General => "navigation hints mouse startup version about",
             Self::Appearance => "theme light dark system color",
-            Self::Viewport => "grid antialiasing quality performance fps frame",
+            Self::Viewport => {
+                "grid antialiasing ambient occlusion ao strength quality performance fps frame"
+            }
             Self::Shortcuts => "keyboard commands bindings undo redo save",
             Self::Agent => "connection assistant mcp session",
             Self::Updates => "check version release",
@@ -633,6 +642,52 @@ impl SettingsView {
                     })
                     .into_iter()
                     .chain([
+                        self.form_row(
+                            "Ambient occlusion",
+                            "Shade contacts between nearby voxels.",
+                            self.toggle(
+                                "ambient-occlusion",
+                                p.ambient_occlusion,
+                                |p| {
+                                    p.ambient_occlusion = !p.ambient_occlusion;
+                                    if p.ambient_occlusion
+                                        && p.ambient_occlusion_strength
+                                            == AmbientOcclusionStrength::OFF
+                                    {
+                                        p.ambient_occlusion_strength =
+                                            AmbientOcclusionStrength::default();
+                                    }
+                                },
+                                t,
+                                cx,
+                            ),
+                            t,
+                        ),
+                        self.form_row(
+                            "AO strength",
+                            "0 is off; 1 is the default.",
+                            Slider::labelled(
+                                Slider::new(
+                                    "ambient-occlusion-strength",
+                                    "Ambient occlusion strength",
+                                    t,
+                                    SliderRange::new(0.0, AmbientOcclusionStrength::MAX, 0.05),
+                                    p.ambient_occlusion_strength.get(),
+                                )
+                                .on_change(|value, _, cx| {
+                                    let strength = AmbientOcclusionStrength::new(*value)
+                                        .expect("bounded AO slider");
+                                    change(cx, |p| {
+                                        p.ambient_occlusion_strength = strength;
+                                        p.ambient_occlusion =
+                                            strength != AmbientOcclusionStrength::OFF;
+                                    });
+                                }),
+                                mono(format!("{:.2}", p.ambient_occlusion_strength.get())),
+                            )
+                            .w(px(200.0)),
+                            t,
+                        ),
                         self.form_row(
                             "Antialiasing",
                             "Smooth edges when the camera comes to rest.",
@@ -1184,6 +1239,7 @@ impl EditorView {
         let next = cx.global::<SettingsState>().values.clone();
         let next_theme = theme(next.appearance, window);
         let rerender = self.preferences.antialiasing != next.antialiasing
+            || self.preferences.viewport_ambient_occlusion() != next.viewport_ambient_occlusion()
             || (self.viewport.gpu_enabled()
                 && (self.theme != next_theme || self.preferences.grid != next.grid));
         self.theme = next_theme;
@@ -1223,6 +1279,7 @@ mod tests {
                 "Render performance",
             ),
             ("smooth edges", Section::Viewport, "Antialiasing"),
+            ("ao strength", Section::Viewport, "Ambient occlusion"),
             ("navigation hints", Section::General, "Navigation help"),
             ("reduce motion", Section::General, "Animate camera"),
             ("assistant", Section::Agent, "Project connection"),

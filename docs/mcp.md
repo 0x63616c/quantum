@@ -200,6 +200,11 @@ combined view/sheet pixels. A 12 MiB encoded result cap covers base64 plus all
 metadata. Reduce resolution/view count if that cap rejects. Front looks from +Z,
 right from +X, top from +Y with −Z up; all fits use Y-up coordinates.
 
+`render` and `export_png` accept `ambient_occlusion_strength` from 0 to 2.
+The default is 1, preserving the original shading; 0 disables local voxel
+contact shading while retaining directional shadows. Saved viewport preferences
+never change MCP output. See [AO comparisons](ambient-occlusion.md).
+
 Palette presets are `pico8`, `endesga32`, `sweetie16`, `grayscale`, `neutral`,
 `warm`, and `vivid`. Imported slots may differ from their source indices: use the
 returned `slot_mapping` instead of assuming append positions.

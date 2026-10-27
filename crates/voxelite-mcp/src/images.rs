@@ -5,7 +5,9 @@ use crate::{
 };
 use serde_json::{Value, json};
 use voxelite_core::Snapshot;
-use voxelite_render::{Camera, PresetView, Projection, RenderOptions, View};
+use voxelite_render::{
+    AmbientOcclusionStrength, Camera, PresetView, Projection, RenderOptions, View,
+};
 
 pub(crate) struct Images {
     pub pngs: Vec<Vec<u8>>,
@@ -67,6 +69,10 @@ fn render_with_encoder(
     let mode: String = a.default("image_mode", "contact_sheet".into())?;
     let perspective = a.default("perspective", false)?;
     let background = a.default("background", [0u8; 4])?;
+    let ambient_occlusion_strength: AmbientOcclusionStrength = a.default(
+        "ambient_occlusion_strength",
+        AmbientOcclusionStrength::default(),
+    )?;
     let mut names: Vec<String> = a.default(
         "views",
         vec!["iso".into(), "front".into(), "right".into(), "back".into()],
@@ -162,6 +168,7 @@ fn render_with_encoder(
                 height,
                 view,
                 background,
+                ambient_occlusion_strength,
                 ..Default::default()
             },
         )?;
@@ -280,5 +287,32 @@ mod tests {
         let exported = export(&snapshot, &Args(&args), &mut crate::exports::host()).unwrap();
         assert_eq!(exported.pngs, images.pngs);
         assert_eq!(exported.metadata, images.metadata);
+    }
+
+    #[test]
+    fn ao_override_is_explicit_and_shared_by_render_and_export() {
+        let snapshot = serde_json::from_slice(include_bytes!(
+            "../../voxelite-export/tests/golden/scene.json"
+        ))
+        .unwrap();
+        let mut args = json!({"width":80,"height":64,"views":["iso"],"image_mode":"individual"});
+        let original = render(&snapshot, &Args(&args)).unwrap();
+        args["ambient_occlusion_strength"] = json!(1);
+        assert_eq!(original.pngs, render(&snapshot, &Args(&args)).unwrap().pngs);
+        for strength in [0.0, 0.5, 2.0] {
+            args["ambient_occlusion_strength"] = json!(strength);
+            let rendered = render(&snapshot, &Args(&args)).unwrap();
+            assert_ne!(original.pngs, rendered.pngs);
+            assert_eq!(
+                rendered.pngs,
+                export(&snapshot, &Args(&args), &mut crate::exports::host())
+                    .unwrap()
+                    .pngs
+            );
+        }
+        for value in [json!(-0.1), json!(2.1), json!(null), json!("1")] {
+            args["ambient_occlusion_strength"] = value;
+            assert!(render(&snapshot, &Args(&args)).is_err());
+        }
     }
 }
