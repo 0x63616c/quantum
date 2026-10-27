@@ -155,7 +155,12 @@ mod tests {
                 include_bytes!("../../../voxelite-export/tests/golden/palette.gpl").as_slice(),
             ),
         ] {
-            assert_eq!(host.dispatch_export(id, &cx).unwrap().unwrap(), golden);
+            let actual = host.dispatch_export(id, &cx).unwrap().unwrap();
+            if id == GLB {
+                assert_glb_matches(&actual, golden);
+            } else {
+                assert_eq!(actual, golden);
+            }
         }
         host.disable(PLUGIN_ID).unwrap();
         assert_eq!(host.registry().formats().count(), 0);
@@ -168,5 +173,29 @@ mod tests {
             include_bytes!("../../../voxelite-export/tests/golden/scene.png")
         );
         assert_eq!(serde_json::to_vec(&snapshot).unwrap(), before);
+    }
+
+    /// libm differences across platforms may move linearised colours by one ulp; everything else is exact.
+    fn assert_glb_matches(actual: &[u8], expected: &[u8]) {
+        assert_eq!(actual.len(), expected.len());
+        let json_len = u32::from_le_bytes(expected[12..16].try_into().unwrap()) as usize;
+        let bin_start = 20 + json_len + 8;
+        assert_eq!(actual[..bin_start], expected[..bin_start]);
+        for (a, e) in actual[bin_start..]
+            .chunks_exact(4)
+            .zip(expected[bin_start..].chunks_exact(4))
+        {
+            if a == e {
+                continue;
+            }
+            let a = u32::from_le_bytes(a.try_into().unwrap());
+            let e = u32::from_le_bytes(e.try_into().unwrap());
+            assert!(
+                f32::from_bits(a).abs() > 1e-3
+                    && f32::from_bits(e).abs() > 1e-3
+                    && a.abs_diff(e) <= 1,
+                "{a:#x} != {e:#x}"
+            );
+        }
     }
 }
