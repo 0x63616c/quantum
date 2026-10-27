@@ -70,6 +70,7 @@ pub(crate) fn copy_name(library: &PaletteLibrary, source: &str) -> Result<String
     ))
 }
 
+#[cfg(test)]
 pub(crate) fn set_colors(
     library: &mut PaletteLibrary,
     index: usize,
@@ -102,7 +103,8 @@ pub fn step_swatch(palette: &Palette, color: &Swatch, delta: isize) -> (usize, S
         .iter()
         .position(|slot| palette.get(*slot).is_some_and(|s| s.rgba == color.rgba))
         .unwrap_or(0);
-    let next = (current as isize + delta).rem_euclid(palette.order.len() as isize) as usize;
+    let next = (current as isize + delta.rem_euclid(palette.order.len() as isize))
+        .rem_euclid(palette.order.len() as isize) as usize;
     (
         next,
         palette

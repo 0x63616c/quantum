@@ -1,0 +1,286 @@
+use super::*;
+use voxelite_plugin_api::*;
+
+#[derive(Default)]
+struct Context {
+    state: PaletteState,
+    palette: Palette,
+    brush: Swatch,
+}
+impl PaletteCx for Context {
+    fn palette(&self) -> &Palette {
+        &self.palette
+    }
+    fn active_color(&self) -> &Swatch {
+        &self.brush
+    }
+    fn state(&self) -> &PaletteState {
+        &self.state
+    }
+    fn setting(&self, _: &str) -> Option<&SettingValue> {
+        None
+    }
+}
+impl Context {
+    fn apply(&mut self, action: PaletteAction) -> PaletteOutcome {
+        let out = PalettePlugin.interact(self, action).unwrap();
+        self.state = out.state.clone();
+        if let Some(color) = &out.color {
+            self.brush = color.clone();
+        }
+        out
+    }
+    fn view(&self) -> PaletteView {
+        PalettePlugin.view(self)
+    }
+    fn custom(palette: Palette) -> Self {
+        let mut cx = Self::default();
+        cx.state.custom =
+            Some(library::create(&mut cx.state.library, "Test".into(), palette).unwrap());
+        cx
+    }
+    fn rejects(&self, action: PaletteAction, message: &str) {
+        assert!(
+            PalettePlugin
+                .interact(self, action)
+                .unwrap_err()
+                .to_string()
+                .contains(message)
+        );
+    }
+}
+
+#[test]
+fn drag_moves_preserve_every_slot_and_selected_identity_for_all_small_permutations() {
+    fn permutations(ids: &mut [u16], start: usize, visit: &mut impl FnMut(&[u16])) {
+        if start == ids.len() {
+            visit(ids);
+            return;
+        }
+        for i in start..ids.len() {
+            ids.swap(start, i);
+            permutations(ids, start + 1, visit);
+            ids.swap(start, i);
+        }
+    }
+    for count in 1..=4 {
+        let palette =
+            Palette::from_colors((0..count).map(|i| Swatch::rgb(i as u8, 0, 0)).collect()).unwrap();
+        let mut order = palette.order.clone();
+        permutations(&mut order, 0, &mut |order| {
+            for from in 0..count {
+                for to in (0..count).chain([usize::MAX]) {
+                    for selected in 0..count {
+                        let mut original = palette.clone();
+                        original.order = order.to_vec();
+                        let mut cx = Context::custom(original.clone());
+                        cx.state.slot = selected;
+                        let out = cx.apply(PaletteAction::MoveSwatch { from, to });
+                        let actual = cx.view().palette;
+                        actual.validate().unwrap();
+                        assert_eq!(actual.slots, original.slots);
+                        assert_eq!(actual.order[cx.state.slot], original.order[selected]);
+                        let to = to.min(count - 1);
+                        let mut expected = original.order.clone();
+                        let moved = expected.remove(from);
+                        expected.insert(to, moved);
+                        assert_eq!(actual.order, expected);
+                        assert_eq!(out.library_bytes.is_none(), from == to);
+                    }
+                }
+            }
+        });
+    }
+}
+
+#[test]
+fn removing_and_adding_use_display_positions_without_renumbering_survivors() {
+    let mut palette = Palette::from_colors(vec![Swatch::default(); 4]).unwrap();
+    palette.order = vec![4, 2, 1, 3];
+    let mut cx = Context::custom(palette.clone());
+    cx.apply(PaletteAction::SelectSlot(2));
+    cx.apply(PaletteAction::RemoveSwatch(0));
+    assert_eq!(cx.view().palette.order, [2, 1, 3]);
+    assert_eq!(cx.state.slot, 1);
+    assert_eq!(cx.view().palette.slots, palette.slots[..3]);
+    cx.apply(PaletteAction::AddSwatch {
+        rgb: [1, 2, 3],
+        at: Some(1),
+    });
+    assert_eq!(cx.view().palette.order, [2, 4, 1, 3]);
+    assert_eq!(cx.state.slot, 1);
+    assert_eq!(cx.view().palette.get(4).unwrap(), &Swatch::rgb(1, 2, 3));
+    cx.apply(PaletteAction::RemoveSwatch(1));
+    assert_eq!(cx.view().palette.order[cx.state.slot], 1);
+    cx.apply(PaletteAction::RemoveSwatch(2));
+    cx.apply(PaletteAction::RemoveSwatch(1));
+    let before = cx.state.clone();
+    cx.rejects(PaletteAction::RemoveSwatch(0), "last swatch");
+    cx.rejects(PaletteAction::RemoveSwatch(usize::MAX), "no longer exists");
+    cx.rejects(
+        PaletteAction::MoveSwatch {
+            from: usize::MAX,
+            to: 0,
+        },
+        "no longer exists",
+    );
+    cx.rejects(
+        PaletteAction::DuplicateSwatch(usize::MAX),
+        "no longer exists",
+    );
+    assert_eq!(cx.state, before);
+}
+
+#[test]
+fn duplicate_swatch_copies_name_and_color_and_capacity_failures_are_atomic() {
+    let mut cx = Context::custom(Palette::default());
+    cx.apply(PaletteAction::DuplicateSwatch(0));
+    assert_eq!(cx.view().palette.order, [1, 2]);
+    assert_eq!(cx.view().palette.get(1), cx.view().palette.get(2));
+    assert_eq!(cx.state.slot, 1);
+    for i in 2..256 {
+        cx.apply(PaletteAction::AddSwatch {
+            rgb: [i as u8, 0, 0],
+            at: Some(usize::MAX),
+        });
+    }
+    assert_eq!(cx.view().palette.order, (1..=256).collect::<Vec<_>>());
+    assert_eq!(cx.state.slot, 255);
+    let before = cx.state.clone();
+    cx.rejects(
+        PaletteAction::AddSwatch {
+            rgb: [0; 3],
+            at: None,
+        },
+        "256 swatches",
+    );
+    cx.rejects(PaletteAction::DuplicateSwatch(0), "256 swatches");
+    assert_eq!(cx.state, before);
+    cx.apply(PaletteAction::RemoveSwatch(42));
+    cx.apply(PaletteAction::AddSwatch {
+        rgb: [10; 3],
+        at: Some(0),
+    });
+    assert_eq!(cx.view().palette.order[0], 43);
+    assert_eq!(cx.view().palette.slots.len(), 256);
+}
+
+#[test]
+fn preview_copies_only_once_commits_once_and_cancel_restores_library_and_selection() {
+    for custom in [false, true] {
+        let mut cx = if custom {
+            Context::custom(Palette::default())
+        } else {
+            Context::default()
+        };
+        let before = cx.state.clone();
+        let brush = cx.brush.clone();
+        let first = cx.apply(PaletteAction::SetColor {
+            rgb: [1, 2, 3],
+            commit: false,
+        });
+        assert_eq!(first.copied_from.is_some(), !custom);
+        assert!(first.library_bytes.is_none());
+        let id = cx.state.custom;
+        for value in 4..64 {
+            let out = cx.apply(PaletteAction::SetColor {
+                rgb: [value; 3],
+                commit: false,
+            });
+            assert!(out.library_bytes.is_none() && out.copied_from.is_none());
+            assert_eq!(cx.state.custom, id);
+            assert_eq!(cx.state.library.entries.len(), 1);
+            assert_eq!(
+                cx.view().palette.get(1).unwrap().rgba,
+                [value, value, value, 255]
+            );
+        }
+        assert_eq!(cx.brush, brush);
+        assert_eq!(cx.palette, Palette::default());
+        let cancelled = cx.apply(PaletteAction::CancelColor);
+        assert!(cancelled.library_bytes.is_none());
+        assert_eq!(cx.state, before);
+        cx.apply(PaletteAction::SetColor {
+            rgb: [9, 8, 7],
+            commit: false,
+        });
+        let committed = cx.apply(PaletteAction::CommitColor);
+        assert!(cx.state.preview.is_none());
+        assert!(committed.library_bytes.is_some());
+        assert_eq!(
+            library::load(committed.library_bytes.as_deref()).unwrap(),
+            cx.state.library
+        );
+        assert!(cx.apply(PaletteAction::CommitColor).library_bytes.is_none());
+        cx.apply(PaletteAction::SetColor {
+            rgb: [1; 3],
+            commit: false,
+        });
+        let committed = cx.apply(PaletteAction::SetColor {
+            rgb: [2; 3],
+            commit: true,
+        });
+        assert!(committed.library_bytes.is_some() && cx.state.preview.is_none());
+        assert_eq!(cx.view().palette.get(1).unwrap().rgba, [2, 2, 2, 255]);
+        assert_eq!(cx.view().palette.get(1).unwrap().name, Some("clay".into()));
+    }
+}
+
+#[test]
+fn selection_cancels_preview_and_loading_never_requests_a_write() {
+    let mut cx = Context::default();
+    let before = cx.state.clone();
+    cx.apply(PaletteAction::SetColor {
+        rgb: [0; 3],
+        commit: false,
+    });
+    let out = cx.apply(PaletteAction::SelectSlot(0));
+    assert!(out.library_bytes.is_none());
+    assert_eq!(cx.state, before);
+    let out = cx.apply(PaletteAction::SetColor {
+        rgb: [0; 3],
+        commit: true,
+    });
+    let bytes = out.library_bytes.unwrap();
+    let mut fresh = Context::default();
+    assert!(
+        fresh
+            .apply(PaletteAction::LoadLibrary(Some(bytes)))
+            .library_bytes
+            .is_none()
+    );
+    assert_eq!(fresh.state.library, cx.state.library);
+}
+
+#[test]
+fn source_noops_do_not_copy_but_remove_and_reorder_do_copy() {
+    let mut cx = Context {
+        palette: Preset::Pico8.palette(),
+        ..Default::default()
+    };
+    let out = cx.apply(PaletteAction::MoveSwatch { from: 1, to: 1 });
+    assert!(out.copied_from.is_none() && out.library_bytes.is_none());
+    let out = cx.apply(PaletteAction::MoveSwatch {
+        from: 0,
+        to: usize::MAX,
+    });
+    assert_eq!(out.copied_from.as_deref(), Some("Project colors"));
+    assert_eq!(cx.view().palette.order.last(), Some(&1));
+    cx.apply(PaletteAction::ChoosePreset(0));
+    let out = cx.apply(PaletteAction::RemoveSwatch(1));
+    assert!(out.copied_from.is_some());
+    assert_eq!(cx.state.library.entries[1].name, "Project colors copy 2");
+    assert!(cx.view().palette.get(2).is_none());
+    assert_eq!(cx.palette, Preset::Pico8.palette());
+}
+
+#[test]
+fn stepping_accepts_extreme_deltas_without_overflow() {
+    let mut cx = Context {
+        palette: Preset::Pico8.palette(),
+        ..Default::default()
+    };
+    cx.brush = cx.palette.get(16).unwrap().clone();
+    cx.apply(PaletteAction::StepSwatch(isize::MAX));
+    cx.apply(PaletteAction::StepSwatch(isize::MIN));
+}

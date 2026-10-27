@@ -20,15 +20,28 @@ pub struct PaletteLibrary {
     pub entries: Vec<LibraryPalette>,
 }
 
-/// Transient panel selection and the last successfully persisted library.
+/// Rollback point for an uncommitted picker gesture. Never serialized.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PalettePreview {
+    /// Library before the first preview, including before an automatic copy.
+    pub library: PaletteLibrary,
+    /// Custom selection before the gesture.
+    pub custom: Option<Uuid>,
+    /// Manager display position before the gesture.
+    pub slot: usize,
+}
+
+/// Panel selection and working library. The host admits returned state atomically.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PaletteState {
-    /// Custom library loaded by the host.
+    /// Custom library, including transient edits while a preview is active.
     pub library: PaletteLibrary,
     /// Selected custom palette, if any.
     pub custom: Option<Uuid>,
     /// Selected display position in the manager.
     pub slot: usize,
+    /// Original library and selection while a picker gesture is active.
+    pub preview: Option<PalettePreview>,
 }
 
 /// Origin and editing policy of a palette in the manager.
@@ -135,6 +148,37 @@ pub enum PaletteAction {
     ChoosePalette(PaletteId),
     /// Select a manager swatch, without changing the brush.
     SelectSlot(usize),
+    /// Set the selected swatch's exact opaque RGB, preserving its name.
+    /// A preview creates at most one custom copy and produces no library bytes.
+    /// Other actions cancel the preview first, except CommitColor and CancelColor.
+    SetColor {
+        /// Exact sRGB bytes, including values sampled by an eyedropper.
+        rgb: [u8; 3],
+        /// Persist this value and end any active preview.
+        commit: bool,
+    },
+    /// Persist the current preview once; no-op when no preview exists.
+    CommitColor,
+    /// Restore the library and selection from before the current preview.
+    CancelColor,
+    /// Insert a swatch and select it, using the lowest free stable slot.
+    AddSwatch {
+        /// Exact opaque sRGB bytes.
+        rgb: [u8; 3],
+        /// Display position before which to insert; None appends, overflow clamps.
+        at: Option<usize>,
+    },
+    /// Remove a swatch by display position; the final swatch cannot be removed.
+    RemoveSwatch(usize),
+    /// Move a swatch to a final display position, preserving all stable slots.
+    MoveSwatch {
+        /// Existing display position; out-of-range sources are rejected.
+        from: usize,
+        /// Final display position, clamped to the last position.
+        to: usize,
+    },
+    /// Copy a swatch and its name immediately after its display position; select it.
+    DuplicateSwatch(usize),
     /// Select a brush swatch by display position.
     SelectSwatch(usize),
     /// Move the brush selection, wrapping in display order.

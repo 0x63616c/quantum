@@ -1,8 +1,8 @@
-use crate::{PRESET_SETTING, PalettePlugin, Preset, library};
+use crate::{PRESET_SETTING, PalettePlugin, Preset, library, manager};
 use voxelite_plugin_api::{
     Command, Palette, PaletteAction, PaletteChoice, PaletteCx, PaletteEdit, PaletteError,
-    PaletteId, PaletteKind, PaletteOperation, PaletteOutcome, PalettePanel, PalettePresentation,
-    PaletteView, SettingValue,
+    PaletteId, PaletteKind, PaletteOutcome, PalettePanel, PalettePresentation, PalettePreview,
+    PaletteState, PaletteView, SettingValue, Swatch,
 };
 
 const CHOICES: [(&str, &str, Option<Preset>); 8] = [
@@ -22,72 +22,7 @@ pub(crate) fn choices() -> Vec<String> {
 
 impl PalettePanel for PalettePlugin {
     fn view(&self, cx: &dyn PaletteCx) -> PaletteView {
-        let preset = CHOICES
-            .iter()
-            .position(|(key, _, _)| {
-                cx.setting(PRESET_SETTING) == Some(&SettingValue::Choice((*key).into()))
-            })
-            .unwrap_or(0);
-        let mut choices: Vec<_> = CHOICES
-            .iter()
-            .enumerate()
-            .map(|(index, (_, name, preset))| PaletteChoice {
-                id: PaletteId::Source(index),
-                kind: if index == 0 {
-                    PaletteKind::Project
-                } else {
-                    PaletteKind::BuiltIn
-                },
-                read_only: true,
-                name: (*name).into(),
-                palette: preset
-                    .map(Preset::palette)
-                    .unwrap_or_else(|| cx.palette().clone()),
-            })
-            .collect();
-        choices.extend(
-            cx.state()
-                .library
-                .entries
-                .iter()
-                .map(|entry| PaletteChoice {
-                    id: PaletteId::Custom(entry.id),
-                    kind: PaletteKind::Custom,
-                    read_only: false,
-                    name: entry.name.clone(),
-                    palette: entry.palette.clone(),
-                }),
-        );
-        let selected = cx
-            .state()
-            .custom
-            .and_then(|id| cx.state().library.entries.iter().find(|e| e.id == id));
-        let (name, palette) = selected
-            .map(|e| (e.name.clone(), e.palette.clone()))
-            .unwrap_or_else(|| {
-                (
-                    choices[preset].name.clone(),
-                    choices[preset].palette.clone(),
-                )
-            });
-        let mut state = cx.state().clone();
-        state.slot = state.slot.min(palette.order.len() - 1);
-        PaletteView {
-            selected: selected
-                .map(|e| PaletteId::Custom(e.id))
-                .unwrap_or(PaletteId::Source(preset)),
-            kind: if selected.is_some() {
-                PaletteKind::Custom
-            } else {
-                choices[preset].kind
-            },
-            read_only: selected.is_none(),
-            name,
-            palette,
-            choices,
-            preset,
-            state,
-        }
+        view(cx, cx.state())
     }
 
     fn interact(
@@ -95,14 +30,39 @@ impl PalettePanel for PalettePlugin {
         cx: &dyn PaletteCx,
         action: PaletteAction,
     ) -> Result<PaletteOutcome, PaletteError> {
-        let view = self.view(cx);
         let mut out = PaletteOutcome {
             state: cx.state().clone(),
             ..Default::default()
         };
+        let keep_preview = matches!(
+            action,
+            PaletteAction::SetColor { .. } | PaletteAction::CommitColor
+        );
+        if !keep_preview {
+            cancel_preview(&mut out.state);
+        }
+        let view = view(cx, &out.state);
+        let before = out
+            .state
+            .preview
+            .as_ref()
+            .map(|p| &p.library)
+            .unwrap_or(&out.state.library)
+            .clone();
+        let mut persist = true;
         match action {
             PaletteAction::LoadLibrary(bytes) => {
-                out.state.library = library::load(bytes.as_deref())?
+                out.state.library = library::load(bytes.as_deref())?;
+                if !out
+                    .state
+                    .library
+                    .entries
+                    .iter()
+                    .any(|e| Some(e.id) == out.state.custom)
+                {
+                    out.state.custom = None;
+                }
+                persist = false;
             }
             PaletteAction::ChoosePreset(index)
             | PaletteAction::ChoosePalette(PaletteId::Source(index)) => {
@@ -123,7 +83,7 @@ impl PalettePanel for PalettePlugin {
                 out.state.custom = Some(id);
             }
             PaletteAction::SelectSlot(slot) => {
-                out.state.slot = slot.min(view.palette.order.len() - 1)
+                out.state.slot = slot.min(view.palette.order.len().saturating_sub(1))
             }
             PaletteAction::SelectSwatch(index) => {
                 let slot =
@@ -134,6 +94,7 @@ impl PalettePanel for PalettePlugin {
                 out.selected = Some(index);
             }
             PaletteAction::StepSwatch(delta) => {
+                view.palette.validate()?;
                 let (index, color) = library::step_swatch(&view.palette, cx.active_color(), delta);
                 out.color = Some(color);
                 out.selected = Some(index);
@@ -143,9 +104,45 @@ impl PalettePanel for PalettePlugin {
                 name,
                 color,
             } => {
-                out.state.slot = view.state.slot;
-                edit_library(&view, &mut out, operation, name, color)?;
-                out.library_bytes = Some(library::encode(&out.state.library)?);
+                let edit = manager::legacy(&view, operation, name, color)?;
+                manager::edit(&view, &mut out, edit)?;
+            }
+            PaletteAction::SetColor { rgb, commit } => {
+                if !commit && out.state.preview.is_none() {
+                    out.state.preview = Some(PalettePreview {
+                        library: out.state.library.clone(),
+                        custom: out.state.custom,
+                        slot: out.state.slot,
+                    });
+                }
+                manager::edit(&view, &mut out, manager::Edit::SetColor(rgb))?;
+                persist = commit;
+                if commit {
+                    out.state.preview = None;
+                }
+            }
+            PaletteAction::CommitColor => {
+                out.state.preview = None;
+            }
+            PaletteAction::CancelColor => {}
+            PaletteAction::AddSwatch { rgb: [r, g, b], at } => {
+                manager::edit(
+                    &view,
+                    &mut out,
+                    manager::Edit::Add {
+                        color: Swatch::rgb(r, g, b),
+                        at,
+                    },
+                )?;
+            }
+            PaletteAction::RemoveSwatch(position) => {
+                manager::edit(&view, &mut out, manager::Edit::Remove(position))?;
+            }
+            PaletteAction::MoveSwatch { from, to } => {
+                manager::edit(&view, &mut out, manager::Edit::Move { from, to })?;
+            }
+            PaletteAction::DuplicateSwatch(position) => {
+                manager::edit(&view, &mut out, manager::Edit::DuplicateSwatch(position))?;
             }
             PaletteAction::ImportLibrary { name, format, text } => {
                 let palette = import(&format, &text)?;
@@ -154,8 +151,7 @@ impl PalettePanel for PalettePlugin {
                     name.chars().take(100).collect(),
                     palette.clone(),
                 )?);
-                out.state.slot = out.state.slot.min(palette.order.len() - 1);
-                out.library_bytes = Some(library::encode(&out.state.library)?);
+                out.state.slot = out.state.slot.min(palette.order.len().saturating_sub(1));
             }
             PaletteAction::Command(id) => {
                 out.presentation = Some(match id.as_str() {
@@ -186,89 +182,81 @@ impl PalettePanel for PalettePlugin {
                 append(cx.palette(), import(&format, &text)?, &mut out)?
             }
         }
+        if persist && out.state.library != before {
+            out.library_bytes = Some(library::encode(&out.state.library)?);
+        }
         Ok(out)
     }
 }
 
-fn edit_library(
-    view: &PaletteView,
-    out: &mut PaletteOutcome,
-    operation: PaletteOperation,
-    name: String,
-    color: String,
-) -> Result<(), PaletteError> {
-    use PaletteOperation::*;
-    let slot = out.state.slot;
-    if matches!(operation, Create | Duplicate) {
-        let name = if operation == Create {
-            "Untitled palette".into()
-        } else {
-            library::copy_name(&out.state.library, &name)?
-        };
-        out.state.custom = Some(library::create(
-            &mut out.state.library,
-            name,
-            if operation == Create {
-                Palette::default()
-            } else {
-                view.palette.clone()
-            },
-        )?);
-    } else {
-        if view.read_only && operation != Delete {
-            let name = library::copy_name(&out.state.library, &view.name)?;
-            out.state.custom = Some(library::create(
-                &mut out.state.library,
-                name,
-                view.palette.clone(),
-            )?);
-            out.copied_from = Some(view.name.clone());
-        }
-        let i = out
-            .state
-            .custom
-            .and_then(|id| out.state.library.entries.iter().position(|e| e.id == id))
-            .ok_or_else(|| PaletteError::Message("Only custom palettes can be deleted".into()))?;
-        match operation {
-            Delete => {
-                out.state.library.entries.remove(i);
-                out.state.custom = None;
-            }
-            Rename => out.state.library.entries[i].name = name,
-            _ => {
-                let mut colors = view
-                    .palette
-                    .order
-                    .iter()
-                    .map(|s| view.palette.get(*s).unwrap().clone())
-                    .collect::<Vec<_>>();
-                match operation {
-                    ApplyColor => colors[slot] = library::parse_color(&color)?,
-                    AddSlot => colors.push(library::parse_color(&color)?),
-                    RemoveSlot => {
-                        colors.remove(slot);
-                    }
-                    MoveLeft if slot > 0 => colors.swap(slot, slot - 1),
-                    MoveRight if slot + 1 < colors.len() => colors.swap(slot, slot + 1),
-                    _ => {}
-                }
-                library::set_colors(&mut out.state.library, i, colors)?;
-            }
-        }
+fn cancel_preview(state: &mut PaletteState) {
+    if let Some(preview) = state.preview.take() {
+        state.library = preview.library;
+        state.custom = preview.custom;
+        state.slot = preview.slot;
     }
-    out.state.slot = match operation {
-        MoveLeft => slot.saturating_sub(1),
-        MoveRight => (slot + 1).min(view.palette.order.len() - 1),
-        _ => slot,
-    };
-    let palette = out
-        .state
+}
+
+fn view(cx: &dyn PaletteCx, state: &PaletteState) -> PaletteView {
+    let preset = CHOICES
+        .iter()
+        .position(|(key, _, _)| {
+            cx.setting(PRESET_SETTING) == Some(&SettingValue::Choice((*key).into()))
+        })
+        .unwrap_or(0);
+    let mut choices: Vec<_> = CHOICES
+        .iter()
+        .enumerate()
+        .map(|(index, (_, name, preset))| PaletteChoice {
+            id: PaletteId::Source(index),
+            kind: if index == 0 {
+                PaletteKind::Project
+            } else {
+                PaletteKind::BuiltIn
+            },
+            read_only: true,
+            name: (*name).into(),
+            palette: preset
+                .map(Preset::palette)
+                .unwrap_or_else(|| cx.palette().clone()),
+        })
+        .collect();
+    choices.extend(state.library.entries.iter().map(|entry| PaletteChoice {
+        id: PaletteId::Custom(entry.id),
+        kind: PaletteKind::Custom,
+        read_only: false,
+        name: entry.name.clone(),
+        palette: entry.palette.clone(),
+    }));
+    let selected = state
         .custom
-        .and_then(|id| out.state.library.entries.iter().find(|e| e.id == id))
-        .map(|e| &e.palette)
-        .unwrap_or(&view.choices[view.preset].palette);
-    out.state.slot = out.state.slot.min(palette.order.len() - 1);
-    Ok(())
+        .and_then(|id| state.library.entries.iter().find(|e| e.id == id));
+    let (name, palette) = selected
+        .map(|e| (e.name.clone(), e.palette.clone()))
+        .unwrap_or_else(|| {
+            (
+                choices[preset].name.clone(),
+                choices[preset].palette.clone(),
+            )
+        });
+    let mut state = state.clone();
+    state.slot = state.slot.min(palette.order.len().saturating_sub(1));
+    PaletteView {
+        selected: selected
+            .map(|e| PaletteId::Custom(e.id))
+            .unwrap_or(PaletteId::Source(preset)),
+        kind: if selected.is_some() {
+            PaletteKind::Custom
+        } else {
+            choices[preset].kind
+        },
+        read_only: selected.is_none(),
+        name,
+        palette,
+        choices,
+        preset,
+        state,
+    }
 }
 
 /// Parse an existing bounded palette interchange format.

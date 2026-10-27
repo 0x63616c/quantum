@@ -157,7 +157,7 @@ fn selection_and_library_operations_preserve_colors_and_order() {
     request(&mut host, &mut cx, edit(MoveLeft, "", ""));
     assert_eq!(cx.state.slot, 15);
     assert_eq!(
-        cx.state.library.entries[0].palette.get(16).unwrap().rgba,
+        cx.state.library.entries[0].palette.get(17).unwrap().rgba,
         [17, 34, 51, 255]
     );
     request(&mut host, &mut cx, edit(ApplyColor, "", "445566"));

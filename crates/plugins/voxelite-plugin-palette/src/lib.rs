@@ -1,6 +1,7 @@
 //! Built-in palettes, library management and portable panel behavior.
 mod import;
 mod library;
+mod manager;
 mod panel;
 mod presets;
 
@@ -116,5 +117,7 @@ mod tests {
 
 #[cfg(test)]
 mod characterization;
+#[cfg(test)]
+mod manager_tests;
 #[cfg(test)]
 mod panel_tests;
