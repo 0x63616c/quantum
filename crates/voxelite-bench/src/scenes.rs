@@ -7,9 +7,11 @@ pub const DEFAULT_SCENES: &[&str] = &["autumn", "terrain1m", "sponge1m"];
 pub fn load(name: &str) -> Result<Snapshot> {
     let snapshot = match name {
         "autumn" => {
-            voxelite_format::from_bytes(include_bytes!("../../../examples/autumn-workshop.voxl"))?
-                .document
-                .content
+            voxelite_format::from_bytes(include_bytes!(
+                "../../../bench/scenes/autumn-workshop.voxl"
+            ))?
+            .document
+            .content
         }
         "terrain1m" => terrain(128, 128, 1_040_000, name)?,
         "sponge1m" => sponge(128, 1_040_000)?,

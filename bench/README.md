@@ -19,3 +19,7 @@ For another machine, `cargo xtask visual --local-baseline` initializes an absent
 local set in `target/golden/<machine_key>/`; subsequent invocations compare it.
 Updating an existing local set requires `--local-baseline --rebaseline`.
 Never commit local sets or Linux software-renderer results as Metal goldens.
+
+`scenes/autumn-workshop.voxl` is the single tracked scene file: a pinned copy of
+`examples/autumn-workshop.voxl`. Procedural scenes (terrain, sponge) are generated
+deterministically and verified by scene hash.

@@ -26,7 +26,7 @@ on:
         type: string
         default: '3'
       scenes:
-        description: Space-separated scenes (empty selects autumn terrain1m sponge1m)
+        description: Space-separated scenes (empty selects all four, including terrain10m)
         type: string
         default: ''
 
@@ -47,7 +47,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       RENDER_COMMAND: ${{ inputs.command || 'visual' }}
       RENDER_RUNS: ${{ inputs.runs || '3' }}
-      RENDER_SCENES: ${{ inputs.scenes }}
+      RENDER_SCENES: ${{ inputs.scenes || 'autumn terrain1m sponge1m terrain10m' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

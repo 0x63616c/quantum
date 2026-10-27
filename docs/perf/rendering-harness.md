@@ -97,7 +97,7 @@ pixels and performance are not Metal baselines.
 
 ## Scenes, paths and edit phases
 
-`autumn` embeds `examples/autumn-workshop.voxl`. `terrain1m` and `sponge1m` use
+`autumn` embeds `bench/scenes/autumn-workshop.voxl`, a pinned copy of the demo diorama so product edits to `examples/` cannot silently change what is measured (changing it changes the scene hash and invalidates goldens and baselines). `terrain1m` and `sponge1m` use
 fixed seeds, integer hash noise and fixed-order f64 FBM. Noise is quantized to
 24 bits before integer height searches or rank thresholds decide occupancy;
 sponge rank ties use cell index. Scene hashes detect any cross-platform or
@@ -111,7 +111,7 @@ Autumn's hash is covered by a fixed-value unit test. Changed hashes invalidate
 both performance and screenshot comparison with instructions to restore the
 scene or explicitly regenerate references.
 
-`terrain10m` is opt-in:
+`terrain10m` is opt-in locally; the Rendering checks workflow selects all four scenes unless its `scenes` input says otherwise:
 
 ```sh
 cargo xtask bench --scene terrain10m
