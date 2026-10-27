@@ -203,6 +203,20 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
   segmented controls, menus, fields, sliders, toggles, swatches, cards, dialogs
   and chrome. Add reusable controls under `crates/voxelite-ui/src/` and export
   through `lib.rs`; do not hand-style one-off replacements in the app.
+- Build every control from the library: `Button`, `IconButton` (square 36 px
+  rail button, `IconButton::rail`, optional corner badge such as the Mirror axis
+  letter), `Tab`/`TabBar`, `Segment`/`SegmentedControl`, `Panel` and `Popover`
+  from [navigation.rs](crates/voxelite-ui/src/navigation.rs),
+  [surfaces.rs](crates/voxelite-ui/src/surfaces.rs) and
+  [components.rs](crates/voxelite-ui/src/components.rs). Buttons, tabs, segments
+  and rail controls all use `radius::CONTROL` on all four corners; selected and
+  hover fills must be rounded too. Do not write raw `px(..)` sizes, radii or
+  colors in `ui.rs` or `ui/*.rs`: add a token in
+  [tokens.rs](crates/voxelite-ui/src/tokens.rs) (`space`, `radius`, `metrics`,
+  `Theme`) and a component if none fits. Component rules and the documented
+  radius exceptions live in [crates/voxelite-ui/AGENTS.md](crates/voxelite-ui/AGENTS.md).
+  Any change to a shared control needs before/after captures of every screen
+  that uses it.
 - Use [tokens.rs](crates/voxelite-ui/src/tokens.rs) for theme, spacing, radii,
   typography, heights and focus rings. Keep domain dispatch, modal state, focus
   restoration and file dialogs in the app.
@@ -341,6 +355,6 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Core architecture](docs/architecture/core.md) | Document/transaction invariants. |
 | [Plugin guide](crates/plugins/README.md), [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) | API, host and built-in ownership. |
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
-| [UI library](crates/voxelite-ui/README.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
+| [UI library](crates/voxelite-ui/README.md), [UI rules](crates/voxelite-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
 | [Reviews](docs/reviews/), [history playback](docs/reviews/history-playback.md) | Regression evidence and preview invariants. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |

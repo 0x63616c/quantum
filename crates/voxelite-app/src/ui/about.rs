@@ -1,7 +1,7 @@
 //! Small About and acknowledgements panels built from the shared dialog shell.
 use super::*;
+use voxelite_ui::Card;
 use voxelite_ui::tokens::ControlSize;
-use voxelite_ui::{Card, IconButton};
 
 const TAGLINE: &str = "A voxel workspace by Calum";
 
@@ -69,20 +69,23 @@ impl EditorView {
 
     pub(super) fn about_dialog(&self, acknowledgements: bool, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
-        let close = IconButton::button("close-about", "close", "Close About Voxelite", t)
+        // Preserve the original content-width compact action (29 × 24).
+        let close = Button::new("close-about", "Close About Voxelite", t)
+            .variant(ButtonVariant::Icon)
+            .icon("close")
             .size(ControlSize::Sm)
             .build()
             .on_click(cx.listener(|this, _, window, cx| this.close_about(window, cx)));
         let panel = if acknowledgements {
             Dialog::panel("acknowledgements", "Acknowledgements", t, &self.modal_focus)
-                .w(px(480.))
-                .h(px(440.))
+                .w(px(metrics::CONFIRM_WIDTH))
+                .h(px(metrics::COMMAND_HEIGHT))
                 .child(Dialog::title("Acknowledgements", t).child(close))
                 .child(
                     div()
                         .id("license-list")
                         .flex_1()
-                        .min_h(px(0.))
+                        .min_h(px(space::NONE))
                         .overflow_y_scroll()
                         .p(px(space::XL))
                         .child(
@@ -121,7 +124,7 @@ impl EditorView {
                 .child(
                     div()
                         .flex_1()
-                        .min_h(px(0.))
+                        .min_h(px(space::NONE))
                         .flex()
                         .flex_col()
                         .items_center()

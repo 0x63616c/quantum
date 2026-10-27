@@ -555,7 +555,7 @@ impl TextField {
                     .cursor_default()
                     .w(px(180.))
                     .p(px(space::XS))
-                    .rounded(px(radius::MD))
+                    .rounded(px(radius::CONTROL))
                     .border_1()
                     .border_color(t.separator())
                     .bg(t.surface_raised())
