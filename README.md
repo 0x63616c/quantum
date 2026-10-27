@@ -422,13 +422,12 @@ failed site deployment rather than replacing published release assets.
 | [Native editor guide](crates/voxelite-app/README.md) | Running the app, controls and platform notes. |
 | [MCP guide](docs/mcp.md), [integrations](integrations/README.md), [skills](skills/README.md) | Agent setup and workflows. |
 | [Web guide](docs/web.md), [site guide](site/README.md) | Browser builds and generated documentation. |
-| [Domain glossary](GLOSSARY.md) | Shared terminology and proposed architecture seams. |
+| [Domain glossary](docs/glossary.md) | Shared terminology and proposed architecture seams. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Decisions and the architecture review's recommended order. |
 | [Core architecture](docs/architecture/core.md), [built-in plugins](crates/plugins/README.md) | Model invariants and extension boundaries. |
 | [Format specification](spec/voxl/1.0/README.md), [MCP contract](spec/mcp/v1/contract.md) | File and protocol contracts. |
-| [PLAN.md](PLAN.md) | Product plan, including historical and deferred scope. |
-| [Art checklist](design/ART-CHECKLIST.md), [private archive](https://github.com/0x63616c/quantum-archive) | Visual direction and historical concepts/review captures. |
-| [Reviews](docs/reviews/) | Recorded findings, screenshots and verification limits. |
+| [Product direction](docs/adr/0003-product-direction.md) | Product scope, core and built-in plugin boundaries, and deferred work. |
+| [Art checklist](design/ART-CHECKLIST.md), [private archive](https://github.com/0x63616c/quantum-archive) | Visual direction; historical concepts, review captures and design history. |
 | [Rendering harness](docs/perf/rendering-harness.md), [release guide](docs/releasing-macos.md) | Pixel/performance gates and distribution. |
 | [AGENTS.md](AGENTS.md) | Coding conventions, commands, UI rules and PR workflow. |
 

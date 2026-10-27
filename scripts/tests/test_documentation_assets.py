@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class DocumentationAssetTests(unittest.TestCase):
     def test_local_markdown_image_targets_exist(self):
         documents = [ROOT / name for name in (
-            'README.md', 'AGENTS.md', 'PLAN.md', 'examples/README.md',
+            'README.md', 'AGENTS.md', 'examples/README.md',
             'site/README.md', 'design/ART-CHECKLIST.md',
         )]
         documents.extend((ROOT / 'docs').rglob('*.md'))

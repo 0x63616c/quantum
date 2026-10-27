@@ -7,10 +7,8 @@ toolbar, a persistent left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
 palettes and layer lists scroll within bounded panels.
 
-The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
-current visual assessment, verification and both-theme captures. The sidebar
-switches between Session, Comments and History. Save is available from the File
-menu and Cmd/Ctrl+S; the bottom-left cog opens Settings (also Cmd/Ctrl+,). Sharing
+The sidebar switches between Session, Comments and History. Save is available
+from the File menu and Cmd/Ctrl+S; the bottom-left cog opens Settings (also Cmd/Ctrl+,). Sharing
 is deferred to the hosted edition. Static medium and semibold Geist faces preserve the intended weight hierarchy on Linux.
 
 ```sh
@@ -252,13 +250,14 @@ PNGs. Dialog errors appear in the status bar and preserve the current project.
 the full resolved dependency graph in `Cargo.lock`. These are the Apache-2.0
 [GPUI Archipelago registry distribution](https://github.com/gpui-archipelago/gpui-unofficial)
 of Zed's GPUI family. Native platform features are X11, Wayland and font-kit;
-web code and plugin crates are not built by this stage. Geist and Geist Mono
-are bundled in the crate with their OFL notices. The default example is embedded
+the browser build uses the same editor through `gpui_web`. Geist and Geist Mono
+are copied into the crate with their OFL notices. The default example is embedded
 at compile time.
 
-This stage implements the native editor polish scope, not every release row in
-`PLAN.md`. Plugin hosting remains required by PLAN.md and is not implemented by this native polish stage. Recovery journals, GLB export UI, hosted collaboration and screen-reader
-certification remain outside this round. Portable data is retained on save.
+See [product direction](../../docs/adr/0003-product-direction.md) for product scope
+and deferred work. The app registers statically linked built-in plugins through
+`app_host()`; external plugin loading and scripting remain deferred. Portable
+data is retained on save.
 
 ## Polish round 2: local authoring and live agents
 
@@ -267,7 +266,6 @@ highlights the active tool. Mirror X/Y/Z controls live below the tool group.
 Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
 Tools → Choose tool retains searchable selection without a toolbar dropdown.
 The bottom-left cog opens Settings; Save is in the File menu and Cmd/Ctrl+S.
-Plugin hosting remains an open v1 gate.
 
 **Palette → Manage palettes** opens a persistent custom library. Create, rename,
 duplicate, delete, edit a six-digit hex color, choose a hue or drag RGB channels,
@@ -337,8 +335,8 @@ multi-user collaboration or a durable recovery journal.
 The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
 `bash scripts/capture-native.sh` now also captures main/tools/palettes/
 comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
-client drives the real stdio bridge and checks edit receipts. It also checks selection reversal, repeated swatch moves and small-window feature states. See
-[the round 2 review](../../docs/reviews/app-polish-2.md) for validation and limits.
+client drives the real stdio bridge and checks edit receipts. It also checks
+selection reversal, repeated swatch moves and small-window feature states.
 
 UI action glyphs are bundled Lucide SVGs with upstream ISC/Feather MIT notices in
 `assets/icons/`. Settings uses an always-visible bottom-left cog, with the optional
