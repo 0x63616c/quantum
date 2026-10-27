@@ -6203,9 +6203,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "url",
- "uuid",
  "voxelite-format",
- "voxelite-mcp",
 ]
 
 [[package]]

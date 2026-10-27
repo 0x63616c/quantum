@@ -28,6 +28,8 @@ jsonschema = { version = "0.37", default-features = false }
 rustix = { version = "1", features = ["process"] }
 
 [dev-dependencies]
+# Match the site's catalog key order in standalone and workspace test runs.
+serde_json = { workspace = true, features = ["preserve_order"] }
 tempfile = "3"
 png.workspace = true
 
