@@ -30,7 +30,7 @@ NOTARY = {
     "APPLE_API_KEY_P8_BASE64": base64.b64encode(b"fixture API key").decode(),
     "APPLE_API_KEY_ID": "fixture ID", "APPLE_API_ISSUER_ID": "fixture issuer",
 }
-PUBLIC = {"SPARKLE_PUBLIC_ED_KEY": base64.b64encode(bytes(32)).decode()}
+PUBLIC = {"SPARKLE_PUBLIC_ED_KEY": (ROOT / "packaging/macos/sparkle_public_ed_key.txt").read_text().strip()}
 
 MOCK = r'''#!/usr/bin/env python3
 import json, os, pathlib, shutil, signal, sys
@@ -80,16 +80,32 @@ GENERATOR = r'''#!/usr/bin/env python3
 import base64, os, pathlib, plistlib, sys, xml.etree.ElementTree as ET
 assert 'SPARKLE_ED_PRIVATE_KEY' not in os.environ
 assert sys.stdin.read().strip() == 'fixture private key'
+assert 'fixture private key' not in sys.argv
 args = sys.argv[1:]
-assert '--embed-release-notes' in args
+assert args[args.index('--maximum-versions')+1] == '0'
+assert args[args.index('--maximum-deltas')+1] == '0'
 notes = (pathlib.Path(args[-1]) / 'Voxelite.html').read_text(encoding='utf-8')
 ns = '{http://www.andymatuschak.org/xml-namespaces/sparkle}'
-root = ET.Element('rss', version='2.0')
-item = ET.SubElement(ET.SubElement(root, 'channel'), 'item')
+if os.environ.get('GENERATOR_FAILURE'):
+    print('PRIVATE-DIAGNOSTIC-SENTINEL')
+    print('fixture private key', file=sys.stderr)
+    sys.exit(1)
+root = ET.parse(args[args.index('-o')+1]).getroot()
+channel = root.find('channel')
+item = ET.Element('item')
+channel.insert(0, item)
 if not os.environ.get('MISSING_NOTES'):
-    ET.SubElement(item, 'description').text = 'Wrong notes' if os.environ.get('WRONG_NOTES') else notes
+    link = ET.SubElement(item, ns+'releaseNotesLink', {
+        ns+'edSignature':base64.b64encode(bytes(64)).decode(),
+        ns+'length':str(len(notes.encode()))})
+    link.text = args[args.index('--release-notes-url-prefix')+1]+'Voxelite.html'
+    if os.environ.get('WRONG_NOTES'): link.text = 'https://example.invalid/notes'
+if os.environ.get('DROP_HISTORY'):
+    for old in channel.findall('item')[1:]: channel.remove(old)
 info = plistlib.load(open('dist/Voxelite.app/Contents/Info.plist', 'rb'))
 ET.SubElement(item, ns+'version').text = info['CFBundleVersion']
+ET.SubElement(item, ns+'shortVersionString').text = info['CFBundleShortVersionString']
+ET.SubElement(item, ns+'minimumSystemVersion').text = info['LSMinimumSystemVersion']
 attrs = {'url':args[args.index('--download-url-prefix')+1]+'Voxelite.dmg',
          'length':str(pathlib.Path('dist/Voxelite.dmg').stat().st_size)}
 if not os.environ.get('UNSIGNED_FEED'): attrs[ns+'edSignature'] = base64.b64encode(bytes(64)).decode()
@@ -118,6 +134,8 @@ class PackagingTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for name in ["scripts/package-macos.sh", "scripts/generate-macos-appcast.sh",
+                     "scripts/check-macos-appcast.py", "scripts/macos_appcast.py", "site/appcast.xml",
+                     "packaging/macos/sparkle_public_ed_key.txt",
                      "packaging/macos/Info.plist", "packaging/macos/Voxelite.entitlements"]:
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,9 +168,9 @@ class PackagingTests(unittest.TestCase):
             FIXTURE_ARCHIVE=str(self.archive), TAG="v1.2.3", GITHUB_REPOSITORY="0x63616c/voxelite",
         )
 
-    def run_script(self, name="package-macos.sh", overrides=None, args=(), success=True):
+    def run_script(self, name="package-macos.sh", overrides=None, args=(), success=True, trace=False):
         result = subprocess.run(
-            ["bash", "scripts/" + name, *args], cwd=self.root,
+            ["bash", *(["-x"] if trace else []), "scripts/" + name, *args], cwd=self.root,
             env=self.env | (overrides or {}), capture_output=True, text=True,
         )
         self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
@@ -163,13 +181,42 @@ class PackagingTests(unittest.TestCase):
         return [json.loads(line) for line in (self.root / "calls").read_text().splitlines()]
 
     def test_no_secrets_reach_build_or_tools(self):
-        self.run_script(overrides=CERT | NOTARY | {"SPARKLE_ED_PRIVATE_KEY": "unused fixture"})
+        result = self.run_script(overrides=CERT | NOTARY | {"SPARKLE_ED_PRIVATE_KEY": "unused fixture"}, trace=True)
+        for value in (CERT | NOTARY | {"SPARKLE_ED_PRIVATE_KEY": "unused fixture"}).values():
+            self.assertNotIn(value, result.stdout + result.stderr)
         for name, _, secrets in self.events():
             self.assertEqual(secrets, [], name)
         self.assertTrue((self.root / "dist/.notarized").exists())
         # Check from a download folder, independently of the repository layout.
         subprocess.run(["shasum", "-a", "256", "--check", "Voxelite.dmg.sha256"],
                        cwd=self.root / "dist", check=True, capture_output=True)
+
+    def test_default_public_key_and_matching_override(self):
+        raw = (ROOT / "packaging/macos/sparkle_public_ed_key.txt").read_text()
+        self.assertEqual(raw, raw.strip() + "\n")
+        self.assertEqual(len(base64.b64decode(raw.strip(), validate=True)), 32)
+        for overrides in ({}, PUBLIC):
+            self.run_script(overrides=overrides)
+            info = plistlib.loads((self.root / "dist/Voxelite.app/Contents/Info.plist").read_bytes())
+            self.assertEqual(info['SUPublicEDKey'], raw.strip())
+            self.assertEqual(info['SUFeedURL'], 'https://voxelite.worldwidewebb.co/appcast.xml')
+            self.assertIs(info['SUEnableAutomaticChecks'], True)
+            self.assertIs(info['SUAutomaticallyUpdate'], False)
+            signatures = [args for name, args, _ in self.events()
+                          if name == 'codesign' and '--verify' not in args]
+            self.assertTrue(signatures)
+            self.assertTrue(all('--options' not in args for args in signatures))
+            self.assertTrue(all('--deep' not in args for args in signatures))
+
+    def test_mismatched_public_override_and_missing_default_fail(self):
+        self.run_script(overrides={"SPARKLE_PUBLIC_ED_KEY": base64.b64encode(bytes(32)).decode()}, success=False)
+        (self.root / "packaging/macos/sparkle_public_ed_key.txt").unlink()
+        self.run_script(overrides=PUBLIC, success=False)
+
+    def test_appcast_requires_credentials_and_notarization(self):
+        self.run_script()
+        self.run_script("generate-macos-appcast.sh", success=False)
+        self.run_script("generate-macos-appcast.sh", {"SPARKLE_ED_PRIVATE_KEY": "fixture private key"}, success=False)
 
     def test_skip_build(self):
         binary = self.root / "target/release/voxelite"
@@ -185,9 +232,9 @@ class PackagingTests(unittest.TestCase):
         self.assertIn(['build', '--release', '--locked', '-p', 'voxelite-mcp'], builds)
         signatures = [args for name, args, _ in self.events()
                       if name == 'codesign' and '--verify' not in args]
-        self.assertEqual([Path(args[-1]).name for args in signatures[:3]],
+        self.assertEqual([Path(args[-1]).name for args in signatures[5:8]],
                          ['voxelite-mcp', 'Voxelite', 'Voxelite.app'])
-        for args in signatures[:3]:
+        for args in signatures[5:8]:
             self.assertEqual(args[args.index('--sign') + 1], 'A' * 40)
             self.assertEqual(args[args.index('--options') + 1], 'runtime')
         for binary in ('voxelite-mcp', 'Voxelite'):
@@ -261,6 +308,7 @@ class PackagingTests(unittest.TestCase):
         verifier = self.root / "dist/sparkle/bin/sign_update"
         verifier.write_text(VERIFIER)
         verifier.chmod(0o755)
+        shutil.copyfile(self.root / "site/appcast.xml", self.root / "dist/previous-appcast.xml")
         output = self.root / "outputs"
         credentials = {"SPARKLE_ED_PRIVATE_KEY": "fixture private key", "GITHUB_OUTPUT": str(output)}
         notes = self.root / "dist/RELEASE_NOTES.md"
@@ -269,15 +317,16 @@ class PackagingTests(unittest.TestCase):
                          encoding="utf-8")
         for overrides, success in [({}, True), ({"TAG": "v9.9.9"}, False),
                                    ({"UNSIGNED_FEED": "1"}, False), ({"WRONG_URL": "1"}, False),
-                                   ({"UNSIGNED_METADATA": "1"}, False),
+                                   ({"UNSIGNED_METADATA": "1"}, False), ({"GENERATOR_FAILURE": "1"}, False),
                                    ({"MISSING_NOTES": "1"}, False), ({"WRONG_NOTES": "1"}, False)]:
             with self.subTest(overrides=overrides):
                 output.unlink(missing_ok=True)
-                result = self.run_script("generate-macos-appcast.sh", credentials | overrides, success=success)
+                result = self.run_script("generate-macos-appcast.sh", credentials | overrides, success=success, trace=True)
                 self.assertEqual("generated=true" in output.read_text(), success)
                 self.assertNotIn("PRIVATE-DIAGNOSTIC-SENTINEL", result.stdout + result.stderr)
+                self.assertNotIn("fixture private key", result.stdout + result.stderr)
                 if success:
-                    description = ET.parse(self.root / "site/appcast.xml").findtext("channel/item/description")
+                    description = (self.root / "dist/Voxelite.html").read_text()
                     self.assertIn("&lt;script&gt;", description)
                     self.assertIn("&amp;", description)
                     parser = HTMLParser()
@@ -288,6 +337,19 @@ class PackagingTests(unittest.TestCase):
                     parser.feed(description)
                     self.assertEqual("".join(text).strip(), notes.read_text(encoding="utf-8").strip())
                     self.assertEqual(tags, ["html", "head", "meta", "body", "pre"])
+        # Preserve the first signed update when generating a newer one.
+        shutil.copyfile(self.root / "site/appcast.xml", self.root / "dist/previous-appcast.xml")
+        plist = self.root / "dist/Voxelite.app/Contents/Info.plist"
+        info = plistlib.loads(plist.read_bytes())
+        info["CFBundleVersion"] = info["CFBundleShortVersionString"] = "1.2.4"
+        plist.write_bytes(plistlib.dumps(info))
+        credentials["TAG"] = "v1.2.4"
+        self.run_script("generate-macos-appcast.sh", credentials | {"DROP_HISTORY": "1"}, success=False)
+        self.run_script("generate-macos-appcast.sh", credentials)
+        items = ET.parse(self.root / "site/appcast.xml").findall("channel/item")
+        ns = "{http://www.andymatuschak.org/xml-namespaces/sparkle}"
+        self.assertEqual([item.findtext(ns + "version") for item in items], ["1.2.4", "1.2.3"])
+        self.run_script("generate-macos-appcast.sh", credentials | {"TAG": "v1.2.3"}, success=False)
         notes.unlink()
         self.run_script("generate-macos-appcast.sh", credentials, success=False)
         dmg = self.root / "dist/Voxelite.dmg"

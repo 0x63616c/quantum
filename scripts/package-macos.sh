@@ -30,12 +30,27 @@ if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; th
   exit 1
 fi
 export VERSION
-SPARKLE_PUBLIC_ED_KEY=${SPARKLE_PUBLIC_ED_KEY:-}
-if [[ -z "$SPARKLE_PUBLIC_ED_KEY" && -f packaging/macos/sparkle_public_ed_key.txt ]]; then
-  SPARKLE_PUBLIC_ED_KEY=$(cat packaging/macos/sparkle_public_ed_key.txt)
-fi
-SPARKLE_PUBLIC_ED_KEY=$(printf '%s' "$SPARKLE_PUBLIC_ED_KEY" | tr -d '[:space:]')
-export SPARKLE_PUBLIC_ED_KEY
+# A stale Actions variable must not silently change the key shipped to users.
+export SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY:-}"
+SPARKLE_PUBLIC_ED_KEY=$(python3 - <<'PY'
+import base64
+import os
+from pathlib import Path
+
+committed = Path("packaging/macos/sparkle_public_ed_key.txt").read_text().strip()
+override = os.environ["SPARKLE_PUBLIC_ED_KEY"].strip()
+for key in (committed, override or committed):
+    try:
+        decoded = base64.b64decode(key, validate=True)
+        if len(decoded) != 32 or base64.b64encode(decoded).decode() != key:
+            raise ValueError()
+    except ValueError:
+        raise SystemExit("Sparkle public key must be canonical base64 of 32 bytes.") from None
+if override and override != committed:
+    raise SystemExit("SPARKLE_PUBLIC_ED_KEY differs from packaging/macos/sparkle_public_ed_key.txt; update the file and variable together.")
+print(override or committed)
+PY
+)
 APP=dist/Voxelite.app
 DMG=dist/Voxelite.dmg
 IDENTITY=-
@@ -103,27 +118,20 @@ cp target/release/voxelite "$APP/Contents/MacOS/Voxelite"
 cp target/release/voxelite-mcp "$APP/Contents/MacOS/voxelite-mcp"
 python3 - "$APP/Contents/Info.plist" <<'PY'
 import os
-import base64
 import plistlib
 import sys
 
 with open("packaging/macos/Info.plist", "rb") as source:
     info = plistlib.load(source)
 info["CFBundleVersion"] = info["CFBundleShortVersionString"] = os.environ["VERSION"]
-public_key = os.environ["SPARKLE_PUBLIC_ED_KEY"].strip()
-if public_key:
-    try:
-        if len(base64.b64decode(public_key, validate=True)) != 32:
-            raise ValueError()
-    except ValueError:
-        raise SystemExit("SPARKLE_PUBLIC_ED_KEY must be a base64-encoded 32-byte Ed25519 public key.") from None
-    info.update(
-        SUFeedURL="https://voxelite.worldwidewebb.co/appcast.xml",
-        SUPublicEDKey=public_key,
-        SUEnableAutomaticChecks=True,
-        SUVerifyUpdateBeforeExtraction=True,
-        SURequireSignedFeed=True,
-    )
+info.update(
+    SUFeedURL="https://voxelite.worldwidewebb.co/appcast.xml",
+    SUPublicEDKey=os.environ["SPARKLE_PUBLIC_ED_KEY"],
+    SUEnableAutomaticChecks=True,
+    SUAutomaticallyUpdate=False,
+    SUVerifyUpdateBeforeExtraction=True,
+    SURequireSignedFeed=True,
+)
 with open(sys.argv[1], "wb") as output:
     plistlib.dump(info, output)
 PY
@@ -135,22 +143,18 @@ for s in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Voxelite.icns"
 
-if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
-  # Pin both the release and its archive digest; never execute unverified tools.
-  SPARKLE_VERSION=2.10.1
-  SPARKLE_SHA256=1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27
-  curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-    "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" \
-    --output "$WORK_DIR/Sparkle.tar.xz"
-  printf '%s  %s\n' "$SPARKLE_SHA256" "$WORK_DIR/Sparkle.tar.xz" | shasum -a 256 --check
-  mkdir -p dist/sparkle "$APP/Contents/Frameworks"
-  tar -xf "$WORK_DIR/Sparkle.tar.xz" -C dist/sparkle ./Sparkle.framework ./bin ./LICENSE
-  # ditto preserves the framework's versioned symlinks and executable modes.
-  ditto dist/sparkle/Sparkle.framework "$APP/Contents/Frameworks/Sparkle.framework"
-  cp dist/sparkle/LICENSE "$APP/Contents/Resources/Sparkle-LICENSE.txt"
-else
-  echo "NOTICE: No Sparkle public Ed25519 key configured; skipping Sparkle embedding and automatic updates."
-fi
+# Pin both the release and its archive digest; never execute unverified tools.
+SPARKLE_VERSION=2.10.1
+SPARKLE_SHA256=1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27
+curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+  "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" \
+  --output "$WORK_DIR/Sparkle.tar.xz"
+printf '%s  %s\n' "$SPARKLE_SHA256" "$WORK_DIR/Sparkle.tar.xz" | shasum -a 256 --check
+mkdir -p dist/sparkle "$APP/Contents/Frameworks"
+tar -xf "$WORK_DIR/Sparkle.tar.xz" -C dist/sparkle ./Sparkle.framework ./bin ./LICENSE
+# ditto preserves the framework's versioned symlinks and executable modes.
+ditto dist/sparkle/Sparkle.framework "$APP/Contents/Frameworks/Sparkle.framework"
+cp dist/sparkle/LICENSE "$APP/Contents/Resources/Sparkle-LICENSE.txt"
 
 if [[ ${MACOS_SIGNING_MODE:-auto} != adhoc && -n ${MACOS_CERTIFICATE_P12_BASE64:-} && -n ${MACOS_CERTIFICATE_PASSWORD:-} ]]; then
   # Restrict secret files without changing permissions on the distributable app.

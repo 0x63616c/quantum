@@ -17,11 +17,20 @@ provided token; a personal access token is not needed.
 | `APPLE_API_ISSUER_ID` | The team API Issuer ID from App Store Connect. |
 | `SPARKLE_ED_PRIVATE_KEY` | The **contents** of the private key file exported by Sparkle `generate_keys -x`. It is already base64; do not base64-encode it again. |
 
-The public Sparkle key belongs in
-`packaging/macos/sparkle_public_ed_key.txt`, as one base64 line. It is deliberately
-absent until Calum generates a key pair. Alternatively, set the Actions **variable**
-`SPARKLE_PUBLIC_ED_KEY`; it overrides the file and is not a secret. Local packaging
-accepts that same environment variable. No placeholder key is shipped.
+The public Sparkle key is committed in
+`packaging/macos/sparkle_public_ed_key.txt` as canonical base64 of 32 bytes.
+Every packaged build embeds Sparkle, including ad-hoc CI packages. The optional
+Actions **variable** `SPARKLE_PUBLIC_ED_KEY` (or local environment variable) still
+supplies the key when set, but must match the committed key. A missing/invalid
+file or mismatched override fails packaging; there is no silent key change or
+update-free package. No Actions variables are required.
+
+Read-only inventory on **2026-10-26**: `gh secret list -R 0x63616c/voxelite
+--json name,updatedAt` and `gh variable list -R 0x63616c/voxelite --json
+name,updatedAt` both returned empty lists. All six required repository secrets
+above are missing; `MACOS_SIGNING_IDENTITY` is optional. This inventory confirms
+names only, not credential validity or organization/environment inheritance.
+No secrets or variables were set during implementation.
 
 ### Developer ID certificate
 
@@ -73,35 +82,6 @@ after such an interruption. Do not run packaging with shell tracing. Raw signing
 and authentication diagnostics are suppressed on failure because they can expose
 certificate identities; reproduce locally to inspect Apple tool errors.
 
-### Sparkle update keys
-
-Use the same pinned Sparkle distribution as `scripts/package-macos.sh`:
-**2.10.1**, SHA-256
-`1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27`.
-On a Mac, from the repository root:
-
-```sh
-sparkle_setup=$(mktemp -d)
-curl --fail --location --proto '=https' --tlsv1.2 \
-  https://github.com/sparkle-project/Sparkle/releases/download/2.10.1/Sparkle-2.10.1.tar.xz \
-  --output "$sparkle_setup/Sparkle.tar.xz"
-printf '%s  %s\n' \
-  1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27 \
-  "$sparkle_setup/Sparkle.tar.xz" | shasum -a 256 --check
-# Continue only after the digest check succeeds.
-tar -xf "$sparkle_setup/Sparkle.tar.xz" -C "$sparkle_setup"
-"$sparkle_setup/bin/generate_keys"
-"$sparkle_setup/bin/generate_keys" -p > packaging/macos/sparkle_public_ed_key.txt
-(umask 077; "$sparkle_setup/bin/generate_keys" -x "$sparkle_setup/private-key.txt")
-gh secret set SPARKLE_ED_PRIVATE_KEY --repo 0x63616c/voxelite \
-  < "$sparkle_setup/private-key.txt"
-rm -rf "$sparkle_setup"
-```
-
-Only the public key file is committed. `generate_keys` also retains the private
-key in the Mac's login keychain; maintain a secure backup. Use the same key for
-subsequent releases. See [Sparkle's setup and key guidance](https://sparkle-project.org/documentation/).
-
 ## CI behavior
 
 `.github/workflows/ci-macos.yml` runs on pushes to `main` and same-repository pull
@@ -137,11 +117,12 @@ expire after **3 days**. New runs cancel older CI runs for the same ref.
 The release workflow is triggered by `v*` tags or manual dispatch with an
 existing tag. It accepts stable `vMAJOR.MINOR.PATCH` tags only and checks out the
 fully qualified `refs/tags/` ref, so a same-named branch cannot supply the build.
-The tag without `v` supplies both bundle version fields. Use an
+The tag without `v` must equal the `voxelite-app` Cargo version and supplies both
+bundle version fields. Bump the workspace version and lockfile before tagging. Use an
 increasing version for each public update and keep published release tags/assets
 immutable; the update feed depends on their exact bytes. Releases serialize and
 are not cancelled in progress. Publication creates a draft, uploads the DMG,
-checksum, and optional feed together, then publishes only after every upload
+checksum, signed release notes, and signed feed together, then publishes only after every upload
 succeeds. An existing release (including a draft) makes publication fail; assets
 are never overwritten. A failed upload leaves a draft for inspection. Remove
 that unpublished draft manually before retrying, or use a new version tag.
@@ -153,13 +134,10 @@ The packager:
    the packager with `--skip-build` and an explicit `VERSION`. Local packaging
    still builds by default. The script removes credential variables from child
    environments and exposes each encoded key only to its decoder.
-2. If a public Sparkle key exists, downloads the pinned archive, verifies SHA-256,
-   preserves framework symlinks, and embeds Sparkle plus its license. It sets
-   `SUFeedURL=https://voxelite.worldwidewebb.co/appcast.xml`, `SUPublicEDKey`, and
-   `SUEnableAutomaticChecks=true`, `SUVerifyUpdateBeforeExtraction=true`, and
-   `SURequireSignedFeed=true` in the built Info.plist. The last two settings opt
-   into signed update metadata and archive verification before extraction.
-   Without the public key, it omits those keys and the framework and prints a notice.
+2. Validates the committed public key and optional matching override, downloads
+   pinned Sparkle 2.10.1, verifies SHA-256, preserves framework symlinks, and embeds
+   the framework and license. It sets the feed, key, and update policy described
+   below in the built Info.plist.
 3. With a certificate and password, signs the Sparkle XPC services, helper tool,
    updater app, framework, and outer app in that order, using the same Developer
    ID, hardened runtime, and secure timestamps. The app uses
@@ -177,7 +155,9 @@ The packager:
 
 Without the certificate/password pair, the build succeeds with ad-hoc app signing
 and an unsigned DMG. With Developer ID but incomplete API credentials, it signs
-without notarizing. Both cases print clear notices and skip the public appcast.
+without notarizing. These local/CI modes print clear notices. The release workflow requires all five
+Apple secrets and appcast generation requires a notarized result and the Sparkle
+secret; an incomplete configuration cannot publish a release.
 Invalid credentials, rejected notarization, bad checksums, or failed signature
 verification fail the release; they do not silently fall back. Ad-hoc builds omit
 hardened runtime so they can load the ad-hoc Sparkle framework during development.
@@ -185,65 +165,211 @@ hardened runtime so they can load the ad-hoc Sparkle framework during developmen
 The runtime updater loads only `Contents/Frameworks/Sparkle.framework/Sparkle`
 from the app bundle, through `dlopen`. It retains the Objective-C controller and
 framework for the process lifetime. Non-bundle `cargo run` and bundles without
-Sparkle work normally. The macOS menu integration should invoke
-`crate::updater::check_for_updates()` on GPUI's main thread for **Check for
-Updates…**; this change exposes that API but leaves menu wiring to the menu job.
+Sparkle work normally. The app menu and Settings > Updates both call
+`crate::updater::check_for_updates()` on GPUI's main thread. Their availability
+query, `is_available()`, reads the controller's updater `canCheckForUpdates`, so
+validation disables checks while Sparkle is busy or unavailable. Dispatch checks
+that property again. The controller starts with `initWithStartingUpdater: true`.
+Verify that menu/Settings presentation refreshes when the updater changes state.
 Only this macOS module permits the unsafe Objective-C calls; the app's other code
 denies unsafe code, and other crates retain the workspace forbid lint.
 
-## Appcast and site deployment
+## Automatic updates (Sparkle)
 
-After packaging, with full Git history and tags available, run
-`TAG=v0.2.0 python3 scripts/generate-macos-release-notes.py` (using the release's
-actual tag). This writes `dist/RELEASE_NOTES.md`: the installation notes plus
-non-merge commit subjects and short hashes since the nearest reachable stable
-tag before the release, or all commits if there is no previous stable tag.
-Author identities and commit bodies are omitted. The release workflow runs this
-step after packaging clears `dist/` and uses the result for the GitHub release.
+### Policy and key custody
 
-After a notarized build, `scripts/generate-macos-appcast.sh` passes
-`SPARKLE_ED_PRIVATE_KEY` to Sparkle's `generate_appcast --ed-key-file -` through
-stdin, without exporting it to the tool or its children. It first checks the
-DMG checksum and stapled ticket. It creates a single-version `site/appcast.xml`,
-with no delta updates, pointing at:
+The production feed is `https://voxelite.worldwidewebb.co/appcast.xml`.
+`SUEnableAutomaticChecks=true` starts automatic checks when the updater starts
+at launch, subject to Sparkle's remembered last-check time and default daily
+interval. `SUAutomaticallyUpdate=false` requires user approval before downloads
+and installation by default; users can opt into automatic downloads in Sparkle's
+update dialog. Neither setting forces a preference the user has already changed.
+System profiling remains off. See [Sparkle's settings](https://sparkle-project.org/documentation/customization/).
 
-```text
-https://github.com/0x63616c/voxelite/releases/download/<tag>/Voxelite.dmg
-```
+`SUVerifyUpdateBeforeExtraction=true` and `SURequireSignedFeed=true` retain
+archive and metadata signature verification. There is no unsigned installable
+fallback. Before the first signed release, the checked-in RSS feed is valid and
+empty: `/appcast.xml` exists but contains no update items. A signed-feed client
+may report a verification error for this unsigned bootstrap feed; the first
+signed release replaces it. Older builds that never embedded Sparkle require a
+manual installation of the first Sparkle-enabled release (planned v0.3.0).
 
-The script rejects an unsigned enclosure, wrong URL, incorrect size, or stale
-bundle version, and requires the release tag to equal `v` plus the bundle version.
-It converts `dist/RELEASE_NOTES.md` to escaped `Voxelite.html` beside the archived
-DMG, embeds it with `--embed-release-notes`, and checks the item contains those
-same notes before publishing. See [Sparkle's embedded release notes](https://sparkle-project.org/documentation/publishing/#embedded-release-notes).
-Sparkle compares the signing key with the bundled public key;
-a mismatch cannot be published as an unsigned update. The feed itself is also
-signed because the bundle opts into `SURequireSignedFeed`; enclosure signing alone
-does not sign the XML. The script requires `sign_update --verify` to validate the
-feed signature before copying it for upload. Both tools receive the key only on
-stdin. See [Sparkle's signed feed requirements](https://sparkle-project.org/documentation/#signing-feeds-optional).
-Missing private key, missing framework, or non-notarized output skips generation
-with a notice.
+The existing production private key lives only at
+`/home/box/secrets/voxelite-sparkle/sparkle_ed_private_key.txt`. It must never be
+read into a prompt, printed, logged, committed, or copied into the checkout.
+The maintainer uploads its existing contents as **`SPARKLE_ED_PRIVATE_KEY`** using
+stdin or the GitHub secrets UI. Sparkle 2.10.1's new format is already base64 of a
+32-byte seed; do not encode it again. Maintain an encrypted offline backup under
+maintainer control. Only the public key belongs in Git. Never regenerate the
+production key as part of setup or CI.
 
-The release workflow uploads `Voxelite.dmg`, `Voxelite.dmg.sha256`, and, when
-generated, **`appcast.xml` as GitHub release assets**. It never commits the feed,
-pushes a branch, or deploys the site. No PR-less push is used.
+Both release scripts disable shell tracing and unexport signing credentials.
+Sparkle receives its key only through stdin (`--ed-key-file -`); its children do
+not inherit it. Both Sparkle tools' stdout/stderr go to `/dev/null`, since
+malformed-key diagnostics can reveal input. No key or raw diagnostic file is
+created by the feed script. Exit and signal traps remove its temporary archives.
+Apple keys are decoded into private temporary files and removed after
+use; the Apple CLI still receives certificate/keychain passwords and public API
+identifiers as arguments, so the dedicated runner must be trusted.
 
-**The site deployment must copy the release's appcast asset to `site/appcast.xml`
-after building the site and before publishing it.** The repository's site build
-script does not fetch this asset automatically. For an explicitly selected
-release, the deployment preparation step is:
+For rotation, retain the old key and follow [Sparkle's key rotation guidance](https://sparkle-project.org/documentation/#rotating-signing-keys).
+Do not simply replace the committed key and Actions secret: existing clients
+trust the old key, and this feed is signed too. Plan and test a bridge release
+with the same Developer ID and a separately hosted old-key-signed feed leading
+to an app configured for the new key/feed. Keep that bridge and old feed available
+for older clients. Update the committed public key and any override together,
+and then switch the secret only for releases using the new key. This requires a
+reviewed migration beyond the normal single-key workflow; losing the old key is
+not grounds to publish an unsigned item. Sparkle's documented Developer ID DMG
+fallback and signed-feed failure expiration also need testing before use.
+
+### Production and hosting flow
+
+1. `release-macos.yml` checks out the exact stable tag, verifies its Cargo version,
+   builds without signing secrets, signs inside-out, notarizes/staples the app,
+   creates the DMG, and notarizes/staples that DMG. Only the final stapled bytes
+   are hashed and signed for updates. The intermediate ZIP exists solely for app
+   notarization; it is not a release asset or appcast enclosure. No deltas ship.
+2. `generate-macos-release-notes.py` writes `dist/RELEASE_NOTES.md` from non-merge
+   commit subjects since the previous reachable stable tag, omitting authors and
+   commit bodies. `fetch-macos-appcast.py dist/previous-appcast.xml` then retrieves
+   the highest numeric stable release with an appcast, across all API pages.
+   Drafts/prereleases and older releases without feeds are excluded. It checks
+   every enclosure and release-notes URL/length against published asset metadata.
+   Only a confirmed absence of any release feed permits the empty initial feed;
+   network, authentication, download, and malformed-feed errors fail the job.
+3. `generate-macos-appcast.sh` requires the private key, framework, history file,
+   notarization marker, matching tag, checksum, and stapled ticket. It seeds the
+   output with the previous feed and invokes pinned `generate_appcast` with
+   `--maximum-versions 0 --maximum-deltas 0`, preserving all historical items.
+   New versions must increase strictly. Sparkle derives `sparkle:version`,
+   `sparkle:shortVersionString`, and `sparkle:minimumSystemVersion` from the bundle
+   (currently macOS 13.0). It signs the full DMG and escaped HTML release notes,
+   and signs the resulting XML. Links use immutable version-specific GitHub
+   release assets, e.g. `.../releases/download/v0.3.0/Voxelite.dmg` and
+   `.../releases/download/v0.3.0/Voxelite.html`.
+4. `sign_update --verify` checks the generated XML signature. The offline checker
+   checks canonical 64-byte signatures, exact GitHub URLs, local DMG/notes byte
+   lengths, bundle metadata, newest-first ordering, and unchanged prior items.
+   It checks structure/lengths, not Ed25519 cryptography; real signature checks
+   belong to the pinned Sparkle tools and the installed client. The generated
+   feed is copied to `site/appcast.xml` without reserialization.
+5. The workflow creates a draft, uploads `Voxelite.dmg`, its checksum,
+   `Voxelite.html`, and `appcast.xml`, then publishes. Existing releases/drafts
+   make creation fail; no asset is overwritten. A successful **Release macOS**
+   workflow triggers **Deploy site** through `workflow_run`, which works even
+   when publication uses `GITHUB_TOKEN`. The deploy builds trusted `main`, only
+   accepts successful owner-triggered release runs from this repository, and
+   shares the existing production concurrency group with main/manual builds.
+6. The site fetches the highest stable appcast using the same helper, then
+   `crates/voxelite-site` preserves those bytes both in place and for another
+   output directory. The build stages the feed at the root of the `site-dist`
+   artifact/branch. Vercel's existing `site-dist` production deployment serves
+   it at `/appcast.xml`, with RSS content type and revalidation cache headers.
+   Do not minify or rewrite signed XML or HTML notes.
+
+Release assets are the single source of truth: no bot commits to `main`, new
+credentials, or mutable server-side feed state. Keeping all prior items allows
+Sparkle to select a compatible older update when a later release raises its OS
+requirement. Numeric version selection avoids a GitHub “latest” toggle or a new
+release without an appcast rolling the feed back. Site builds fail closed on
+fetch/validation errors, leaving the existing deployment intact. A site failure
+after publication is retried by manually running **Deploy site** on `main`, not
+by republishing the release. The trigger must already be merged to `main` before
+releasing. See [GitHub workflow_run semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run).
+
+Offline checks, without network access or credentials:
 
 ```sh
-# Set RELEASE_TAG to the release selected for this deployment.
-gh release download "$RELEASE_TAG" --repo 0x63616c/voxelite \
-  --pattern appcast.xml --dir site --clobber
+python3 -B scripts/check-macos-appcast.py site/appcast.xml --allow-empty
+# After generating a real release locally or in CI:
+python3 -B scripts/check-macos-appcast.py site/appcast.xml \
+  --release-dir dist --previous dist/previous-appcast.xml
+python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
 ```
 
-Serve those exact bytes at `https://voxelite.worldwidewebb.co/appcast.xml`; do not
-rewrite/minify the signed XML. A release without an appcast must leave the last
-published feed intact. Confirm its enclosure URL serves the released DMG before
-publishing the feed. Site publication is a separate, explicit operation.
+### Local end-to-end test with a throwaway key
+
+Use a disposable checkout and a separate macOS user account. Never use the
+production key or overwrite the production public key in your normal checkout.
+Download Sparkle **2.10.1** to an external temporary directory and verify the
+SHA-256 from `scripts/package-macos.sh` before extracting or executing it:
+
+```sh
+set +x
+sparkle_test=$(mktemp -d)
+curl --fail --location --proto '=https' --tlsv1.2 \
+  https://github.com/sparkle-project/Sparkle/releases/download/2.10.1/Sparkle-2.10.1.tar.xz \
+  --output "$sparkle_test/Sparkle.tar.xz"
+printf '%s  %s\n' \
+  1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27 \
+  "$sparkle_test/Sparkle.tar.xz" | shasum -a 256 --check
+# Continue only if the digest matches.
+tar -xf "$sparkle_test/Sparkle.tar.xz" -C "$sparkle_test"
+"$sparkle_test/bin/generate_keys" --account voxelite-local-update-test
+"$sparkle_test/bin/generate_keys" --account voxelite-local-update-test -p \
+  > packaging/macos/sparkle_public_ed_key.txt
+(umask 077; "$sparkle_test/bin/generate_keys" --account voxelite-local-update-test \
+  -x "$sparkle_test/test-private-key.txt")
+```
+
+In that disposable checkout, change the packager's `SUFeedURL` to
+`http://127.0.0.1:8091/appcast.xml` **before signing**, and use a test bundle
+identifier (e.g. `co.worldwidewebb.voxelite.update-test`) to isolate preferences.
+If macOS transport security blocks HTTP, add a loopback-only test ATS exception
+in that disposable plist; production must keep HTTPS. Unset the public-key
+override or set it to the throwaway public key.
+
+Build two packages using `VERSION=0.0.1 MACOS_SIGNING_MODE=adhoc
+scripts/package-macos.sh`, then `VERSION=0.0.2 MACOS_SIGNING_MODE=adhoc
+scripts/package-macos.sh`. Preserve each app outside `dist` before rebuilding
+(the packager clears `dist`). Copy the older app into a writable Applications
+folder. ZIP only the newer app into a separate HTTP directory; do not put the
+private key under the served directory:
+
+```sh
+mkdir "$sparkle_test/http"
+ditto -c -k --keepParent /path/to/newer/Voxelite.app "$sparkle_test/http/Voxelite.zip"
+"$sparkle_test/bin/generate_appcast" --ed-key-file - --maximum-deltas 0 \
+  --download-url-prefix http://127.0.0.1:8091/ "$sparkle_test/http" \
+  < "$sparkle_test/test-private-key.txt" > /dev/null 2>&1
+"$sparkle_test/bin/sign_update" --ed-key-file - --verify "$sparkle_test/http/appcast.xml" \
+  < "$sparkle_test/test-private-key.txt" > /dev/null 2>&1
+python3 -m http.server 8091 --bind 127.0.0.1 --directory "$sparkle_test/http"
+```
+
+Start the older installed app and invoke both the app menu and Settings button.
+Verify Sparkle shows 0.0.2, disables duplicate checks, asks before downloading,
+installs, relaunches, and reports no update on a second check. Delete only the
+test identifier's `SULastCheckTime` preference to test automatic launch checks.
+Alter one archive byte and confirm signature rejection; stop the server and
+confirm a recoverable failure. Do not use the production checker for this local
+ZIP/HTTP feed: it intentionally only accepts production GitHub DMG URLs.
+
+Ad-hoc ZIP testing exercises updater plumbing, not Gatekeeper or Developer ID
+identity continuity. Repeat the flow with Developer ID signed/notarized DMGs and
+the throwaway Sparkle key before release, including a quarantined download,
+installation into `/Applications`, relaunch, and an offline launch. Clean up the
+test user's preferences, throwaway Keychain account, checkout, and temporary
+files. Do not upload throwaway assets or keys to GitHub.
+
+### Signed-release checklist
+
+- Merge packaging and site workflows to `main`; confirm Vercel watches `site-dist`
+  and a normal site deployment serves the valid empty feed before the first release.
+- Configure the six required secrets above, retain backups, and leave the optional
+  public variable unset or exactly matching the committed key. Verify the runner's
+  Developer ID certificate, API key permissions, Xcode/Metal, and toolchain.
+- Complete the throwaway-key update test and live menu/Settings
+  refresh checks on macOS, including an ad-hoc CI app launch.
+- Bump Cargo/lockfile to the approved version; run formatting, Python regression
+  tests, Clippy and Rust tests, then verify the intended tag points to that code.
+  Creating/pushing the tag is a separate release action; this work does not do it.
+- Confirm nested signatures, both Accepted notarizations, both stapled tickets,
+  Gatekeeper assessments, final checksum, signed feed/notes, and unchanged history.
+- After an authorized release, confirm all four assets are public, **Deploy site**
+  succeeds, and the HTTPS appcast bytes match the release asset exactly. Check a
+  real update from the previous installed version and its offline relaunch.
 
 ## Verification and remaining Mac checks
 
@@ -260,9 +386,8 @@ cargo check --workspace --locked
 cargo test --workspace --locked
 ```
 
-The implementation was checked on Linux, including a separate Apple ARM64
-cross-target check of the updater module and packaging control-flow tests with
-mock macOS tools. These do not validate Apple services or actual signatures.
+The implementation is checked on Linux using workspace checks and packaging
+control-flow tests with mock macOS tools. These do not validate Apple services or actual signatures.
 Before a public signed release, verify on the Mac: the Xcode/Metal setup, full
 workspace build/tests/Clippy, nested `codesign --verify --deep --strict`, both
 notarization submissions and stapled tickets, `spctl` assessments, and an app
