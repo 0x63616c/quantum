@@ -1,8 +1,10 @@
 //! Built-in byte-stable GLB and PNG exporters, with no filesystem capabilities.
 use voxelite_plugin_api::{
     API_VERSION, ExportCallback, ExportCx, ExportResult, FormatContent, FormatContribution,
-    Manifest, Plugin, PluginId, Registrar, Version, encoding,
+    Manifest, Plugin, PluginId, Registrar, Version,
 };
+
+pub mod encoding;
 
 /// Stable identity of the optional built-in exporters.
 pub const PLUGIN_ID: &str = "dev.voxelite.exporters";
@@ -115,10 +117,8 @@ mod tests {
 
     #[test]
     fn registered_exports_match_pre_migration_bytes_and_disable_cleanly() {
-        let snapshot = serde_json::from_slice(include_bytes!(
-            "../../../voxelite-export/tests/golden/scene.json"
-        ))
-        .unwrap();
+        let snapshot =
+            serde_json::from_slice(include_bytes!("../tests/golden/scene.json")).unwrap();
         let before = serde_json::to_vec(&snapshot).unwrap();
         let options = voxelite_render::RenderOptions {
             width: 80,
@@ -144,23 +144,19 @@ mod tests {
                     .to_string()
                     .starts_with("{\"z\"")
                 {
-                    include_bytes!("../../../voxelite-export/tests/golden/scene.ordered.glb")
-                        .as_slice()
+                    include_bytes!("../tests/golden/scene.ordered.glb").as_slice()
                 } else {
-                    include_bytes!("../../../voxelite-export/tests/golden/scene.glb").as_slice()
+                    include_bytes!("../tests/golden/scene.glb").as_slice()
                 },
             ),
-            (
-                PNG,
-                include_bytes!("../../../voxelite-export/tests/golden/scene.png").as_slice(),
-            ),
+            (PNG, include_bytes!("../tests/golden/scene.png").as_slice()),
             (
                 HEX,
-                include_bytes!("../../../voxelite-export/tests/golden/palette.hex").as_slice(),
+                include_bytes!("../tests/golden/palette.hex").as_slice(),
             ),
             (
                 GPL,
-                include_bytes!("../../../voxelite-export/tests/golden/palette.gpl").as_slice(),
+                include_bytes!("../tests/golden/palette.gpl").as_slice(),
             ),
         ] {
             let actual = host.dispatch_export(id, &cx).unwrap().unwrap();
@@ -178,7 +174,7 @@ mod tests {
         assert_eq!(host.registry().formats().count(), 4);
         assert_eq!(
             host.dispatch_export(PNG, &cx).unwrap().unwrap(),
-            include_bytes!("../../../voxelite-export/tests/golden/scene.png")
+            include_bytes!("../tests/golden/scene.png")
         );
         assert_eq!(serde_json::to_vec(&snapshot).unwrap(), before);
     }

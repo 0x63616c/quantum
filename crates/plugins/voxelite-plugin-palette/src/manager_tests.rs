@@ -424,7 +424,7 @@ fn manager_exports_formats_and_registry_pal_encoder_use_the_same_bytes() {
     }
     let mut host = Host::new(vec![Box::new(PalettePlugin)]);
     let snapshot: Snapshot = json::from_slice(include_bytes!(
-        "../../../voxelite-export/tests/golden/scene.json"
+        "../../voxelite-plugin-exporters/tests/golden/scene.json"
     ))
     .unwrap();
     let export_cx = SnapshotExport {

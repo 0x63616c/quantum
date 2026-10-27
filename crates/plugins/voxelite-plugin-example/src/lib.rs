@@ -1,6 +1,8 @@
 //! Minimal plugin template, not linked into the app.
 //!
 //! This example declares one command without implementing a feature or execution.
+//! Export plugins use the API's `ExportCx`/`ExportResult` contracts and supply their
+//! own encoders; the API has no encoding module or renderer dependency.
 
 use voxelite_plugin_api::{
     API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,

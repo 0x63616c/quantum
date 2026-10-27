@@ -1,30 +1,8 @@
 //! Deterministic, CPU-only GLB 2.0 and lossless RGBA PNG export.
 use serde_json::json;
 use std::io::Write;
-use voxelite_core::Snapshot;
-use voxelite_mesh::{MeshError, greedy_mesh};
+use voxelite_plugin_api::{ExportError, ExportResult, Snapshot, greedy_mesh};
 
-/// Export validation, encoding or output failure.
-#[derive(Debug, thiserror::Error)]
-pub enum ExportError {
-    /// Geometry generation failed.
-    #[error(transparent)]
-    Geometry(#[from] MeshError),
-    /// PNG encoder error.
-    #[error(transparent)]
-    Png(#[from] png::EncodingError),
-    /// I/O failed (the caller should stage file replacements).
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-    /// Serialization failed.
-    #[error(transparent)]
-    Json(#[from] serde_json::Error),
-    /// Output or pixel limits were exceeded.
-    #[error("export limit or input error: {0}")]
-    Invalid(String),
-}
-/// Result of a checked export.
-pub type ExportResult<T> = Result<T, ExportError>;
 /// Maximum encoded output, matching portable artifact admission.
 pub const MAX_EXPORT_BYTES: usize = 128 * 1024 * 1024;
 

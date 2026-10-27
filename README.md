@@ -209,7 +209,6 @@ only a container.
 | [voxelite-format](crates/voxelite-format/) | Canonical, bounded `.voxl` JSON, build-history replay and document-session persistence. |
 | [voxelite-mesh](crates/voxelite-mesh/) | Deterministic greedy surface geometry shared by rendering and GLB export. |
 | [voxelite-render](crates/voxelite-render/) | Cameras, CPU rasterization, exact shadows and the optional GPU viewport/headless harness interface. |
-| [voxelite-export](crates/voxelite-export/) | Bounded, deterministic GLB and RGBA PNG byte encoding. |
 | [voxelite-plugin-api](crates/voxelite-plugin-api/) | Portable plugin manifests, contributions and capability-scoped behavior contracts. |
 | [voxelite-plugin-host](crates/voxelite-plugin-host/) | Registry, enablement, lifecycle, dispatch, fault isolation and conformance checks. |
 | [voxelite-ui](crates/voxelite-ui/) | Shared GPUI controls, design tokens, text editing and fixed-width status components. |
@@ -222,7 +221,7 @@ only a container.
 | [voxelite-plugin-gizmo-grid](crates/plugins/voxelite-plugin-gizmo-grid/) | Camera orientation widget, navigation interaction and ground-grid overlays. |
 | [voxelite-plugin-palette](crates/plugins/voxelite-plugin-palette/) | Presets, local palette management, portable panel behavior and palette interchange. |
 | [voxelite-plugin-comments](crates/plugins/voxelite-plugin-comments/) | Discussion panel, anchor-placement tool and viewport pins. |
-| [voxelite-plugin-exporters](crates/plugins/voxelite-plugin-exporters/) | Registered GLB/PNG and HEX/GPL export callbacks without filesystem access. |
+| [voxelite-plugin-exporters](crates/plugins/voxelite-plugin-exporters/) | Bounded, deterministic GLB/PNG encoders and registered HEX/GPL export callbacks without filesystem access. |
 | [voxelite-plugin-agent](crates/plugins/voxelite-plugin-agent/) | Agent/Extensions command declarations; execution remains in the app. |
 | [voxelite-plugin-example](crates/plugins/voxelite-plugin-example/) | Minimal declaration-only plugin template, not linked into the app. |
 

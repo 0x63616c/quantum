@@ -77,15 +77,16 @@ fn pre_plugin_export_bytes() {
             } else {
                 "scene.glb"
             },
-            voxelite_export::glb(&snapshot).unwrap(),
+            voxelite_plugin_exporters::encoding::glb(&snapshot).unwrap(),
         ),
         ("scene.png", {
             let image = voxelite_render::render(&snapshot, &options).unwrap();
-            voxelite_export::png_rgba(image.width, image.height, &image.rgba).unwrap()
+            voxelite_plugin_exporters::encoding::png_rgba(image.width, image.height, &image.rgba)
+                .unwrap()
         }),
         (
             "rgba.png",
-            voxelite_export::png_rgba(
+            voxelite_plugin_exporters::encoding::png_rgba(
                 2,
                 2,
                 &[

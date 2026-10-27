@@ -12,6 +12,13 @@ target-specific dependencies. In particular, plugins must not depend directly on
 Dev-dependencies are exempt so plugin tests can use
 `voxelite_plugin_host::conformance::check`.
 
+`voxelite-plugin-api` owns `ExportError`/`ExportResult` and the stable
+`ExportCallback`, `ExportImage` and `ExportCx` contracts. It exposes portable mesh
+geometry, but no GLB/PNG encoding module or renderer dependency. The built-in
+`voxelite-plugin-exporters` owns the bounded encoders in its `encoding` module;
+other plugins implement their own callbacks using the API and external crates.
+MCP render-feedback PNGs use `png` directly.
+
 Run the dependency rule and its fixture tests with:
 
 ```sh

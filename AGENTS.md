@@ -24,13 +24,12 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 | `voxelite-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
 | `voxelite-format` → `voxelite-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
 | `voxelite-mesh` → `voxelite-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |
-| `voxelite-export` → `voxelite-core`, `voxelite-mesh` | Encode bounded GLB/PNG bytes. Accept supplied pixels; no normal renderer dependency. |
 | `voxelite-render` → `voxelite-core`, `voxelite-mesh` | Render immutable snapshots; own cameras, rasterization, occupancy, shadows and GPU resources. No document mutations or host/encoder/plugin dependencies. |
-| `voxelite-plugin-api` → `voxelite-core`, `voxelite-export` | Expose portable manifests, contributions, capabilities and selected shared types/encoders. No GPUI, app, registry lifecycle or renderer. |
+| `voxelite-plugin-api` → `voxelite-core`, `voxelite-mesh` | Expose portable manifests, contributions, capabilities, export errors and selected shared types/geometry. No GPUI, app, registry lifecycle or renderer. |
 | `voxelite-plugin-host` → `voxelite-core`, `voxelite-plugin-api` | Own registration, compatibility, enabled declarations, dispatch, fault quarantine, timings and conformance. No shell, GPUI or renderer. |
 | `crates/plugins/*` → `voxelite-plugin-api` | Implement optional features through portable capabilities; return proposals without accessing app internals. |
 | `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
-| `voxelite-mcp` | Adapt core/format/render/export and built-in host capabilities to stdio and Unix-socket sessions. No app or GPUI dependency. |
+| `voxelite-mcp` | Adapt core/format/render and built-in host capabilities to stdio and Unix-socket sessions. No app or GPUI dependency. |
 | `voxelite-app` | Compose editor state, plugins, native/web UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
 | `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
 | `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
@@ -40,8 +39,8 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 - Keep tools in `voxelite-plugin-tools`, command mirroring in
   `voxelite-plugin-mirror`, camera gizmo/grid in `voxelite-plugin-gizmo-grid`,
   palettes in `voxelite-plugin-palette`, discussions/pins in
-  `voxelite-plugin-comments`, export callbacks in `voxelite-plugin-exporters`,
-  and agent command metadata in `voxelite-plugin-agent`.
+  `voxelite-plugin-comments`, bounded GLB/PNG encoders and export callbacks in
+  `voxelite-plugin-exporters`, and agent command metadata in `voxelite-plugin-agent`.
 - Keep `voxelite-plugin-example` a declaration-only template outside the app.
   Do not imply dynamic loading, scripting or a plugin enablement UI exists.
 - Admit edits through `Engine` transactions. Preserve atomic failure, no-op,
@@ -68,7 +67,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 - Run `normal_workspace_dependencies_preserve_renderer_boundary` in
   [boundary.rs](crates/voxelite-render/tests/boundary.rs). It checks the renderer's
   two normal workspace dependencies and forbids normal renderer dependencies in
-  export, format, plugin API/host and the exporters plugin:
+  format, plugin API/host and the exporters plugin:
 
 ```sh
 cargo test -p voxelite-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
@@ -79,7 +78,7 @@ cargo test -p voxelite-render --locked --test boundary normal_workspace_dependen
 - Allow only `voxelite-plugin-api` plus external crates in plugin normal/build
   dependencies, including optional, renamed and target-specific dependencies.
   Keep GPUI out of plugins. Expose required domain types through the API rather
-  than directly depending on core, export, UI or app crates.
+  than directly depending on core, mesh, UI or app crates.
 - Use dev-dependencies for `voxelite_plugin_host::conformance::check`. Exercise
   enable/disable/enable, validation, errors and panic isolation as appropriate.
 - Follow [the plugin guide](crates/plugins/README.md) and run:
