@@ -8,6 +8,7 @@ Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, 
 - [**MCP tools**The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
 - [**The .voxl format**Portable projects, canonical JSON, and the rules on disk.](https://voxelite.worldwidewebb.co/docs/format.md)
 - [**Agent skills**Reusable workflows for composition, palettes and visual review.](https://voxelite.worldwidewebb.co/docs/skills.md)
+- [**Plugins**Built-in features, the core boundary, and writing a plugin.](https://voxelite.worldwidewebb.co/docs/plugins.md)
 
 ## Choose your workspace
 

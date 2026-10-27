@@ -84,7 +84,7 @@ The namespace shares the existing 4 MiB non-comment metadata budget, counting ra
 
 Enabled owners declare their schema versions and forward migration callbacks. The host stages migrations and validation through `DataCx`, which reads/writes only that owner's declared sections. Missing paths, newer stored versions or callback errors reject without modifying the document. Successful changes form one undoable edit and are saved only on a subsequent save.
 
-The format remains 1.0. Old files without extensions load unchanged; an empty namespace is omitted and preserves existing canonical output. Older builds do not guarantee raw-byte retention. Existing core comments and palette data stay in place. Extensions are project data outside named voxel snapshots; runtime history and build-recipe replay preserve them.
+The format remains 1.0. Old files without extensions load unchanged; an empty namespace is omitted and preserves existing canonical output. Older builds do not guarantee raw-byte retention. Existing core comments and palette data stay in place. Extensions are project data outside named voxel snapshots; runtime history and build-recipe replay preserve them. See [Plugins](https://voxelite.worldwidewebb.co/docs/plugins/#data) for declarations, lifecycle and host integration.
 
 ## A complete example
 
