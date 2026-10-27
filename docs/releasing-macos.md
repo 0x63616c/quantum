@@ -192,7 +192,7 @@ fallback. Before the first signed release, the checked-in RSS feed is valid and
 empty: `/appcast.xml` exists but contains no update items. A signed-feed client
 may report a verification error for this unsigned bootstrap feed; the first
 signed release replaces it. Older builds that never embedded Sparkle require a
-manual installation of the first Sparkle-enabled release (planned v0.3.0).
+manual installation of v0.3.0 or later, which includes Sparkle.
 
 The existing production private key lives only at
 `/home/box/secrets/voxelite-sparkle/sparkle_ed_private_key.txt`. It must never be
@@ -232,7 +232,10 @@ fallback and signed-feed failure expiration also need testing before use.
    notarization; it is not a release asset or appcast enclosure. No deltas ship.
 2. `generate-macos-release-notes.py` writes `dist/RELEASE_NOTES.md` from non-merge
    commit subjects since the previous reachable stable tag, omitting authors and
-   commit bodies. `fetch-macos-appcast.py dist/previous-appcast.xml` then retrieves
+   commit bodies. Run it after packaging: `dist/.notarized` selects
+   `packaging/macos/RELEASE_NOTES.md`; without that marker it uses
+   `packaging/macos/RELEASE_NOTES.unnotarized.md` with first-launch workarounds.
+   `fetch-macos-appcast.py dist/previous-appcast.xml` then retrieves
    the highest numeric stable release with an appcast, across all API pages.
    Drafts/prereleases and older releases without feeds are excluded. It checks
    every enclosure and release-notes URL/length against published asset metadata.
