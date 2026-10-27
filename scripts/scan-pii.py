@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Report potential identity/path/credential leaks without reproducing values.
 
-Read tracked and unignored files (including design), generated web bundles, and
+Read tracked and unignored files, generated web bundles, and
 all blobs/commits reachable through local refs or reflogs. Never modify history.
 """
 from pathlib import Path
@@ -85,7 +85,7 @@ for oid in commits:
 
 report = ['# Repository and Git history personal-info scan', '',
     'Scanned on 2026-10-25. Values are deliberately redacted; locations and categories are sufficient for follow-up. No history was rewritten and no Git identity was changed.', '',
-    f'Scope: {len(files)} working-tree/generated files; {len(commits)} commits and {blobs} unique historical blobs reachable through all local refs and reflogs. Includes `design/` read-only, source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.', '',
+    f'Scope: {len(files)} working-tree/generated files; {len(commits)} commits and {blobs} unique historical blobs reachable through all local refs and reflogs. Includes source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.', '',
     'Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.', '',
     '## Git metadata', '',
     f'- {len(identities)} distinct author/committer identity pairs are present across {len(commits)} commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.',
@@ -103,8 +103,6 @@ for name, kind, lines in current:
         disposition = 'Embedded upstream font attribution/contact; retain original licensed font.'
     elif name.endswith('.png') and kind == 'email':
         disposition = 'Compressed binary byte-pattern match; not a verified address or visible image text.'
-    elif name.startswith('design/'):
-        disposition = 'Read-only design ownership; retained and reported.'
     elif name.startswith(('site/app/', 'web/dist/')):
         disposition = 'Ignored generated bundle; evaluate reproducible-build path remapping separately.'
     elif name == 'scripts/scan-pii.py':
@@ -114,6 +112,7 @@ if not current:
     report.append('| — | No matches | — |')
 report += ['', '## Historical blob findings', '',
     'One row per unique blob/category; a blob can occur in many commits. Use `git show <blob>` locally to inspect a finding. No matched values are copied into this report.', '',
+    'Historical design assets and review captures are preserved in the [private archive](https://github.com/0x63616c/quantum-archive) at their original paths.', '',
     '| Blob · file:line | Category |', '| --- | --- |']
 for oid, name, kind, lines in history:
     report.append(f'| `{oid}` · `{name}:{",".join(map(str, lines))}` | {kind} |')
@@ -125,7 +124,7 @@ for oid, kind, lines in message_findings:
 if not message_findings:
     report.append('No pattern matches in commit messages.')
 report += ['', '## Outcome', '',
-    'No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. No trivially safe authored working-tree path leak was found outside the read-only design boundary; Git plumbing and generated compiler paths must not be blindly replaced. This report does not certify the repository as free of personal information.', '']
+    'No credential-shaped strings or URL credentials were found unless explicitly listed above. Historical identity headers remain. License attributions remain. Git plumbing and generated compiler paths must not be blindly replaced. This report does not certify the repository as free of personal information.', '']
 (ROOT / 'docs/reviews/pii-scan.md').write_text('\n'.join(report))
 print(f'Scanned {len(files)} files, {len(commits)} commits, {blobs} historical blobs; {len(current)} current and {len(history)} historic location/category findings. Values redacted.')
 print('Current categories:', dict(collections.Counter(kind for _, kind, _ in current)))

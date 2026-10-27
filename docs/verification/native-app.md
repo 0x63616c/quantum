@@ -8,7 +8,7 @@ fixes, **96 passing workspace tests**, minimum-window and high-density captures,
 and native dialog regression checks. The stage evidence below is historical.
 
 Verified 2026-10-25 in the Linux build worktree. Scope: `voxelite-app`, binary
-`voxelite`. No plugin or web application was built, and `design/` was unchanged.
+`voxelite`. No plugin or web application was built.
 
 ## Build and automated checks
 
@@ -51,9 +51,9 @@ not a performance guarantee. No GPU or display is initialized by `--viewport-png
 
 ## Artifacts and reproduction
 
-- [Dark native window](../../screenshots/app-dark.png)
-- [Light native window](../../screenshots/app-light.png)
-- [Display-free viewport](../../screenshots/viewport.png)
+- [Dark native window](../images/app-dark.png)
+- [Light native window](../images/app-light.png)
+- [Display-free viewport](../images/viewport.png)
 - [Capture script](../../scripts/capture-native.sh)
 - [Build dependencies, controls and stage boundaries](../../crates/voxelite-app/README.md)
 
