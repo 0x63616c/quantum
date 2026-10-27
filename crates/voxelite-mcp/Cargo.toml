@@ -13,6 +13,7 @@ voxelite-plugin-host.workspace = true
 voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
 voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
 voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
+voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 voxelite-export = { path = "../voxelite-export" }

@@ -331,6 +331,7 @@ impl EditorView {
         self.agent.capture_generation = self.agent.capture_generation.wrapping_add(1);
         let generation = self.agent.capture_generation;
         self.agent.capturing = true;
+        let passes = self.editor.render_plan();
         let work = cx.background_executor().spawn(async move {
             views
                 .into_iter()
@@ -338,6 +339,7 @@ impl EditorView {
                     let mut frame = voxelite_render::render(
                         &snapshot,
                         &RenderOptions {
+                            passes: passes.clone(),
                             width: 180,
                             height: 160,
                             supersampling: 2,

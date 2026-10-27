@@ -31,6 +31,8 @@ pub use mac::{Frame, Worker};
 /// Appearance is composited before presentation (NV12 has no alpha channel).
 #[derive(Clone, Copy)]
 pub struct Style {
+    /// Compiled lighting slot from the same plan used by software rendering.
+    pub lighting: crate::Lighting,
     /// Opaque sRGB background, with alpha ignored.
     pub background: [f32; 4],
     /// Draw voxel edge outlines.
@@ -391,13 +393,14 @@ impl Viewport {
         };
         let view_projection = projection * Mat4::look_at_rh(eye, center, up);
         let redraw_shadow = self.fallback.as_mut().is_some_and(|fallback| {
-            fallback.cache.update(
+            fallback.cache.update_lighting(
                 ShadowInput {
                     bounds,
                     view_projection,
                     light,
                 },
                 !updates.is_empty(),
+                style.lighting,
             )
         });
         let shadow_fit = self.fallback.as_ref().and_then(|f| f.cache.fit);
@@ -406,7 +409,9 @@ impl Viewport {
             light_projection: shadow_fit
                 .map_or(Mat4::IDENTITY, |fit| fit.projection)
                 .to_cols_array_2d(),
-            light: light.extend(0.).to_array(),
+            light: light
+                .extend(f32::from(style.lighting == crate::Lighting::Ambient))
+                .to_array(),
             eye: eye.extend(0.).to_array(),
             forward: forward.extend(0.).to_array(),
             settings: [

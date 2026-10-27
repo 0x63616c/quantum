@@ -272,7 +272,10 @@ impl AttachedSession {
             let before = self.session.documents[&model].engine.snapshot();
             let revision = self.session.documents[&model].engine.revision();
             if request.name == "voxelite_render" && self.render.is_none() {
-                match self.session.prepare_render(request.arguments.clone()) {
+                match self
+                    .session
+                    .prepare_render(request.arguments.clone(), host.render_plan())
+                {
                     Ok(task) => {
                         let snapshot = task.snapshot.clone();
                         let epoch = self.session.epoch;

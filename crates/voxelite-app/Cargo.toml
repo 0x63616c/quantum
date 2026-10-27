@@ -26,6 +26,7 @@ voxelite-plugin-host.workspace = true
 voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
 voxelite-plugin-mirror = { path = "../plugins/voxelite-plugin-mirror" }
 voxelite-plugin-gizmo-grid = { path = "../plugins/voxelite-plugin-gizmo-grid" }
+voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }
 voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
 voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
 voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }

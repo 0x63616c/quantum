@@ -10,6 +10,8 @@ library operations and palette commands dispatch through an enabled panel bindin
 Project extensions retain raw section bytes; enabled owners migrate and validate
 their sections through capability-scoped data access during load. Discussions and
 pin placement dispatch through the comments panel/tool, and pins through its overlay.
+Exact shadows and lighting now dispatch through enabled render-pass descriptions;
+an empty lighting slot uses deterministic ambient shading.
 
 ## Context
 
@@ -48,19 +50,20 @@ defaults. IDs and setting keys are namespaced; data section names are scoped by
 plugin ID and never grant access to core `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx`,
-`TransformCx`, `OverlayCx`, `PaletteCx`, `CommentsCx`, `DataCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
+`TransformCx`, `OverlayCx`, `PassCx`, `PaletteCx`, `CommentsCx`, `DataCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
 service locator.
 `ActivateCx` scopes activation capabilities separately. `CommandCx` and
 `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
 voxel and face normal, bounded work-plane intersection, visible composite sample,
 layer voxel lookup, palette, selected color, active layer, visibility/lock state
 and document bounds. It exposes no engine, mutations, mirror settings or GUI.
-The API depends on `voxelite-core` and `voxelite-export` and re-exports the core
-command/value types and the shared GLB/PNG byte encoders;
+The API depends on `voxelite-core`, `voxelite-export` and `voxelite-render` and
+re-exports core command/value types, the shared GLB/PNG byte encoders and portable
+render graph/kernel declarations;
 plugin crates still depend only on the API.
 
 `Plugin` exposes `manifest`, `contribute`, default-unbound `tool(id)` and
-`command_transform(id)`, `overlay(id)`, `palette_panel(id)`, `comments_panel(id)` and `exporter(id)` implementation lookups, and default no-op
+`command_transform(id)`, `overlay(id)`, `render_pass(id)`, `palette_panel(id)`, `comments_panel(id)` and `exporter(id)` implementation lookups, and default no-op
 `activate`/`deactivate` hooks. The host owns API compatibility checks, cross-plugin
 conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool lookup and invocation are admitted
 only for declared IDs belonging to an enabled plugin, as are command transforms.
@@ -92,10 +95,74 @@ actions, recent colors, and import/export metadata to public palette types.
 The `0.6.0` bump adds the `Pin` variant to the exhaustive `OverlayPrimitive` enum,
 portable discussion panel types and a default-unbound `comments_panel` lookup.
 Optional overlay projection/picking/discussion queries default to no capability.
+The `0.7.0` bump extends the exhaustive `RenderPassSlot` enum with Geometry,
+Lighting and PostProcess. It adds default-unbound `render_pass` lookup and the
+new `RenderPass`/`PassCx` contract. Existing BeforeScene, AfterScene and Overlay
+declarations retain their meanings.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
 binary ABI or an external code loader.
+
+## Render pass graph and shadows/lighting
+
+`voxelite-render::PASS_GRAPH` documents the logical order:
+`BeforeScene -> Geometry -> Lighting -> AfterScene -> Overlay -> PostProcess`.
+Core owns geometry/depth, coverage, outlines, antialiasing resolve and presentation.
+The host sorts contributions by slot, preserving plugin/declaration registration
+order for ties. Existing portable overlays still use their background/foreground
+shell composition paths. Unbound declarations are inert; slots do not grant
+arbitrary access to a framebuffer or an engine.
+
+`dev.voxelite.shadows-lighting` ships enabled and can be disabled. It declares
+`dev.voxelite.shadows-lighting.surface` in Lighting and selects the typed kernel
+ID `RenderKernel::ExactShadowsLighting` (diagnostic ID
+`dev.voxelite.render.exact-shadows-lighting`) through `PassCx::select`.
+`PassCx` exposes only the admitted slot, its owner's settings and the selection
+sink. This kernel is accepted only in Lighting; unsupported slot/kernel pairs
+return false without modifying the plan. Repeated selections replace the same
+surface implementation, never multiply its illumination. The API re-exports
+portable graph/kernel data from the renderer, already a transitive dependency
+through export, and exposes no GPU resource types. Built-ins still depend only
+on `voxelite-plugin-api`.
+
+This is deliberately an implementation selection, with no new lighting parameters.
+Moving shading code or changing physical passes is riskier than retaining the
+existing arithmetic and resource lifetimes. CPU AO/exact occupancy tracing and
+both GPU shaders (exact occupancy and allocation-failure shadow-map fallback)
+remain in core. GPU geometry/lighting stay fused in the existing MSAA draw;
+software shading/resolve stay fused in the existing sample loop. The named graph
+is a logical dependency graph, not a promise of one GPU render pass per slot.
+Its current supported plugin kernel is the lighting implementation; geometry and
+postprocessing remain mandatory core stages, while overlay bindings supply the
+existing grid/gizmo/pin primitives. No external shader code or resources are loaded.
+
+The host builds a fresh owned `RenderPlan` for viewport, export and agent work.
+Absent, disabled, unbound or faulted lighting contributions leave constant 0.44
+linear ambient illumination, with no diffuse light, AO or shadow traversal/sample.
+CPU fallback also skips the occupancy cache and AO lookup map. GPU meshes and
+occupancy remain synchronized for re-enable; the shadow-map path skips its depth
+draw while disabled and invalidates its cache so edits cannot leave stale shadows.
+Coverage, background, camera, outlines and resolve are unchanged. Standalone
+`RenderOptions::default()` retains an explicit legacy standard plan, preserving
+headless callers and pre-existing golden tests; hosts always replace it with the
+enabled registry's plan. The effective lighting selection participates in viewport
+frame identity, preventing stale lit/ambient worker results from being installed.
+Captured export/agent jobs retain their plan alongside their immutable snapshot.
+
+Pass binding/description uses the host's panic quarantine and timings, including
+per-owner `render_pass` and `render_pass:<contribution-id>` records and advisory
+budgets. Selections are staged; a later callback fault discards every selection
+from that owner before publishing the plan. These timings cover CPU description
+callbacks, not fused renderer cost or asynchronous GPU execution; no GPU timestamp
+queries or waits are introduced.
+
+Conformance checks binding removal and plan equality after re-enable. Regression
+tests reuse the existing enabled PNG golden unchanged, add an ambient PNG golden,
+compare cached/stateless output and coverage, test scoped settings, graph ordering,
+unsupported slots, binding/description panics and document/history preservation.
+Linux also validates the actual WGSL branches with Naga and type-checks GPU code;
+Metal execution/presentation still requires macOS hardware.
 
 ## Tool behavior and transaction boundary
 

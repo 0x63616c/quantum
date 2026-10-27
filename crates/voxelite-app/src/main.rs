@@ -88,6 +88,7 @@ fn main() -> anyhow::Result<()> {
         let format = editor.export_format("png")?;
         let job = editor.prepare_export(&format.id)?;
         let options = voxelite_render::RenderOptions {
+            passes: editor.render_plan(),
             width: 1024,
             height: 900,
             background: if options.theme == Some(Theme::Light) {

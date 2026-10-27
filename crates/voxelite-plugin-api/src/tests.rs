@@ -426,8 +426,11 @@ fn format_capabilities_and_extension_order_are_preserved() {
 fn render_pass_slots_are_preserved() {
     for slot in [
         RenderPassSlot::BeforeScene,
+        RenderPassSlot::Geometry,
+        RenderPassSlot::Lighting,
         RenderPassSlot::AfterScene,
         RenderPassSlot::Overlay,
+        RenderPassSlot::PostProcess,
     ] {
         let declaration = Contribution::RenderPass(RenderPassContribution {
             id: "dev.voxelite.lighting.render".into(),

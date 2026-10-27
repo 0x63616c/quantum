@@ -628,6 +628,10 @@ impl Editor {
     pub fn plugin_host(&self) -> Ref<'_, Host> {
         self.plugins.borrow()
     }
+    /// Capture enabled renderer passes for a viewport, export or preview worker.
+    pub fn render_plan(&self) -> voxelite_render::RenderPlan {
+        self.plugins.borrow_mut().render_plan()
+    }
     /// Find a format by extension in the live registry, without a built-in format table.
     pub fn export_format(
         &self,

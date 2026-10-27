@@ -31,11 +31,12 @@ pub(crate) struct RenderTask {
     revision: u64,
     pub snapshot: std::sync::Arc<Snapshot>,
     args: Value,
+    passes: voxelite_render::RenderPlan,
 }
 impl RenderTask {
     pub fn run(self) -> CallToolResult {
         let result = (|| -> Result<CallToolResult> {
-            let images = images::render(&self.snapshot, &Args(&self.args))?;
+            let images = images::render(&self.snapshot, &Args(&self.args), &self.passes)?;
             let mut data = images.metadata;
             data["model_id"] = json!(self.model);
             data["revision"] = json!(self.revision.to_string());
@@ -94,7 +95,11 @@ impl Session {
         Ok(())
     }
     /// Validate and pin only read-only rendering; no history or authority is cloned.
-    pub(crate) fn prepare_render(&self, args: Value) -> Result<RenderTask> {
+    pub(crate) fn prepare_render(
+        &self,
+        args: Value,
+        passes: voxelite_render::RenderPlan,
+    ) -> Result<RenderTask> {
         let spec = crate::catalog::CATALOG
             .iter()
             .find(|s| s.tool.name == "voxelite_render")
@@ -126,6 +131,7 @@ impl Session {
             }
         }
         Ok(RenderTask {
+            passes,
             id: self.id,
             epoch: self.epoch,
             model,
@@ -592,7 +598,7 @@ fn dispatch(
             let images = if name == "export_png" {
                 images::export(s, a, host)?
             } else {
-                images::render(s, a)?
+                images::render(s, a, &host.render_plan())?
             };
             if name == "export_png" {
                 if images.pngs.len() != 1 {
@@ -828,6 +834,7 @@ mod render_worker_tests {
         let task = session
             .prepare_render(
                 json!({"model_id":model,"revision":"0","views":["front"],"width":32,"height":32}),
+                exports::host().render_plan(),
             )
             .unwrap();
         let engine = &mut session.documents.get_mut(&model).unwrap().engine;
@@ -849,7 +856,10 @@ mod render_worker_tests {
         assert_eq!(session.documents[&model].engine.revision(), 1);
         assert!(
             session
-                .prepare_render(json!({"model_id":model,"revision":"0"}))
+                .prepare_render(
+                    json!({"model_id":model,"revision":"0"}),
+                    exports::host().render_plan()
+                )
                 .is_err()
         );
     }

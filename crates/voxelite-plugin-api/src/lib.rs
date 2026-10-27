@@ -13,6 +13,7 @@ mod export;
 mod id;
 mod overlay;
 mod palette;
+mod pass;
 mod registrar;
 mod spec;
 mod tool;
@@ -25,6 +26,7 @@ pub use export::*;
 pub use id::{InvalidPluginId, PluginId};
 pub use overlay::*;
 pub use palette::*;
+pub use pass::*;
 pub use registrar::{Contributions, Registrar, ValidationError, validate_contributions};
 pub use semver::Version;
 /// Portable JSON codecs for plugin-owned settings, without filesystem access.
@@ -75,6 +77,10 @@ pub trait Plugin {
     }
     /// Bind a declared render pass to portable overlay drawing and interaction.
     fn overlay(&self, _id: &str) -> Option<&dyn Overlay> {
+        None
+    }
+    /// Bind a declared render pass to a capability-scoped kernel description.
+    fn render_pass(&self, _id: &str) -> Option<&dyn RenderPass> {
         None
     }
     /// Bind a declared export format to a portable, stateless byte encoder.

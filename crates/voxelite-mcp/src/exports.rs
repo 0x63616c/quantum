@@ -20,6 +20,7 @@ pub(crate) fn host() -> Host {
         Box::new(voxelite_plugin_exporters::ExportersPlugin),
         Box::new(voxelite_plugin_palette::PalettePlugin),
         Box::new(voxelite_plugin_comments::CommentsPlugin),
+        Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
     ])
 }
 
@@ -50,12 +51,16 @@ pub(crate) fn encode(host: &mut Host, format: &str, cx: &dyn ExportCx) -> Result
 
 pub(crate) fn snapshot(host: &mut Host, extension: &str, snapshot: &Snapshot) -> Result<Vec<u8>> {
     let format = format(host, extension)?;
+    let options = voxelite_render::RenderOptions {
+        passes: host.render_plan(),
+        ..Default::default()
+    };
     encode(
         host,
         &format,
         &SnapshotExport {
             snapshot,
-            render_view: &render_view(&Default::default()),
+            render_view: &render_view(&options),
         },
     )
 }
