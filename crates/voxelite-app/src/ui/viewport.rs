@@ -418,23 +418,7 @@ impl EditorView {
                 _ => None,
             })
             .collect();
-        let comment_region = self
-            .discussion
-            .draft
-            .as_ref()
-            .or_else(|| {
-                self.discussion
-                    .selected
-                    .and_then(|id| {
-                        self.editor
-                            .display_snapshot()
-                            .comments
-                            .iter()
-                            .find(|c| c.id == id)
-                    })
-                    .map(|c| &c.anchor)
-            })
-            .and_then(|a| a.region().ok());
+        let comment_region = self.editor.comments_view().and_then(|view| view.region);
         canvas(
             move |bounds, window, _| {
                 let previous = bounds_cell.replace(bounds);

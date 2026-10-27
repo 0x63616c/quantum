@@ -1,16 +1,27 @@
-//! Built-in comments command declarations; execution remains in the app.
+//! Built-in discussions, anchor placement and pins. Core owns storage and undo.
 
-use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
-};
+use voxelite_plugin_api::*;
+mod panel;
+mod pins;
 
-/// Metadata for the built-in comments commands.
+/// Built-in discussion owner.
+pub const PLUGIN_ID: &str = "dev.voxelite.comments";
+/// Registered discussion panel.
+pub const PANEL_ID: &str = "dev.voxelite.comments.panel";
+/// Registered placement tool.
+pub const TOOL_ID: &str = "dev.voxelite.comments.tool";
+/// Registered pins overlay.
+pub const PINS_ID: &str = "dev.voxelite.comments.pins";
+/// Existing shell command and shortcut identity.
+pub const COMMAND_ID: &str = "dev.voxelite.comments.comment";
+
+/// Standard, disableable discussion feature.
 pub struct CommentsPlugin;
 
 impl Plugin for CommentsPlugin {
     fn manifest(&self) -> Manifest {
         Manifest {
-            id: PluginId::new("dev.voxelite.comments").unwrap(),
+            id: PluginId::new(PLUGIN_ID).unwrap(),
             name_key: "plugins.comments.name".into(),
             description_key: "plugins.comments.description".into(),
             version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
@@ -21,9 +32,32 @@ impl Plugin for CommentsPlugin {
         }
     }
 
+    fn comments_panel(&self, id: &str) -> Option<&dyn CommentsPanel> {
+        (id == PANEL_ID).then_some(self)
+    }
+    fn tool(&self, id: &str) -> Option<&dyn Tool> {
+        (id == TOOL_ID).then_some(self)
+    }
+    fn overlay(&self, id: &str) -> Option<&dyn Overlay> {
+        (id == PINS_ID).then_some(self)
+    }
     fn contribute(&self, registrar: &mut Registrar) {
+        registrar.panel(PanelContribution {
+            id: PANEL_ID.into(),
+            label_key: "Comments".into(),
+            icon: Some("comment".into()),
+        });
+        registrar.tool(ToolContribution {
+            id: TOOL_ID.into(),
+            label_key: "Add comment pin".into(),
+            icon: Some("comment".into()),
+        });
+        registrar.render_pass(RenderPassContribution {
+            id: PINS_ID.into(),
+            slot: RenderPassSlot::Overlay,
+        });
         registrar.command(CommandContribution {
-            id: "dev.voxelite.comments.comment".into(),
+            id: COMMAND_ID.into(),
             label_key: "Add comment pin".into(),
             args_schema: Value::Object(
                 [
@@ -52,5 +86,11 @@ mod tests {
     #[test]
     fn conforms_to_plugin_contract() {
         voxelite_plugin_host::conformance::check(|| Box::new(CommentsPlugin));
+        let mut host = voxelite_plugin_host::Host::new(vec![Box::new(CommentsPlugin)]);
+        assert!(host.has_comments_panel(PANEL_ID).unwrap());
+        assert!(host.has_tool(TOOL_ID).unwrap());
+        assert!(host.has_overlay(PINS_ID).unwrap());
+        // Comments remain core content; no extension namespace is introduced.
+        assert_eq!(host.registry().data_sections().count(), 0);
     }
 }

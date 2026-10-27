@@ -491,7 +491,14 @@ fn disabling_tools_makes_all_gestures_inert_while_core_editor_still_works() {
     e.apply_at([1; 3]).unwrap();
     e.set_plugin_enabled("dev.voxelite.tools", false).unwrap();
     assert_eq!(e.box_start, None);
-    assert_eq!(e.plugin_host().registry().tools().count(), 0);
+    assert_eq!(
+        e.plugin_host()
+            .registry()
+            .tools()
+            .filter(|(owner, _)| owner.as_str() == "dev.voxelite.tools")
+            .count(),
+        0
+    );
     assert_eq!(
         e.plugin_host().state("dev.voxelite.core"),
         Some(&voxelite_plugin_host::PluginState::Enabled)
@@ -548,7 +555,14 @@ fn disabling_tools_makes_all_gestures_inert_while_core_editor_still_works() {
         before
     );
     e.set_plugin_enabled("dev.voxelite.tools", true).unwrap();
-    assert_eq!(e.plugin_host().registry().tools().count(), Tool::ALL.len());
+    assert_eq!(
+        e.plugin_host()
+            .registry()
+            .tools()
+            .filter(|(owner, _)| owner.as_str() == "dev.voxelite.tools")
+            .count(),
+        Tool::ALL.len()
+    );
     e.tool = Tool::Box;
     assert!(!e.apply_at([1; 3]).unwrap());
     assert!(e.apply_at([2; 3]).unwrap());
