@@ -1,12 +1,13 @@
 use std::{
     any::Any,
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     panic::{AssertUnwindSafe, catch_unwind},
 };
 
 use voxelite_plugin_api::{
-    API_VERSION, ActivateCx, Contribution, Contributions, Manifest, Plugin, PluginId, Registrar,
-    ToolCx, ToolError, ToolInput, ToolOutcome, ValidationError, Version,
+    API_VERSION, ActivateCx, Command, Contribution, Contributions, Manifest, Plugin, PluginId,
+    Region, Registrar, SettingKind, SettingValue, ToolCx, ToolError, ToolInput, ToolOutcome,
+    TransformCx, ValidationError, Version,
 };
 
 use crate::{BudgetExceeded, Conflict, Registry, Timings, registry::find_conflicts};
@@ -71,6 +72,8 @@ pub enum Phase {
     Deactivate,
     /// Binding or invoking a tool through read-only capabilities.
     Tool,
+    /// Binding or invoking a pending command transform.
+    CommandTransform,
 }
 
 impl Phase {
@@ -80,6 +83,7 @@ impl Phase {
             Self::Activate => "activate",
             Self::Deactivate => "deactivate",
             Self::Tool => "tool",
+            Self::CommandTransform => "command_transform",
         }
     }
 }
@@ -152,9 +156,15 @@ pub enum RegistrationError {
     },
 }
 
-/// A runtime lifecycle or tool request could not be completed.
+/// A runtime lifecycle, setting, tool or command transform request failed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
+    /// A runtime setting value does not match its declared schema.
+    #[error("invalid value for plugin setting {key:?}")]
+    InvalidSetting {
+        /// Declared setting key.
+        key: String,
+    },
     /// A tool rejected a gesture without changing the document.
     #[error(transparent)]
     Tool(#[from] ToolError),
@@ -261,6 +271,7 @@ pub(crate) struct HostedPlugin {
     pub(crate) manifest: Manifest,
     pub(crate) state: PluginState,
     pub(crate) contributions: Contributions,
+    settings: BTreeMap<String, SettingValue>,
 }
 
 /// Owns plugin instances and the read-only registry they populate.
@@ -278,7 +289,8 @@ pub struct Host {
 
 impl Host {
     /// Resolve and invoke a declared, enabled tool. Missing or disabled tools are inert.
-    /// Both binding and execution are timed and panic-isolated like lifecycle hooks.
+    /// Transforms run on each returned outcome before any commands reach the app.
+    /// Binding and execution are timed and panic-isolated like lifecycle hooks.
     pub fn dispatch_tool(
         &mut self,
         id: &str,
@@ -288,11 +300,17 @@ impl Host {
         let Some(index) = self.tool_owner(id) else {
             return Ok(None);
         };
-        self.invoke(index, Phase::Tool, |plugin| {
-            plugin.tool(id).map(|tool| tool.interact(cx, input))
-        })?
-        .transpose()
-        .map_err(HostError::from)
+        let mut outcome = self
+            .invoke(index, Phase::Tool, |plugin| {
+                plugin.tool(id).map(|tool| tool.interact(cx, input))
+            })?
+            .transpose()
+            .map_err(HostError::from)?;
+        if let Some(outcome) = &mut outcome {
+            outcome.commands =
+                self.transform_commands(cx.bounds(), std::mem::take(&mut outcome.commands))?;
+        }
+        Ok(outcome)
     }
 
     /// Whether an enabled tool declaration has an implementation binding.
@@ -311,6 +329,101 @@ impl Host {
                     .iter()
                     .any(|c| matches!(c, Contribution::Tool(tool) if tool.id == id))
         })
+    }
+
+    /// Run enabled transforms in ascending order, with registration order for ties.
+    /// Missing bindings are inert; a panic aborts the pending edit and quarantines
+    /// its plugin. No document mutation occurs here.
+    pub fn transform_commands(
+        &mut self,
+        bounds: Region,
+        mut commands: Vec<Command>,
+    ) -> Result<Vec<Command>, HostError> {
+        let mut transforms: Vec<_> = self
+            .plugins
+            .iter()
+            .enumerate()
+            .filter(|(_, plugin)| plugin.state == PluginState::Enabled)
+            .flat_map(|(index, plugin)| {
+                plugin.contributions.iter().filter_map(move |c| {
+                    if let Contribution::CommandTransform(spec) = c {
+                        Some((index, spec.id.clone(), spec.order))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+        transforms.sort_by_key(|(_, _, order)| *order);
+        for (index, id, _) in transforms {
+            let cx = TransformContext {
+                bounds,
+                settings: self.plugins[index].settings.clone(),
+            };
+            commands = self.invoke(index, Phase::CommandTransform, |plugin| {
+                match plugin.command_transform(&id) {
+                    Some(transform) => transform.transform(&cx, commands),
+                    None => commands,
+                }
+            })?;
+        }
+        Ok(commands)
+    }
+
+    /// Whether a declared, enabled command transform has an implementation binding.
+    pub fn has_command_transform(&mut self, id: &str) -> Result<bool, HostError> {
+        let Some(index) = self.plugins.iter().position(|plugin| {
+            plugin.state == PluginState::Enabled
+                && plugin
+                    .contributions
+                    .iter()
+                    .any(|c| matches!(c, Contribution::CommandTransform(spec) if spec.id == id))
+        }) else {
+            return Ok(false);
+        };
+        self.invoke(index, Phase::CommandTransform, |plugin| {
+            plugin.command_transform(id).is_some()
+        })
+    }
+
+    /// Read an enabled plugin's setting. Values survive disable/enable in this host;
+    /// serialization, if any, remains the app's responsibility.
+    pub fn setting(&self, key: &str) -> Option<&SettingValue> {
+        self.plugins
+            .iter()
+            .filter(|plugin| plugin.state == PluginState::Enabled)
+            .find_map(|plugin| plugin.settings.get(key))
+    }
+
+    /// Update declared plugin state without affecting document content or history.
+    /// Unknown, disabled and faulted settings are inert and return `false`.
+    pub fn set_setting(&mut self, key: &str, value: SettingValue) -> Result<bool, HostError> {
+        for plugin in &mut self.plugins {
+            if plugin.state != PluginState::Enabled {
+                continue;
+            }
+            let Some(setting) = plugin.contributions.iter().find_map(|c| match c {
+                Contribution::Setting(setting) if setting.key == key => Some(setting),
+                _ => None,
+            }) else {
+                continue;
+            };
+            let valid = match (&setting.kind, &value) {
+                (SettingKind::Bool, SettingValue::Bool(_)) => true,
+                (SettingKind::Choice(choices), SettingValue::Choice(value)) => {
+                    choices.contains(value)
+                }
+                (SettingKind::Number, SettingValue::Number(value)) => value.is_finite(),
+                _ => false,
+            };
+            if !valid {
+                return Err(HostError::InvalidSetting { key: key.into() });
+            }
+            let changed = plugin.settings.get(key) != Some(&value);
+            plugin.settings.insert(key.into(), value);
+            return Ok(changed);
+        }
+        Ok(false)
     }
 
     /// Register plugins and activate those enabled by their manifests.
@@ -368,9 +481,21 @@ impl Host {
                 manifest,
                 state: PluginState::Disabled,
                 contributions: Contributions::default(),
+                settings: BTreeMap::new(),
             });
             match self.collect(index) {
-                Ok(Ok(contributions)) => self.plugins[index].contributions = contributions,
+                Ok(Ok(contributions)) => {
+                    self.plugins[index].settings = contributions
+                        .iter()
+                        .filter_map(|c| match c {
+                            Contribution::Setting(setting) => {
+                                Some((setting.key.clone(), setting.default.clone()))
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    self.plugins[index].contributions = contributions;
+                }
                 Ok(Err(error)) => {
                     self.plugins.pop();
                     self.reject(RegistrationError::InvalidContributions {
@@ -599,6 +724,20 @@ impl Host {
 
 struct ActivationContext;
 impl ActivateCx for ActivationContext {}
+
+struct TransformContext {
+    bounds: Region,
+    settings: BTreeMap<String, SettingValue>,
+}
+
+impl TransformCx for TransformContext {
+    fn bounds(&self) -> Region {
+        self.bounds
+    }
+    fn setting(&self, key: &str) -> Option<&SettingValue> {
+        self.settings.get(key)
+    }
+}
 
 fn isolate<T>(operation: impl FnOnce() -> T) -> Result<T, String> {
     catch_unwind(AssertUnwindSafe(operation)).map_err(panic_message)

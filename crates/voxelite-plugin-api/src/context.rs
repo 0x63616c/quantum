@@ -29,6 +29,17 @@ pub trait ToolCx {
     fn bounds(&self) -> crate::Region;
 }
 
+/// Read-only capabilities for transforming pending tool commands.
+///
+/// Settings are scoped to the declaring plugin, including its enabled mirror
+/// axes. No other plugin's settings, document mutations or GUI are exposed.
+pub trait TransformCx {
+    /// Finite, half-open bounds of the live document.
+    fn bounds(&self) -> crate::Region;
+    /// Current value of one of this plugin's declared settings.
+    fn setting(&self, key: &str) -> Option<&crate::SettingValue>;
+}
+
 /// Host-provided capabilities for exporting document content.
 ///
 /// This trait is a stub. Snapshot and output capabilities will be added with

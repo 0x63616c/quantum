@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
 use voxelite_plugin_api::{
-    CommandContribution, Contribution, Contributions, DataSectionContribution, FormatContribution,
-    PanelContribution, PluginId, RenderPassContribution, SettingContribution, ToolContribution,
+    CommandContribution, CommandTransformContribution, Contribution, Contributions,
+    DataSectionContribution, FormatContribution, PanelContribution, PluginId,
+    RenderPassContribution, SettingContribution, ToolContribution,
 };
 
 use crate::host::{HostedPlugin, PluginState};
@@ -95,6 +96,17 @@ impl<'a> Registry<'a> {
         self.iter()
             .filter_map(|(id, contribution)| match contribution {
                 Contribution::Tool(spec) => Some((id, spec)),
+                _ => None,
+            })
+    }
+
+    /// Enabled transform declarations in registration order, before execution sorting.
+    pub fn command_transforms(
+        &self,
+    ) -> impl Iterator<Item = (&'a PluginId, &'a CommandTransformContribution)> + use<'a> {
+        self.iter()
+            .filter_map(|(id, contribution)| match contribution {
+                Contribution::CommandTransform(spec) => Some((id, spec)),
                 _ => None,
             })
     }

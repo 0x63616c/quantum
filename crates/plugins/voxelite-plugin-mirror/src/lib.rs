@@ -1,10 +1,22 @@
-//! Built-in mirror command declarations; execution remains in the app.
+//! Built-in centered mirroring of pending tool commands.
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
+    API_VERSION, Command, CommandContribution, CommandTransform, CommandTransformContribution,
+    Manifest, Mirror, Plugin, PluginId, Registrar, SettingContribution, SettingKind, SettingValue,
+    TransformCx, Value, Version,
 };
 
-/// Metadata for the built-in mirror commands.
+/// Plugin-owned axis settings in X/Y/Z order. The host retains their transient values.
+pub const AXIS_SETTINGS: [&str; 3] = [
+    "dev.voxelite.mirror.x_enabled",
+    "dev.voxelite.mirror.y_enabled",
+    "dev.voxelite.mirror.z_enabled",
+];
+
+/// Stable command transform identity.
+pub const TRANSFORM_ID: &str = "dev.voxelite.mirror.transform";
+
+/// Mirror command metadata, axis defaults and pending command behavior.
 pub struct MirrorPlugin;
 
 impl Plugin for MirrorPlugin {
@@ -69,15 +81,52 @@ impl Plugin for MirrorPlugin {
                 agent_visible: false,
             });
         }
+        for (key, label) in AXIS_SETTINGS
+            .into_iter()
+            .zip(["Mirror X", "Mirror Y", "Mirror Z"])
+        {
+            registrar.setting(SettingContribution {
+                key: key.into(),
+                label_key: label.into(),
+                kind: SettingKind::Bool,
+                default: SettingValue::Bool(false),
+            });
+        }
+        registrar.command_transform(CommandTransformContribution {
+            id: TRANSFORM_ID.into(),
+            order: 0,
+        });
+    }
+
+    fn command_transform(&self, id: &str) -> Option<&dyn CommandTransform> {
+        (id == TRANSFORM_ID).then_some(self)
+    }
+}
+
+impl CommandTransform for MirrorPlugin {
+    fn transform(&self, cx: &dyn TransformCx, mut commands: Vec<Command>) -> Vec<Command> {
+        let axes = AXIS_SETTINGS.map(|key| cx.setting(key) == Some(&SettingValue::Bool(true)));
+        let mirror = Mirror::centered(cx.bounds(), axes);
+        for command in &mut commands {
+            mirror_command(command, mirror);
+        }
+        commands
+    }
+}
+
+fn mirror_command(command: &mut Command, settings: Mirror) {
+    match command {
+        Command::SetVoxels { mirror, .. }
+        | Command::FloodFill { mirror, .. }
+        | Command::Primitive { mirror, .. } => *mirror = settings,
+        Command::Batch(commands) => {
+            for command in commands {
+                mirror_command(command, settings);
+            }
+        }
+        _ => {}
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(MirrorPlugin));
-    }
-}
+mod tests;

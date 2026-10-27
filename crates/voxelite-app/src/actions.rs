@@ -301,6 +301,14 @@ impl Op {
             _ => Ok(()),
         }
     }
+
+    /// Check the live registry as well as editor state for installed shell actions.
+    pub fn availability_in(self, host: &Host, context: CommandContext) -> Result<(), &'static str> {
+        if host.registry().get(self.command_id()).is_none() {
+            return Err("This command’s plugin is disabled");
+        }
+        self.availability(context)
+    }
 }
 
 /// In-window menus use the same placement on every host, including Apple browsers.
@@ -655,6 +663,37 @@ mod tests {
             );
             host.enable(&plugin).unwrap();
             assert_eq!(ShellCommands::from_host(&host).entries, SHELL.entries);
+        }
+    }
+
+    #[test]
+    fn live_registry_disables_installed_mirror_actions_without_disabling_tools() {
+        let mut host = voxelite_app::app_host();
+        let context = CommandContext::Editor(EditorState::default());
+        for op in [Op::MirrorX, Op::MirrorY, Op::MirrorZ] {
+            assert!(op.availability_in(&host, context).is_ok());
+        }
+        host.disable("dev.voxelite.mirror").unwrap();
+        for op in [Op::MirrorX, Op::MirrorY, Op::MirrorZ] {
+            assert_eq!(
+                op.availability_in(&host, context),
+                Err("This command’s plugin is disabled")
+            );
+        }
+        for op in [
+            Op::Place,
+            Op::Paint,
+            Op::Erase,
+            Op::Box,
+            Op::Fill,
+            Op::Picker,
+            Op::New,
+        ] {
+            assert!(op.availability_in(&host, context).is_ok());
+        }
+        host.enable("dev.voxelite.mirror").unwrap();
+        for op in [Op::MirrorX, Op::MirrorY, Op::MirrorZ] {
+            assert!(op.availability_in(&host, context).is_ok());
         }
     }
 

@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
 use crate::{
-    CommandContribution, Contribution, DataSectionContribution, FormatContribution,
-    PanelContribution, RenderPassContribution, SettingContribution, SettingKind, SettingValue,
-    ToolContribution,
+    CommandContribution, CommandTransformContribution, Contribution, DataSectionContribution,
+    FormatContribution, PanelContribution, RenderPassContribution, SettingContribution,
+    SettingKind, SettingValue, ToolContribution,
 };
 
 /// Collects declarations during [`crate::Plugin::contribute`].
@@ -30,6 +30,11 @@ impl Registrar {
     /// Append an interactive tool declaration.
     pub fn tool(&mut self, contribution: ToolContribution) {
         self.contribute(Contribution::Tool(contribution));
+    }
+
+    /// Append a pending command transform declaration.
+    pub fn command_transform(&mut self, contribution: CommandTransformContribution) {
+        self.contribute(Contribution::CommandTransform(contribution));
     }
 
     /// Append a panel declaration.

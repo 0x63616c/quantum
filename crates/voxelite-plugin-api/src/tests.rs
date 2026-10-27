@@ -72,6 +72,10 @@ fn declarations(id: &str) -> Vec<Contribution> {
             section_name: id.into(),
             schema_version: 2,
         }),
+        Contribution::CommandTransform(CommandTransformContribution {
+            id: id.into(),
+            order: -10,
+        }),
     ]
 }
 
@@ -144,7 +148,7 @@ fn plugin_id_dns_length_limits_are_checked() {
 fn manifest_uses_independent_semver_versions_and_localization_keys() {
     let manifest = manifest();
     assert_eq!(manifest.version.to_string(), "2.3.4-beta.1+build.7");
-    assert_eq!(manifest.api_version, Version::new(0, 3, 0));
+    assert_eq!(manifest.api_version, Version::new(0, 4, 0));
     assert_ne!(manifest.version, manifest.api_version);
     assert_eq!(manifest.name_key, "plugins.tools.name");
     assert_eq!(manifest.description_key, "plugins.tools.description");
@@ -170,6 +174,7 @@ fn all_contribution_kinds_and_metadata_preserve_registration_order() {
         "dev.voxelite.grid.render",
         "dev.voxelite.tools.brush_size",
         "dev.voxelite.comments.pins",
+        "dev.voxelite.mirror.transform",
     ];
     let expected: Vec<_> = ids
         .iter()
@@ -181,6 +186,7 @@ fn all_contribution_kinds_and_metadata_preserve_registration_order() {
         match contribution {
             Contribution::Command(value) => registrar.command(value),
             Contribution::Tool(value) => registrar.tool(value),
+            Contribution::CommandTransform(value) => registrar.command_transform(value),
             Contribution::Panel(value) => registrar.panel(value),
             Contribution::Format(value) => registrar.format(value),
             Contribution::RenderPass(value) => registrar.render_pass(value),
