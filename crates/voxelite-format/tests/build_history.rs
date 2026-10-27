@@ -183,3 +183,35 @@ fn replay_respects_host_limits_and_opens_clean() {
     assert_eq!(engine.history().count(), 3);
     assert!(!engine.is_dirty());
 }
+
+#[test]
+fn build_replay_and_undo_preserve_unknown_project_extensions() {
+    let original = small_build();
+    let bytes = original.to_bytes().unwrap();
+    let raw = r#"{ "schema_version":1,"encoding":"json","payload": [1e2,"\u0061"] }"#;
+    let text = format!(
+        "{{\"extensions\":{{\"org.absent\":{{\"state\":{raw}}}}},{}",
+        &std::str::from_utf8(&bytes).unwrap()[1..]
+    );
+    let project = from_bytes(text.as_bytes()).unwrap();
+    assert!(project.build_history().is_some());
+    let mut engine = project.open_engine(Limits::default()).unwrap();
+    while let Some(head) = engine.head() {
+        assert_eq!(
+            engine
+                .document()
+                .extensions
+                .get("org.absent", "state")
+                .unwrap()
+                .raw_json(),
+            raw
+        );
+        engine.undo(engine.revision(), head).unwrap();
+    }
+    assert_eq!(engine.document().extensions, project.document.extensions);
+    assert!(
+        std::str::from_utf8(&project.to_bytes().unwrap())
+            .unwrap()
+            .contains(raw)
+    );
+}

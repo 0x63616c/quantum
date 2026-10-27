@@ -149,6 +149,11 @@ fn invalid_reason(contribution: &Contribution) -> Option<&'static str> {
     if !matches!(contribution, Contribution::DataSection(_)) && !id.contains('.') {
         return Some("expected a namespaced ID with at least two dot-separated segments");
     }
+    if let Contribution::DataSection(section) = contribution
+        && (section.schema_version == 0 || !voxelite_core::valid_section_name(id))
+    {
+        return Some("data section requires a bounded section name and positive schema_version");
+    }
     if let Contribution::Setting(setting) = contribution {
         match (&setting.kind, &setting.default) {
             (SettingKind::Bool, SettingValue::Bool(_)) => {}

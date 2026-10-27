@@ -692,7 +692,60 @@
       "type": "object"
     },
     "extensions": {
-      "type": "object"
+      "description": "Optional plugin-owned sections. Raw section envelopes are preserved byte-for-byte; Rust additionally enforces duplicate-key, nesting and encoded-size limits.",
+      "type": "object",
+      "propertyNames": {
+        "maxLength": 253,
+        "pattern": "^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "maxLength": 253,
+          "pattern": "^[a-z][a-z0-9_-]*(?:\\.[a-z][a-z0-9_-]*)*$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "encoding",
+            "payload"
+          ],
+          "properties": {
+            "schema_version": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "encoding": {
+              "enum": [
+                "json",
+                "bytes"
+              ]
+            },
+            "payload": {}
+          },
+          "if": {
+            "properties": {
+              "encoding": {
+                "const": "bytes"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "build_history": {
       "description": "Optional deterministic build recipe, validated by core command replay against the complete live document.",

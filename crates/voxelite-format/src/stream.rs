@@ -22,6 +22,7 @@ impl<W: Write> Write for BoundedWriter<W> {
 }
 struct State {
     volumes: BTreeMap<String, Volume>,
+    extensions: Extensions,
     bytes: usize,
     voxel_count: usize,
 }
@@ -117,7 +118,11 @@ impl<'de> Visitor<'de> for Seed<'_> {
                 segments.as_slice(),
                 ["layers", _, "voxels"] | ["versions", _, "snapshot", "layers", _, "voxels"]
             );
-            let value = if voxels {
+            let value = if path == "/extensions" {
+                self.state.extensions = map.next_value::<Extensions>()?;
+                self.charge(self.state.extensions.bytes())?;
+                Value::Object(Map::new())
+            } else if voxels {
                 let volume = map.next_value::<Volume>()?;
                 self.state.voxel_count += volume.len();
                 // Serialized version geometry has its own 64 MiB cap; also bound
@@ -139,7 +144,7 @@ impl<'de> Visitor<'de> for Seed<'_> {
         Ok(Value::Object(out))
     }
 }
-pub fn read(reader: impl Read) -> FormatResult<(Value, BTreeMap<String, Volume>)> {
+pub fn read(reader: impl Read) -> FormatResult<(Value, BTreeMap<String, Volume>, Extensions)> {
     struct BoundedRead<R> {
         inner: R,
         read: usize,
@@ -156,6 +161,7 @@ pub fn read(reader: impl Read) -> FormatResult<(Value, BTreeMap<String, Volume>)
     }
     let mut state = State {
         volumes: BTreeMap::new(),
+        extensions: Extensions::default(),
         bytes: 0,
         voxel_count: 0,
     };
@@ -170,7 +176,7 @@ pub fn read(reader: impl Read) -> FormatResult<(Value, BTreeMap<String, Volume>)
     }
     .deserialize(&mut de)?;
     de.end()?;
-    Ok((value, state.volumes))
+    Ok((value, state.volumes, state.extensions))
 }
 fn indent(w: &mut impl Write, depth: usize) -> std::io::Result<()> {
     for _ in 0..depth * 2 {
@@ -184,7 +190,11 @@ pub fn write(
     path: &str,
     depth: usize,
     volumes: &BTreeMap<String, &Volume>,
+    extensions: &Extensions,
 ) -> std::io::Result<()> {
+    if path == "/extensions" {
+        return serde_json::to_writer(w, extensions).map_err(std::io::Error::other);
+    }
     if let Some(volume) = volumes.get(path) {
         w.write_all(b"[")?;
         for (i, (p, s)) in volume.sorted().iter().enumerate() {
@@ -207,7 +217,7 @@ pub fn write(
                 indent(w, depth + 1)?;
                 canonical::write_value(w, &Value::String((*k).clone()), depth + 1)?;
                 w.write_all(b": ")?;
-                write(w, v, &format!("{path}/{k}"), depth + 1, volumes)?;
+                write(w, v, &format!("{path}/{k}"), depth + 1, volumes, extensions)?;
             }
             if !o.is_empty() {
                 w.write_all(b"\n")?;
@@ -220,7 +230,7 @@ pub fn write(
             for (i, v) in a.iter().enumerate() {
                 w.write_all(if i == 0 { b"\n" } else { b",\n" })?;
                 indent(w, depth + 1)?;
-                write(w, v, &format!("{path}/{i}"), depth + 1, volumes)?;
+                write(w, v, &format!("{path}/{i}"), depth + 1, volumes, extensions)?;
             }
             if !a.is_empty() {
                 w.write_all(b"\n")?;

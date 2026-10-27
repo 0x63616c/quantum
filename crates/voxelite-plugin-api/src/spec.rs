@@ -177,13 +177,13 @@ pub struct SettingContribution {
 
 /// Declaration of a plugin-owned `.voxl` data section.
 ///
-/// This metadata does not change the file format or implement serialization,
-/// migration or ownership checks against core sections; those belong to the host.
+/// Stored under `extensions[plugin_id][section_name]`. The host gates access and
+/// runs [`crate::Plugin::data_migrations`] before [`crate::Plugin::load_data`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DataSectionContribution {
     /// Stable section name, such as `comments` or `dev.voxelite.comments.pins`.
     ///
-    /// Each dot-separated segment matches `[a-z][a-z0-9_-]*`.
+    /// At most 253 bytes; each dot-separated segment matches `[a-z][a-z0-9_-]*`.
     pub section_name: String,
     /// Section schema revision, independent of plugin, API and `.voxl` versions.
     pub schema_version: u32,
@@ -215,8 +215,8 @@ impl Contribution {
     ///
     /// IDs and keys use at least two dot-separated segments matching
     /// `[a-z][a-z0-9_-]*`, for example `dev.voxelite.tools.paint`.
-    /// Data sections also allow a single segment to describe existing `.voxl`
-    /// sections. All kinds share one identifier namespace within a plugin.
+    /// Data sections also allow a single plugin-local segment. All kinds share
+    /// one identifier namespace within a plugin.
     pub fn id(&self) -> &str {
         match self {
             Self::Command(spec) => &spec.id,

@@ -6111,6 +6111,8 @@ name = "voxelite-plugin-host"
 version = "0.2.0"
 dependencies = [
  "thiserror 2.0.21",
+ "voxelite-core",
+ "voxelite-format",
  "voxelite-plugin-api",
  "voxelite-render",
 ]

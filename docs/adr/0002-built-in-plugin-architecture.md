@@ -7,6 +7,8 @@ and command transforms through the host registry. Camera gizmo and grid drawing
 and interaction also dispatch through enabled overlay bindings. Export formats
 and byte encoding dispatch through the enabled exporters registry. Palette state,
 library operations and palette commands dispatch through an enabled panel binding.
+Project extensions retain raw section bytes; enabled owners migrate and validate
+their sections through capability-scoped data access during load.
 
 ## Context
 
@@ -39,13 +41,13 @@ icons, menus and agent visibility. Shell presentation order and optional Apple
 application-menu sections preserve placement across plugin boundaries without
 changing registry registration order. Settings declare Bool, Choice or Number schemas
 with typed defaults. Render passes declare insertion slots; data sections declare
-their stored names and schema revisions. Declaring a data section does not change
-the current `.voxl` format. Local validation checks identifier syntax, duplicate
-contribution identifiers within a plugin and setting defaults. IDs and setting
-keys are namespaced; data section names may also name existing `.voxl` fields.
+their plugin-local names and positive schema revisions. Local validation checks
+identifier syntax, duplicate contribution identifiers within a plugin and setting
+defaults. IDs and setting keys are namespaced; data section names are scoped by
+plugin ID and never grant access to core `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx`,
-`TransformCx`, `OverlayCx`, `PaletteCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
+`TransformCx`, `OverlayCx`, `PaletteCx`, `DataCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
 service locator.
 `ActivateCx` scopes activation capabilities separately. `CommandCx` and
 `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
@@ -63,7 +65,7 @@ conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool loo
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.5.1`, independently of plugin implementation versions and `.voxl` or
+is `0.5.2`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -81,6 +83,9 @@ The `0.5.0` bump adds required snapshot/render queries to `ExportCx` and a
 The compatible `0.5.1` addition binds portable palette behavior to existing panel
 declarations through a default-unbound lookup and new palette capability/value
 types. Existing required trait methods and contribution construction are unchanged.
+The compatible `0.5.2` addition supplies `DataSection`, `DataCx`, `DataMigration`
+and default `data_migrations`/`load_data` hooks. No existing plugin must implement
+a new required method. The core `Document` now stores project extensions.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -295,6 +300,59 @@ unchanged `.voxl` bytes during selection, typed edit undo/redo, disabled/absent
 palette fallback, scoped settings and panic isolation. The shell's existing golden
 continues to pin labels, icons, menus and shortcuts.
 
+## Project extension data (PR 10)
+
+The optional top-level `extensions` object maps plugin ID → section name →
+`{schema_version, encoding, payload}`. `schema_version` is a positive `u32`;
+`encoding` is `json` or `bytes` (an array of octets). The format remains **1.0**:
+files without this optional namespace read unchanged, and an empty namespace is
+omitted, preserving the existing golden bytes. Core comments, palettes and other
+existing fields remain in place; this step does not migrate built-in content.
+See [the wire specification](../../spec/voxl/1.0/README.md#plugin-extension-data).
+
+Core owns `Document::extensions` and bounded `DataSection` envelopes. The streaming
+format reader extracts each raw JSON envelope without passing it through a JSON
+value tree. Saving writes those exact bytes, including internal whitespace,
+key order, numeric spelling and escapes. This applies to unknown owners,
+undeclared sections, disabled/faulted plugins, and unchanged current sections.
+Namespace keys sort; raw envelopes are the deliberate exception to canonical JSON
+formatting. Raw bytes contribute to the project semantic hash and metadata budgets.
+No payload is executable or a remote reference.
+
+`DataSectionContribution { section_name, schema_version }` declares access to one
+section beneath the owner's plugin ID. Two plugins may use the same section name;
+registry lookup uses `data_section(plugin_id, name)`. `DataCx::read`/`write` cannot
+address another plugin or an undeclared section. Writes require the declared
+current version; deletion removes only the named section. The context exposes no
+engine, UI, filesystem or service locator.
+
+At load, `Host::load_data` stages all extension changes, then visits enabled
+owners in registration order. Each present declared section follows the owner's
+`DataMigration` callbacks from its stored version to the declared version.
+Edges must advance, have unique source versions, end at or below the current
+version, and total at most 256. Missing paths, newer stored schemas, wrong callback
+output versions, callback errors and malformed payloads reject the operation.
+After migration, `Plugin::load_data` validates or initializes the owner's data.
+Disabled and missing owners run no callbacks. The editor calls this host operation
+when attaching plugins to an opened `DocumentSession`, before installing the editor.
+Hosts must also call it when re-enabling a plugin against an already open document.
+
+A successful change uses `Engine::set_extensions` to commit one undoable edit,
+including dirty-state and history-budget accounting. A no-op creates no history.
+`Host::with_data` provides the same staged boundary for later scoped edits. Errors
+leave the entire engine and original on-disk file intact; panics additionally
+quarantine the plugin using normal host timing/events. Rejected file opens preserve
+the previous editor. Users may disable an owner whose payload validation fails and
+reopen its structurally valid raw data. No salvage or lossy partial save is attempted.
+
+Extensions belong to the project, not named voxel snapshots. Restoring a named
+version leaves them alone; branches copy them opaquely. Runtime undo, redo,
+checkpoints and preview retain them. Build recipes carry the namespace unchanged
+through every replayed state; recipes cannot execute extension edits. A later data
+edit invalidates the attached recipe like any other document change. Tests cover
+old golden files, raw JSON/byte round trips and durable saving, disabled owners,
+scoped writes, ordered migrations, failures/panics, and replay/undo preservation.
+
 ## Crate layout and dependency rule
 
 Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
@@ -320,7 +378,7 @@ linked into the app and adds no built-in feature or command execution.
 manifests and collects declarations once per plugin. The read-only `Registry`
 exposes only successfully enabled plugins, preserving plugin and declaration
 registration order. Catalog conflicts include disabled plugins; duplicate IDs
-across contribution kinds and duplicate canonical default keybindings in the same
+across globally named contribution kinds and duplicate canonical default keybindings in the same
 opaque context are structured `Conflict` values. Enablement checks the candidate
 against enabled plugins and its own bindings, leaving the whole candidate disabled
 on conflict so it can be retried after the conflicting plugin is disabled.
@@ -332,7 +390,7 @@ Repeated enable/disable requests are no-ops; transitions call their hook once.
 API compatibility ignores build metadata and requires exact version precedence
 for prereleases, which have no compatibility guarantee.
 
-Plugin entry points, including tool, transform, overlay, palette and export binding and invocation, are
+Plugin entry points, including data migration/validation and tool, transform, overlay, palette and export binding and invocation, are
 guarded with `catch_unwind`. A hook panic marks the plugin
 `Faulted`, discards its declarations and prevents retries for that host's lifetime;
 a manifest panic is a registration rejection because no identity is established.

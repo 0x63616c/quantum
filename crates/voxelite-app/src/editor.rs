@@ -403,7 +403,9 @@ impl Editor {
         Self::from_session(DocumentSession::new(project, path, Limits::default())?)
     }
     /// Attach UI-thread plugins to a session that may have been loaded in the background.
-    pub fn from_session(session: DocumentSession) -> EditorResult<Self> {
+    pub fn from_session(mut session: DocumentSession) -> EditorResult<Self> {
+        let mut plugins = crate::app_host();
+        plugins.load_data(&mut session.engine)?;
         let s = &session.engine.document().content;
         let layer = s
             .layers
@@ -420,7 +422,7 @@ impl Editor {
         let camera = OrbitCamera::fit(s, 1.3);
         Ok(Self {
             session,
-            plugins: RefCell::new(crate::app_host()),
+            plugins: RefCell::new(plugins),
             raster: voxelite_render::RasterCache::default(),
             preview: None,
             playback: None,

@@ -201,6 +201,7 @@ impl Engine {
         let target = self.preview(entry)?;
         let mut staged = (*self.document).clone();
         staged.content = target.content.clone();
+        staged.extensions = target.extensions.clone();
         self.commit_restore(staged, id, actor, "Restore history state".into())
     }
     /// Retained conservative history byte accounting.
@@ -256,7 +257,8 @@ impl Engine {
             &mut work,
         )?;
         staged.validate()?;
-        let changes = compare(&self.document.content, &staged.content);
+        let mut changes = compare(&self.document.content, &staged.content);
+        changes.metadata_changed |= self.document.extensions != staged.extensions;
         let changed = staged != *self.document;
         let bytes = if changed {
             patch_bytes(&self.document, &staged)
@@ -362,7 +364,8 @@ impl Engine {
             .checked_add(1)
             .ok_or_else(|| Error::Limit("revision overflow".into()))?;
         let e = self.undo.pop_back().expect("head checked");
-        let changes = compare(&self.document.content, &e.before.content);
+        let mut changes = compare(&self.document.content, &e.before.content);
+        changes.metadata_changed |= self.document.extensions != e.before.extensions;
         self.document = e.before.clone();
         self.redo.push(e);
         self.revision = next;
@@ -384,7 +387,8 @@ impl Engine {
             .checked_add(1)
             .ok_or_else(|| Error::Limit("revision overflow".into()))?;
         let e = self.redo.pop().expect("head checked");
-        let changes = compare(&self.document.content, &e.after.content);
+        let mut changes = compare(&self.document.content, &e.after.content);
+        changes.metadata_changed |= self.document.extensions != e.after.extensions;
         self.document = e.after.clone();
         self.undo.push_back(e);
         self.revision = next;
@@ -458,7 +462,24 @@ impl Engine {
         let target = self.preview(c.head)?;
         let mut staged = (*self.document).clone();
         staged.content = target.content.clone();
+        staged.extensions = target.extensions.clone();
         self.commit_restore(staged, id, actor, "Restore checkpoint".into())
+    }
+    /// Commit host-scoped extension edits or migrations as one reversible operation.
+    /// The caller supplies ownership checks; core enforces revision and history limits.
+    /// Project data is independent of named voxel snapshots and build recipes.
+    pub fn set_extensions(
+        &mut self,
+        revision: u64,
+        id: Uuid,
+        actor: Actor,
+        extensions: Extensions,
+    ) -> Result<Receipt> {
+        self.guard(revision)?;
+        validate_name(&actor.tool)?;
+        let mut staged = (*self.document).clone();
+        staged.extensions = extensions;
+        self.commit_restore(staged, id, actor, "Update plugin data".into())
     }
     fn commit_restore(
         &mut self,
@@ -472,7 +493,8 @@ impl Engine {
         }
         crate::command::validate_restore(&self.document.content, &staged.content)?;
         staged.validate()?;
-        let changes = compare(&self.document.content, &staged.content);
+        let mut changes = compare(&self.document.content, &staged.content);
+        changes.metadata_changed |= self.document.extensions != staged.extensions;
         if staged == *self.document {
             return Ok(Receipt {
                 revision: self.revision,
@@ -568,6 +590,7 @@ impl Engine {
             id: new_id,
             content,
             versions: BTreeMap::new(),
+            extensions: self.document.extensions.clone(),
             lineage: Some(Lineage {
                 document: self.document.id,
                 version,
@@ -581,6 +604,8 @@ impl Engine {
 fn patch_bytes(a: &Document, b: &Document) -> usize {
     512 + a.content.bytes()
         + b.content.bytes()
+        + a.extensions.bytes()
+        + b.extensions.bytes()
         + a.versions
             .values()
             .map(|v| v.snapshot.bytes())
@@ -657,6 +682,11 @@ fn revert_field<T: Clone + PartialEq>(current: &mut T, before: &T, after: &T) ->
     Ok(())
 }
 fn revert_document(current: &mut Document, before: &Document, after: &Document) -> Result<()> {
+    revert_field(
+        &mut current.extensions,
+        &before.extensions,
+        &after.extensions,
+    )?;
     revert_field(&mut current.versions, &before.versions, &after.versions)?;
     let c = &mut current.content;
     let b = &before.content;

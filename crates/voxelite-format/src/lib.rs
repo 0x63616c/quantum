@@ -91,6 +91,8 @@ struct Wire {
     view: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     build_history: Option<BuildHistory>,
+    #[serde(default, skip_serializing_if = "Extensions::is_empty")]
+    extensions: Extensions,
     #[serde(flatten)]
     extra: Extra,
 }
@@ -107,7 +109,8 @@ impl Project {
             built_document: None,
         })
     }
-    /// Access retained input metadata (voxel arrays are deliberately empty here).
+    /// Access retained input metadata (voxel arrays and extensions are empty here).
+    /// Exact section envelopes live in `document.extensions`.
     pub fn metadata(&self) -> &Value {
         &self.template
     }
@@ -137,13 +140,20 @@ impl Project {
                 .expect("root object")
                 .remove("build_history");
         }
-        validate_metadata(&metadata)?;
+        validate_metadata(&metadata, &self.document.extensions)?;
         let mut writer = stream::BoundedWriter {
             inner: writer,
             written: 0,
             limit: MAX_FILE_BYTES,
         };
-        stream::write(&mut writer, &metadata, "", 0, &volumes)?;
+        stream::write(
+            &mut writer,
+            &metadata,
+            "",
+            0,
+            &volumes,
+            &self.document.extensions,
+        )?;
         writer.write_all(b"\n")?;
         Ok(())
     }
@@ -206,17 +216,21 @@ impl Project {
             view: self.view.clone(),
             extra: s.extra.clone(),
             build_history: self.build_history().cloned(),
+            extensions: Extensions::default(),
         };
         let mut metadata = serde_json::to_value(wire)?;
         preserve_unknown(&mut metadata, &self.template, "");
+        if !self.document.extensions.is_empty() {
+            metadata["extensions"] = json!({});
+        }
         Ok((metadata, volumes))
     }
 }
 /// Read bounded UTF-8 JSON directly into staged chunks and a small metadata tree.
 /// Duplicate object keys are rejected at every level, before installation.
 pub fn read(reader: impl Read) -> FormatResult<Project> {
-    let (metadata, mut volumes) = stream::read(reader)?;
-    validate_metadata(&metadata)?;
+    let (metadata, mut volumes, extensions) = stream::read(reader)?;
+    validate_metadata(&metadata, &extensions)?;
     let mut wire: Wire = serde_json::from_value(metadata.clone())?;
     if wire.format != "voxelite" || wire.version.major != 1 {
         return Err(FormatError::Invalid(
@@ -261,6 +275,7 @@ pub fn read(reader: impl Read) -> FormatResult<Project> {
         },
         versions,
         lineage: wire.lineage,
+        extensions,
     };
     document.validate()?;
     let mut project = Project {
@@ -307,6 +322,7 @@ fn known(path: &str) -> Option<&'static [&'static str]> {
             "lineage",
             "view",
             "build_history",
+            "extensions",
         ]);
     }
     match last {
@@ -333,7 +349,7 @@ fn known(path: &str) -> Option<&'static [&'static str]> {
 // Known fields come from live content. Unknown fields are merged by stable IDs,
 // never by array position, so a layer reorder cannot move extension ownership.
 fn preserve_unknown(current: &mut Value, old: &Value, path: &str) {
-    if path == "/build_history" {
+    if path == "/build_history" || path == "/extensions" {
         return;
     }
     match (current, old) {
@@ -368,7 +384,7 @@ fn preserve_unknown(current: &mut Value, old: &Value, path: &str) {
         _ => {}
     }
 }
-fn validate_metadata(value: &Value) -> FormatResult<()> {
+fn validate_metadata(value: &Value, extensions: &Extensions) -> FormatResult<()> {
     fn inert(v: &Value, depth: usize) -> bool {
         if depth > 16 {
             return false;
@@ -419,7 +435,7 @@ fn validate_metadata(value: &Value) -> FormatResult<()> {
         Ok(())
     }
     walk(value, "")?;
-    let bytes = serde_json::to_vec(value)?.len();
+    let bytes = serde_json::to_vec(value)?.len() + extensions.bytes();
     if bytes > MAX_METADATA_BYTES {
         return Err(FormatError::Invalid("8 MiB metadata budget".into()));
     }
