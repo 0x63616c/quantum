@@ -6041,6 +6041,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "voxelite-plugin"
+version = "0.2.0"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "voxelite-render"
 version = "0.2.0"
 dependencies = [

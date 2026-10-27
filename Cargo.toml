@@ -11,6 +11,7 @@ license = "MIT"
 [workspace.dependencies]
 voxelite-core = { path = "crates/voxelite-core" }
 voxelite-format = { path = "crates/voxelite-format" }
+voxelite-plugin = { path = "crates/voxelite-plugin" }
 voxelite-render = { path = "crates/voxelite-render" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
