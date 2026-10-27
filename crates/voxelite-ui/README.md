@@ -21,6 +21,22 @@ RGB and HSB values; callers own validation. Slider supports a gradient backgroun
 a value-label slot and arrow/Home/End keys. Swatch supports selection and a lock
 badge. Toggle, Badge (Pill) and Kbd cover small form and informational elements.
 
+`Hsb` provides bounded sRGB ↔ HSB (HSV) conversion, byte rounding and achromatic
+hue preservation. `rgb_hex` / `parse_rgb_hex` format and validate opaque colors.
+`ColorSquare` paints the saturation/brightness plane at the supplied hue;
+`HueSlider` paints the hue spectrum. Both are controlled, focusable inputs with
+arrow keys (Shift for larger steps), accessible values and pointer tracking beyond
+their bounds. `ColorChange::commit` is false during a drag and true on release or
+keyboard changes. The owner supplies separate `ColorGesture`s, cancels them before
+rolling back on Escape, and routes previews/commits through its domain. The square
+takes its parent's width and has equal height; the hue track is 24 px high.
+
+`SidebarItem::custom` provides the same selection, hover and accessibility frame
+as a standard item, with caller-provided content such as a palette thumbnail.
+`Menu::button`, `panel` and `item` provide consistent menu presentation. The owner
+manages open state, arrow-key selection, activation, dismissal and focus. These
+helpers perform no domain operations.
+
 Dialog supplies a centered scrim, focusable panel, title and optional footer.
 The caller owns Escape, open state and focus restoration; `trap_tab` keeps focus
 inside the panel. Small About panels use the quiet scrim. Tooltips share the
