@@ -12,12 +12,15 @@ struct Globals {
     shadow_settings: vec4<f32>, // inverse map size, world-space normal offset, reserved
 };
 @group(0) @binding(0) var<uniform> globals: Globals;
-// Packed ABI from occupancy.rs: 48-byte header, 16 words per 8³ brick,
-// followed by one bit per nonempty brick. World origin is used in VS only.
+// Packed ABI from occupancy.rs: 80-byte header, 16 words per 8³ brick,
+// one bit per nonempty brick, then one bit per nonempty 4³-brick super-brick.
+// World origin is used in VS only.
 struct Occupancy {
     min: vec4<i32>,
-    size: vec4<u32>,
+    size: vec4<u32>, // xyz extent, w = super-mask word offset
     bricks: vec4<u32>, // xyz dimensions, w = coarse-mask word offset
+    box_min: vec4<u32>, // inclusive grow-only occupied cell box (min > max: empty)
+    box_max: vec4<u32>,
     words: array<u32>,
 };
 @group(1) @binding(0) var<storage, read> occupancy: Occupancy;
@@ -65,41 +68,57 @@ fn first_axis(t: vec3<f32>) -> u32 {
 fn precedes(t: f32, axis: u32, end: f32, end_axis: u32) -> bool {
     return t < end || (t == end && axis <= end_axis);
 }
+fn skip_box(origin: vec3<f32>, dir: vec3<f32>, step: vec3<i32>, start: vec3<i32>, edge: i32) -> vec3<i32> {
+    var cell = start;
+    let lo = (cell / edge) * edge;
+    let hi = lo + vec3(edge - 1);
+    var end: vec3<f32>;
+    for (var a = 0u; a < 3u; a++) {
+        end[a] = crossing(origin[a], dir[a], select(lo[a], hi[a], step[a] > 0));
+    }
+    let axis = first_axis(end);
+    let time = end[axis];
+    for (var a = 0u; a < 3u; a++) {
+        if step[a] == 0 { continue; }
+        var candidate = clamp(i32(floor(origin[a] + dir[a] * time)), lo[a], hi[a]);
+        while (candidate - cell[a]) * step[a] > 0 && !precedes(crossing(origin[a], dir[a], candidate - step[a]), a, time, axis) {
+            candidate -= step[a];
+        }
+        while candidate >= lo[a] && candidate <= hi[a] && precedes(crossing(origin[a], dir[a], candidate), a, time, axis) {
+            candidate += step[a];
+        }
+        cell[a] = candidate;
+    }
+    return cell;
+}
 fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
     let scale = max(max(abs(direction.x), abs(direction.y)), abs(direction.z));
     if scale == 0.0 { return false; }
     let dir = direction / scale;
     let size = vec3<i32>(occupancy.size.xyz);
+    let amin = vec3<i32>(occupancy.box_min.xyz);
+    let amax = vec3<i32>(occupancy.box_max.xyz);
+    if any(amin > amax) { return false; }
+    let supers = (occupancy.bricks.xyz + vec3(3u)) / 4u;
     var cell = vec3<i32>(floor(origin));
     let step = vec3<i32>(sign(dir));
     for (var iteration = 0u; iteration < 768u; iteration++) {
         if any(cell < vec3(0)) || any(cell >= size) { return false; }
+        // Monotonic per axis: past the occupied box in the travel direction means no hit ahead.
+        if any((step >= vec3(0) & cell > amax) | (step <= vec3(0) & cell < amin)) { return false; }
         let p = vec3<u32>(cell);
         let b = p / 8u;
         let brick = b.x + occupancy.bricks.x * (b.y + occupancy.bricks.y * b.z);
         let bit = p.x % 8u + 8u * (p.y % 8u) + 64u * (p.z % 8u);
         let word = brick * 16u + bit / 32u;
         let mask = occupancy.bricks.w + brick / 32u;
-        if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
-            let lo = (cell / 8) * 8;
-            let hi = lo + vec3(7);
-            var end: vec3<f32>;
-            for (var a = 0u; a < 3u; a++) {
-                end[a] = crossing(origin[a], dir[a], select(lo[a], hi[a], step[a] > 0));
-            }
-            let axis = first_axis(end);
-            let time = end[axis];
-            for (var a = 0u; a < 3u; a++) {
-                if step[a] == 0 { continue; }
-                var candidate = clamp(i32(floor(origin[a] + dir[a] * time)), lo[a], hi[a]);
-                while (candidate - cell[a]) * step[a] > 0 && !precedes(crossing(origin[a], dir[a], candidate - step[a]), a, time, axis) {
-                    candidate -= step[a];
-                }
-                while candidate >= lo[a] && candidate <= hi[a] && precedes(crossing(origin[a], dir[a], candidate), a, time, axis) {
-                    candidate += step[a];
-                }
-                cell[a] = candidate;
-            }
+        let s = b / 4u;
+        let sup = s.x + supers.x * (s.y + supers.y * s.z);
+        let super_mask = occupancy.size.w + sup / 32u;
+        if (occupancy.words[super_mask] & (1u << (sup % 32u))) == 0u {
+            cell = skip_box(origin, dir, step, cell, 32);
+        } else if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
+            cell = skip_box(origin, dir, step, cell, 8);
         } else {
             if (occupancy.words[word] & (1u << (bit % 32u))) != 0u { return true; }
             var next: vec3<f32>;
