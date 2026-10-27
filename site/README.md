@@ -29,7 +29,15 @@ previews, structured data and crawl files. `sitemap.xml` lists the homepage,
 download page, docs and editor; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
-from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
+from the committed [tool catalog](../spec/mcp/v1/tools.json), without linking the
+MCP server. The MCP crate checks that catalog against `VoxeliteServer::tools()`.
+After changing tool metadata or schemas, refresh it with:
+
+```sh
+UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog
+```
+
+Commit the refreshed catalog; do not edit generated `docs/` or schema copies.
 
 Commit the sources, not the built site. CI builds the site on every PR and push
 to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
@@ -100,8 +108,9 @@ node scripts/check-site-install.mjs
 The site checks verify both Markdown aliases, discovery links, local links and
 fragments, exact code/schema parity, and inclusion in both LLM indexes. The Rust
 tests validate fresh generator output, Markdown aliases, LLM indexes, navigation
-and the live MCP catalog. Browser checks cover complete Markdown copying,
-download/clipboard failures, and viewing raw Markdown without JavaScript.
+and the versioned MCP catalog. The MCP crate tests catalog freshness and runs the
+published tutorial against the server. Browser checks cover complete Markdown
+copying, download/clipboard failures, and viewing raw Markdown without JavaScript.
 
 The browser script requires the local server and the repository's Playwright
 installation (`npm ci`, `npx playwright install chromium` when absent). It captures

@@ -1,9 +1,15 @@
 # voxelite.v1 — headless MCP stage contract
 
 The implemented catalog is [tools.json](tools.json): 38 sorted tools, descriptions,
-strict JSON Schema 2020-12 inputs, output envelopes, and annotations. Regenerate
-with `cargo run -p voxelite-mcp -- --schema > spec/mcp/v1/tools.json`; the catalog
-snapshot test must pass. Breaking changes require a new API major. Application
+strict JSON Schema 2020-12 inputs, output envelopes, and annotations. The MCP
+crate owns this committed catalog; the site reads it without linking the server.
+Regenerate with
+`UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
+The test compares exact bytes against `VoxeliteServer::tools()`, using pretty JSON,
+stable tool/key order and a trailing newline. Its `serde_json/preserve_order`
+dev-dependency keeps the site's existing key order in standalone and workspace
+test runs. Commit the refreshed catalog; the snapshot test must pass without the
+update flag. Breaking changes require a new API major. Application
 version, MCP protocol version, and `.voxl` version evolve independently.
 
 This is the standalone **MCP stage** requested for `voxelite-mcp`, not completion
