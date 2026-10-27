@@ -37,6 +37,9 @@ impl AssetSource for Assets {
             "icons/chevron-right.svg" => Some(Cow::Borrowed(include_bytes!(
                 "../assets/icons/chevron-right.svg"
             ))),
+            "icons/chevron-left.svg" => Some(Cow::Borrowed(include_bytes!(
+                "../assets/icons/chevron-left.svg"
+            ))),
             "icons/circle.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/circle.svg"))),
             "icons/close.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/close.svg"))),
             "icons/command.svg" => {
@@ -127,6 +130,9 @@ impl AssetSource for Assets {
             ))),
             "icons/save.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/save.svg"))),
             "icons/search.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/search.svg"))),
+            "icons/settings.svg" => Some(Cow::Borrowed(include_bytes!(
+                "../assets/icons/settings.svg"
+            ))),
             "icons/send.svg" => Some(Cow::Borrowed(include_bytes!("../assets/icons/send.svg"))),
             "icons/sliders-horizontal.svg" => Some(Cow::Borrowed(include_bytes!(
                 "../assets/icons/sliders-horizontal.svg"

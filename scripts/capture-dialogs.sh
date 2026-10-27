@@ -61,8 +61,8 @@ xdotool mousemove --window "$window" 27 210
 sleep 1.5
 capture tooltip
 convert "$OUT/tooltip.png" -crop 300x100+0+160 +repage "$OUT/tooltip.png"
-# Bottom-left keyboard button (view-help), inside the viewport.
-xdotool mousemove --window "$window" 96 836 click 1
+# Bottom-left keyboard guide (view-help), to the right of the Settings cog.
+xdotool mousemove --window "$window" 136 836 click 1
 xdotool mousemove --window "$window" 700 60
 capture help
 xdotool key --clearmodifiers Escape ctrl+k

@@ -1,8 +1,16 @@
 //! Unsaved-change confirmation and deferred commands, independent of a window.
 //!
-//! The dialog gate also covers open/import/export operations. Completing those
-//! operations must not consume a command deferred until a project save succeeds.
+//! The dialog gate also covers open/import/export operations. Unrelated dialogs
+//! must not consume a command deferred until a project save succeeds; choosing
+//! an export instead of a project save cancels that deferred command.
 use super::*;
+
+#[cfg(not(target_family = "wasm"))]
+mod format;
+#[cfg(not(target_family = "wasm"))]
+use format::SaveFormat;
+#[cfg(target_os = "macos")]
+mod macos;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SaveChoice {
@@ -211,6 +219,52 @@ impl EditorView {
         .detach();
     }
     #[cfg(not(target_family = "wasm"))]
+    fn write_export(&mut self, path: PathBuf, format: SaveFormat, cx: &mut Context<Self>) {
+        // An export cannot satisfy a deferred New/Open/Quit that needs a project save.
+        self.save_flow.complete_save(false);
+        self.save_flow.begin_dialog();
+        self.status = format!("Exporting {}…", format.label()).into();
+        let snapshot = self.editor.snapshot().clone();
+        let options = RenderOptions {
+            width: 1024,
+            height: 768,
+            view: View::Camera(self.editor.camera.camera()),
+            background: if self.theme == Theme::Dark {
+                [0, 0, 0, 255]
+            } else {
+                [255; 4]
+            },
+            ..Default::default()
+        };
+        let task = cx.background_executor().spawn(async move {
+            let bytes = match format {
+                SaveFormat::Glb => voxelite_export::glb(&snapshot)?,
+                SaveFormat::Png => voxelite_export::render_png(&snapshot, &options)?,
+                SaveFormat::Project => anyhow::bail!("Choose GLB or PNG for export"),
+            };
+            std::fs::write(&path, bytes)?;
+            Ok::<_, anyhow::Error>(path)
+        });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, cx| {
+                this.save_flow.finish_dialog();
+                match result {
+                    Ok(path) => {
+                        this.status = format!("Exported {}", path.display()).into();
+                        this.error = false;
+                    }
+                    Err(error) => {
+                        this.status = error.to_string().into();
+                        this.error = true;
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+    #[cfg(not(target_family = "wasm"))]
     pub(super) fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
             self.write_project(path, cx);
@@ -233,19 +287,38 @@ impl EditorView {
         );
         self.save_flow.begin_dialog();
         self.status = "Choose where to save this project…".into();
+        #[cfg(target_os = "macos")]
+        let receiver = macos::choose_save_path(&directory, &suggested, cx);
+        #[cfg(not(target_os = "macos"))]
         let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
         cx.spawn(async move |this, cx| {
             let result = receiver.await;
+            #[cfg(not(target_os = "macos"))]
+            let result = result.map(|result| {
+                result.map(|path| path.map(|mut path| {
+                    let format = SaveFormat::from_extension(
+                        path.extension().and_then(|ext| ext.to_str()).unwrap_or_default(),
+                    );
+                    if path.extension().is_none() { path.set_extension(format.extension()); }
+                    (path, format)
+                }))
+            });
             let _ = this.update(cx, |this, cx| {
                 match result {
-                    Ok(Ok(Some(mut path))) => {
-                        if path.extension().is_none() { path.set_extension("voxl"); }
-                        this.write_project(path, cx);
+                    Ok(Ok(Some((path, format)))) => {
+                        match format {
+                            SaveFormat::Project => this.write_project(path, cx),
+                            SaveFormat::Glb | SaveFormat::Png => this.write_export(path, format, cx),
+                        }
                     }
                     Ok(Ok(None)) => { this.save_flow.cancel_save(); }
                     _ => {
                         this.save_flow.cancel_save();
-                        this.status = "Save dialog unavailable. Enable a desktop file portal; edits are still open.".into();
+                        this.status = if cfg!(target_os = "macos") {
+                            "Save dialog unavailable; edits are still open."
+                        } else {
+                            "Save dialog unavailable. Enable a desktop file portal; edits are still open."
+                        }.into();
                         this.error = true;
                     }
                 }

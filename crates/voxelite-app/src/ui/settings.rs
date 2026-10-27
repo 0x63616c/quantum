@@ -72,7 +72,7 @@ pub(super) fn change(cx: &mut App, edit: impl FnOnce(&mut Preferences)) {
     cx.set_global(state);
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Section {
     General,
     Appearance,
@@ -105,7 +105,7 @@ impl Section {
     }
     fn icon(self) -> &'static str {
         match self {
-            Self::General => "sliders-horizontal",
+            Self::General => "settings",
             Self::Appearance => "sun",
             Self::Viewport => "cube",
             Self::Shortcuts => "keyboard",
@@ -114,27 +114,73 @@ impl Section {
             Self::Advanced => "wrench",
         }
     }
-    fn color(self) -> u32 {
+    fn group(self) -> &'static str {
         match self {
-            Self::General => 0x858b96,
-            Self::Appearance => 0xa56af6,
-            Self::Viewport => 0x3894f5,
-            Self::Shortcuts => 0xf28b39,
-            Self::Agent => 0xd566a6,
-            Self::Updates => 0x48aa78,
-            Self::Advanced => 0x657a9b,
+            Self::General | Self::Appearance => "Essentials",
+            Self::Viewport | Self::Shortcuts => "Editor",
+            Self::Agent | Self::Updates => "Connect",
+            Self::Advanced => "Other",
         }
     }
-    fn description(self) -> &'static str {
-        match self {
-            Self::General => "Make room for your next idea.",
-            Self::Appearance => "A familiar workspace, in any light.",
-            Self::Viewport => "Find the balance between detail and responsiveness.",
-            Self::Shortcuts => "Keep your hands on the keyboard and your ideas moving.",
-            Self::Agent => "Connect an assistant to your current project.",
-            Self::Updates => "Keep Voxelite up to date.",
-            Self::Advanced => "Local preferences and workspace defaults.",
-        }
+    fn settings(self) -> Vec<(&'static str, String)> {
+        let entries: &[(&str, &str)] = match self {
+            Self::General => &[
+                (
+                    "Navigation help",
+                    "keyboard mouse guide viewport navigation hints",
+                ),
+                ("Voxelite", "about installed version workspace voxels"),
+            ],
+            Self::Appearance => &[("Appearance", "theme system device light dark color")],
+            Self::Viewport => &[
+                ("Ground grid", "spatial reference beneath model"),
+                ("Antialiasing", "smooth edges camera quality rendering"),
+                (
+                    "Render performance",
+                    "show viewport fps average frame time renderer statistics",
+                ),
+            ],
+            Self::Shortcuts => {
+                return actions::shortcut_sheet(ShortcutPlatform::current())
+                    .map(|op| {
+                        (
+                            op.label(),
+                            format!(
+                                "{} {} {}",
+                                op.menu(cfg!(target_os = "macos")),
+                                op.shortcut(),
+                                op.key().unwrap_or("")
+                            ),
+                        )
+                    })
+                    .collect();
+            }
+            Self::Agent => &[(
+                "Project connection",
+                "open connection manage assistant attached project mcp session",
+            )],
+            Self::Updates => &[
+                ("Installed version", "Voxelite version release"),
+                #[cfg(not(target_family = "wasm"))]
+                (
+                    "Software updates",
+                    "check for updates latest version automatic updates",
+                ),
+                #[cfg(target_family = "wasm")]
+                ("Browser edition", "reload page latest published version"),
+            ],
+            Self::Advanced => &[
+                ("Preferences", "saved locally device storage"),
+                (
+                    "Restore defaults",
+                    "reset settings appearance viewport preferences",
+                ),
+            ],
+        };
+        entries
+            .iter()
+            .map(|(title, terms)| (*title, (*terms).to_owned()))
+            .collect()
     }
     fn keywords(self) -> &'static str {
         match self {
@@ -147,17 +193,104 @@ impl Section {
             Self::Advanced => "reset defaults storage local preferences",
         }
     }
-    fn matches(self, query: &str) -> bool {
-        format!("{} {}", self.title(), self.keywords())
-            .to_lowercase()
-            .contains(query)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct SearchResult {
+    section: Section,
+    settings: Vec<&'static str>,
+}
+
+fn matches_query(text: &str, query: &str) -> bool {
+    let text = text.to_lowercase();
+    query.split_whitespace().all(|word| text.contains(word))
+}
+
+fn search_sections(query: &str) -> Vec<SearchResult> {
+    let query = query.trim().to_lowercase();
+    Section::ALL
+        .into_iter()
+        .filter_map(|section| {
+            let settings: Vec<_> = if query.is_empty() {
+                Vec::new()
+            } else {
+                section
+                    .settings()
+                    .into_iter()
+                    .filter(|(title, terms)| {
+                        matches_query(&format!("{} {title} {terms}", section.title()), &query)
+                    })
+                    .map(|(title, _)| title)
+                    .collect()
+            };
+            (matches_query(
+                &format!("{} {}", section.title(), section.keywords()),
+                &query,
+            ) || !settings.is_empty())
+            .then_some(SearchResult { section, settings })
+        })
+        .collect()
+}
+
+/// Browser-style history: selecting a new section after going back drops the forward branch.
+struct SectionHistory {
+    entries: Vec<Section>,
+    cursor: usize,
+}
+impl SectionHistory {
+    fn new(section: Section) -> Self {
+        Self {
+            entries: vec![section],
+            cursor: 0,
+        }
     }
+    fn current(&self) -> Section {
+        self.entries[self.cursor]
+    }
+    fn can_back(&self) -> bool {
+        self.cursor > 0
+    }
+    fn can_forward(&self) -> bool {
+        self.cursor + 1 < self.entries.len()
+    }
+    fn visit(&mut self, section: Section) {
+        if self.current() != section {
+            self.entries.truncate(self.cursor + 1);
+            self.entries.push(section);
+            self.cursor += 1;
+        }
+    }
+    fn back(&mut self) {
+        if self.can_back() {
+            self.cursor -= 1;
+        }
+    }
+    fn forward(&mut self) {
+        if self.can_forward() {
+            self.cursor += 1;
+        }
+    }
+}
+
+fn settings_color(t: Theme, dark: u32, light: u32) -> Hsla {
+    rgb(if t == Theme::Dark { dark } else { light }).into()
+}
+fn blue() -> Hsla {
+    rgb(0x007aff).into()
+}
+fn hairline(t: Theme) -> Hsla {
+    settings_color(t, 0x393939, 0xd7d7db)
+}
+fn control_bg(t: Theme) -> Hsla {
+    settings_color(t, 0x353535, 0xe6e6e9)
 }
 
 #[cfg(target_family = "wasm")]
 pub(super) struct Dismiss;
 pub(super) struct SettingsView {
-    section: Section,
+    history: SectionHistory,
+    sidebar_visible: bool,
+    pane_scroll: ScrollHandle,
     search: Entity<TextField>,
     focus: FocusHandle,
     owner: WeakEntity<EditorView>,
@@ -175,6 +308,7 @@ impl SettingsView {
         cx: &mut Context<Self>,
     ) -> Self {
         let search = TextField::new("Search settings", cx);
+        search.update(cx, |field, _| field.embed());
         cx.observe(&search, |_, _, cx| cx.notify()).detach();
         cx.observe_global::<SettingsState>(|_, cx| cx.notify())
             .detach();
@@ -185,7 +319,9 @@ impl SettingsView {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         Self {
-            section,
+            history: SectionHistory::new(section),
+            sidebar_visible: true,
+            pane_scroll: ScrollHandle::new(),
             search,
             focus,
             owner,
@@ -227,20 +363,106 @@ impl SettingsView {
             }
         });
     }
-    fn tile(section: Section, size: f32) -> Div {
+    fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.history.visit(section);
+        self.message = None;
+        self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
+        cx.notify();
+    }
+    fn history_step(&mut self, forward: bool, cx: &mut Context<Self>) {
+        if forward {
+            self.history.forward();
+        } else {
+            self.history.back();
+        }
+        self.message = None;
+        self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
+        cx.notify();
+    }
+    fn chrome_button(
+        &self,
+        id: &'static str,
+        glyph: &'static str,
+        label: &'static str,
+        enabled: bool,
+        t: Theme,
+    ) -> Stateful<Div> {
         row()
-            .size(px(size))
-            .flex_shrink_0()
+            .id(id)
+            .role(Role::Button)
+            .aria_label(label)
+            .size(px(30.0))
             .justify_center()
-            .rounded(px(size * 0.25))
-            .bg(rgb(section.color()))
-            .border_1()
-            .border_color(rgba(0xffffff30))
+            .rounded_full()
+            .text_color(if enabled {
+                t.text()
+            } else {
+                t.muted().opacity(0.35)
+            })
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            .when(enabled, |d| {
+                d.tab_index(0)
+                    .cursor_pointer()
+                    .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+                    .hover(move |d| d.bg(t.text().opacity(0.08)))
+                    .active(move |d| d.bg(t.text().opacity(0.14)))
+            })
+            .when(!enabled, |d| d.tab_stop(false))
+            .tooltip(super::hint(label, t))
+            .child(icon(glyph).size(px(18.0)).text_color(if enabled {
+                t.text()
+            } else {
+                t.muted().opacity(0.35)
+            }))
+    }
+    fn sidebar_row(
+        &self,
+        section: Section,
+        setting: Option<&'static str>,
+        index: usize,
+        t: Theme,
+        cx: &Context<Self>,
+    ) -> Stateful<Div> {
+        let selected = setting.is_none() && section == self.history.current();
+        let label = setting.unwrap_or(section.title());
+        row()
+            .id(("settings-result", index))
+            .tab_index(0)
+            .role(Role::Button)
+            .aria_label(label)
+            .aria_selected(selected)
+            .min_h(px(if setting.is_some() { 30.0 } else { 36.0 }))
+            .px(px(10.0))
+            .gap(px(10.0))
+            .mb(px(2.0))
+            .rounded(px(8.0))
+            .when(setting.is_some(), |d| d.ml(px(22.0)).text_size(px(11.0)))
+            .when(selected, |d| d.bg(blue()).text_color(rgb(0xffffff)))
+            .when(!selected, |d| {
+                d.hover(move |d| d.bg(t.text().opacity(0.06)))
+            })
+            .cursor_pointer()
+            .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+            .active(move |d| d.bg(blue().opacity(0.6)))
             .child(
-                icon(section.icon())
-                    .size(px(size * 0.57))
-                    .text_color(rgb(0xffffff)),
+                icon(if setting.is_some() {
+                    "chevron-right"
+                } else {
+                    section.icon()
+                })
+                .size(px(if setting.is_some() { 12.0 } else { 17.0 }))
+                .text_color(if selected {
+                    rgb(0xffffff).into()
+                } else {
+                    t.muted()
+                })
+                .flex_shrink_0(),
             )
+            .child(div().min_w(px(0.0)).child(label))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.navigate(section, cx);
+                window.focus(&this.focus, cx);
+            }))
     }
     fn form_row(
         &self,
@@ -250,7 +472,7 @@ impl SettingsView {
         t: Theme,
     ) -> Div {
         row()
-            .min_h(px(62.0))
+            .min_h(px(68.0))
             .px(px(16.0))
             .py(px(12.0))
             .gap(px(20.0))
@@ -263,7 +485,7 @@ impl SettingsView {
                         d.child(
                             div()
                                 .mt(px(3.0))
-                                .text_size(px(11.0))
+                                .text_size(px(12.0))
                                 .text_color(t.muted())
                                 .child(detail),
                         )
@@ -276,12 +498,12 @@ impl SettingsView {
         div()
             .rounded(px(12.0))
             .border_1()
-            .border_color(t.line())
+            .border_color(hairline(t).opacity(0.55))
             .overflow_hidden()
-            .bg(rgb(if t == Theme::Dark { 0x2b2c32 } else { 0xffffff }).opacity(0.8))
+            .bg(settings_color(t, 0x262626, 0xffffff))
             .children(rows.into_iter().enumerate().map(|(i, row)| {
                 div().child(row).when(i + 1 < count, |d| {
-                    d.child(div().mx(px(16.0)).h(px(1.0)).bg(t.line().opacity(0.65)))
+                    d.child(div().mx(px(16.0)).h(px(1.0)).bg(hairline(t).opacity(0.7)))
                 })
             }))
     }
@@ -306,7 +528,7 @@ impl SettingsView {
             .p(px(3.0))
             .rounded(px(20.0))
             .bg(if value {
-                rgb(0x3485ef).into()
+                blue()
             } else {
                 t.muted().opacity(0.28)
             })
@@ -337,12 +559,72 @@ impl SettingsView {
             .flex_shrink_0()
             .rounded(px(7.0))
             .border_1()
-            .border_color(t.line())
-            .bg(t.background())
+            .border_color(hairline(t))
+            .bg(control_bg(t))
             .text_size(px(12.0))
             .cursor_pointer()
-            .hover(move |d| d.bg(t.hover()))
+            .hover(move |d| d.bg(t.text().opacity(0.12)))
             .child(label)
+    }
+    fn appearance_preview(appearance: Appearance) -> Div {
+        let fill: Background = match appearance {
+            Appearance::System => linear_gradient(
+                150.0,
+                linear_color_stop(rgb(0xfafafa), 0.5),
+                linear_color_stop(rgb(0x303030), 0.5),
+            ),
+            Appearance::Light => rgb(0xfafafa).into(),
+            Appearance::Dark => rgb(0x303030).into(),
+        };
+        div()
+            .h(px(90.0))
+            .rounded(px(8.0))
+            .overflow_hidden()
+            .bg(fill)
+            .child(
+                row()
+                    .h(px(20.0))
+                    .px(px(8.0))
+                    .gap(px(4.0))
+                    .bg(rgba(0x88888822))
+                    .children(
+                        [0xff6058, 0xffbd2e, 0x28c840]
+                            .map(|color| div().size(px(5.0)).rounded_full().bg(rgb(color))),
+                    ),
+            )
+            .child(
+                row()
+                    .h(px(70.0))
+                    .items_stretch()
+                    .child(
+                        div()
+                            .w(relative(0.28))
+                            .p(px(7.0))
+                            .bg(rgba(0x88888822))
+                            .children([1.0, 0.8, 0.6].map(|width| {
+                                div()
+                                    .mt(px(6.0))
+                                    .h(px(4.0))
+                                    .w(relative(width))
+                                    .rounded_full()
+                                    .bg(rgba(0x99999988))
+                            })),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .p(px(10.0))
+                            .children([0.9, 0.65, 0.75].map(|width| {
+                                div()
+                                    .mt(px(4.0))
+                                    .mb(px(6.0))
+                                    .h(px(4.0))
+                                    .w(relative(width))
+                                    .rounded_full()
+                                    .bg(rgba(0x99999988))
+                            })),
+                    ),
+            )
     }
     fn content(&self, section: Section, t: Theme, cx: &Context<Self>) -> Div {
         let p = &cx.global::<SettingsState>().values;
@@ -370,116 +652,78 @@ impl SettingsView {
                 ],
                 t,
             ),
-            Section::Appearance => div()
-                .child(self.group(
-                    vec![self.form_row(
-                        "Appearance",
-                        "System follows your device’s light and dark appearance.",
-                        div(),
-                        t,
-                    )],
-                    t,
-                ))
-                .child(
-                    row().mt(px(18.0)).gap(px(12.0)).children(
-                        [
-                            (Appearance::Light, "Light"),
-                            (Appearance::Dark, "Dark"),
-                            (Appearance::System, "System"),
-                        ]
-                        .into_iter()
-                        .enumerate()
-                        .map(|(i, (appearance, label))| {
-                            let active = p.appearance == appearance;
+            Section::Appearance => self.group(
+                vec![
+                    div()
+                        .p(px(18.0))
+                        .child(
                             div()
-                                .id(("appearance", i))
-                                .tab_index(0)
-                                .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-                                .active(move |d| d.bg(t.selected()))
-                                .aria_label(label)
-                                .focus(move |d| d.border_color(t.accent()))
-                                .flex_1()
-                                .p(px(8.0))
-                                .rounded(px(12.0))
-                                .border_2()
-                                .border_color(if active { t.accent() } else { t.line() })
-                                .cursor_pointer()
-                                .bg(if active {
-                                    t.selected()
-                                } else {
-                                    t.background().opacity(0.65)
-                                })
-                                .child(
-                                    row()
-                                        .h(px(78.0))
-                                        .rounded(px(6.0))
-                                        .overflow_hidden()
-                                        .bg(rgb(if appearance == Appearance::Dark {
-                                            0x27292f
-                                        } else {
-                                            0xebeef4
-                                        }))
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .mb(px(16.0))
+                                .child("Window appearance"),
+                        )
+                        .child(
+                            row().gap(px(12.0)).children(
+                                [
+                                    (Appearance::System, "System"),
+                                    (Appearance::Light, "Light"),
+                                    (Appearance::Dark, "Dark"),
+                                ]
+                                .into_iter()
+                                .enumerate()
+                                .map(|(i, (appearance, label))| {
+                                    let selected = p.appearance == appearance;
+                                    div()
+                                        .id(("appearance", i))
+                                        .tab_index(0)
+                                        .role(Role::Button)
+                                        .aria_label(label)
+                                        .aria_selected(selected)
+                                        .flex_1()
+                                        .min_w(px(0.0))
+                                        .p(px(7.0))
+                                        .rounded(px(10.0))
+                                        .when(selected, |d| d.bg(blue().opacity(0.08)))
+                                        .cursor_pointer()
+                                        .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+                                        .hover(move |d| d.bg(blue().opacity(0.1)))
                                         .child(
-                                            div()
-                                                .w(px(25.0))
-                                                .h_full()
-                                                .p(px(5.0))
-                                                .bg(rgb(if appearance == Appearance::Light {
-                                                    0xd9dfea
+                                            Self::appearance_preview(appearance)
+                                                .border_2()
+                                                .border_color(if selected {
+                                                    blue()
                                                 } else {
-                                                    0x414653
-                                                }))
-                                                .child(
-                                                    div()
-                                                        .h(px(5.0))
-                                                        .rounded(px(2.0))
-                                                        .bg(rgb(0x73a9ef)),
-                                                ),
+                                                    hairline(t)
+                                                }),
                                         )
                                         .child(
                                             div()
-                                                .flex_1()
-                                                .p(px(8.0))
-                                                .child(
-                                                    div()
-                                                        .h(px(8.0))
-                                                        .w(px(34.0))
-                                                        .rounded(px(2.0))
-                                                        .bg(rgb(0x8a98b0)),
-                                                )
-                                                .child(
-                                                    div()
-                                                        .mt(px(8.0))
-                                                        .h(px(24.0))
-                                                        .rounded(px(3.0))
-                                                        .bg(rgb(
-                                                            if appearance == Appearance::Light {
-                                                                0xffffff
-                                                            } else {
-                                                                0x575f70
-                                                            },
-                                                        )),
-                                                ),
-                                        ),
-                                )
-                                .child(
-                                    row()
-                                        .mt(px(10.0))
-                                        .justify_center()
-                                        .gap(px(6.0))
-                                        .child(label)
-                                        .when(active, |d| {
-                                            d.child(
-                                                icon("check").size(px(13.0)).text_color(t.accent()),
-                                            )
-                                        }),
-                                )
-                                .on_click(cx.listener(move |_, _, _, cx| {
-                                    change(cx, |p| p.appearance = appearance)
-                                }))
-                        }),
-                    ),
-                ),
+                                                .mt(px(9.0))
+                                                .text_center()
+                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .text_color(if selected {
+                                                    blue()
+                                                } else {
+                                                    t.text()
+                                                })
+                                                .child(label),
+                                        )
+                                        .on_click(cx.listener(move |_, _, _, cx| {
+                                            change(cx, |p| p.appearance = appearance)
+                                        }))
+                                }),
+                            ),
+                        )
+                        .child(
+                            div()
+                                .mt(px(18.0))
+                                .text_size(px(12.0))
+                                .text_color(t.muted())
+                                .child("System follows your device’s light and dark appearance."),
+                        ),
+                ],
+                t,
+            ),
             Section::Viewport => self.group(
                 vec![
                     self.form_row(
@@ -517,11 +761,40 @@ impl SettingsView {
             ),
             Section::Shortcuts => self.group(
                 actions::shortcut_sheet(ShortcutPlatform::current())
-                    .map(|op| {
+                    .enumerate()
+                    .map(|(i, op)| {
                         self.form_row(
                             op.label(),
                             op.menu(cfg!(target_os = "macos")),
-                            super::shortcut_hint::sheet_shortcut(op),
+                            row()
+                                .gap(px(8.0))
+                                .child(
+                                    row()
+                                        .min_w(px(96.0))
+                                        .h(px(30.0))
+                                        .px(px(8.0))
+                                        .justify_center()
+                                        .rounded(px(6.0))
+                                        .bg(control_bg(t))
+                                        .child(super::shortcut_hint::sheet_shortcut(op)),
+                                )
+                                // The registry exposes fixed bindings, all already at their defaults.
+                                .child(
+                                    row()
+                                        .id(("reset-shortcut", i))
+                                        .tab_stop(false)
+                                        .aria_label("Reset shortcut")
+                                        .h(px(30.0))
+                                        .px(px(10.0))
+                                        .rounded(px(6.0))
+                                        .bg(control_bg(t).opacity(0.5))
+                                        .text_color(t.muted().opacity(0.5))
+                                        .tooltip(super::hint(
+                                            "This shortcut already uses its built-in default.",
+                                            t,
+                                        ))
+                                        .child("Reset"),
+                                ),
                             t,
                         )
                     })
@@ -543,19 +816,16 @@ impl SettingsView {
                 t,
             ),
             Section::Updates => {
-                let group = self.group(
-                    vec![self.form_row(
-                        "Installed version",
-                        "Voxelite",
-                        mono(env!("CARGO_PKG_VERSION")),
-                        t,
-                    )],
+                let mut rows = vec![self.form_row(
+                    "Installed version",
+                    "Voxelite",
+                    mono(env!("CARGO_PKG_VERSION")),
                     t,
-                );
+                )];
                 #[cfg(not(target_family = "wasm"))]
                 let updates_available = super::updates_available();
                 #[cfg(not(target_family = "wasm"))]
-                let group = group.child(self.form_row(
+                rows.push(self.form_row(
                     "Software updates",
                     if updates_available {
                         "Check for the latest version of Voxelite."
@@ -574,13 +844,13 @@ impl SettingsView {
                     t,
                 ));
                 #[cfg(target_family = "wasm")]
-                let group = group.child(self.form_row(
+                rows.push(self.form_row(
                     "Browser edition",
                     "Reload the page to use the latest published version.",
                     div(),
                     t,
                 ));
-                group
+                self.group(rows, t)
             }
             Section::Advanced => self.group(
                 vec![
@@ -609,16 +879,52 @@ impl Render for SettingsView {
         let state = cx.global::<SettingsState>().clone();
         let t = theme(state.values.appearance, window);
         self.search.update(cx, |field, cx| field.appearance(t, cx));
-        let query = self.search.read(cx).text.trim().to_lowercase();
-        let sections: Vec<_> = Section::ALL
-            .into_iter()
-            .filter(|section| section.matches(&query))
-            .collect();
-        let section = if sections.contains(&self.section) {
-            Some(self.section)
-        } else {
-            sections.first().copied()
-        };
+        let query = self.search.read(cx).text.clone();
+        let results = search_sections(&query);
+        let section = self.history.current();
+        let mut sidebar_rows = div()
+            .id("settings-sections")
+            .flex_1()
+            .min_h(px(0.0))
+            .overflow_y_scroll();
+        let mut previous_group = "";
+        let mut index = 0;
+        for result in &results {
+            if query.trim().is_empty() && result.section.group() != previous_group {
+                previous_group = result.section.group();
+                sidebar_rows = sidebar_rows.child(
+                    div()
+                        .px(px(10.0))
+                        .pt(px(17.0))
+                        .pb(px(7.0))
+                        .text_size(px(10.0))
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(t.muted())
+                        .child(previous_group.to_uppercase()),
+                );
+            }
+            sidebar_rows = sidebar_rows.child(self.sidebar_row(result.section, None, index, t, cx));
+            index += 1;
+            for setting in &result.settings {
+                sidebar_rows = sidebar_rows.child(self.sidebar_row(
+                    result.section,
+                    Some(setting),
+                    index,
+                    t,
+                    cx,
+                ));
+                index += 1;
+            }
+        }
+        if results.is_empty() {
+            sidebar_rows = sidebar_rows.child(
+                div()
+                    .p(px(12.0))
+                    .text_size(px(12.0))
+                    .text_color(t.muted())
+                    .child("No matching settings"),
+            );
+        }
         if window.is_window_active() && cfg!(target_os = "macos") {
             cx.set_menus(actions::menus(
                 |_| false,
@@ -630,16 +936,16 @@ impl Render for SettingsView {
                 },
             ));
         }
-        let sidebar_bg = rgb(if t == Theme::Dark { 0x24252b } else { 0xe6e8ef });
-        let pane_bg = rgb(if t == Theme::Dark { 0x1b1c21 } else { 0xf4f5f8 });
-        row()
+        div()
+            .flex()
+            .flex_col()
             .id("settings-root")
             .tab_group()
             .tab_stop(false)
             .key_context("Settings")
             .track_focus(&self.focus)
             .size_full()
-            .items_stretch()
+            .bg(settings_color(t, 0x1e1e1e, 0xf5f5f7))
             .font(gpui::font(if cfg!(target_os = "macos") {
                 ".AppleSystemUIFont"
             } else {
@@ -661,10 +967,10 @@ impl Render for SettingsView {
                 }
                 match op {
                     Op::Settings => window.activate_window(),
-                    Op::About => this.section = Section::General,
-                    Op::Help => this.section = Section::Shortcuts,
+                    Op::About => this.navigate(Section::General, cx),
+                    Op::Help => this.navigate(Section::Shortcuts, cx),
                     Op::CheckUpdates => {
-                        this.section = Section::Updates;
+                        this.navigate(Section::Updates, cx);
                         this.message = super::check_for_updates().map(str::to_owned);
                     }
                     Op::Hide => cx.hide(),
@@ -695,147 +1001,192 @@ impl Render for SettingsView {
                 }
             }))
             .child(
-                div()
-                    .w(px(224.0))
+                row()
+                    .id("settings-titlebar")
+                    .h(px(62.0))
                     .flex_shrink_0()
-                    .flex()
-                    .flex_col()
-                    .bg(sidebar_bg.opacity(0.85))
-                    .border_r_1()
-                    .border_color(t.line())
+                    .px(px(16.0))
+                    .gap(px(16.0))
+                    .when(cfg!(target_os = "macos"), |d| d.pl(px(92.0)))
+                    .on_mouse_down(MouseButton::Left, |_, window, _| window.start_window_move())
                     .child(
                         row()
-                            .id("settings-titlebar")
-                            .h(px(62.0))
-                            .flex_shrink_0()
-                            .px(px(18.0))
-                            .when(cfg!(target_os = "macos"), |d| d.pl(px(92.0)))
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .child("Settings")
-                            .on_mouse_down(MouseButton::Left, |_, window, _| {
-                                window.start_window_move()
-                            }),
-                    )
-                    .child(div().px(px(12.0)).mb(px(18.0)).child(self.search.clone()))
-                    .child(
-                        div()
-                            .id("settings-sections")
-                            .flex_1()
-                            .min_h(px(0.0))
-                            .overflow_y_scroll()
-                            .px(px(10.0))
-                            .children(sections.into_iter().enumerate().map(|(i, entry)| {
-                                row()
-                                    .id(("settings-section", i))
-                                    .tab_index(0)
-                                    .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-                                    .active(move |d| d.bg(t.selected()))
-                                    .aria_label(entry.title())
-                                    .focus(move |d| d.bg(t.accent().opacity(0.22)))
-                                    .h(px(42.0))
-                                    .px(px(9.0))
-                                    .gap(px(10.0))
-                                    .mb(px(3.0))
-                                    .rounded(px(9.0))
-                                    .cursor_pointer()
-                                    .when(section == Some(entry), |d| {
-                                        d.bg(t.accent().opacity(0.16))
-                                    })
-                                    .hover(move |d| d.bg(t.accent().opacity(0.10)))
-                                    .child(Self::tile(entry, 27.0))
-                                    .child(div().text_size(px(12.0)).child(entry.title()))
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.section = entry;
-                                        this.message = None;
-                                        window.focus(&this.focus, cx);
+                            .p(px(3.0))
+                            .gap(px(2.0))
+                            .rounded_full()
+                            .border_1()
+                            .border_color(hairline(t))
+                            .bg(settings_color(t, 0x282828, 0xebebed))
+                            .child(
+                                self.chrome_button(
+                                    "settings-sidebar-toggle",
+                                    "panel-left",
+                                    "Toggle sidebar",
+                                    true,
+                                    t,
+                                )
+                                .on_click(cx.listener(
+                                    |this, _, _, cx| {
+                                        this.sidebar_visible = !this.sidebar_visible;
                                         cx.notify();
-                                    }))
-                            })),
+                                    },
+                                )),
+                            )
+                            .child(
+                                self.chrome_button(
+                                    "settings-back",
+                                    "chevron-left",
+                                    "Back",
+                                    self.history.can_back(),
+                                    t,
+                                )
+                                .when(
+                                    self.history.can_back(),
+                                    |d| {
+                                        d.on_click(cx.listener(|this, _, _, cx| {
+                                            this.history_step(false, cx)
+                                        }))
+                                    },
+                                ),
+                            )
+                            .child(
+                                self.chrome_button(
+                                    "settings-forward",
+                                    "chevron-right",
+                                    "Forward",
+                                    self.history.can_forward(),
+                                    t,
+                                )
+                                .when(
+                                    self.history.can_forward(),
+                                    |d| {
+                                        d.on_click(
+                                            cx.listener(|this, _, _, cx| {
+                                                this.history_step(true, cx)
+                                            }),
+                                        )
+                                    },
+                                ),
+                            ),
                     )
                     .child(
                         div()
-                            .p(px(20.0))
-                            .text_size(px(11.0))
-                            .text_color(t.muted())
-                            .child("Voxelite")
-                            .child(div().mt(px(3.0)).child("Your space to create.")),
+                            .min_w(px(0.0))
+                            .text_size(px(16.0))
+                            .font_weight(FontWeight::BOLD)
+                            .child("Voxelite Settings"),
+                    )
+                    .child(div().flex_1())
+                    .child(
+                        self.button("close-settings", "Done", t)
+                            .on_click(cx.listener(|this, _, window, cx| this.close(window, cx))),
                     ),
             )
             .child(
-                div()
+                row()
                     .flex_1()
-                    .min_w(px(0.0))
-                    .flex()
-                    .flex_col()
-                    .bg(pane_bg.opacity(0.96))
-                    .child(
-                        row()
-                            .id("settings-pane-titlebar")
-                            .on_mouse_down(MouseButton::Left, |_, window, _| {
-                                window.start_window_move()
-                            })
-                            .h(px(62.0))
-                            .flex_shrink_0()
-                            .px(px(24.0))
-                            .justify_end()
-                            .child(self.button("close-settings", "Done", t).on_click(
-                                cx.listener(|this, _, window, cx| this.close(window, cx)),
-                            )),
-                    )
-                    .child(
-                        div()
-                            .id("settings-pane")
-                            .flex_1()
-                            .min_h(px(0.0))
-                            .overflow_y_scroll()
-                            .px(px(28.0))
-                            .pb(px(28.0))
-                            .when_some(section, |d, section| {
-                                d.child(
+                    .min_h(px(0.0))
+                    .items_stretch()
+                    .when(self.sidebar_visible, |d| {
+                        d.child(
+                            div()
+                                .w(px(224.0))
+                                .flex_shrink_0()
+                                .m(px(10.0))
+                                .mt(px(0.0))
+                                .mr(px(0.0))
+                                .p(px(10.0))
+                                .flex()
+                                .flex_col()
+                                .rounded(px(12.0))
+                                .border_1()
+                                .border_color(hairline(t))
+                                .bg(settings_color(t, 0x191919, 0xebebed))
+                                .child(
                                     row()
-                                        .gap(px(14.0))
-                                        .mb(px(24.0))
-                                        .child(Self::tile(section, 44.0))
+                                        .h(px(34.0))
+                                        .flex_shrink_0()
+                                        .px(px(9.0))
+                                        .gap(px(6.0))
+                                        .mb(px(4.0))
+                                        .rounded_full()
+                                        .bg(settings_color(t, 0x2b2b2b, 0xe0e0e3))
+                                        .border_1()
+                                        .border_color(if self.search.read(cx).focused(window) {
+                                            blue()
+                                        } else {
+                                            transparent_black()
+                                        })
+                                        .child(
+                                            icon("search")
+                                                .size(px(15.0))
+                                                .flex_shrink_0()
+                                                .text_color(t.muted()),
+                                        )
                                         .child(
                                             div()
                                                 .flex_1()
-                                                .child(
-                                                    div()
-                                                        .text_size(px(23.0))
-                                                        .font_weight(FontWeight::SEMIBOLD)
-                                                        .child(section.title()),
+                                                .min_w(px(0.0))
+                                                .child(self.search.clone()),
+                                        )
+                                        .when(!query.is_empty(), |d| {
+                                            d.child(
+                                                self.chrome_button(
+                                                    "clear-settings-search",
+                                                    "close",
+                                                    "Clear search",
+                                                    true,
+                                                    t,
                                                 )
-                                                .child(
-                                                    div()
-                                                        .mt(px(5.0))
-                                                        .text_size(px(12.0))
-                                                        .text_color(t.muted())
-                                                        .child(section.description()),
-                                                ),
-                                        ),
+                                                .size(px(20.0))
+                                                .on_click(cx.listener(|this, _, window, cx| {
+                                                    this.search.update(cx, |field, cx| {
+                                                        field.set(String::new(), cx)
+                                                    });
+                                                    window.focus(&this.search.focus_handle(cx), cx);
+                                                })),
+                                            )
+                                        }),
                                 )
-                                .child(self.content(section, t, cx))
-                            })
-                            .when(section.is_none(), |d| {
+                                .child(sidebar_rows),
+                        )
+                    })
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .id("settings-pane")
+                                    .flex_1()
+                                    .min_h(px(0.0))
+                                    .overflow_y_scroll()
+                                    .track_scroll(&self.pane_scroll)
+                                    .px(px(28.0))
+                                    .pt(px(18.0))
+                                    .pb(px(28.0))
+                                    .child(
+                                        div()
+                                            .mb(px(24.0))
+                                            .text_size(px(24.0))
+                                            .font_weight(FontWeight::BOLD)
+                                            .child(section.title()),
+                                    )
+                                    .child(self.content(section, t, cx)),
+                            )
+                            .when_some(state.error.or(self.message.clone()), |d, message| {
                                 d.child(
                                     div()
-                                        .mt(px(80.0))
-                                        .text_center()
-                                        .text_color(t.muted())
-                                        .child("No matching settings"),
+                                        .px(px(28.0))
+                                        .pb(px(18.0))
+                                        .text_size(px(12.0))
+                                        .text_color(t.danger())
+                                        .child(message),
                                 )
                             }),
-                    )
-                    .when_some(state.error.or(self.message.clone()), |d, message| {
-                        d.child(
-                            div()
-                                .px(px(28.0))
-                                .pb(px(18.0))
-                                .text_size(px(12.0))
-                                .text_color(t.danger())
-                                .child(message),
-                        )
-                    }),
+                    ),
             )
     }
 }
@@ -854,7 +1205,7 @@ impl EditorView {
             if let Some(handle) = self.settings_window
                 && handle
                     .update(cx, |view, window, cx| {
-                        view.section = section;
+                        view.navigate(section, cx);
                         cx.notify();
                         window.activate_window();
                     })
@@ -918,5 +1269,108 @@ impl EditorView {
             self.request_render(cx);
         }
         cx.notify();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SearchResult, Section, SectionHistory, search_sections};
+    use crate::actions::Op;
+
+    #[test]
+    fn empty_search_keeps_all_sections_without_setting_rows() {
+        let results = search_sections("  ");
+        assert_eq!(
+            results.iter().map(|r| r.section).collect::<Vec<_>>(),
+            Section::ALL
+        );
+        assert!(results.iter().all(|r| r.settings.is_empty()));
+    }
+
+    #[test]
+    fn search_finds_individual_settings_by_label_and_description() {
+        for (query, section, title) in [
+            (" ground GRID ", Section::Viewport, "Ground grid"),
+            (
+                "average frame time",
+                Section::Viewport,
+                "Render performance",
+            ),
+            ("smooth edges", Section::Viewport, "Antialiasing"),
+            ("navigation hints", Section::General, "Navigation help"),
+            ("assistant", Section::Agent, "Project connection"),
+            ("reset settings", Section::Advanced, "Restore defaults"),
+            ("system dark", Section::Appearance, "Appearance"),
+        ] {
+            assert_eq!(
+                search_sections(query),
+                vec![SearchResult {
+                    section,
+                    settings: vec![title]
+                }],
+                "{query}"
+            );
+        }
+    }
+
+    #[test]
+    fn search_includes_parent_sections_and_individual_shortcuts() {
+        let results = search_sections("save");
+        let shortcuts = results
+            .iter()
+            .find(|r| r.section == Section::Shortcuts)
+            .unwrap();
+        assert!(shortcuts.settings.contains(&Op::Save.label()));
+        assert!(shortcuts.settings.contains(&Op::SaveAs.label()));
+        assert!(!shortcuts.settings.contains(&Op::Undo.label()));
+        assert!(search_sections("unmatched-xyz").is_empty());
+        assert_eq!(
+            search_sections("viewport ground")[0].settings,
+            vec!["Ground grid"]
+        );
+    }
+
+    #[test]
+    fn history_moves_back_and_forward_and_stops_at_boundaries() {
+        let mut history = SectionHistory::new(Section::General);
+        assert!(!history.can_back());
+        assert!(!history.can_forward());
+        history.back();
+        history.forward();
+        assert_eq!(history.current(), Section::General);
+        history.visit(Section::Appearance);
+        history.visit(Section::Viewport);
+        history.back();
+        assert_eq!(history.current(), Section::Appearance);
+        assert!(history.can_back());
+        assert!(history.can_forward());
+        history.back();
+        history.back();
+        assert_eq!(history.current(), Section::General);
+        history.forward();
+        history.forward();
+        history.forward();
+        assert_eq!(history.current(), Section::Viewport);
+        assert!(!history.can_forward());
+    }
+
+    #[test]
+    fn history_preserves_forward_on_reselection_and_truncates_on_new_navigation() {
+        let mut history = SectionHistory::new(Section::General);
+        history.visit(Section::Appearance);
+        history.visit(Section::Viewport);
+        history.back();
+        history.visit(Section::Appearance);
+        assert!(history.can_forward());
+        assert_eq!(history.entries.len(), 3);
+        history.visit(Section::Agent);
+        assert!(!history.can_forward());
+        assert_eq!(
+            history.entries,
+            vec![Section::General, Section::Appearance, Section::Agent]
+        );
+        history.visit(Section::Agent);
+        history.back();
+        assert_eq!(history.current(), Section::Appearance);
     }
 }

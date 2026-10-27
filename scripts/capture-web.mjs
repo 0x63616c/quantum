@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const base = process.env.VOXELITE_WEB_URL || 'http://127.0.0.1:8080';
-await mkdir('screenshots', { recursive: true });
+const output = process.env.VOXELITE_CAPTURE_DIR || 'screenshots';
+await mkdir(output, { recursive: true });
 const report = { captures: [], workflows: [] };
 const common = ['--no-sandbox', '--enable-unsafe-webgpu', '--enable-unsafe-swiftshader'];
 const configurations = [
@@ -16,6 +17,8 @@ for (const configuration of configurations) {
   try {
     report.browser = browser.version();
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    // The static dev server has no hosted analytics endpoints.
+    await page.route('**/_vercel/**', route => route.fulfill({ contentType: 'application/javascript', body: '' }));
     const errors = [];
     const messages = [];
     page.on('pageerror', error => errors.push(String(error)));
@@ -32,13 +35,33 @@ for (const configuration of configurations) {
     await page.waitForTimeout(3000);
     const suffix = configuration.backend === 'auto' ? '' : `-${configuration.backend}`;
     const capture = async theme => {
-      const bytes = await page.screenshot({ path: `screenshots/web-${theme}${suffix}.png` });
+      const bytes = await page.screenshot({ path: `${output}/web-${theme}${suffix}.png` });
       assert.ok(bytes.length > 100_000, 'Capture must contain rendered artwork, not a blank canvas');
       report.captures.push({ theme, backend: configuration.backend, bytes: bytes.length });
     };
     await capture('dark');
-    // Toggle the actual shared GPUI toolbar control, without reloading.
-    await page.mouse.click(1190, 63);
+    // Open the shared Settings modal through the persistent bottom-left cog.
+    await page.mouse.click(96, 836);
+    await page.mouse.move(700, 160);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${output}/web-settings-dark${suffix}.png` });
+    // Modal origin is (280, 130) in the 1440×900 viewport.
+    await page.mouse.click(380, 337); // Appearance
+    await page.waitForTimeout(200);
+    await page.mouse.click(835, 380); // Light thumbnail
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${output}/web-settings-light${suffix}.png` });
+    const preferences = () => page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => key.endsWith('settings.json'));
+      return key ? JSON.parse(localStorage.getItem(key)) : null;
+    });
+    assert.equal((await preferences()).appearance, 'light');
+    report.workflows.push({ action: 'settings-appearance', backend: configuration.backend, persisted: true });
+    await page.mouse.click(1116, 161); // Done
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Control+,');
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Escape');
     await page.mouse.move(700, 80);
     await page.waitForTimeout(800);
     await capture('light');
@@ -91,6 +114,6 @@ for (const configuration of configurations) {
     console.log(`${configuration.backend}: rendered both themes and passed browser checks`);
   } finally {
     await browser.close();
-    await writeFile('screenshots/web-verification.json', JSON.stringify(report, null, 2) + '\n');
+    await writeFile(`${output}/web-verification.json`, JSON.stringify(report, null, 2) + '\n');
   }
 }

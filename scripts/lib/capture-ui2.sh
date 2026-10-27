@@ -20,7 +20,7 @@ capture_ui2 tooltip-tool-b
 convert "$VOXELITE_CAPTURE_DIR/tooltip-tool-b-$theme.png" -crop 220x80+4+215 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/keycap-tooltip-$theme.png"
 xdotool mousemove --window "$window" 700 60
 capture_ui2 keycap-search-source
-convert "$VOXELITE_CAPTURE_DIR/keycap-search-source-$theme.png" -crop 350x64+950+32 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/keycap-search-$theme.png"
+convert "$VOXELITE_CAPTURE_DIR/keycap-search-source-$theme.png" -crop 280x64+1160+32 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/keycap-search-$theme.png"
 # Below the top toolbar / above the bottom controls.
 xdotool mousemove --window "$window" 1370 64
 sleep 1
@@ -76,7 +76,7 @@ xdotool mousemove --window "$window" 120 16 click 1
 capture_ui2 menu
 xdotool key Escape
 # Tab traverses the rail, and Enter selects without editing the model.
-xdotool key Tab Tab Tab Tab Tab Tab Tab Tab Tab
+xdotool key Tab Tab Tab Tab Tab Tab Tab
 capture_ui2 focus-tool
 xdotool key Return
 [[ "$(xdotool getwindowname "$window")" != *"•"* ]]
@@ -110,13 +110,13 @@ done
 xdotool windowfocus "$settings_window"
 sleep 1
 timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-general-$theme.png"
-xdotool mousemove --window "$settings_window" 100 180 click 1
+xdotool mousemove --window "$settings_window" 100 207 click 1
 sleep 0.5
 timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-appearance-$theme.png"
-xdotool mousemove --window "$settings_window" 100 225 click 1
+xdotool mousemove --window "$settings_window" 100 285 click 1
 sleep 0.5
 timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-viewport-$theme.png"
-xdotool mousemove --window "$settings_window" 100 266 click 1
+xdotool mousemove --window "$settings_window" 100 323 click 1
 sleep 0.5
 timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-shortcuts-$theme.png"
 xdotool key Escape
@@ -141,7 +141,7 @@ assert same("main", "gizmo-reset", art), "double-click did not reset to isometri
 if os.environ.get("VOXELITE_CAPTURE_MAC_UI"):
     source = image("keycap-search-source")
     columns = {}
-    for x in range(1201, 1222):
+    for x in range(1382, 1401):
         rows = [y for y in range(56, 70) if
                 (source.getpixel((x, y))[0] > 95 if theme == "dark" else
                  source.getpixel((x, y))[0] < 160)]

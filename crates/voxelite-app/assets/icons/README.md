@@ -25,7 +25,8 @@ Local semantic aliases:
 - `undo.svg`: `undo-2.svg`
 - `unlock.svg`: `lock-open.svg`
 
-Other filenames match upstream.
+Other filenames match upstream, including `settings.svg` (the bottom-left cog)
+and `chevron-left.svg` (Settings history).
 
 Control audit: Save/Settings, tools and mirrors, camera views, menus and command
 search, sidebar tabs and filters, connection/pause/revert actions, comments,

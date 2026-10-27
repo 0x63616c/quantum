@@ -33,7 +33,7 @@ gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = fa
 gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
 image = { version = "0.25", default-features = false, optional = true }
 
-# Keep unsafe denied everywhere except the audited macOS updater FFI module.
+# Keep unsafe denied except in the audited macOS FFI modules.
 # `forbid` cannot be locally overridden for the Objective-C runtime bridge.
 [lints.rust]
 unsafe_code = "deny"
@@ -53,6 +53,11 @@ tempfile = "3"
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
 objc2 = "0.6.5"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSButton", "NSControl", "NSPanel", "NSPopUpButton", "NSResponder", "NSSavePanel", "NSTextField", "NSView", "NSWindow", "block2", "objc2-uniform-type-identifiers"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
+objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
+block2 = "0.6.2"
+futures-channel = "0.3"
 libloading = "0.8.9"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
@@ -67,4 +72,3 @@ uuid = { workspace = true, features = ["js"] }
 [target.'cfg(target_os = "macos")'.dependencies.voxelite-render]
 workspace = true
 features = ["gpu"]
-

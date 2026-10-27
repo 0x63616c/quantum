@@ -81,7 +81,7 @@ commands! {
         Undo => ("Undo", Some(Shortcut::Editor("secondary-z")), "undo", None),
         Redo => ("Redo", Some(Shortcut::Editor("secondary-shift-z")), "redo", None),
         Commands => ("Search commands…", Some(Shortcut::Editor("secondary-k")), "search", None),
-        Settings => ("Settings…", Some(Shortcut::Global("secondary-,")), "sliders-horizontal", Some(ApplicationSection::Settings)),
+        Settings => ("Settings…", Some(Shortcut::Global("secondary-,")), "settings", Some(ApplicationSection::Settings)),
     },
     "View" {
         Frame => ("Frame model", Some(Shortcut::Editor("f")), "cube", None),
