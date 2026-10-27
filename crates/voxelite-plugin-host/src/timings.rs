@@ -89,7 +89,7 @@ impl Timings {
         std::mem::take(&mut self.notices)
     }
 
-    fn record(&mut self, plugin_id: &str, label: &str, elapsed: Duration) {
+    pub(crate) fn record(&mut self, plugin_id: &str, label: &str, elapsed: Duration) {
         let timing = self
             .entries
             .entry(plugin_id.to_owned())

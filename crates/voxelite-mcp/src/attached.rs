@@ -15,7 +15,7 @@ use std::{
     },
     path::{Path, PathBuf},
     sync::{
-        Arc,
+        Arc, RwLock,
         atomic::{AtomicUsize, Ordering},
         mpsc,
     },
@@ -60,6 +60,7 @@ fn allowed(name: &str) -> bool {
 #[derive(Clone)]
 struct Bridge {
     sender: mpsc::SyncSender<Request>,
+    tools: Arc<RwLock<Vec<Tool>>>,
 }
 impl ServerHandler for Bridge {
     fn get_info(&self) -> ServerConfig {
@@ -80,10 +81,13 @@ impl ServerHandler for Bridge {
             return Err(ErrorData::invalid_params("Single page; omit cursor", None));
         }
         Ok(ListToolsResult {
-            tools: catalog::CATALOG
+            tools: self
+                .tools
+                .read()
+                .map_err(|_| ErrorData::internal_error("Tool registry unavailable", None))?
                 .iter()
-                .filter(|s| allowed(&s.tool.name))
-                .map(|s| s.tool.clone())
+                .filter(|tool| allowed(&tool.name))
+                .cloned()
                 .collect(),
             ..Default::default()
         })
@@ -115,6 +119,8 @@ impl ServerHandler for Bridge {
 /// Owner-thread half of a running MCP attachment. Dropping stops the socket worker.
 pub struct AttachedSession {
     session: Session,
+    tools: Arc<RwLock<Vec<Tool>>>,
+    export_formats: Vec<voxelite_plugin_api::FormatContribution>,
     requests: mpsc::Receiver<Request>,
     stop: Option<oneshot::Sender<()>>,
     worker: Option<std::thread::JoinHandle<()>>,
@@ -144,6 +150,10 @@ impl AttachedSession {
         let worker_path = path.clone();
         let clients = Arc::new(AtomicUsize::new(0));
         let worker_clients = clients.clone();
+        let host = crate::exports::host();
+        let export_formats = host.registry().formats().map(|(_, f)| f.clone()).collect();
+        let tools = Arc::new(RwLock::new(crate::exports::tools(&host)));
+        let worker_tools = tools.clone();
         let (sender, requests) = mpsc::sync_channel(16);
         let (stop, stopped) = oneshot::channel();
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -159,7 +169,7 @@ impl AttachedSession {
                     accept=listener.accept()=>{
                         let Ok((stream,_))=accept else{break};
                         if worker_clients.load(Ordering::Relaxed)>=8{continue;}
-                        let bridge=Bridge{sender:sender.clone()};let clients=worker_clients.clone();clients.fetch_add(1,Ordering::Relaxed);
+                        let bridge=Bridge{sender:sender.clone(),tools:worker_tools.clone()};let clients=worker_clients.clone();clients.fetch_add(1,Ordering::Relaxed);
                         tasks.spawn(async move{let (read,write)=stream.into_split();if let Ok(service)=bridge.serve(JsonLines::new(read,write)).await{let _=service.waiting().await;}clients.fetch_sub(1,Ordering::Relaxed);});
                     }
                 }}
@@ -169,6 +179,8 @@ impl AttachedSession {
         })?;
         Ok(Self {
             session,
+            tools,
+            export_formats,
             requests,
             stop: Some(stop),
             worker: Some(worker),
@@ -195,6 +207,26 @@ impl AttachedSession {
     /// Process a bounded number of requests on the engine's owner thread.
     /// No request executes after its awaiting protocol caller has cancelled.
     pub fn poll(&mut self, document: &mut DocumentSession) -> Vec<SessionEvent> {
+        self.poll_with_host(document, &mut crate::exports::host())
+    }
+    /// Process requests using the editor's live format registry and export bindings.
+    pub fn poll_with_host(
+        &mut self,
+        document: &mut DocumentSession,
+        host: &mut voxelite_plugin_host::Host,
+    ) -> Vec<SessionEvent> {
+        // Most ticks do not change formats; avoid cloning the full schema catalog.
+        if !host
+            .registry()
+            .formats()
+            .map(|(_, f)| f)
+            .eq(self.export_formats.iter())
+        {
+            self.export_formats = host.registry().formats().map(|(_, f)| f.clone()).collect();
+            if let Ok(mut tools) = self.tools.write() {
+                *tools = crate::exports::tools(host);
+            }
+        }
         let mut events = Vec::new();
         if let Some(receiver) = &self.render {
             match receiver.try_recv() {
@@ -306,7 +338,7 @@ impl AttachedSession {
                     "Human paused agent edits; retry after resuming",
                 )))
             } else if let Some(spec) = spec {
-                Ok(self.session.call(spec, request.arguments))
+                Ok(self.session.call_with_host(spec, request.arguments, host))
             } else {
                 Err(ErrorData::invalid_params("Unknown tool", None))
             };

@@ -6,9 +6,7 @@
 use super::*;
 
 #[cfg(not(target_family = "wasm"))]
-mod format;
-#[cfg(not(target_family = "wasm"))]
-use format::SaveFormat;
+use voxelite_app::save_format::SaveFormat;
 #[cfg(target_os = "macos")]
 mod macos;
 
@@ -223,11 +221,24 @@ impl EditorView {
         .detach();
     }
     #[cfg(not(target_family = "wasm"))]
-    fn write_export(&mut self, path: PathBuf, format: SaveFormat, cx: &mut Context<Self>) {
+    fn write_export(
+        &mut self,
+        path: PathBuf,
+        format: voxelite_plugin_api::FormatContribution,
+        cx: &mut Context<Self>,
+    ) {
         // An export cannot satisfy a deferred New/Open/Quit that needs a project save.
         self.save_flow.complete_save(false);
         self.save_flow.begin_dialog();
-        self.status = format!("Exporting {}…", format.label()).into();
+        self.status = format!("Exporting {}…", format.label_key).into();
+        let job = match self.editor.prepare_export(&format.id) {
+            Ok(job) => job,
+            Err(error) => {
+                self.save_flow.finish_dialog();
+                self.report::<()>(Err(error), "", cx);
+                return;
+            }
+        };
         let snapshot = self.editor.snapshot().clone();
         let options = RenderOptions {
             width: 1024,
@@ -240,17 +251,26 @@ impl EditorView {
             },
             ..Default::default()
         };
-        let task = cx.background_executor().spawn(async move {
-            let bytes = match format {
-                SaveFormat::Glb => voxelite_export::glb(&snapshot)?,
-                SaveFormat::Png => voxelite_export::render_png(&snapshot, &options)?,
-                SaveFormat::Project => anyhow::bail!("Choose GLB or PNG for export"),
-            };
-            std::fs::write(&path, bytes)?;
-            Ok::<_, anyhow::Error>(path)
+        let executor = cx.background_executor().clone();
+        let task = executor.spawn(async move {
+            job.run(&voxelite_plugin_host::SnapshotExport {
+                snapshot: &snapshot,
+                options: &options,
+            })
         });
         cx.spawn(async move |this, cx| {
-            let result = task.await;
+            let completion = task.await;
+            let bytes = this.update(cx, |this, _| this.editor.finish_export(completion));
+            let result: anyhow::Result<PathBuf> = async {
+                let bytes = bytes??;
+                executor
+                    .spawn(async move {
+                        std::fs::write(&path, bytes)?;
+                        Ok::<_, anyhow::Error>(path)
+                    })
+                    .await
+            }
+            .await;
             let _ = this.update(cx, |this, cx| {
                 this.save_flow.finish_dialog();
                 match result {
@@ -291,8 +311,9 @@ impl EditorView {
         );
         self.save_flow.begin_dialog();
         self.status = "Choose where to save this project…".into();
+        let formats = SaveFormat::available(&self.editor.plugin_host());
         #[cfg(target_os = "macos")]
-        let receiver = macos::choose_save_path(&directory, &suggested, cx);
+        let receiver = macos::choose_save_path(&directory, &suggested, formats, cx);
         #[cfg(not(target_os = "macos"))]
         let receiver = cx.prompt_for_new_path(&directory, Some(&suggested));
         cx.spawn(async move |this, cx| {
@@ -301,6 +322,7 @@ impl EditorView {
             let result = result.map(|result| {
                 result.map(|path| path.map(|mut path| {
                     let format = SaveFormat::from_extension(
+                        &formats,
                         path.extension().and_then(|ext| ext.to_str()).unwrap_or_default(),
                     );
                     if path.extension().is_none() { path.set_extension(format.extension()); }
@@ -312,7 +334,7 @@ impl EditorView {
                     Ok(Ok(Some((path, format)))) => {
                         match format {
                             SaveFormat::Project => this.write_project(path, cx),
-                            SaveFormat::Glb | SaveFormat::Png => this.write_export(path, format, cx),
+                            SaveFormat::Export(format) => this.write_export(path, format, cx),
                         }
                     }
                     Ok(Ok(None)) => { this.save_flow.cancel_save(); }

@@ -170,13 +170,30 @@ impl EditorView {
                 callback(this, window, cx)
             }))
     }
+    fn palette_export(
+        &self,
+        extension: &str,
+        palette: Palette,
+        name: String,
+    ) -> EditorResult<Vec<u8>> {
+        let format = self.editor.export_format(extension)?;
+        let job = self.editor.prepare_export(&format.id)?;
+        let mut snapshot = self.editor.snapshot().clone();
+        snapshot.palette = palette;
+        snapshot.name = name;
+        self.editor
+            .finish_export(job.run(&voxelite_plugin_host::SnapshotExport {
+                snapshot: &snapshot,
+                options: &Default::default(),
+            }))
+    }
     #[cfg(not(target_family = "wasm"))]
-    fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
+    fn palette_file(&mut self, export: Option<String>, cx: &mut Context<Self>) {
         self.save_flow.begin_dialog();
         let palette = self.active_palette();
         let name = self.palette_name();
         cx.spawn(async move |this, cx| {
-            let path: anyhow::Result<Option<PathBuf>> = if let Some(ext) = export {
+            let path: anyhow::Result<Option<PathBuf>> = if let Some(ext) = &export {
                 let receiver = cx.update(|cx| {
                     cx.prompt_for_new_path(&data_dir(), Some(&format!("palette.{ext}")))
                 });
@@ -198,48 +215,60 @@ impl EditorView {
             };
             let result = match path {
                 Ok(Some(path)) => {
-                    cx.background_executor()
-                        .spawn(async move {
-                            if let Some(ext) = export {
-                                let text = if ext == "gpl" {
-                                    palette.to_gpl(&name)?
+                    async {
+                        let bytes = if let Some(ext) = export {
+                            Some(
+                                this.update(cx, |this, _| this.palette_export(&ext, palette, name))
+                                    .map_err(|error| {
+                                        voxelite_app::editor::EditorError::Gesture(
+                                            error.to_string(),
+                                        )
+                                    })??,
+                            )
+                        } else {
+                            None
+                        };
+                        cx.background_executor()
+                            .spawn(async move {
+                                if let Some(bytes) = bytes {
+                                    voxelite_app::palettes::write_local(&path, &bytes)?;
+                                    Ok(None)
                                 } else {
-                                    palette.to_hex()
-                                };
-                                voxelite_app::palettes::write_local(&path, text.as_bytes())?;
-                                Ok(None)
-                            } else {
-                                if std::fs::metadata(&path)?.len() > 256 * 1024 {
-                                    return Err(voxelite_app::editor::EditorError::Gesture(
-                                        "Palette file too large".into(),
-                                    ));
-                                }
-                                let text = std::fs::read_to_string(&path)?;
-                                let p = match path
-                                    .extension()
-                                    .and_then(|e| e.to_str())
-                                    .map(str::to_ascii_lowercase)
-                                    .as_deref()
-                                {
-                                    Some("gpl") => Palette::from_gpl(&text)?,
-                                    Some("hex") => Palette::from_hex(&text)?,
-                                    _ => {
+                                    if std::fs::metadata(&path)?.len() > 256 * 1024 {
                                         return Err(voxelite_app::editor::EditorError::Gesture(
-                                            "Choose a .hex or .gpl palette".into(),
+                                            "Palette file too large".into(),
                                         ));
                                     }
-                                };
-                                let name = path
-                                    .file_stem()
-                                    .and_then(|s| s.to_str())
-                                    .unwrap_or("Imported palette")
-                                    .chars()
-                                    .take(100)
-                                    .collect();
-                                Ok(Some((name, p)))
-                            }
-                        })
-                        .await
+                                    let text = std::fs::read_to_string(&path)?;
+                                    let p = match path
+                                        .extension()
+                                        .and_then(|e| e.to_str())
+                                        .map(str::to_ascii_lowercase)
+                                        .as_deref()
+                                    {
+                                        Some("gpl") => Palette::from_gpl(&text)?,
+                                        Some("hex") => Palette::from_hex(&text)?,
+                                        _ => {
+                                            return Err(
+                                                voxelite_app::editor::EditorError::Gesture(
+                                                    "Choose a .hex or .gpl palette".into(),
+                                                ),
+                                            );
+                                        }
+                                    };
+                                    let name = path
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .unwrap_or("Imported palette")
+                                        .chars()
+                                        .take(100)
+                                        .collect();
+                                    Ok(Some((name, p)))
+                                }
+                            })
+                            .await
+                    }
+                    .await
                 }
                 Ok(None) => Ok(None),
                 Err(e) => Err(voxelite_app::editor::EditorError::Gesture(e.to_string())),
@@ -266,18 +295,13 @@ impl EditorView {
         .detach();
     }
     #[cfg(target_family = "wasm")]
-    fn palette_file(&mut self, export: Option<&'static str>, cx: &mut Context<Self>) {
+    fn palette_file(&mut self, export: Option<String>, cx: &mut Context<Self>) {
         if let Some(ext) = export {
-            let palette = self.active_palette();
-            let result = if ext == "gpl" {
-                palette.to_gpl(&self.palette_name())
-            } else {
-                Ok(palette.to_hex())
-            }
-            .map_err(Into::into)
-            .and_then(|text| {
-                crate::web::download(&format!("palette.{ext}"), "text/plain", text.as_bytes())
-            });
+            let result = self
+                .palette_export(&ext, self.active_palette(), self.palette_name())
+                .and_then(|bytes| {
+                    crate::web::download(&format!("palette.{ext}"), "text/plain", &bytes)
+                });
             self.report(result, "Palette download started", cx);
             return;
         }
@@ -654,20 +678,27 @@ impl EditorView {
                             cx,
                             |this, _, cx| this.palette_file(None, cx),
                         ))
-                        .child(self.control(
-                            "export-hex",
-                            "upload",
-                            "Export HEX…",
-                            cx,
-                            |this, _, cx| this.palette_file(Some("hex"), cx),
-                        ))
-                        .child(self.control(
-                            "export-gpl",
-                            "upload",
-                            "Export GPL…",
-                            cx,
-                            |this, _, cx| this.palette_file(Some("gpl"), cx),
-                        )),
+                        .children(
+                            self.editor
+                                .plugin_host()
+                                .registry()
+                                .formats()
+                                .filter(|(_, format)| {
+                                    format.export
+                                        && format.content
+                                            == voxelite_plugin_api::FormatContent::Palette
+                                })
+                                .filter_map(|(_, format)| format.extensions.first().cloned())
+                                .map(|ext| {
+                                    self.control(
+                                        SharedString::from(format!("export-{ext}")),
+                                        "upload",
+                                        format!("Export {}…", ext.to_uppercase()),
+                                        cx,
+                                        move |this, _, cx| this.palette_file(Some(ext.clone()), cx),
+                                    )
+                                }),
+                        ),
                 )
                 .child(div().text_size(px(12.0)).text_color(t.muted()).child(
                     "Palette selection applies to new voxels. Existing colors stay intact.",

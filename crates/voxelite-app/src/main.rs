@@ -85,23 +85,23 @@ fn main() -> anyhow::Result<()> {
         None => Editor::example()?,
     };
     if let Some(path) = options.viewport_png {
-        let frame = voxelite_render::render(
-            editor.snapshot(),
-            &voxelite_render::RenderOptions {
-                width: 1024,
-                height: 900,
-                background: if options.theme == Some(Theme::Light) {
-                    [255; 4]
-                } else {
-                    [0, 0, 0, 255]
-                },
-                ..Default::default()
+        let format = editor.export_format("png")?;
+        let job = editor.prepare_export(&format.id)?;
+        let options = voxelite_render::RenderOptions {
+            width: 1024,
+            height: 900,
+            background: if options.theme == Some(Theme::Light) {
+                [255; 4]
+            } else {
+                [0, 0, 0, 255]
             },
-        )?;
-        std::fs::write(
-            path,
-            voxelite_export::png_rgba(frame.width, frame.height, &frame.rgba)?,
-        )?;
+            ..Default::default()
+        };
+        let bytes = editor.finish_export(job.run(&voxelite_plugin_host::SnapshotExport {
+            snapshot: editor.snapshot(),
+            options: &options,
+        }))?;
+        std::fs::write(path, bytes)?;
         return Ok(());
     }
     gpui_platform::application()

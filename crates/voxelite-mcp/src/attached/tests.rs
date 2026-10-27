@@ -11,6 +11,12 @@ fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>)
     (
         AttachedSession {
             session,
+            tools: Arc::new(RwLock::new(crate::exports::tools(&crate::exports::host()))),
+            export_formats: crate::exports::host()
+                .registry()
+                .formats()
+                .map(|(_, f)| f.clone())
+                .collect(),
             requests,
             stop: None,
             worker: None,
@@ -206,4 +212,58 @@ fn attached_reads_share_the_owners_save_state_without_adopting_the_placeholder()
         .unwrap();
     document.finish_save(receipt);
     assert!(!document.needs_save());
+}
+
+#[test]
+fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_document() {
+    let (mut attachment, mut document, send) = attachment();
+    let root = tempfile::tempdir().unwrap();
+    attachment.session = Session::new(root.path().to_owned());
+    attachment.session.attach(document.project()).unwrap();
+    let mut host = crate::exports::host();
+    let model = document.engine.document().id;
+    let before = document.project().to_bytes().unwrap();
+    let revision = document.engine.revision();
+    for (tool, ext) in [
+        ("voxelite_export_glb", "glb"),
+        ("voxelite_export_png", "png"),
+    ] {
+        let path = format!("enabled.{ext}");
+        let args = if ext == "png" {
+            json!({"model_id":model,"path":path,"views":["iso"],"width":32,"height":32})
+        } else {
+            json!({"model_id":model,"path":path})
+        };
+        let mut receive = queue(&send, tool, args.clone());
+        attachment.poll_with_host(&mut document, &mut host);
+        assert_eq!(result(&mut receive)["ok"], true);
+        assert!(root.path().join(&path).exists());
+        host.disable("dev.voxelite.exporters").unwrap();
+        let mut args = args;
+        args["path"] = json!(format!("disabled.{ext}"));
+        let mut receive = queue(&send, tool, args);
+        attachment.poll_with_host(&mut document, &mut host);
+        assert_eq!(result(&mut receive)["error"]["code"], "export_unavailable");
+        assert!(!root.path().join(format!("disabled.{ext}")).exists());
+        assert!(
+            attachment
+                .tools
+                .read()
+                .unwrap()
+                .iter()
+                .all(|t| !t.name.contains("export"))
+        );
+        host.enable("dev.voxelite.exporters").unwrap();
+    }
+    attachment.poll_with_host(&mut document, &mut host);
+    assert!(
+        attachment
+            .tools
+            .read()
+            .unwrap()
+            .iter()
+            .any(|t| t.name == "voxelite_export_png")
+    );
+    assert_eq!(document.project().to_bytes().unwrap(), before);
+    assert_eq!(document.engine.revision(), revision);
 }

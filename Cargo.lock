@@ -5973,12 +5973,12 @@ dependencies = [
  "thiserror 2.0.21",
  "uuid",
  "voxelite-core",
- "voxelite-export",
  "voxelite-format",
  "voxelite-mcp",
  "voxelite-plugin-agent",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
+ "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",
  "voxelite-plugin-host",
  "voxelite-plugin-mirror",
@@ -6045,6 +6045,9 @@ dependencies = [
  "voxelite-core",
  "voxelite-export",
  "voxelite-format",
+ "voxelite-plugin-api",
+ "voxelite-plugin-exporters",
+ "voxelite-plugin-host",
  "voxelite-render",
 ]
 
@@ -6064,6 +6067,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.21",
  "voxelite-core",
+ "voxelite-export",
 ]
 
 [[package]]
@@ -6083,6 +6087,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "voxelite-plugin-exporters"
+version = "0.2.0"
+dependencies = [
+ "serde_json",
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+ "voxelite-render",
+]
+
+[[package]]
 name = "voxelite-plugin-gizmo-grid"
 version = "0.2.0"
 dependencies = [
@@ -6096,6 +6110,7 @@ version = "0.2.0"
 dependencies = [
  "thiserror 2.0.21",
  "voxelite-plugin-api",
+ "voxelite-render",
 ]
 
 [[package]]

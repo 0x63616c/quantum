@@ -27,10 +27,10 @@ voxelite-plugin-mirror = { path = "../plugins/voxelite-plugin-mirror" }
 voxelite-plugin-gizmo-grid = { path = "../plugins/voxelite-plugin-gizmo-grid" }
 voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
 voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
+voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
 voxelite-plugin-agent = { path = "../plugins/voxelite-plugin-agent" }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
-voxelite-export = { path = "../voxelite-export" }
 glam.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true

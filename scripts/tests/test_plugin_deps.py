@@ -41,8 +41,9 @@ class PluginDependencyTests(unittest.TestCase):
         self.api = package("voxelite-plugin-api", "/repo/crates/voxelite-plugin-api")
         self.core = package("voxelite-core", "/repo/crates/voxelite-core")
         self.host = package("voxelite-plugin-host", "/repo/crates/voxelite-plugin-host")
+        self.export = package("voxelite-export", "/repo/crates/voxelite-export")
         self.other = package("voxelite-plugin-other", "/repo/crates/plugins/voxelite-plugin-other")
-        packages = [self.plugin, self.api, self.core, self.host, self.other]
+        packages = [self.plugin, self.api, self.core, self.host, self.export, self.other]
         self.metadata = {
             "workspace_root": "/repo",
             "workspace_members": [p["id"] for p in packages],
@@ -63,8 +64,15 @@ class PluginDependencyTests(unittest.TestCase):
         ]
         self.assertEqual(CHECKER.dependency_violations(self.metadata), [])
 
+    def test_export_encoders_must_be_reached_through_api(self):
+        self.api["dependencies"] = [self.workspace_dependency(self.export)]
+        self.plugin["dependencies"] = [self.workspace_dependency(self.api)]
+        self.assertEqual(CHECKER.dependency_violations(self.metadata), [])
+        self.plugin["dependencies"].append(self.workspace_dependency(self.export))
+        self.assertEqual(len(CHECKER.dependency_violations(self.metadata)), 1)
+
     def test_rejects_other_workspace_dependencies(self):
-        for target in [self.core, self.host, self.other]:
+        for target in [self.core, self.host, self.export, self.other]:
             with self.subTest(target=target["name"]):
                 self.plugin["dependencies"] = [self.workspace_dependency(target)]
                 self.assertEqual(CHECKER.dependency_violations(self.metadata), [

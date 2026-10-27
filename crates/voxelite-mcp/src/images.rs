@@ -13,6 +13,55 @@ pub(crate) struct Images {
 }
 
 pub(crate) fn render(s: &Snapshot, a: &Args<'_>) -> Result<Images> {
+    render_with_encoder(s, a, |width, height, rgba| {
+        Ok(voxelite_export::png_rgba(width, height, rgba)?)
+    })
+}
+
+pub(crate) fn export(
+    s: &Snapshot,
+    a: &Args<'_>,
+    host: &mut voxelite_plugin_host::Host,
+) -> Result<Images> {
+    let format = crate::exports::format(host, "png")?;
+    render_with_encoder(s, a, |width, height, rgba| {
+        crate::exports::encode(
+            host,
+            &format,
+            &Pixels {
+                snapshot: s,
+                width,
+                height,
+                rgba,
+            },
+        )
+    })
+}
+
+struct Pixels<'a> {
+    snapshot: &'a Snapshot,
+    width: u32,
+    height: u32,
+    rgba: &'a [u8],
+}
+impl voxelite_plugin_api::ExportCx for Pixels<'_> {
+    fn snapshot(&self) -> &Snapshot {
+        self.snapshot
+    }
+    fn render_view(&self) -> voxelite_plugin_api::ExportResult<voxelite_plugin_api::ExportImage> {
+        Ok(voxelite_plugin_api::ExportImage {
+            width: self.width,
+            height: self.height,
+            rgba: self.rgba.to_vec(),
+        })
+    }
+}
+
+fn render_with_encoder(
+    s: &Snapshot,
+    a: &Args<'_>,
+    mut encode: impl FnMut(u32, u32, &[u8]) -> Result<Vec<u8>>,
+) -> Result<Images> {
     let width: u32 = a.default("width", 512)?;
     let height: u32 = a.default("height", 512)?;
     let mode: String = a.default("image_mode", "contact_sheet".into())?;
@@ -116,7 +165,7 @@ pub(crate) fn render(s: &Snapshot, a: &Args<'_>) -> Result<Images> {
                 ..Default::default()
             },
         )?;
-        let png = voxelite_export::png_rgba(width, height, &image.rgba)?;
+        let png = encode(width, height, &image.rgba)?;
         let projection = match image.camera.projection {
             Projection::Orthographic { height } => {
                 json!({"projection":"orthographic","ortho_height":height})
@@ -149,7 +198,7 @@ pub(crate) fn render(s: &Snapshot, a: &Args<'_>) -> Result<Images> {
         }
     }
     if sheet {
-        let png = voxelite_export::png_rgba(sw, sh, &canvas)?;
+        let png = encode(sw, sh, &canvas)?;
         output.insert(0,json!({"view":"contact_sheet","width":sw,"height":sh,"sha256":files::hash(&png),"bytes":png.len()}));
         pngs.insert(0, png);
     }
@@ -212,5 +261,24 @@ fn label(canvas: &mut [u8], stride: u32, tile: [u32; 4], text: &str) {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn contact_sheet_export_characterization() {
+        let snapshot = serde_json::from_slice(include_bytes!(
+            "../../voxelite-export/tests/golden/scene.json"
+        ))
+        .unwrap();
+        let args = json!({"width":80,"height":64,"views":["iso","front"]});
+        let images = render(&snapshot, &Args(&args)).unwrap();
+        assert_eq!(images.pngs[0], include_bytes!("../tests/contact-sheet.png"));
+        let exported = export(&snapshot, &Args(&args), &mut crate::exports::host()).unwrap();
+        assert_eq!(exported.pngs, images.pngs);
+        assert_eq!(exported.metadata, images.metadata);
     }
 }
