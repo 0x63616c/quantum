@@ -218,7 +218,7 @@ fn attached_reads_share_the_owners_save_state_without_adopting_the_placeholder()
 fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_document() {
     let (mut attachment, mut document, send) = attachment();
     let root = tempfile::tempdir().unwrap();
-    attachment.session = Session::new(root.path().to_owned());
+    attachment.session = Session::new(root.path().canonicalize().unwrap());
     attachment.session.attach(document.project()).unwrap();
     let mut host = crate::exports::host();
     let model = document.engine.document().id;
