@@ -264,8 +264,10 @@ fallback and signed-feed failure expiration also need testing before use.
 6. The site fetches the highest stable appcast using the same helper, then
    `crates/voxelite-site` preserves those bytes both in place and for another
    output directory. The build stages the feed at the root of the `site-dist`
-   artifact/branch. Vercel's existing `site-dist` production deployment serves
-   it at `/appcast.xml`, with RSS content type and revalidation cache headers.
+   artifact/branch. The Vercel project has no Git integration, so the workflow's
+   last step deploys that directory to production with the Vercel CLI (needs the
+   `VERCEL_TOKEN` repo secret). Vercel then serves it at `/appcast.xml`, with RSS
+   content type and revalidation cache headers.
    Do not minify or rewrite signed XML or HTML notes.
 
 Release assets are the single source of truth: no bot commits to `main`, new
@@ -355,8 +357,9 @@ files. Do not upload throwaway assets or keys to GitHub.
 
 ### Signed-release checklist
 
-- Merge packaging and site workflows to `main`; confirm Vercel watches `site-dist`
-  and a normal site deployment serves the valid empty feed before the first release.
+- Merge packaging and site workflows to `main`; set the `VERCEL_TOKEN`
+  repo secret (the Vercel project is not Git-linked) and confirm a site deployment
+  serves the valid empty feed before the first release.
 - Configure the six required secrets above, retain backups, and leave the optional
   public variable unset or exactly matching the committed key. Verify the runner's
   Developer ID certificate, API key permissions, Xcode/Metal, and toolchain.
