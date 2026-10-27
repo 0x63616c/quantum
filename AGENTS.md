@@ -7,9 +7,10 @@
   piecemeal. Use real names in commands, paths and identifiers.
 - Build an Aseprite-style 3D voxel editor with a Rust/GPUI native macOS shell,
   shared wasm editor, `.voxl` projects, GLB/PNG exports and MCP agent workflows.
-- Verify behavior in code and manifests. [PLAN.md](PLAN.md),
-  [GLOSSARY.md](GLOSSARY.md) and older reviews contain planned or superseded seams.
-  Do not present those as implemented features.
+- Verify behavior in code and manifests. [Product direction](docs/adr/0003-product-direction.md)
+  and the [domain glossary](docs/glossary.md) distinguish current implementation
+  from deferred work and proposed seams. Do not present those as implemented
+  features.
 - Keep changes scoped to the task. Preserve unrelated work, identifiers,
   file-format compatibility and published release assets.
 
@@ -331,8 +332,8 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
   through `pull_request_target`.
 - Never commit secrets, private keys or machine-specific credentials.
   `python3 scripts/scan-pii.py` scans source/assets and reachable Git history and
-  rewrites `docs/reviews/pii-scan.md` with redacted findings. Run it when relevant,
-  review its report deliberately, and do not treat it as proof of no secrets.
+  prints redacted findings to stdout. Run it when relevant, review its report
+  deliberately, and do not treat it as proof of no secrets.
   Keep private values out of logs and PRs.
 - Write release-worthy subjects: `scripts/generate-macos-release-notes.py`
   includes non-merge commit subjects in public release notes.
@@ -358,12 +359,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
-| [PLAN.md](PLAN.md) | Direction and historical/deferred scope; verify implementation. |
-| [GLOSSARY.md](GLOSSARY.md) | Domain terminology; distinguish proposed seams from current code. |
+| [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
+| [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |
 | [Core architecture](docs/architecture/core.md) | Document/transaction invariants. |
 | [Plugin guide](crates/plugins/README.md), [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) | API, host and built-in ownership. |
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
 | [UI library](crates/voxelite-ui/README.md), [UI rules](crates/voxelite-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
-| [Reviews](docs/reviews/), [history playback](docs/reviews/history-playback.md) | Regression evidence and preview invariants. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |
