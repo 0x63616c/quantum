@@ -15,7 +15,7 @@ python3 -m http.server 8090 --directory site --bind 127.0.0.1
 
 Open `http://127.0.0.1:8090`. The browser editor is at `/app/`. Site-only iterations
 can reuse the verified `web/dist/` with `scripts/build-site.sh --skip-web`.
-`site/app/` and `web/dist/` are generated and ignored by Git. If the bundle is
+Generated site output and `web/dist/` are ignored by Git. If the bundle is
 missing, run `scripts/build-web.sh` first. Nothing in these scripts deploys or
 pushes. `site/vercel.json` is published at the root of `site-dist` and adds
 immutable font cache headers.
@@ -31,14 +31,24 @@ canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
 from `VoxeliteServer::tools()`; do not edit generated `docs/` or schema copies.
 
+Commit the sources, not the built site. CI builds the site on every PR and push
+to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
+`index.html`, `404.html`, `download/`, `docs/`, `docs.md`, `llms*.txt`,
+`sitemap.xml`, `robots.txt`, `assets/mcp-tools.json`, `assets/integrations/`,
+`assets/skills/`, `assets/voxelite-skills.zip` and `app/`. Keep `content/`, this
+README, `PROGRESS.md`, `vercel.json`, `appcast.xml` and the remaining assets
+(styles, scripts, fonts, images, badges, licenses and sample project) tracked:
+the site build does not recreate them. The appcast is also a generator input.
+
 The MCP and skills pages share `templates/install.html`. All MCP deeplinks,
 commands and downloadable examples come from one server configuration in
 `src/install.rs`: the Mac bundle's `Contents/MacOS/voxelite-mcp` executable.
 Cursor and VS Code use `${workspaceFolder}`; Claude/Codex CLI commands use
 `"$PWD"` and must run from the project directory. The same build refreshes
-`integrations/` (including its README from `templates/integrations.md`), their
-downloadable copies and the skills ZIP. Edit the Rust definition/templates,
-not the generated examples. Per-skill install commands use the metadata from
+the tracked root `integrations/` (including its README from
+`templates/integrations.md`), their downloadable copies and the skills ZIP.
+Edit the Rust definition/templates, not the generated examples. Per-skill install
+commands use the metadata from
 `skills/*/SKILL.md`. Tabs enhance static panels; every host's instructions and
 deeplinks remain available without JavaScript. Copy buttons use `assets/site.js`.
 
@@ -71,11 +81,17 @@ Rust generator copies it unchanged to another output directory and preserves it
 in place. Do not edit a generated feed: its signature covers the exact bytes.
 See [automatic updates](../docs/releasing-macos.md#automatic-updates-sparkle).
 
-Verification:
+Generator tests build into temporary directories and do not require a site or
+wasm build:
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo test --locked -p voxelite-site
+```
+
+After `scripts/build-site.sh`, verify the complete local site:
+
+```sh
 python3 scripts/check-site.py
 node scripts/capture-site.mjs screenshots/site/final
 node scripts/check-site-install.mjs
@@ -83,8 +99,8 @@ node scripts/check-site-install.mjs
 
 The site checks verify both Markdown aliases, discovery links, local links and
 fragments, exact code/schema parity, and inclusion in both LLM indexes. The Rust
-tests also compare a fresh generator run against the published files to catch
-stale prose or metadata. Browser checks cover complete Markdown copying,
+tests validate fresh generator output, Markdown aliases, LLM indexes, navigation
+and the live MCP catalog. Browser checks cover complete Markdown copying,
 download/clipboard failures, and viewing raw Markdown without JavaScript.
 
 The browser script requires the local server and the repository's Playwright
