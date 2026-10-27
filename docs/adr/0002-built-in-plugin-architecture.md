@@ -2,7 +2,7 @@
 
 Date: 2026-10-26
 
-Status: Accepted; the plugin API foundation is implemented, host and registry follow.
+Status: Accepted; the plugin API, host and registry are implemented independently of the app.
 
 ## Context
 
@@ -43,8 +43,9 @@ Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx` and
 `ActivateCx` scopes activation capabilities separately. These are trait stubs in
 this step; concrete operations arrive with host integration. `Plugin` exposes
 `manifest`, `contribute`, and default no-op `activate`/`deactivate` hooks. The host
-will own implementation binding, API compatibility checks, cross-plugin conflicts,
-keybinding conflicts, enabled sets and lifecycle management in the next PR.
+owns API compatibility checks, cross-plugin conflicts, keybinding conflicts,
+enabled sets and lifecycle management. Implementation binding follows with app
+integration.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
 starts at `0.1.0`, independently of plugin implementation versions and `.voxl` or
@@ -52,16 +53,45 @@ data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
 methods and changes to exhaustive enums or public struct construction count as
-breaking changes. Future host compatibility checks must respect the pre-1.0
+breaking changes. Host compatibility checks respect the pre-1.0
 minor boundary and reject newer required API versions.
 
 Third-party plugins and WASM are deferred to a later design; dynamic loading and
 scripting are also out of scope. This is a statically linked Rust API, not a stable
 binary ABI or an external code loader.
 
+## Host
+
+`voxelite-plugin-host` is pure Rust and depends on the API without GPUI. It validates
+manifests and collects declarations once per plugin. The read-only `Registry`
+exposes only successfully enabled plugins, preserving plugin and declaration
+registration order. Catalog conflicts include disabled plugins; duplicate IDs
+across contribution kinds and duplicate canonical default keybindings in the same
+opaque context are structured `Conflict` values. Enablement checks the candidate
+against enabled plugins and its own bindings, leaving the whole candidate disabled
+on conflict so it can be retried after the conflicting plugin is disabled.
+
+`EnabledSet` converts to and from `Vec<String>` or `BTreeSet<String>` for later
+app-owned persistence. A supplied set overrides defaults, but `can_disable = false`
+plugins are always selected, subject to validation and successful activation.
+Repeated enable/disable requests are no-ops; transitions call their hook once.
+API compatibility ignores build metadata and requires exact version precedence
+for prereleases, which have no compatibility guarantee.
+
+Plugin entry points are guarded with `catch_unwind`. A hook panic marks the plugin
+`Faulted`, discards its declarations and prevents retries for that host's lifetime;
+a manifest panic is a registration rejection because no identity is established.
+Shell notices are drainable `HostEvent` values. `Timings` records count/total/max by
+plugin and label, including failed hooks, and reports advisory budget overruns.
+The public `conformance::check` harness validates a plugin and exercises a full
+enable/disable/enable cycle, recollecting metadata to detect residue. Required
+plugins also have their cleanup hooks exercised without exposing a public bypass
+of their disablement policy. Panic isolation requires unwinding and cannot recover
+from aborts or roll back arbitrary plugin-owned external effects.
+
 ## Consequences
 
-This step adds the API and its unit tests only; it does not implement a registry,
-wire plugins into the app or change runtime behavior. Later steps move built-in
-feature registration and shell metadata behind this boundary while preserving
-existing behavior.
+The API and host have independent unit tests and a reusable conformance harness;
+they are not wired into the app and do not change its runtime behavior. Later
+steps move built-in feature registration and shell metadata behind this boundary
+while preserving existing behavior.
