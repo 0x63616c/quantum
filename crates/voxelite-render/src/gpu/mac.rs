@@ -491,7 +491,7 @@ impl Surfaces {
         diagnostics: &mut FrameDiagnostics,
     ) -> RenderResult<Frame> {
         diagnostics.presenting();
-        // The source scene and luma are already 2x device dimensions; CbCr has
+        // The source scene and luma use the selected surface dimensions; CbCr has
         // half their width/height. Replacing the pool does not invalidate leases
         // retained by older GPUI scenes or in-flight consumer command buffers.
         if self.size != size {

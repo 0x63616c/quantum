@@ -16,6 +16,9 @@ pub enum MeshError {
     /// Geometry/image budget exceeded.
     #[error("render limit exceeded: {0}")]
     Limit(String),
+    /// Render surface dimensions exceed device or allocation limits; resizing may help.
+    #[error("render limit exceeded: {0}")]
+    SurfaceSize(String),
     /// Invalid camera or render settings.
     #[error("invalid render settings: {0}")]
     Invalid(String),
