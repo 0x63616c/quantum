@@ -7,6 +7,7 @@
 //! There is no GUI dependency, registry, enablement or lifecycle management here,
 //! and no third-party code loading, WASM or scripting.
 mod context;
+mod data;
 mod export;
 mod id;
 mod overlay;
@@ -17,6 +18,7 @@ mod tool;
 mod transform;
 
 pub use context::{ActivateCx, CommandCx, ExportCx, ToolCx, TransformCx};
+pub use data::*;
 pub use export::*;
 pub use id::{InvalidPluginId, PluginId};
 pub use overlay::*;
@@ -44,7 +46,7 @@ pub use voxelite_core::{
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 5, 1);
+pub const API_VERSION: Version = Version::new(0, 5, 2);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -52,6 +54,15 @@ pub trait Plugin {
     fn manifest(&self) -> Manifest;
     /// Contribute declarations; hosts bind implementations later by ID.
     fn contribute(&self, registrar: &mut Registrar);
+    /// Forward migrations for a declared section, invoked only while enabled.
+    fn data_migrations(&self, _section_name: &str) -> Vec<DataMigration> {
+        vec![]
+    }
+    /// Validate or initialize this plugin's sections after all its migrations.
+    /// Failure aborts the entire load operation without changing stored data.
+    fn load_data(&self, _cx: &mut dyn DataCx) -> DataResult<()> {
+        Ok(())
+    }
     /// Bind a declared tool ID to its implementation. Hosts gate calls on enablement.
     fn tool(&self, _id: &str) -> Option<&dyn Tool> {
         None

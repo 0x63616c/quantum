@@ -1,6 +1,8 @@
 #[path = "export.rs"]
 mod export;
 pub use export::{ExportCompletion, ExportJob, SnapshotExport};
+#[path = "data.rs"]
+mod data;
 #[path = "palette.rs"]
 mod palette;
 
@@ -71,6 +73,8 @@ impl From<EnabledSet> for BTreeSet<String> {
 /// A plugin entry point guarded by the host.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
+    /// Migrating, validating or editing capability-scoped extension data.
+    Data,
     /// Collecting declarations.
     Contribute,
     /// Initializing an enabled plugin.
@@ -92,6 +96,7 @@ pub enum Phase {
 impl Phase {
     fn label(self) -> &'static str {
         match self {
+            Self::Data => "data",
             Self::Contribute => "contribute",
             Self::Activate => "activate",
             Self::Deactivate => "deactivate",
@@ -175,6 +180,9 @@ pub enum RegistrationError {
 /// A runtime lifecycle, setting, tool or command transform request failed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
+    /// Section access, validation or migration failed without changing the document.
+    #[error("plugin data: {0}")]
+    Data(#[from] voxelite_plugin_api::DataError),
     /// Palette interaction failed without admitting state or document edits.
     #[error(transparent)]
     Palette(#[from] voxelite_plugin_api::PaletteError),

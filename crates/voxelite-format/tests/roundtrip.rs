@@ -22,7 +22,7 @@ fn golden_and_idempotence() {
 fn unknown_fields_every_level_survive_and_minor_is_retained() {
     let mut v = input();
     v["version"]["minor"] = json!(8);
-    v["extensions"] = json!({"org.example":{"text":"Élan / forest","flags":[true,null,-7]}});
+    v["future_metadata"] = json!({"org.example":{"text":"Élan / forest","flags":[true,null,-7]}});
     v["document"]["bounds"]["future"] = json!(42);
     v["palette"]["slots"][0]["future"] = json!("slot");
     v["layers"][0]["future"] = json!([2, 1]);

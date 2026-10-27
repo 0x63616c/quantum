@@ -409,6 +409,8 @@ pub struct Document {
     pub versions: BTreeMap<Uuid, NamedVersion>,
     /// External branch source.
     pub lineage: Option<Lineage>,
+    /// Opaque plugin data, preserved independently of plugin availability.
+    pub extensions: crate::Extensions,
 }
 impl Document {
     /// Create the specified default model with deterministic supplied identities.
@@ -425,11 +427,17 @@ impl Document {
             },
             versions: BTreeMap::new(),
             lineage: None,
+            extensions: crate::Extensions::default(),
         }
     }
     /// Validate live and version content, hashes, parent references and version bytes.
     pub fn validate(&self) -> Result<()> {
         self.content.validate()?;
+        if self.content.extra.contains_key("extensions") {
+            return Err(Error::Invalid(
+                "extensions must use the project namespace".into(),
+            ));
+        }
         if self.versions.len() > 64 {
             return Err(Error::Limit("64 named versions".into()));
         }
