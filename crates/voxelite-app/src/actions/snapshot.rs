@@ -101,7 +101,15 @@ fn shell_snapshot() -> String {
             let keys = binding
                 .keystrokes()
                 .iter()
-                .map(|stroke| stroke.unparse())
+                .map(|stroke| {
+                    // The platform spells the primary modifier `cmd` on macOS and `super` elsewhere.
+                    stroke
+                        .unparse()
+                        .split('-')
+                        .map(|part| if part == "cmd" { "super" } else { part })
+                        .collect::<Vec<_>>()
+                        .join("-")
+                })
                 .collect::<Vec<_>>()
                 .join(" ");
             let context = binding
