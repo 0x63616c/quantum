@@ -129,6 +129,8 @@ impl EditorView {
         }
         button
             .build()
+            .border_1()
+            .border_color(t.line())
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus, cx);
                 callback(this, window, cx)

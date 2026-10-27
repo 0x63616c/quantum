@@ -2,7 +2,7 @@
 use crate::{actions::ClipboardOp, shortcuts::ShortcutPlatform, theme::Theme};
 use gpui::{prelude::*, *};
 use std::ops::Range;
-use voxelite_ui::tokens::{metrics, type_size};
+use voxelite_ui::tokens::{metrics, space, type_size};
 
 pub struct TextField {
     pub text: String,
@@ -399,7 +399,8 @@ impl Render for TextField {
                             };
                             let caret_x = line.x_for_index(caret);
                             if focused {
-                                let width = (bounds.size.width - px(2.0)).max(px(metrics::EDGE));
+                                let width =
+                                    (bounds.size.width - px(space::XXS)).max(px(metrics::EDGE));
                                 this.scroll_x =
                                     this.scroll_x.min(caret_x).max(caret_x - width).max(px(0.0));
                             }

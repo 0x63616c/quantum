@@ -1,6 +1,7 @@
 # Bundled acknowledgements
 
-`Sparkle-LICENSE.txt` is the unmodified license from Sparkle 2.10.1, the version
+`Sparkle-LICENSE.txt` is the license from Sparkle 2.10.1 (trailing whitespace
+normalized), the version
 pinned by `scripts/package-macos.sh`:
 https://github.com/sparkle-project/Sparkle/blob/2.10.1/LICENSE
 It is included in the macOS acknowledgements. The package script also ships the
