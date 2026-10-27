@@ -458,7 +458,7 @@ Complete output schema
             "maxLength": 16
           },
           "minItems": 1,
-          "maxItems": 5
+          "maxItems": 6
         },
         "presets": {
           "type": "array",
@@ -7646,13 +7646,13 @@ Complete output schema
 
 ### voxelite\_palette\_export
 
-Return palette as .hex or .gpl text in display order; GPL preserves representable names. Read-only, no filesystem side effects.
+Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.
 
 | Argument   | Required | Type / constraints                                                    |
 | ---------- | -------- | --------------------------------------------------------------------- |
 | `model_id` | Yes      | string                                                                |
 | `revision` | Optional | string. Captured monotonic revision, encoded as a decimal u64 string. |
-| `format`   | Yes      | string; enum: \["hex","gpl"\]                                         |
+| `format`   | Yes      | string; enum: \["hex","gpl","pal"\]                                   |
 
 Complete input schema
 
@@ -7673,7 +7673,8 @@ Complete input schema
       "type": "string",
       "enum": [
         "hex",
-        "gpl"
+        "gpl",
+        "pal"
       ]
     }
   },
@@ -7727,7 +7728,8 @@ Complete output schema
           "type": "string",
           "enum": [
             "hex",
-            "gpl"
+            "gpl",
+            "pal"
           ]
         }
       },
@@ -7827,7 +7829,7 @@ Complete output schema
 
 ### voxelite\_palette\_import
 
-Append colors from bounded .hex or .gpl text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.
+Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.
 
 | Argument            | Required | Type / constraints                                                                                                                   |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -7836,7 +7838,7 @@ Append colors from bounded .hex or .gpl text into unused slots; no implicit geom
 | `model_id`          | Yes      | string                                                                                                                               |
 | `expected_revision` | Yes      | string. Captured monotonic revision, encoded as a decimal u64 string.                                                                |
 | `label`             | Optional | string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime. |
-| `format`            | Yes      | string; enum: \["hex","gpl"\]                                                                                                        |
+| `format`            | Yes      | string; enum: \["hex","gpl","pal"\]                                                                                                  |
 | `text`              | Yes      | string; maxLength: 65536                                                                                                             |
 
 Complete input schema
@@ -7873,7 +7875,8 @@ Complete input schema
       "type": "string",
       "enum": [
         "hex",
-        "gpl"
+        "gpl",
+        "pal"
       ]
     },
     "text": {

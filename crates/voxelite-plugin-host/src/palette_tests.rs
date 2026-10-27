@@ -55,6 +55,10 @@ impl PalettePanel for PanelPlugin {
         );
         assert_eq!(cx.setting("dev.secret.value"), None);
         PaletteView {
+            formats: vec![],
+            selected: PaletteId::Source(0),
+            kind: PaletteKind::Project,
+            read_only: true,
             name: "Test".into(),
             palette: cx.palette().clone(),
             choices: vec![],

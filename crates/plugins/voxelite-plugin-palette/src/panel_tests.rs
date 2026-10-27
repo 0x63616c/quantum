@@ -148,10 +148,6 @@ fn selection_and_library_operations_preserve_colors_and_order() {
     assert_eq!(cx.color.rgba, [41, 173, 255, 255]);
     assert!(selected.commands.is_empty());
     assert_eq!(cx.palette, Palette::default());
-    assert!(
-        host.dispatch_palette(PANEL_ID, &cx, edit(AddSlot, "", "112233"))
-            .is_err()
-    );
     request(&mut host, &mut cx, edit(Duplicate, "PICO-8", ""));
     let id = cx.state.custom.unwrap();
     assert_eq!(cx.state.library.entries[0].name, "PICO-8 copy");
@@ -161,7 +157,7 @@ fn selection_and_library_operations_preserve_colors_and_order() {
     request(&mut host, &mut cx, edit(MoveLeft, "", ""));
     assert_eq!(cx.state.slot, 15);
     assert_eq!(
-        cx.state.library.entries[0].palette.get(16).unwrap().rgba,
+        cx.state.library.entries[0].palette.get(17).unwrap().rgba,
         [17, 34, 51, 255]
     );
     request(&mut host, &mut cx, edit(ApplyColor, "", "445566"));
@@ -274,4 +270,107 @@ fn document_import_proposes_typed_commands_in_free_slot_order() {
         host.dispatch_palette(PANEL_ID, &full, PaletteAction::AppendPreset("pico8".into()))
             .is_err()
     );
+}
+
+#[test]
+fn choices_expose_origins_and_stable_selection_addresses() {
+    let mut host = Host::new(vec![Box::new(PalettePlugin)]);
+    let mut cx = Context::default();
+    let view = host.palette_view(PANEL_ID, &cx).unwrap().unwrap();
+    assert_eq!(view.kind, PaletteKind::Project);
+    assert!(view.read_only);
+    for (i, choice) in view.choices.iter().enumerate() {
+        assert_eq!(choice.id, PaletteId::Source(i));
+        assert!(choice.read_only);
+        assert_eq!(
+            choice.kind,
+            if i == 0 {
+                PaletteKind::Project
+            } else {
+                PaletteKind::BuiltIn
+            }
+        );
+    }
+    request(&mut host, &mut cx, edit(PaletteOperation::Create, "", ""));
+    let id = cx.state.custom.unwrap();
+    let view = host.palette_view(PANEL_ID, &cx).unwrap().unwrap();
+    assert_eq!(view.selected, PaletteId::Custom(id));
+    assert_eq!(view.kind, PaletteKind::Custom);
+    assert!(!view.read_only);
+    assert_eq!(view.choices.last().unwrap().id, PaletteId::Custom(id));
+    assert!(!view.choices.last().unwrap().read_only);
+    request(
+        &mut host,
+        &mut cx,
+        PaletteAction::ChoosePalette(PaletteId::Source(2)),
+    );
+    assert_eq!(
+        host.palette_view(PANEL_ID, &cx).unwrap().unwrap().kind,
+        PaletteKind::BuiltIn
+    );
+    request(
+        &mut host,
+        &mut cx,
+        PaletteAction::ChoosePalette(PaletteId::Custom(id)),
+    );
+    assert_eq!(cx.state.custom, Some(id));
+}
+
+#[test]
+fn source_edits_copy_once_and_leave_document_and_builtin_unchanged() {
+    for source in [0, 1] {
+        for operation in [
+            PaletteOperation::ApplyColor,
+            PaletteOperation::AddSlot,
+            PaletteOperation::Rename,
+        ] {
+            let mut host = Host::new(vec![Box::new(PalettePlugin)]);
+            let mut cx = Context::default();
+            request(&mut host, &mut cx, PaletteAction::ChoosePreset(source));
+            let view = host.palette_view(PANEL_ID, &cx).unwrap().unwrap();
+            let out = request(&mut host, &mut cx, edit(operation, "Renamed", "123456"));
+            assert_eq!(out.copied_from, Some(view.name.clone()));
+            assert!(out.library_bytes.is_some());
+            assert_eq!(cx.state.library.entries.len(), 1);
+            let id = cx.state.custom;
+            let out = request(
+                &mut host,
+                &mut cx,
+                edit(PaletteOperation::ApplyColor, "", "aabbcc"),
+            );
+            assert!(out.copied_from.is_none());
+            assert_eq!(cx.state.custom, id);
+            assert_eq!(cx.palette, Palette::default());
+            request(&mut host, &mut cx, PaletteAction::ChoosePreset(source));
+            assert_eq!(
+                host.palette_view(PANEL_ID, &cx).unwrap().unwrap().palette,
+                view.palette
+            );
+            assert!(
+                host.dispatch_palette(PANEL_ID, &cx, edit(PaletteOperation::Delete, "", ""))
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Only custom")
+            );
+        }
+    }
+}
+
+#[test]
+fn copy_names_are_unique_and_reserve_utf8_bytes_for_numbered_suffixes() {
+    for source in ["PICO-8".to_owned(), "x".repeat(128), "色".repeat(42)] {
+        let mut library = PaletteLibrary::default();
+        for number in 1..=128 {
+            let name = library::copy_name(&library, &source).unwrap();
+            validate_name(&name).unwrap();
+            assert!(name.ends_with(&if number == 1 {
+                " copy".into()
+            } else {
+                format!(" copy {number}")
+            }));
+            library::create(&mut library, name, Palette::default()).unwrap();
+        }
+        assert!(library::create(&mut library, "Overflow".into(), Palette::default()).is_err());
+    }
+    assert!(library::copy_name(&PaletteLibrary::default(), "bad\nname").is_err());
 }
