@@ -300,7 +300,7 @@ impl EditorView {
     fn set_agent_view(&mut self, view: PresetView, cx: &mut Context<Self>) {
         let b = self.viewport.bounds();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
-        self.editor.camera = OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
+        let destination = OrbitCamera::fit_view(self.editor.display_snapshot(), aspect, view);
         self.camera_view = match view {
             PresetView::Front => Some(Op::Front),
             PresetView::Right => Some(Op::Right),
@@ -309,7 +309,7 @@ impl EditorView {
             _ => None,
         };
         self.camera_fitted = false;
-        self.request_render(cx);
+        self.animate_camera_to(destination, cx);
     }
 
     /// Render thumbnails from the exact content inspected by MCP, not newer live edits.

@@ -33,6 +33,8 @@ pub struct Preferences {
     pub show_performance: bool,
     /// Display mouse navigation hints over the viewport.
     pub navigation_hints: bool,
+    /// Animate preset and programmatic camera changes; off snaps. macOS Reduce Motion always snaps.
+    pub animate_camera: bool,
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -42,6 +44,7 @@ impl Default for Preferences {
             antialiasing: true,
             show_performance: true,
             navigation_hints: true,
+            animate_camera: true,
         }
     }
 }
@@ -90,12 +93,27 @@ mod tests {
         preferences.grid = !preferences.grid;
         assert_eq!(
             serde_json::to_string(&preferences).unwrap(),
-            r#"{"appearance":"system","grid":false,"antialiasing":true,"show_performance":true,"navigation_hints":true}"#
+            r#"{"appearance":"system","grid":false,"antialiasing":true,"show_performance":true,"navigation_hints":true,"animate_camera":true}"#
         );
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         preferences.save(&path).unwrap();
         assert!(!Preferences::load(&path).unwrap().grid);
+    }
+
+    #[test]
+    fn old_settings_enable_camera_animation_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            br#"{"appearance":"dark","grid":false,"antialiasing":true,"show_performance":true,"navigation_hints":false}"#,
+        ).unwrap();
+        let mut preferences = Preferences::load(&path).unwrap();
+        assert!(preferences.animate_camera);
+        preferences.animate_camera = false;
+        preferences.save(&path).unwrap();
+        assert!(!Preferences::load(&path).unwrap().animate_camera);
     }
 
     #[test]

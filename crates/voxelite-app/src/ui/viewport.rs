@@ -34,6 +34,8 @@ pub(super) struct Viewport {
     displayed: Option<FrameIdentity>,
     display_size: [u32; 2],
     navigation_epoch: u64,
+    // Dropping superseded tasks cancels their timers instead of leaving idle wakeups.
+    navigation_settle: Option<Task<()>>,
     interactive_render: bool,
     bounds: Rc<Cell<Bounds<Pixels>>>,
 }
@@ -62,6 +64,7 @@ impl Viewport {
             displayed: None,
             display_size: [0, 0],
             navigation_epoch: 0,
+            navigation_settle: None,
             interactive_render: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
         }
@@ -105,6 +108,9 @@ impl Viewport {
     pub(super) fn rendering(&self) -> bool {
         self.rendering
     }
+    pub(super) fn has_frame(&self) -> bool {
+        self.image.is_some() || self.gpu.has_frame()
+    }
 
     pub(super) fn is_current(&self, editor: &Editor) -> bool {
         self.displayed == Some(self.identity(editor))
@@ -115,6 +121,7 @@ impl Viewport {
     }
 
     pub(super) fn replace_editor(&mut self, editor: &mut Editor) {
+        self.end_navigation();
         self.frame_meter = FrameMeter::new(if self.gpu.enabled {
             RendererKind::Gpu
         } else {
@@ -197,9 +204,16 @@ impl Viewport {
     }
 
     fn begin_navigation(&mut self) -> u64 {
+        self.navigation_settle = None;
         self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
         self.interactive_render = true;
         self.navigation_epoch
+    }
+
+    pub(super) fn end_navigation(&mut self) {
+        self.navigation_settle = None;
+        self.navigation_epoch = self.navigation_epoch.wrapping_add(1);
+        self.interactive_render = false;
     }
 
     fn settle_navigation(&mut self, epoch: u64) -> bool {
@@ -336,18 +350,21 @@ impl EditorView {
         }
         let epoch = self.viewport.begin_navigation();
         self.request_render(cx);
+        // Animation frames drive their own completion; no per-tick settle timers.
+        if self.camera_anim.is_animating() {
+            return;
+        }
         let timer = cx
             .background_executor()
             .timer(std::time::Duration::from_millis(180));
-        cx.spawn(async move |this, cx| {
+        self.viewport.navigation_settle = Some(cx.spawn(async move |this, cx| {
             timer.await;
             let _ = this.update(cx, |this, cx| {
                 if this.viewport.settle_navigation(epoch) {
                     this.request_render(cx);
                 }
             });
-        })
-        .detach();
+        }));
     }
     fn frame_identity(&self) -> FrameIdentity {
         self.viewport.identity(&self.editor)
@@ -363,6 +380,7 @@ impl EditorView {
         let overlays_changed = self.viewport.sync_scene_grid(&self.editor);
         if self.viewport.render_size != dimensions {
             if self.camera_fitted {
+                self.cancel_camera_animation();
                 self.editor.camera = OrbitCamera::fit_view(
                     self.editor.display_snapshot(),
                     f64::from(dimensions[0]) / f64::from(dimensions[1].max(1)),
@@ -383,6 +401,7 @@ impl EditorView {
         } else if overlays_changed {
             self.request_render(cx);
         }
+        self.tick_camera_animation(window, cx);
         if self.viewport.render_pending && !self.viewport.rendering {
             self.request_render(cx);
         }
@@ -530,7 +549,11 @@ mod tests {
     use gpui::{Bounds, Point, RenderImage, point, px, size};
     use std::sync::Arc;
     use voxelite_app::history::PreviewSource;
-    use voxelite_app::{editor::Editor, frame_meter::RendererKind};
+    use voxelite_app::{
+        editor::{Editor, OrbitCamera},
+        frame_meter::RendererKind,
+    };
+    use voxelite_render::PresetView;
 
     fn fixture() -> (Viewport, Editor) {
         let editor = Editor::blank().unwrap();
@@ -673,6 +696,11 @@ mod tests {
         let full = viewport.cpu_options(editor.camera, true);
         assert_eq!((full.width, full.height, full.supersampling), (801, 601, 2));
         assert_eq!(viewport.cpu_options(editor.camera, false).supersampling, 1);
+        let interrupted = viewport.begin_navigation();
+        viewport.end_navigation();
+        assert!(!viewport.settle_navigation(interrupted));
+        assert!(!viewport.interactive_render);
+        assert!(viewport.navigation_settle.is_none());
     }
 
     #[test]
@@ -694,7 +722,20 @@ mod tests {
         assert!(viewport.ray(&editor, p).is_none());
         viewport.settle_navigation(epoch);
         assert!(viewport.ray(&editor, p).is_some());
-        editor.camera.orbit(10., 0.);
+        let mut animator = voxelite_render::CameraAnimator::new();
+        let destination = OrbitCamera::fit_view(editor.snapshot(), 1.3, PresetView::Front);
+        animator.start(
+            editor.camera.pose(),
+            destination.pose(),
+            std::time::Duration::ZERO,
+            voxelite_render::DEFAULT_TRANSITION,
+        );
+        editor.camera = OrbitCamera::from_pose(
+            animator
+                .sample(voxelite_render::DEFAULT_TRANSITION / 2)
+                .unwrap()
+                .pose,
+        );
         assert!(viewport.ray(&editor, p).is_none());
     }
 

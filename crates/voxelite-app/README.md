@@ -98,6 +98,11 @@ X/Y/Z reflects around the document's center planes in one undo transaction.
 Enable mirrors in the left rail, Tools, command search or Shift-X/Y/Z. Active axes stay highlighted in the rail. The viewport's projected X/Y/Z controls select Right/Top/
 Front; Iso and the separate Frame button return to the fitted isometric view.
 
+Preset views, orientation clicks and agent views ease between camera poses over
+250 ms. Orbit, pan and wheel gestures interrupt transitions and respond directly;
+resize refits and opening a document snap immediately. Settings → General →
+Animate camera disables transitions, and macOS Reduce Motion always disables them.
+
 Selecting a preset does not change existing geometry or dirty the project.
 Selecting a swatch changes the brush. Its color is reused or appended to the
 project palette atomically with the next edit; a full palette fails without

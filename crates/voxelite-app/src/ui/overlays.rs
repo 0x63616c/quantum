@@ -63,6 +63,20 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) -> Option<OverlayOutcome> {
         let input = self.overlay_input(id, position, gesture);
+        // Editor adopts navigation internally. Probe its pure outcome so an orbit
+        // interrupts motion before that mutation, without changing the headless API.
+        if self.camera_anim.is_animating()
+            && let Ok(Some(outcome)) =
+                self.editor
+                    .overlay_outcome(id, self.viewport.display_camera(), input)
+            && matches!(outcome.navigation, Some(OverlayNavigation::Orbit(_)))
+        {
+            self.cancel_camera_animation();
+        }
+        let before = self.editor.camera;
+        // An orientation click during a transition keeps that transition's
+        // destination framing rather than freezing a mid-flight target and zoom.
+        let in_flight = self.camera_anim.target();
         match self
             .editor
             .interact_overlay(id, self.viewport.display_camera(), input)
@@ -85,10 +99,19 @@ impl EditorView {
                             self.request_navigation(cx);
                         }
                         Some(OverlayNavigation::Orient { view, .. }) => {
+                            let mut destination = self.editor.camera;
+                            if let Some(framing) = in_flight {
+                                destination = OrbitCamera::from_pose(voxelite_render::OrbitPose {
+                                    yaw: destination.yaw,
+                                    pitch: destination.pitch,
+                                    ..framing
+                                });
+                            }
+                            self.editor.camera = before;
                             self.agent.follow = false;
                             self.camera_fitted = false;
                             self.camera_view = view.as_deref().and_then(Op::from_command_id);
-                            self.request_render(cx);
+                            self.animate_camera_to(destination, cx);
                         }
                         _ => {}
                     }
