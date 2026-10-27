@@ -32,8 +32,9 @@ resolved to dark for repeatable output. Update this documented contract if the
 app defaults change; do not weaken the renderer to improve a benchmark.
 
 `Headless` and `Worker` call the same snapshot-sync helper. Camera-only frames
-skip occupancy/mesh synchronization. Production workers collect no stats and
-request no timestamp features. Only captures add `COPY_SRC` to the output
+skip occupancy/mesh synchronization. Production workers collect no stats unless the debug overlay is enabled.
+Supported timestamp capability is enabled at device creation, but query sets and
+readback buffers exist only while profiling is enabled. Only captures add `COPY_SRC` to the output
 texture. Profiling requests `TIMESTAMP_QUERY` when the adapter supports it;
 unsupported timestamps are absent metrics, never fabricated zeros. Query slots
 cover fallback shadow redraw, MSAA and resolve. GPU total is a first-to-last

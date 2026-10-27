@@ -1,5 +1,7 @@
 //! The only unsafe boundary: CoreVideo-owned IOSurface planes imported into wgpu.
+use super::diagnostics::FrameDiagnostics;
 use super::*;
+mod diagnostics;
 use crate::occupancy::OccupancyCache;
 use objc2_core_foundation::{CFBoolean, CFDictionary, CFNumber, CFRetained, CFType};
 use objc2_core_video::*;
@@ -33,7 +35,8 @@ struct Request {
     camera: Camera,
     size: [u32; 2],
     style: Style,
-    reply: futures_channel::oneshot::Sender<RenderResult<CompletedFrame>>,
+    diagnostics: bool,
+    reply: futures_channel::oneshot::Sender<RenderResult<(CompletedFrame, Option<FrameStats>)>>,
 }
 
 /// A single Metal owner thread. Dropping this handle disconnects its inbox; it
@@ -42,6 +45,8 @@ struct Request {
 pub struct Worker {
     requests: std::sync::mpsc::Sender<Request>,
     failure: Arc<Mutex<Option<String>>>,
+    diagnostics: bool,
+    last_stats: std::cell::Cell<Option<FrameStats>>,
 }
 impl Worker {
     /// Start the worker; adapter and pipeline initialization happens on it.
@@ -77,12 +82,6 @@ impl Worker {
                         };
                         let result = objc2::rc::autoreleasepool(|_| {
                             pollster::block_on(async {
-                                let updates = sync_snapshot(
-                                    &mut occupancy,
-                                    &mut mesh,
-                                    request.snapshot,
-                                    None,
-                                )?;
                                 if renderer.is_none() {
                                     let mut descriptor =
                                         wgpu::InstanceDescriptor::new_without_display_handle();
@@ -93,6 +92,13 @@ impl Worker {
                                     presenter = Some(Surfaces::new(&viewport.device)?);
                                     renderer = Some(viewport);
                                 }
+                                let mut diagnostics = FrameDiagnostics::new(request.diagnostics);
+                                let updates = sync_snapshot(
+                                    &mut occupancy,
+                                    &mut mesh,
+                                    request.snapshot,
+                                    diagnostics.sync.as_mut(),
+                                )?;
                                 let occupancy = occupancy
                                     .grid_mut()
                                     .ok_or_else(|| error("first frame needs a snapshot"))?;
@@ -100,6 +106,7 @@ impl Worker {
                                     return Err(error("snapshot bounds mismatch"));
                                 }
                                 let renderer = renderer.as_mut().unwrap();
+                                renderer.set_diagnostics(request.diagnostics);
                                 let frame = renderer
                                     .render(
                                         request.camera,
@@ -110,7 +117,7 @@ impl Worker {
                                         request.style,
                                     )
                                     .await?;
-                                presenter
+                                let frame = presenter
                                     .as_mut()
                                     .unwrap()
                                     .present(
@@ -120,15 +127,18 @@ impl Worker {
                                         frame.size,
                                         &frame.output,
                                         &renderer.errors,
+                                        &mut diagnostics,
                                     )
-                                    .await
+                                    .await?;
+                                let stats = diagnostics.finish(renderer)?;
+                                Ok((CompletedFrame(frame), stats))
                             })
                         });
                         let failed = result.is_err();
                         if let Err(error) = &result {
                             *sink.lock().unwrap() = Some(error.to_string());
                         }
-                        let _ = request.reply.send(result.map(CompletedFrame));
+                        let _ = request.reply.send(result);
                         if failed {
                             break;
                         }
@@ -143,7 +153,12 @@ impl Worker {
                 }
             })
             .map_err(error)?;
-        Ok(Self { requests, failure })
+        Ok(Self {
+            requests,
+            failure,
+            diagnostics: false,
+            last_stats: std::cell::Cell::new(None),
+        })
     }
 
     /// Read worker health without polling Metal on the UI thread.
@@ -172,13 +187,17 @@ impl Worker {
                 camera,
                 size,
                 style,
+                diagnostics: self.diagnostics,
                 reply,
             })
             .map_err(|_| error("Metal worker stopped"))?;
         result
             .await
             .map_err(|_| error("Metal worker stopped"))?
-            .map(|completed| completed.0)
+            .map(|(completed, stats)| {
+                self.last_stats.set(stats);
+                completed.0
+            })
     }
 }
 // A CVMetalTexture is an immutable CoreVideo/Metal ownership token here. Its
@@ -460,6 +479,7 @@ impl Surfaces {
             Ok(texture.create_view(&Default::default()))
         }
     }
+    #[allow(clippy::too_many_arguments)]
     pub(super) async fn present(
         &mut self,
         device: &wgpu::Device,
@@ -468,7 +488,9 @@ impl Surfaces {
         size: [u32; 2],
         source: &wgpu::TextureView,
         errors: &Arc<Mutex<Option<String>>>,
+        diagnostics: &mut FrameDiagnostics,
     ) -> RenderResult<Frame> {
+        diagnostics.presenting();
         // The source scene and luma are already 2x device dimensions; CbCr has
         // half their width/height. Replacing the pool does not invalidate leases
         // retained by older GPUI scenes or in-flight consumer command buffers.
@@ -517,6 +539,7 @@ impl Surfaces {
             pass.set_bind_group(0, &bind, &[]);
             pass.draw(0..3, 0..1);
         }
+        diagnostics.submitting();
         queue.submit([encoder.finish()]);
         let complete = Arc::new(AtomicBool::new(false));
         let signal = complete.clone();
@@ -571,6 +594,7 @@ mod tests {
                 frame.size,
                 &frame.output,
                 &viewport.errors,
+                &mut FrameDiagnostics::new(false),
             )
             .await
             .unwrap()
