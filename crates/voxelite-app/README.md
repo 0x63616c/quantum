@@ -9,9 +9,9 @@ palettes and layer lists scroll within bounded panels.
 
 The [polish round 2 review](../../docs/reviews/app-polish-2.md) records the
 current visual assessment, verification and both-theme captures. The sidebar
-switches between Session, Comments and History; the toolbar keeps Save within
-reach. Sharing is deferred to the hosted edition. Static medium and semibold
-Geist faces preserve the intended weight hierarchy on Linux.
+switches between Session, Comments and History. Save is available from the File
+menu and Cmd/Ctrl+S; the bottom-left cog opens Settings (also Cmd/Ctrl+,). Sharing
+is deferred to the hosted edition. Static medium and semibold Geist faces preserve the intended weight hierarchy on Linux.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -30,7 +30,9 @@ cargo test -p voxelite-app --no-default-features
 
 Keyboard shortcuts are generated from `src/actions.rs`, which also supplies the
 menus, command search and Settings → Shortcuts. Commands without a binding appear
-in the settings sheet with “—”. Regenerate this table after editing the registry:
+in the settings sheet with “—”. Shortcut fields show the fixed registry bindings;
+Reset is disabled while they are already at their built-in defaults. Regenerate
+this table after editing the registry:
 
 ```sh
 UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match_registry
@@ -134,6 +136,9 @@ view; every named view fits its own projected bounds. Unchanged clicks and color
 sampling do not trigger a new CPU render.
 Development profiles optimize the CPU renderer and core to keep iteration usable.
 
+Dirty projects show “Edited” next to the in-app title and the native macOS close
+button indicator. Clean projects have no status subtitle.
+
 Appearance lives in Settings, with Light, Dark and System choices. System follows
 live OS appearance changes. Preferences (appearance, grid, antialiasing,
 navigation hints and render statistics) persist in `settings.json` alongside the
@@ -142,8 +147,10 @@ can isolate desktop preferences. `--theme dark|light` overrides startup appearan
 for reproducible captures.
 
 Settings opens in a separate desktop window; repeated requests focus that window.
-The web edition uses the same view in an in-page modal. Sections are searchable,
-controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
+The web edition uses the same view in an in-page modal. The titlebar capsule
+toggles the inset sidebar and navigates section history. Search lists matching
+sections and individual settings; selecting a setting opens its parent section.
+Appearance offers System, Light and Dark window previews. Settings controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
 immediately. A failed save retains the previous preferences and reports the error.
 On macOS, the native Voxelite menu includes Settings, About, Services, application
 visibility and Quit. The native menus share the editor action registry; standard
@@ -229,7 +236,8 @@ The left rail exposes Place/Erase/Paint/Fill/Box/Picker with Lucide icons and
 highlights the active tool. Mirror X/Y/Z controls live below the tool group.
 Shift-X/Y/Z toggle mirrors; C starts a comment pin. Tooltips include shortcuts.
 Tools → Choose tool retains searchable selection without a toolbar dropdown.
-The toolbar provides Save and Settings actions. Plugin hosting remains an open v1 gate.
+The bottom-left cog opens Settings; Save is in the File menu and Cmd/Ctrl+S.
+Plugin hosting remains an open v1 gate.
 
 **Palette → Manage palettes** opens a persistent custom library. Create, rename,
 duplicate, delete, edit a six-digit hex color, choose a hue or drag RGB channels,
@@ -303,6 +311,7 @@ client drives the real stdio bridge and checks edit receipts. It also checks sel
 [the round 2 review](../../docs/reviews/app-polish-2.md) for validation and limits.
 
 UI action glyphs are bundled Lucide SVGs with upstream ISC/Feather MIT notices in
-`assets/icons/`. Save uses an icon and label. The viewport mouse/key legend has
+`assets/icons/`. Settings uses an always-visible bottom-left cog, with the optional
+keyboard guide to its right. The viewport mouse/key legend has
 a full hover tooltip. Text fields support selection contraction/reversal,
 clipboard, IME range conversion, pointer selection and horizontal caret scrolling.
