@@ -33,7 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
             ..RenderOptions::default()
         };
-        let png = voxelite_export::render_png(&project.document.content, &options)?;
+        let image = voxelite_render::render(&project.document.content, &options)?;
+        let png = voxelite_export::png_rgba(image.width, image.height, &image.rgba)?;
         std::fs::write(Path::new(&output).join(format!("{name}.png")), png)?;
         eprintln!("{name}: {:?}", start.elapsed());
     }

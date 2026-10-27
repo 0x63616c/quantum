@@ -1,41 +1,42 @@
 //! Persistent composite mesh. Edits invalidate their 16³ chunks and AO neighbors.
-use crate::{MAX_QUADS, Quad, RenderError, RenderResult};
+use crate::{RenderError, RenderResult};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use voxelite_core::{Pos, Snapshot};
+use voxelite_mesh::{MAX_QUADS, Quad};
 
 /// Vertex layout shared by the GPU backends. Color is linear RGB, AO is baked.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "gpu", derive(bytemuck::Pod, bytemuck::Zeroable))]
-pub struct MeshVertex {
+pub(crate) struct MeshVertex {
     /// World position.
-    pub position: [f32; 3],
+    pub(crate) position: [f32; 3],
     /// Outward unit normal.
-    pub normal: [f32; 3],
+    pub(crate) normal: [f32; 3],
     /// Linear RGB followed by ambient illumination.
-    pub color_ao: [f32; 4],
+    pub(crate) color_ao: [f32; 4],
 }
 /// One chunk's greedy mesh, with AO discontinuities retained.
 #[derive(Default, Debug)]
-pub struct ChunkMesh {
+pub(crate) struct ChunkMesh {
     /// Triangle list, six vertices per greedy quad.
-    pub vertices: Vec<MeshVertex>,
+    pub(crate) vertices: Vec<MeshVertex>,
     /// Exposed unit faces, before merging.
-    pub exposed_faces: usize,
+    pub(crate) exposed_faces: usize,
 }
 /// A cache owned by one viewport. Camera motion never calls `sync_validated`.
 #[derive(Default)]
-pub struct ChunkMeshes {
+pub(crate) struct ChunkMeshes {
     source: Option<Snapshot>,
     cells: HashMap<Pos, u16>,
     /// Deterministically ordered chunk geometry; empty chunks are absent.
-    pub meshes: BTreeMap<Pos, ChunkMesh>,
+    pub(crate) meshes: BTreeMap<Pos, ChunkMesh>,
 }
 impl ChunkMeshes {
     /// Synchronize a snapshot already validated by the document engine. Returns
     /// precisely the chunk buffers to replace/delete, including AO halo changes.
     /// Palette/layer-order/visibility changes invalidate the visible composite.
-    pub fn sync_validated(&mut self, snapshot: &Snapshot) -> RenderResult<Vec<Pos>> {
+    pub(crate) fn sync_validated(&mut self, snapshot: &Snapshot) -> RenderResult<Vec<Pos>> {
         let full = self.source.as_ref().is_none_or(|old| {
             old.palette != snapshot.palette
                 || old.bounds != snapshot.bounds

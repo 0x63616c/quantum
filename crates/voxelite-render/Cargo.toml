@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 voxelite-core.workspace = true
+voxelite-mesh.workspace = true
 
 # Unsafe FFI is confined to the audited Metal interop module.
 [lints.rust]
@@ -17,11 +18,11 @@ all = "warn"
 
 [dependencies.glam]
 workspace = true
-[dependencies.thiserror]
-workspace = true
 
 [dev-dependencies]
+voxelite-format.workspace = true
 proptest.workspace = true
+serde_json.workspace = true
 
 [features]
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:objc2-core-foundation", "dep:objc2-core-video", "dep:objc2-metal", "dep:futures-timer", "dep:objc2-io-surface", "dep:objc2", "dep:pollster", "dep:futures-channel"]

@@ -2,14 +2,14 @@
 use serde_json::json;
 use std::io::Write;
 use voxelite_core::Snapshot;
-use voxelite_render::{RenderError, greedy_mesh};
+use voxelite_mesh::{MeshError, greedy_mesh};
 
 /// Export validation, encoding or output failure.
 #[derive(Debug, thiserror::Error)]
 pub enum ExportError {
     /// Geometry generation failed.
     #[error(transparent)]
-    Geometry(#[from] RenderError),
+    Geometry(#[from] MeshError),
     /// PNG encoder error.
     #[error(transparent)]
     Png(#[from] png::EncodingError),
@@ -165,13 +165,4 @@ fn srgb_to_linear(value: u8) -> f32 {
     } else {
         ((c + 0.055) / 1.055).powf(2.4)
     }
-}
-
-/// Render through the shared CPU renderer, then encode its straight-alpha pixels.
-pub fn render_png(
-    snapshot: &Snapshot,
-    options: &voxelite_render::RenderOptions,
-) -> ExportResult<Vec<u8>> {
-    let image = voxelite_render::render(snapshot, options)?;
-    png_rgba(image.width, image.height, &image.rgba)
 }

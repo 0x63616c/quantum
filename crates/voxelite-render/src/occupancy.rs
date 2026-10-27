@@ -1,11 +1,13 @@
 //! Shared exact shadow grid. Bricks contain 8³ bits (16 contiguous u32 words).
 //! A second bitset marks nonempty bricks. The packed buffer is also the GPU ABI.
 use crate::RenderResult;
-use std::{collections::BTreeSet, ops::Range};
+use std::collections::BTreeSet;
+#[cfg(any(test, feature = "gpu"))]
+use std::ops::Range;
 use voxelite_core::{Pos, Region, Snapshot};
 
 /// Surface offset in voxel units, applied AFTER conversion to grid-local f32.
-pub const SHADOW_EPSILON: f32 = 0.001;
+pub(crate) const SHADOW_EPSILON: f32 = 0.001;
 const HEADER_WORDS: usize = 12;
 const BRICK_WORDS: usize = 16;
 const FAR: f32 = 1.0e30;
@@ -13,7 +15,7 @@ const FAR: f32 = 1.0e30;
 /// Visible occupancy, independent of palette and layer order. Coordinates passed
 /// to editing methods are world cells; ray origins are relative to `bounds.min`.
 #[derive(Clone, Debug)]
-pub struct Occupancy {
+pub(crate) struct Occupancy {
     bounds: Region,
     bricks: [usize; 3],
     data: Vec<u32>,
@@ -23,7 +25,7 @@ pub struct Occupancy {
 }
 impl Occupancy {
     /// Allocate an empty grid. Bounds must obey the document's 256³ limit.
-    pub fn new(bounds: Region) -> RenderResult<Self> {
+    pub(crate) fn new(bounds: Region) -> RenderResult<Self> {
         bounds.validate()?;
         let size = std::array::from_fn::<_, 3, _>(|a| (bounds.max[a] - bounds.min[a]) as usize);
         let bricks = size.map(|n| n.div_ceil(8));
@@ -46,7 +48,7 @@ impl Occupancy {
     }
     /// Build the occupancy of the composited visible layers. Overlaps are a
     /// boolean union: all nonzero palette slots are opaque in both renderers.
-    pub fn from_snapshot(snapshot: &Snapshot) -> RenderResult<Self> {
+    pub(crate) fn from_snapshot(snapshot: &Snapshot) -> RenderResult<Self> {
         let mut grid = Self::new(snapshot.bounds)?;
         for layer in snapshot.layers.iter().filter(|l| l.visible) {
             for (p, _) in layer.voxels.iter() {
@@ -56,12 +58,14 @@ impl Occupancy {
         Ok(grid)
     }
     /// Half-open world bounds.
-    pub fn bounds(&self) -> Region {
+    #[cfg(feature = "gpu")]
+    pub(crate) fn bounds(&self) -> Region {
         self.bounds
     }
     /// GPU storage ABI: min:i32x4, size:u32x4, brick dimensions + mask offset:
     /// u32x4, then brick-local occupancy words and the coarse brick bitset.
-    pub fn words(&self) -> &[u32] {
+    #[cfg(any(test, feature = "gpu"))]
+    pub(crate) fn words(&self) -> &[u32] {
         &self.data
     }
     fn address(&self, p: [i32; 3]) -> (usize, usize, u32) {
@@ -75,7 +79,8 @@ impl Occupancy {
         )
     }
     /// Whether a world cell is occupied; outside cells are empty.
-    pub fn contains(&self, p: Pos) -> bool {
+    #[cfg(test)]
+    pub(crate) fn contains(&self, p: Pos) -> bool {
         if !self.bounds.contains(p) {
             return false;
         }
@@ -84,7 +89,7 @@ impl Occupancy {
     }
     /// Apply one composited cell change. Returns whether occupancy changed.
     /// Recoloring or replacing an overlapped cell does not dirty the GPU buffer.
-    pub fn set(&mut self, p: Pos, occupied: bool) -> bool {
+    pub(crate) fn set(&mut self, p: Pos, occupied: bool) -> bool {
         if !self.bounds.contains(p) {
             return false;
         }
@@ -112,7 +117,8 @@ impl Occupancy {
         true
     }
     /// Refresh only cells in a changed region, clipping to the document bounds.
-    pub fn update_region(&mut self, snapshot: &Snapshot, region: Region) {
+    #[cfg(test)]
+    pub(crate) fn update_region(&mut self, snapshot: &Snapshot, region: Region) {
         let min = std::array::from_fn(|a| region.min[a].max(self.bounds.min[a]));
         let max = std::array::from_fn(|a| region.max[a].min(self.bounds.max[a]));
         for p in (Region { min, max }).cells() {
@@ -122,7 +128,8 @@ impl Occupancy {
     /// Coalesced dirty u32 ranges, including their coarse mask words. The first
     /// upload (and any resize) covers the header and entire allocation.
     /// Acknowledge only after the upload succeeds using `clear_dirty`.
-    pub fn dirty_ranges(&self) -> Vec<Range<usize>> {
+    #[cfg(any(test, feature = "gpu"))]
+    pub(crate) fn dirty_ranges(&self) -> Vec<Range<usize>> {
         if self.full_upload {
             return std::iter::once(0..self.data.len()).collect();
         }
@@ -145,7 +152,7 @@ impl Occupancy {
         merged
     }
     /// Acknowledge successful upload of all pending ranges.
-    pub fn clear_dirty(&mut self) {
+    pub(crate) fn clear_dirty(&mut self) {
         self.full_upload = false;
         self.dirty.clear();
     }
@@ -154,14 +161,14 @@ impl Occupancy {
 /// Persistent snapshot cache. Unchanged snapshots reuse the grid; the GPU worker
 /// can skip even this synchronization on camera-only frames.
 #[derive(Default)]
-pub struct OccupancyCache {
+pub(crate) struct OccupancyCache {
     source: Option<Snapshot>,
     grid: Option<Occupancy>,
 }
 impl OccupancyCache {
     /// Synchronize immutable chunks and layer membership. Only actual changed
     /// cells are sampled; shared chunks and hidden-layer edits are skipped.
-    pub fn sync(&mut self, snapshot: &Snapshot) -> RenderResult<()> {
+    pub(crate) fn sync(&mut self, snapshot: &Snapshot) -> RenderResult<()> {
         if self
             .grid
             .as_ref()
@@ -201,11 +208,11 @@ impl OccupancyCache {
         Ok(())
     }
     /// Current grid, absent until the first snapshot.
-    pub fn grid(&self) -> Option<&Occupancy> {
+    pub(crate) fn grid(&self) -> Option<&Occupancy> {
         self.grid.as_ref()
     }
     /// Current grid, for acknowledging uploads.
-    pub fn grid_mut(&mut self) -> Option<&mut Occupancy> {
+    pub(crate) fn grid_mut(&mut self) -> Option<&mut Occupancy> {
         self.grid.as_mut()
     }
 }
@@ -246,7 +253,7 @@ fn precedes(t: f32, axis: usize, end: f32, end_axis: usize) -> bool {
 /// finite and nonzero. Outside starts return false, as do rays exiting bounds.
 /// On an exact tie visit X, then Y, then Z, including zero-length touched cells.
 /// No slab entry is needed for outward-facing surface-to-sun rays.
-pub fn trace_shadow(occ: &Occupancy, origin: [f32; 3], dir: [f32; 3]) -> bool {
+pub(crate) fn trace_shadow(occ: &Occupancy, origin: [f32; 3], dir: [f32; 3]) -> bool {
     trace(occ, origin, dir, true)
 }
 fn trace(occ: &Occupancy, origin: [f32; 3], dir: [f32; 3], skip: bool) -> bool {

@@ -1,3 +1,7 @@
+//! Deterministic greedy geometry of immutable voxel snapshots.
+//!
+//! Exposes [`Quad`], [`Mesh`], [`greedy_mesh`], [`greedy_mesh_with_limit`],
+//! [`MAX_QUADS`], [`MeshError`] and [`MeshResult`]; no renderer or GPU is required.
 use std::collections::{BTreeMap, HashMap};
 use voxelite_core::{Pos, Snapshot};
 
@@ -5,7 +9,7 @@ use voxelite_core::{Pos, Snapshot};
 pub const MAX_QUADS: usize = 1_500_000;
 /// Geometry or image admission/validation failure.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
-pub enum RenderError {
+pub enum MeshError {
     /// Invalid source document.
     #[error(transparent)]
     Model(#[from] voxelite_core::Error),
@@ -17,7 +21,7 @@ pub enum RenderError {
     Invalid(String),
 }
 /// Result from geometry or rendering operations.
-pub type RenderResult<T> = Result<T, RenderError>;
+pub type MeshResult<T> = Result<T, MeshError>;
 /// One outward-facing greedy rectangle, using exact integer world coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Quad {
@@ -74,16 +78,14 @@ pub struct Mesh {
 }
 /// Mesh the highest visible cell at every coordinate. Internal faces are culled
 /// across chunk/layer boundaries; only identical stable colors merge.
-pub fn greedy_mesh(snapshot: &Snapshot) -> RenderResult<Mesh> {
+pub fn greedy_mesh(snapshot: &Snapshot) -> MeshResult<Mesh> {
     greedy_mesh_with_limit(snapshot, MAX_QUADS)
 }
 /// Mesh with an explicit cap, useful for host resource admission.
-pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> RenderResult<Mesh> {
+pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> MeshResult<Mesh> {
     snapshot.validate()?;
     if max_quads > MAX_QUADS {
-        return Err(RenderError::Invalid(
-            "quad budget exceeds hard limit".into(),
-        ));
+        return Err(MeshError::Invalid("quad budget exceeds hard limit".into()));
     }
     let cells: HashMap<_, _> = snapshot.composite().into_iter().collect();
     let mut mesh = Mesh {
@@ -139,7 +141,7 @@ pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> RenderRe
                             mask[(y + dy) * width + x..(y + dy) * width + x + w].fill(0);
                         }
                         if mesh.quads.len() == max_quads {
-                            return Err(RenderError::Limit(format!(
+                            return Err(MeshError::Limit(format!(
                                 "geometry exceeds {max_quads} greedy quads"
                             )));
                         }

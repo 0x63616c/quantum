@@ -1,10 +1,12 @@
-use crate::*;
+use crate::occupancy::{Occupancy, OccupancyCache, SHADOW_EPSILON, trace_shadow};
+use crate::{Camera, PresetView, Projection, RenderError, RenderResult};
 use glam::{DVec2, DVec3};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
 use voxelite_core::{Pos, Snapshot};
+use voxelite_mesh::greedy_mesh;
 
 /// Named automatic framing or a fully specified camera.
 #[derive(Clone, Copy, Debug, PartialEq)]
