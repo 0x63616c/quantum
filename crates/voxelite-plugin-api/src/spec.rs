@@ -21,6 +21,19 @@ pub struct Manifest {
     pub can_disable: bool,
 }
 
+/// Placement within the native application's menu, independent of its usual menu.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ApplicationMenuSection {
+    /// Application information and updates.
+    About,
+    /// Application preferences.
+    Settings,
+    /// Hide and show application windows.
+    Visibility,
+    /// Exit the application.
+    Quit,
+}
+
 /// Command metadata; execution is bound by the host using `id`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandContribution {
@@ -41,6 +54,11 @@ pub struct CommandContribution {
     pub icon: Option<String>,
     /// Optional host menu identifier or path.
     pub menu: Option<String>,
+    /// Shell presentation order across plugins; ties retain registration order.
+    /// This does not change the registry's declaration order.
+    pub order: i32,
+    /// Optional relocation into the native application's menu on Apple platforms.
+    pub application_section: Option<ApplicationMenuSection>,
     /// Whether the host may expose this command to agents.
     pub agent_visible: bool,
 }

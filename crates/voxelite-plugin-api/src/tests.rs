@@ -28,6 +28,8 @@ fn command(id: &str) -> CommandContribution {
         context: Some("Editor".into()),
         icon: Some("paint".into()),
         menu: Some("tools".into()),
+        order: 0,
+        application_section: None,
         agent_visible: true,
     }
 }
@@ -142,7 +144,7 @@ fn plugin_id_dns_length_limits_are_checked() {
 fn manifest_uses_independent_semver_versions_and_localization_keys() {
     let manifest = manifest();
     assert_eq!(manifest.version.to_string(), "2.3.4-beta.1+build.7");
-    assert_eq!(manifest.api_version, Version::new(0, 1, 0));
+    assert_eq!(manifest.api_version, Version::new(0, 2, 0));
     assert_ne!(manifest.version, manifest.api_version);
     assert_eq!(manifest.name_key, "plugins.tools.name");
     assert_eq!(manifest.description_key, "plugins.tools.description");

@@ -110,6 +110,8 @@ fn command(id: &str, key: Option<&str>, context: Option<&str>) -> Contribution {
         context: context.map(str::to_owned),
         icon: None,
         menu: None,
+        order: 0,
+        application_section: None,
         agent_visible: true,
     })
 }

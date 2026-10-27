@@ -5976,6 +5976,13 @@ dependencies = [
  "voxelite-export",
  "voxelite-format",
  "voxelite-mcp",
+ "voxelite-plugin-agent",
+ "voxelite-plugin-api",
+ "voxelite-plugin-comments",
+ "voxelite-plugin-host",
+ "voxelite-plugin-mirror",
+ "voxelite-plugin-palette",
+ "voxelite-plugin-tools",
  "voxelite-render",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -6041,12 +6048,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "voxelite-plugin-agent"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+]
+
+[[package]]
 name = "voxelite-plugin-api"
 version = "0.2.0"
 dependencies = [
  "semver",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "voxelite-plugin-comments"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
 ]
 
 [[package]]
@@ -6063,6 +6086,30 @@ version = "0.2.0"
 dependencies = [
  "thiserror 2.0.21",
  "voxelite-plugin-api",
+]
+
+[[package]]
+name = "voxelite-plugin-mirror"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+]
+
+[[package]]
+name = "voxelite-plugin-palette"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
+]
+
+[[package]]
+name = "voxelite-plugin-tools"
+version = "0.2.0"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-host",
 ]
 
 [[package]]
