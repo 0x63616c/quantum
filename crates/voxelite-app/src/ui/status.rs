@@ -59,21 +59,35 @@ impl EditorView {
         let selection = box_start
             .map(|start| selection_metrics(start, hover.unwrap_or(self.cursor)))
             .unwrap_or(([0; 3], 0));
-        // Full slots cover the entire i32 coordinate domain and inclusive 2^96
-        // box volume. Compact selection slots use '+' on overflow; tooltips keep
-        // the exact values. Only the window-size breakpoint changes geometry.
+        // Full selection slots cover inclusive dimensions and 2^96 box volume.
+        // Coordinates and compact selection slots use '+' on overflow; tooltips
+        // keep exact values. Only the window-size breakpoint changes geometry.
         let extent_cells = if compact { 3 } else { DIMENSION_CELLS };
         let count_cells = if compact { 6 } else { COUNT_CELLS };
         let slot =
             |label, value: String, cells| StatusSegment::new(label, Some(value), cells).build();
         let position = row()
+            .id("status-position")
             .flex_shrink_0()
-            .gap(px(space::XS))
+            .gap(px(space::MD))
+            .anchored_hint(
+                hover.map_or_else(
+                    || "No cursor position".to_owned(),
+                    |[x, y, z]| format!("Cursor position: {x}, {y}, {z}"),
+                ),
+                t,
+                TooltipSide::Above,
+            )
             .children((0..3).map(|axis| {
                 row()
                     .flex_shrink_0()
+                    .gap(px(space::XS))
                     .child(slot(["X", "Y", "Z"][axis], String::new(), 0).text_color(t.axis(axis)))
-                    .child(StatusSegment::new("", hover.map(|p| p[axis]), COORDINATE_CELLS).build())
+                    .child(
+                        StatusSegment::new("", hover.map(|p| p[axis]), COORDINATE_CELLS)
+                            .left_aligned()
+                            .build(),
+                    )
             }));
         let selection_row = row().id("status-selection").flex_shrink_0()
             .anchored_hint(format!("Box selection preview: {} × {} × {} · {} cells. No persistent selection remains after commit.", selection.0[0], selection.0[1], selection.0[2], selection.1), t, TooltipSide::Above)

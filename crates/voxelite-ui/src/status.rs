@@ -5,16 +5,35 @@ use crate::{
 };
 use gpui::{prelude::*, *};
 
-/// One sign and ten digits, covering every i32 coordinate without grouping.
-pub const COORDINATE_CELLS: usize = 11;
+/// One sign and four digits for typical cursor coordinates. Larger values end
+/// in `+`; the position tooltip retains the exact i32 coordinates.
+pub const COORDINATE_CELLS: usize = 5;
 /// Ten digits cover an inclusive dimension spanning the entire i32 domain.
 pub const DIMENSION_CELLS: usize = 10;
 /// Twenty-nine digits cover the largest inclusive box: 2^96 cells.
 pub const COUNT_CELLS: usize = 29;
 
+/// Which end of a fixed-width slot receives padding.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SlotAlignment {
+    /// Keep the value next to its leading label.
+    Left,
+    /// Align trailing digits, as used by the other telemetry segments.
+    #[default]
+    Right,
+}
+
 /// Right-align a value in exactly `cells` Unicode scalar cells. Overflow ends in
 /// `+`, keeping the most significant prefix. Missing values use an em dash.
 pub fn fixed_slot(value: Option<impl ToString>, cells: usize) -> String {
+    fixed_slot_aligned(value, cells, SlotAlignment::Right)
+}
+/// Pad on the requested side; overflow always keeps a prefix and trailing `+`.
+pub fn fixed_slot_aligned(
+    value: Option<impl ToString>,
+    cells: usize,
+    alignment: SlotAlignment,
+) -> String {
     if cells == 0 {
         return String::new();
     }
@@ -23,12 +42,16 @@ pub fn fixed_slot(value: Option<impl ToString>, cells: usize) -> String {
     if len > cells {
         value.chars().take(cells - 1).chain(['+']).collect()
     } else {
-        format!("{}{value}", "\u{00a0}".repeat(cells - len))
+        let padding = "\u{00a0}".repeat(cells - len);
+        match alignment {
+            SlotAlignment::Left => format!("{value}{padding}"),
+            SlotAlignment::Right => format!("{padding}{value}"),
+        }
     }
 }
-/// Exact coordinate string (no thousands grouping).
+/// Left-aligned coordinate slot (no grouping), with `+` on overflow.
 pub fn coordinate_slot(value: Option<i32>) -> String {
-    fixed_slot(value, COORDINATE_CELLS)
+    fixed_slot_aligned(value, COORDINATE_CELLS, SlotAlignment::Left)
 }
 /// Logical width for a Geist Mono slot, independent of content.
 pub fn slot_width(cells: usize) -> f32 {
@@ -57,6 +80,7 @@ pub struct StatusSegment {
     label: SharedString,
     value: String,
     cells: usize,
+    alignment: SlotAlignment,
     glyph: Option<(SharedString, Hsla)>,
 }
 impl StatusSegment {
@@ -64,10 +88,16 @@ impl StatusSegment {
     pub fn new(label: impl Into<SharedString>, value: Option<impl ToString>, cells: usize) -> Self {
         Self {
             label: label.into(),
-            value: fixed_slot(value, cells),
+            value: value.map_or_else(|| "—".into(), |v| v.to_string()),
             cells,
+            alignment: SlotAlignment::Right,
             glyph: None,
         }
+    }
+    /// Keep the value at the leading edge of its fixed-width slot.
+    pub fn left_aligned(mut self) -> Self {
+        self.alignment = SlotAlignment::Left;
+        self
     }
     /// Add a fixed-size leading icon.
     pub fn icon(mut self, glyph: impl Into<SharedString>, color: impl Into<Hsla>) -> Self {
@@ -103,14 +133,22 @@ impl StatusSegment {
                     .min_w(px(slot_width(self.cells)))
                     .flex_shrink_0()
                     .overflow_hidden()
-                    .text_right()
-                    .child(self.value),
+                    .when(self.alignment == SlotAlignment::Right, |d| d.text_right())
+                    .when(self.alignment == SlotAlignment::Left, |d| d.text_left())
+                    .child(fixed_slot_aligned(
+                        Some(self.value),
+                        self.cells,
+                        self.alignment,
+                    )),
             )
     }
 }
 #[cfg(test)]
 mod tests {
-    use super::{COORDINATE_CELLS, COUNT_CELLS, DIMENSION_CELLS, coordinate_slot, fixed_slot};
+    use super::{
+        COORDINATE_CELLS, COUNT_CELLS, DIMENSION_CELLS, SlotAlignment, coordinate_slot, fixed_slot,
+        fixed_slot_aligned,
+    };
     #[test]
     fn coordinates_keep_the_same_cells_for_sign_extremes_and_placeholders() {
         for value in (i32::MIN..i32::MIN + 4096)
@@ -121,9 +159,32 @@ mod tests {
                 coordinate_slot(Some(value)).chars().count(),
                 COORDINATE_CELLS
             );
-            assert_eq!(coordinate_slot(Some(value)).trim(), value.to_string());
+            if value.to_string().len() <= COORDINATE_CELLS {
+                assert_eq!(coordinate_slot(Some(value)).trim(), value.to_string());
+            } else {
+                assert!(coordinate_slot(Some(value)).ends_with('+'));
+            }
         }
         assert_eq!(coordinate_slot(None).chars().count(), COORDINATE_CELLS);
+    }
+    #[test]
+    fn alignment_preserves_padding_and_overflow_prefixes() {
+        assert_eq!(
+            coordinate_slot(Some(4)),
+            "4\u{00a0}\u{00a0}\u{00a0}\u{00a0}"
+        );
+        assert_eq!(coordinate_slot(Some(-20)), "-20\u{00a0}\u{00a0}");
+        assert_eq!(coordinate_slot(None), "—\u{00a0}\u{00a0}\u{00a0}\u{00a0}");
+        assert_eq!(coordinate_slot(Some(-9999)), "-9999");
+        assert_eq!(coordinate_slot(Some(i32::MIN)), "-214+");
+        assert_eq!(coordinate_slot(Some(i32::MAX)), "2147+");
+        assert_eq!(fixed_slot(Some(4), 5), "\u{00a0}\u{00a0}\u{00a0}\u{00a0}4");
+        for alignment in [SlotAlignment::Left, SlotAlignment::Right] {
+            assert_eq!(fixed_slot_aligned(Some("猫猫猫"), 2, alignment), "猫+");
+            assert_eq!(fixed_slot_aligned(Some(-10000), 5, alignment), "-100+");
+            assert_eq!(fixed_slot_aligned(Some(42), 1, alignment), "+");
+            assert_eq!(fixed_slot_aligned(Some(42), 0, alignment), "");
+        }
     }
     #[test]
     fn box_extremes_fit_and_overflow_preserves_width_including_unicode() {

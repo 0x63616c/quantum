@@ -4,7 +4,6 @@ use super::*;
 pub(super) struct Agent {
     pub events: Vec<()>,
     pub open: bool,
-    pub clients: usize,
     pub capture: Option<CapturedViews>,
     pub capture_generation: u64,
     pub capturing: bool,

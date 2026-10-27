@@ -2,11 +2,38 @@
 use super::*;
 use voxelite_app::history::{HISTORY_STEP_INTERVAL, PreviewSource, display_label};
 use voxelite_core::{Origin, Uuid};
+
+const RECENT_STEPS: usize = 5;
+
+/// Chronological indices to render; callers reverse them for newest-first rows.
+fn visible_steps(count: usize, expanded: bool) -> std::ops::Range<usize> {
+    (if expanded {
+        0
+    } else {
+        count.saturating_sub(RECENT_STEPS)
+    })..count
+}
+
+/// Selection changes reveal older steps and never automatically collapse them.
+fn expanded_for_selection(count: usize, expanded: bool, selected: usize) -> bool {
+    expanded || (selected < count && !visible_steps(count, false).contains(&selected))
+}
+
+/// Map a chronological step to a direct scroll child, skipping the toggle at 5.
+fn step_child_index(count: usize, expanded: bool, selected: usize) -> Option<usize> {
+    if !visible_steps(count, expanded).contains(&selected) {
+        return None;
+    }
+    let reverse = count - selected - 1;
+    Some(reverse + usize::from(reverse >= RECENT_STEPS))
+}
+
 pub(super) struct Timeline {
     pub name: Entity<crate::text_field::TextField>,
     pub dragging: bool,
     pub scroll: ScrollHandle,
     pub playback_task: Option<Task<()>>,
+    pub expanded: bool,
 }
 impl Timeline {
     pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
@@ -26,6 +53,14 @@ impl Timeline {
             dragging: false,
             scroll: ScrollHandle::new(),
             playback_task: None,
+            expanded: false,
+        }
+    }
+
+    fn reveal_step(&mut self, count: usize, selected: usize) {
+        self.expanded = expanded_for_selection(count, self.expanded, selected);
+        if let Some(child) = step_child_index(count, self.expanded, selected) {
+            self.scroll.scroll_to_item(child);
         }
     }
 }
@@ -90,8 +125,9 @@ impl EditorView {
     }
 
     fn refresh_history_playback(&mut self, cx: &mut Context<Self>) {
-        self.timeline.scroll.scroll_to_item(
-            self.editor.timeline_entries().count() - self.editor.timeline_index() - 1,
+        self.timeline.reveal_step(
+            self.editor.timeline_entries().count(),
+            self.editor.timeline_index(),
         );
         self.status = "History preview · read-only".into();
         self.error = false;
@@ -114,13 +150,13 @@ impl EditorView {
                 p.source == PreviewSource::History(*id)
                     && p.revision == self.editor.engine.revision()
             }) {
+                // A manually collapsed list must also reveal an unchanged selection.
+                self.timeline.reveal_step(ids.len(), index);
                 return;
             }
             let r = self.editor.preview_history(*id);
             if r.is_ok() {
-                self.timeline
-                    .scroll
-                    .scroll_to_item(ids.len().saturating_sub(index + 1));
+                self.timeline.reveal_step(ids.len(), index);
                 self.refresh_preview(cx);
             }
             self.report(r, "History preview · read-only", cx);
@@ -140,6 +176,29 @@ impl EditorView {
             .collect();
         let selected = self.editor.timeline_index();
         let count = steps.len();
+        let recent = visible_steps(count, false);
+        let earlier = visible_steps(count, self.timeline.expanded).start..recent.start;
+        let event_row = |i: usize| {
+            let (id, label, origin) = &steps[i];
+            self.control(
+                ("timeline-event", i),
+                if *origin == Origin::Agent {
+                    "diamond"
+                } else {
+                    "circle"
+                },
+                display_label(label).to_string(),
+                cx,
+                move |this, _, cx| this.scrub(i, cx),
+            )
+            .w_full()
+            .border_0()
+            .mb(px(3.0))
+            .when(
+                p.is_some_and(|p| p.source == PreviewSource::History(*id)),
+                |d| d.bg(t.selected()).text_color(t.accent()),
+            )
+        };
         let playing = self.editor.history_playing();
         let playback_label = if playing {
             "Pause history"
@@ -334,32 +393,33 @@ impl EditorView {
                     .flex_1()
                     .min_h(px(70.0))
                     .overflow_y_scroll()
-                    .children(
-                        steps
-                            .iter()
-                            .enumerate()
-                            .rev()
-                            .map(|(i, (id, label, origin))| {
-                                self.control(
-                                    ("timeline-event", i),
-                                    if *origin == Origin::Agent {
-                                        "diamond"
-                                    } else {
-                                        "circle"
-                                    },
-                                    display_label(label).to_string(),
-                                    cx,
-                                    move |this, _, cx| this.scrub(i, cx),
-                                )
-                                .w_full()
-                                .border_0()
-                                .mb(px(3.0))
-                                .when(
-                                    p.is_some_and(|p| p.source == PreviewSource::History(*id)),
-                                    |d| d.bg(t.selected()).text_color(t.accent()),
-                                )
-                            }),
-                    ),
+                    .children(recent.rev().map(event_row))
+                    .when(count > RECENT_STEPS, |d| {
+                        let expanded = self.timeline.expanded;
+                        let label = if expanded {
+                            "Hide earlier changes".to_owned()
+                        } else {
+                            format!("Show {} earlier changes", count - RECENT_STEPS)
+                        };
+                        d.child(
+                            self.control(
+                                "timeline-earlier-toggle",
+                                if expanded { "chevron" } else { "chevron-right" },
+                                label.clone(),
+                                cx,
+                                |this, _, cx| {
+                                    this.timeline.expanded = !this.timeline.expanded;
+                                    cx.notify();
+                                },
+                            )
+                            .aria_label(label)
+                            .aria_expanded(expanded)
+                            .w_full()
+                            .border_0()
+                            .mb(px(3.0)),
+                        )
+                    })
+                    .children(earlier.rev().map(event_row)),
             )
             .child(
                 row()
@@ -428,5 +488,69 @@ impl EditorView {
                         )),
                 )
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RECENT_STEPS, expanded_for_selection, step_child_index, visible_steps};
+
+    #[test]
+    fn recent_window_handles_empty_short_and_long_timelines() {
+        for count in 0..=RECENT_STEPS {
+            assert_eq!(visible_steps(count, false), 0..count);
+            assert_eq!(visible_steps(count, true), 0..count);
+        }
+        assert_eq!(
+            visible_steps(6, false).rev().collect::<Vec<_>>(),
+            [5, 4, 3, 2, 1]
+        );
+        assert_eq!(
+            visible_steps(9, false).rev().collect::<Vec<_>>(),
+            [8, 7, 6, 5, 4]
+        );
+        assert_eq!(visible_steps(9, true), 0..9);
+    }
+
+    #[test]
+    fn scroll_indices_match_rows_on_both_sides_of_toggle() {
+        for count in 0..20 {
+            for expanded in [false, true] {
+                let recent = visible_steps(count, false);
+                let earlier = visible_steps(count, expanded).start..recent.start;
+                let mut children: Vec<_> = recent.rev().map(Some).collect();
+                if count > RECENT_STEPS {
+                    assert_eq!(children.len(), RECENT_STEPS);
+                    children.push(None); // Toggle is a direct child at index 5.
+                }
+                children.extend(earlier.rev().map(Some));
+                for selected in 0..=count {
+                    let expected = children.iter().position(|child| *child == Some(selected));
+                    assert_eq!(step_child_index(count, expanded, selected), expected);
+                }
+            }
+        }
+        assert_eq!(step_child_index(9, true, 4), Some(4));
+        assert_eq!(step_child_index(9, true, 3), Some(6));
+        assert_eq!(step_child_index(9, true, 0), Some(9));
+        assert_eq!(step_child_index(9, false, 3), None);
+    }
+
+    #[test]
+    fn selection_reveals_older_steps_and_stays_expanded_when_moving_forward() {
+        assert!(!expanded_for_selection(0, false, 0));
+        assert!(!expanded_for_selection(5, false, 0));
+        assert!(!expanded_for_selection(9, false, 4));
+        assert!(expanded_for_selection(9, false, 3));
+        assert!(expanded_for_selection(9, false, 0));
+        assert!(expanded_for_selection(9, true, 8));
+        assert!(!expanded_for_selection(9, false, 9));
+        // Playback from oldest to newest keeps every selected row reachable.
+        let mut expanded = false;
+        for selected in 0..9 {
+            expanded = expanded_for_selection(9, expanded, selected);
+            assert!(expanded);
+            assert!(step_child_index(9, expanded, selected).is_some());
+        }
     }
 }
