@@ -2,12 +2,12 @@ use super::*;
 use std::time::{Duration, Instant};
 use voxelite_plugin_api::{ExportCallback, ExportCx, ExportImage, ExportResult, Snapshot};
 
-/// Read-only adapter for a captured snapshot and host-selected render options.
+/// Read-only adapter for a captured snapshot and host-selected renderer.
 pub struct SnapshotExport<'a> {
     /// Immutable document content; no engine or history is supplied.
     pub snapshot: &'a Snapshot,
-    /// The only view the exporter may request.
-    pub options: &'a voxelite_render::RenderOptions,
+    /// Render the only view the exporter may request, using the captured snapshot.
+    pub render_view: &'a dyn Fn(&Snapshot) -> ExportResult<ExportImage>,
 }
 
 impl ExportCx for SnapshotExport<'_> {
@@ -15,12 +15,7 @@ impl ExportCx for SnapshotExport<'_> {
         self.snapshot
     }
     fn render_view(&self) -> ExportResult<ExportImage> {
-        let image = voxelite_render::render(self.snapshot, self.options)?;
-        Ok(ExportImage {
-            width: image.width,
-            height: image.height,
-            rgba: image.rgba,
-        })
+        (self.render_view)(self.snapshot)
     }
 }
 

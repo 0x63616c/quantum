@@ -11,7 +11,7 @@ voxelite-core.workspace = true
 [lints]
 workspace = true
 
-[dependencies.voxelite-render]
+[dependencies.voxelite-mesh]
 workspace = true
 [dependencies.serde_json]
 workspace = true
@@ -21,6 +21,7 @@ workspace = true
 workspace = true
 
 [dev-dependencies]
+voxelite-render.workspace = true
 gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
 proptest.workspace = true
 
