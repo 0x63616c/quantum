@@ -1,11 +1,12 @@
 //! Portable owner of the real viewport, stopping at the sRGB texture consumed by NV12.
+use super::diagnostics::FrameDiagnostics;
 use super::*;
 use voxelite_core::Region;
 
 /// Adapter/device options; no quality controls are exposed.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HeadlessOptions {
-    /// Request TIMESTAMP_QUERY only if supported. CPU stats are always collected.
+    /// Collect GPU timestamps if supported. CPU stats are initially enabled.
     pub profile: bool,
     /// None selects Metal on macOS, Vulkan elsewhere.
     pub backends: Option<Backends>,
@@ -24,7 +25,7 @@ pub struct AdapterInfo {
 }
 /// A completed frame at production quality.
 pub struct HeadlessFrame {
-    /// Timings and resident resource counts.
+    /// Timings and resident resource counts; default values when diagnostics are disabled.
     pub stats: FrameStats,
     /// Tight RGBA8 sRGB bytes when capture was requested (no NV12 conversion).
     pub rgba: Option<Vec<u8>>,
@@ -73,6 +74,17 @@ impl Headless {
     pub fn adapter_info(&self) -> &AdapterInfo {
         &self.adapter
     }
+    /// Enable CPU/resource measurements and supported GPU timestamps, or release
+    /// all diagnostic resources. Does not change render quality or scene caches.
+    pub fn set_diagnostics(&mut self, enabled: bool) {
+        self.viewport.set_diagnostics(enabled);
+    }
+    /// Last completed measurements, absent when diagnostics are disabled.
+    pub fn last_stats(&self) -> Option<FrameStats> {
+        self.viewport
+            .stats
+            .filter(|stats| stats.target_size != [0, 0])
+    }
     /// Drop scene caches and GPU scene resources, retaining the device/pipelines.
     /// The next frame is cold, including targets and any shadow fallback decision.
     pub fn reset_scene(&mut self) -> RenderResult<()> {
@@ -87,6 +99,9 @@ impl Headless {
         self.viewport.occupancy_bind = None;
         self.viewport.fallback = None;
         self.viewport.targets = None;
+        if let Some(stats) = &mut self.viewport.stats {
+            *stats = FrameStats::default();
+        }
         self.viewport.check_error()
     }
     /// Sync on content changes, encode, submit and wait for GPU completion.
@@ -101,13 +116,12 @@ impl Headless {
         style: Style,
         capture: bool,
     ) -> RenderResult<HeadlessFrame> {
-        let started = Instant::now();
-        let mut sync = FrameStats::default();
+        let mut diagnostics = FrameDiagnostics::new(self.viewport.stats.is_some());
         let updates = sync_snapshot(
             &mut self.occupancy,
             &mut self.mesh,
             snapshot,
-            Some(&mut sync),
+            diagnostics.sync.as_mut(),
         )?;
         let occupancy = self
             .occupancy
@@ -148,7 +162,7 @@ impl Headless {
             );
             (buffer, row)
         });
-        let submitted = Instant::now();
+        diagnostics.submitting();
         let submission = self.viewport.queue.submit([frame.encoder.finish()]);
         self.viewport
             .device
@@ -157,19 +171,7 @@ impl Headless {
                 timeout: None,
             })
             .map_err(error)?;
-        let mut stats = self.viewport.stats.unwrap();
-        stats.submit_complete_ms = submitted.elapsed().as_secs_f64() * 1000.0;
-        stats.wall_ms = started.elapsed().as_secs_f64() * 1000.0;
-        self.viewport.check_error()?;
-        stats.occupancy_sync_ms = sync.occupancy_sync_ms;
-        stats.mesh_sync_ms = sync.mesh_sync_ms;
-        if let Some(timer) = &self.viewport.timer {
-            stats.gpu = timer.read(&self.viewport.device)?;
-        }
-        #[cfg(target_os = "macos")]
-        {
-            stats.device_allocated_bytes = mac::device_allocated_bytes(&self.viewport.device);
-        }
+        let stats = diagnostics.finish(&mut self.viewport)?.unwrap_or_default();
         let rgba = readback
             .map(|(buffer, row)| {
                 let data = stats::read_buffer(&self.viewport.device, &buffer)?;
@@ -218,3 +220,7 @@ mod tests {
         assert_eq!(unpad_rows(&[7; 256], [64, 1], 256).unwrap(), vec![7; 256]);
     }
 }
+
+#[cfg(test)]
+#[path = "diagnostics_tests.rs"]
+mod diagnostics_tests;

@@ -176,3 +176,42 @@ fn single_voxel_recolor_exceeds_default_visual_tolerance() {
         "a single visible voxel recolor must FAIL default visual tolerance"
     );
 }
+
+#[test]
+#[ignore = "renders autumn with diagnostics on and off on a real adapter"]
+fn diagnostics_preserve_autumn_pixels() {
+    use voxelite_bench::{paths, scenes, visual};
+    let snapshot = scenes::load("autumn").unwrap();
+    let camera = paths::fit(&snapshot, visual::DISPLAY).unwrap();
+    let mut gpu = block_on(Headless::new(HeadlessOptions::default())).unwrap();
+    gpu.set_diagnostics(false);
+    let reference = block_on(gpu.render(
+        Some(snapshot.clone()),
+        snapshot.bounds,
+        camera,
+        visual::DISPLAY,
+        style(snapshot.bounds),
+        true,
+    ))
+    .unwrap();
+    for enabled in [true, false, true] {
+        gpu.set_diagnostics(enabled);
+        let frame = block_on(gpu.render(
+            None,
+            snapshot.bounds,
+            camera,
+            visual::DISPLAY,
+            style(snapshot.bounds),
+            true,
+        ))
+        .unwrap();
+        let diff = visual::diff(
+            reference.rgba.as_ref().unwrap(),
+            frame.rgba.as_ref().unwrap(),
+            0,
+        )
+        .unwrap();
+        assert_eq!(diff.max_delta, 0);
+        assert_eq!(gpu.last_stats().is_some(), enabled);
+    }
+}
