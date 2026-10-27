@@ -157,28 +157,28 @@ shortcut sheet
   HideOthers | Voxelite | ⌥⌘H
   ShowAll | Voxelite | 
 bindings
-  New | super-n | Editor
-  Open | super-o | Editor
-  Save | super-s | Editor
-  SaveAs | super-shift-s | Editor
+  New | super-n | Editor && !SharedTextInput
+  Open | super-o | Editor && !SharedTextInput
+  Save | super-s | Editor && !SharedTextInput
+  SaveAs | super-shift-s | Editor && !SharedTextInput
   Quit | super-q | global
-  Undo | super-z | Editor
-  Redo | super-shift-z | Editor
-  Commands | super-k | Editor
+  Undo | super-z | Editor && !SharedTextInput
+  Redo | super-shift-z | Editor && !SharedTextInput
+  Commands | super-k | Editor && !SharedTextInput
   Settings | super-, | global
-  Frame | f | Editor
+  Frame | f | Editor && !SharedTextInput
   FullScreen | ctrl-super-f | global
-  Place | b | Editor
-  Erase | e | Editor
-  Paint | p | Editor
-  Fill | g | Editor
-  Box | u | Editor
-  Picker | i | Editor
-  MirrorX | shift-x | Editor
-  MirrorY | shift-y | Editor
-  MirrorZ | shift-z | Editor
-  Comment | c | Editor
-  Minimize | super-m | Editor
+  Place | b | Editor && !SharedTextInput
+  Erase | e | Editor && !SharedTextInput
+  Paint | p | Editor && !SharedTextInput
+  Fill | g | Editor && !SharedTextInput
+  Box | u | Editor && !SharedTextInput
+  Picker | i | Editor && !SharedTextInput
+  MirrorX | shift-x | Editor && !SharedTextInput
+  MirrorY | shift-y | Editor && !SharedTextInput
+  MirrorZ | shift-z | Editor && !SharedTextInput
+  Comment | c | Editor && !SharedTextInput
+  Minimize | super-m | Editor && !SharedTextInput
   Hide | super-h | global
   HideOthers | alt-super-h | global
   Clipboard::Cut | super-x | TextField
@@ -326,28 +326,28 @@ shortcut sheet
   Help | Help | 
   About | Help | 
 bindings
-  New | ctrl-n | Editor
-  Open | ctrl-o | Editor
-  Save | ctrl-s | Editor
-  SaveAs | ctrl-shift-s | Editor
+  New | ctrl-n | Editor && !SharedTextInput
+  Open | ctrl-o | Editor && !SharedTextInput
+  Save | ctrl-s | Editor && !SharedTextInput
+  SaveAs | ctrl-shift-s | Editor && !SharedTextInput
   Quit | ctrl-q | global
-  Undo | ctrl-z | Editor
-  Redo | ctrl-shift-z | Editor
-  Commands | ctrl-k | Editor
+  Undo | ctrl-z | Editor && !SharedTextInput
+  Redo | ctrl-shift-z | Editor && !SharedTextInput
+  Commands | ctrl-k | Editor && !SharedTextInput
   Settings | ctrl-, | global
-  Frame | f | Editor
+  Frame | f | Editor && !SharedTextInput
   FullScreen | f11 | global
-  Place | b | Editor
-  Erase | e | Editor
-  Paint | p | Editor
-  Fill | g | Editor
-  Box | u | Editor
-  Picker | i | Editor
-  MirrorX | shift-x | Editor
-  MirrorY | shift-y | Editor
-  MirrorZ | shift-z | Editor
-  Comment | c | Editor
-  Minimize | ctrl-m | Editor
+  Place | b | Editor && !SharedTextInput
+  Erase | e | Editor && !SharedTextInput
+  Paint | p | Editor && !SharedTextInput
+  Fill | g | Editor && !SharedTextInput
+  Box | u | Editor && !SharedTextInput
+  Picker | i | Editor && !SharedTextInput
+  MirrorX | shift-x | Editor && !SharedTextInput
+  MirrorY | shift-y | Editor && !SharedTextInput
+  MirrorZ | shift-z | Editor && !SharedTextInput
+  Comment | c | Editor && !SharedTextInput
+  Minimize | ctrl-m | Editor && !SharedTextInput
   Clipboard::Cut | ctrl-x | TextField
   Clipboard::Copy | ctrl-c | TextField
   Clipboard::Paste | ctrl-v | TextField

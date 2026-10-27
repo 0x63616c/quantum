@@ -59,17 +59,6 @@ impl ShortcutPlatform {
             }
     }
 
-    /// Option produces text on Apple; AltGr produces text on Windows/Linux.
-    pub fn allows_text(self, modifiers: Modifiers) -> bool {
-        if modifiers.platform || modifiers.function {
-            return false;
-        }
-        match self {
-            Self::Apple => !modifiers.control,
-            Self::WindowsLinux => modifiers.control == modifiers.alt,
-        }
-    }
-
     #[cfg(any(test, target_family = "wasm"))]
     fn from_browser(platform_data: &str, platform: &str, user_agent: &str) -> Self {
         // Prefer explicit platform information over the legacy UA, which may
@@ -487,34 +476,6 @@ mod tests {
             );
             assert_eq!(
                 ShortcutPlatform::WindowsLinux.is_primary(modifiers),
-                other,
-                "{binding}"
-            );
-        }
-    }
-
-    #[test]
-    fn text_entry_preserves_option_and_altgr_without_inserting_commands() {
-        for (binding, apple, other) in [
-            ("e", true, true),
-            ("shift-e", true, true),
-            ("alt-e", true, false),
-            ("alt-shift-e", true, false),
-            ("ctrl-alt-e", false, true),
-            ("ctrl-alt-shift-e", false, true),
-            ("cmd-e", false, false),
-            ("ctrl-e", false, false),
-            ("cmd-ctrl-alt-e", false, false),
-            ("fn-e", false, false),
-        ] {
-            let modifiers = Keystroke::parse(binding).unwrap().modifiers;
-            assert_eq!(
-                ShortcutPlatform::Apple.allows_text(modifiers),
-                apple,
-                "{binding}"
-            );
-            assert_eq!(
-                ShortcutPlatform::WindowsLinux.allows_text(modifiers),
                 other,
                 "{binding}"
             );

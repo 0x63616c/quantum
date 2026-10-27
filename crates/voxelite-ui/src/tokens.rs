@@ -77,6 +77,10 @@ impl Theme {
         })
         .into()
     }
+    /// Selected text background, distinct from a selected control surface.
+    pub fn text_selection(self) -> Hsla {
+        self.accent().opacity(0.25)
+    }
     /// Destructive foreground.
     pub fn danger(self) -> Hsla {
         rgb(if self == Self::Dark {

@@ -8,5 +8,7 @@ license.workspace = true
 [dependencies]
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false }
 
+unicode-segmentation = "=1.13.3"
+
 [lints]
 workspace = true
