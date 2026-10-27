@@ -104,8 +104,6 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
     let step = vec3<i32>(sign(dir));
     for (var iteration = 0u; iteration < 768u; iteration++) {
         if any(cell < vec3(0)) || any(cell >= size) { return false; }
-        // Monotonic per axis: past the occupied box in the travel direction means no hit ahead.
-        if any((step >= vec3(0) & cell > amax) | (step <= vec3(0) & cell < amin)) { return false; }
         let p = vec3<u32>(cell);
         let b = p / 8u;
         let brick = b.x + occupancy.bricks.x * (b.y + occupancy.bricks.y * b.z);
@@ -115,6 +113,9 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
         // Test the brick first: dense regions pay only the original brick-mask read.
         // The coarse level is consulted only once the brick is known to be empty.
         if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
+            // Monotonic per axis: past the occupied box in the travel direction means no hit
+            // ahead. Checked only in empty bricks so dense regions do not pay for it.
+            if any((step >= vec3(0) & cell > amax) | (step <= vec3(0) & cell < amin)) { return false; }
             let s = b / 4u;
             let sup = s.x + supers.x * (s.y + supers.y * s.z);
             let super_mask = occupancy.size.w + sup / 32u;

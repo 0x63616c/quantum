@@ -64,13 +64,6 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
         if cell.cmplt(IVec3::ZERO).any() || cell.cmpge(size).any() {
             return false;
         }
-        let mut past = false;
-        for a in 0..3 {
-            past |= (step[a] >= 0 && cell[a] > amax[a]) || (step[a] <= 0 && cell[a] < amin[a]);
-        }
-        if past {
-            return false;
-        }
         let p = cell.as_uvec3();
         let b = p / 8;
         let brick = b.x + bricks.x * (b.y + bricks.y * b.z);
@@ -78,6 +71,13 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
         let word = brick * 16 + bit / 32;
         let mask = data[11] + brick / 32;
         if words[mask as usize] & (1 << (brick % 32)) == 0 {
+            let mut past = false;
+            for a in 0..3 {
+                past |= (step[a] >= 0 && cell[a] > amax[a]) || (step[a] <= 0 && cell[a] < amin[a]);
+            }
+            if past {
+                return false;
+            }
             let s = b / 4;
             let sup = s.x + supers.x * (s.y + supers.y * s.z);
             let super_mask = data[7] + sup / 32;
