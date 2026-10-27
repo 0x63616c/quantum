@@ -6,6 +6,8 @@ pub(super) struct State {
     pub enabled: bool,
     // A surface-size failure only suspends GPU rendering at this physical size.
     pub limited_size: Option<[u32; 2]>,
+    pub stats: Option<voxelite_render::diagnostics::FrameStats>,
+    diagnostics_epoch: u64,
     #[cfg(target_os = "macos")]
     pub renderer: Option<voxelite_render::gpu::Worker>,
     #[cfg(target_os = "macos")]
@@ -26,6 +28,8 @@ impl State {
         Self {
             enabled,
             limited_size: None,
+            stats: None,
+            diagnostics_epoch: 0,
             #[cfg(target_os = "macos")]
             renderer: None,
             #[cfg(target_os = "macos")]
@@ -46,7 +50,12 @@ impl State {
             false
         }
     }
+    pub fn clear_diagnostics(&mut self) {
+        self.stats = None;
+        self.diagnostics_epoch = self.diagnostics_epoch.wrapping_add(1);
+    }
     pub fn clear_frame(&mut self) {
+        self.clear_diagnostics();
         #[cfg(target_os = "macos")]
         {
             self.frame = None;
@@ -118,6 +127,8 @@ impl EditorView {
         let bounds = self.editor.display_snapshot().bounds;
         let snapshot = changed.then(|| self.editor.display_snapshot().clone());
         let mut renderer = self.viewport.gpu.renderer.take();
+        let diagnostics = self.preferences.show_debug_overlay;
+        let diagnostics_epoch = self.viewport.gpu.diagnostics_epoch;
         let background = if self.theme == Theme::Light { 1. } else { 0. };
         let grid = self.viewport.scene_grid;
         let grid_color: Rgba = grid
@@ -155,6 +166,7 @@ impl EditorView {
                         })?;
                     renderer = Some(voxelite_render::gpu::Worker::new(registry_id)?);
                 }
+                renderer.as_mut().unwrap().set_diagnostics(diagnostics);
                 renderer
                     .as_mut()
                     .unwrap()
@@ -178,11 +190,16 @@ impl EditorView {
                 }
                 match result {
                     Ok(frame) => {
-                        this.viewport.gpu.renderer = renderer;
                         this.viewport.gpu.content = Some(content);
                         // Camera motion may queue a newer frame; keep completed frames
                         // flowing, but never install a different document/preview.
                         if this.viewport.accepts(identity, &this.editor) {
+                            if this.preferences.show_debug_overlay
+                                && this.viewport.gpu.diagnostics_epoch == diagnostics_epoch
+                            {
+                                this.viewport.gpu.stats =
+                                    renderer.as_ref().and_then(|r| r.last_stats());
+                            }
                             this.viewport.display_camera = identity.camera;
                             this.viewport.display_size = identity.size;
                             this.viewport.displayed = Some(identity);
@@ -191,6 +208,7 @@ impl EditorView {
                                 this.viewport.gpu.frame_serial.wrapping_add(1);
                             this.viewport.gpu.frame = Some(frame);
                         }
+                        this.viewport.gpu.renderer = renderer;
                     }
                     Err(error) => {
                         this.gpu_fallback(error, identity.size, cx);

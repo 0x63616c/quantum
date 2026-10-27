@@ -14,6 +14,7 @@ use std::{
 };
 use voxelite_core::{Pos, Snapshot};
 
+mod diagnostics;
 mod headless;
 mod stats;
 pub use headless::{AdapterInfo, Headless, HeadlessFrame, HeadlessOptions};
@@ -135,11 +136,13 @@ impl Viewport {
                 return Err(error(format!("{format:?} lacks 4x MSAA")));
             }
         }
-        let timed = profile && adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
+        let timestamps = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("Voxelite viewport"),
-                required_features: if timed {
+                // Enable the capability up front so diagnostics can be toggled without
+                // replacing the device. No queries or buffers exist until enabled.
+                required_features: if timestamps {
                     wgpu::Features::TIMESTAMP_QUERY
                 } else {
                     wgpu::Features::empty()
@@ -255,7 +258,7 @@ impl Viewport {
         if let Some(e) = scope.pop().await {
             return Err(error(e));
         }
-        let timer = timed.then(|| GpuTimer::new(&device, &queue));
+        let timer = (collect && profile && timestamps).then(|| GpuTimer::new(&device, &queue));
         Ok(Self {
             device,
             errors,
@@ -508,7 +511,9 @@ impl Viewport {
             pass.draw(0..3, 0..1);
         }
         if let Some(stats) = &mut self.stats {
-            stats.draw_calls = self.buffers.len() as u32;
+            stats.resident_chunks = self.buffers.len() as u32;
+            (stats.occupied_bricks, stats.total_bricks) = occupancy.brick_counts();
+            stats.draw_calls = stats.resident_chunks;
             stats.shadow_draw_calls = if redraw_shadow { stats.draw_calls } else { 0 };
             stats.vertices = self.buffers.values().map(|c| u64::from(c.vertices)).sum();
             stats.triangles = stats.vertices / 3;

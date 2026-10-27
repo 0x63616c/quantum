@@ -66,7 +66,7 @@ jobs:
         run: |
           # Keep public Markdown exports and downloadable skill/integration docs.
           mkdir -p "$RUNNER_TEMP/site-dist"
-          rsync -a --exclude=/README.md --exclude=/PROGRESS.md --exclude=/content/ \
+          rsync -a --exclude=/README.md --exclude=/content/ \
             site/ "$RUNNER_TEMP/site-dist/"
 
       - name: Upload built site

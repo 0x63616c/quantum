@@ -89,6 +89,14 @@ impl Occupancy {
     pub(crate) fn words(&self) -> &[u32] {
         &self.data
     }
+    /// Count only on diagnostic frames; normal rendering never scans the cache.
+    #[cfg(feature = "gpu")]
+    pub(crate) fn brick_counts(&self) -> (u32, u32) {
+        (
+            self.counts.iter().filter(|&&count| count != 0).count() as u32,
+            self.counts.len() as u32,
+        )
+    }
     fn mask_base(&self) -> usize {
         HEADER_WORDS + self.counts.len() * BRICK_WORDS
     }
