@@ -30,7 +30,7 @@ for density in 150 200; do
   fi
   for theme in dark light; do
     export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/$density-$theme"
-    target/debug/voxelite --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+    target/debug/voxelite --example --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
     app_pid=$!
     window=''
     for attempt in {1..100}; do

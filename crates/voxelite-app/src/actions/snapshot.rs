@@ -131,5 +131,13 @@ fn shell_snapshot() -> String {
 #[cfg(not(target_family = "wasm"))]
 fn shell_matches_pre_plugin_snapshot() {
     let actual = shell_snapshot();
-    assert_eq!(actual, include_str!("shell.snapshot"));
+    if std::env::var("UPDATE_SHELL_SNAPSHOT").as_deref() == Ok("1") {
+        std::fs::write(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/actions/shell.snapshot"),
+            actual,
+        )
+        .unwrap();
+    } else {
+        assert_eq!(actual, include_str!("shell.snapshot"));
+    }
 }
