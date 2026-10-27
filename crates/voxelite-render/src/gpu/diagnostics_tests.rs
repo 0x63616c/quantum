@@ -50,6 +50,7 @@ fn runtime_diagnostics_release_resources_and_preserve_pixels() {
         let style = Style {
             background: [0., 0., 0., 1.],
             outline: true,
+            ambient_occlusion_strength: Default::default(),
             grid: None,
             grid_color: [0.; 4],
         };

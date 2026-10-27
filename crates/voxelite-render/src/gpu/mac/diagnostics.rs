@@ -40,6 +40,7 @@ mod tests {
                 let style = Style {
                     background: [0., 0., 0., 1.],
                     outline: false,
+                    ambient_occlusion_strength: Default::default(),
                     grid: None,
                     grid_color: [0.; 4],
                 };
