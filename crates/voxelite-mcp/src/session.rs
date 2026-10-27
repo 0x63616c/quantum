@@ -2,7 +2,7 @@
 use crate::{
     API_VERSION,
     catalog::Spec,
-    edit,
+    comments, edit,
     error::{Args, Failure, Result},
     exports, files, images, palettes,
 };
@@ -15,6 +15,7 @@ use voxelite_format::{
     Project,
     session::{DocumentSession, SavePolicy},
 };
+use voxelite_plugin_api::{CommentLayer, CommentsAction, CommentsQuery};
 
 const MAX_RECEIPTS: usize = 4096;
 const MAX_RECEIPT_BYTES: usize = 8 * 1024 * 1024;
@@ -483,63 +484,60 @@ fn dispatch(
             }
         }
         "comments_list" => {
-            let state: String = a.default("state", "all".into())?;
-            let comments: Vec<_> = s
-                .comments
-                .iter()
-                .filter(|c| state == "all" || c.resolved == (state == "resolved"))
-                .collect();
-            let offset: usize = a.default("offset", 0)?;
-            let limit: usize = a.default("limit", 50)?;
-            let message_offset: usize = a.default("message_offset", 0)?;
-            let message_limit: usize = a.default("message_limit", 50)?;
-            let page: Vec<_> = comments.iter().skip(offset).take(limit).map(|c| {
-                let messages: Vec<_> = c.messages.iter().skip(message_offset).take(message_limit)
-                    .map(|m| json!({"id":m.id,"origin":m.origin,"text":m.text,"tool":m.tool})).collect();
-                let next_message = (message_offset + messages.len() < c.messages.len())
-                    .then_some(message_offset + messages.len());
-                json!({
-                    "thread":{"id":c.id,"anchor":c.anchor,"layer":c.layer,"resolved":c.resolved,"messages":messages},
-                    "message_count":c.messages.len(),"next_message_offset":next_message,
-                    "anchor_state":match s.anchor_state(c) {
-                        AnchorState::Visible=>"visible", AnchorState::Orphaned=>"orphaned", AnchorState::Hidden=>"hidden"
-                    }
-                })
-            }).collect();
-            let next = (offset + page.len() < comments.len()).then_some(offset + page.len());
-            return read(
-                engine,
-                json!({"comments":page,"total":comments.len(),"next_offset":next}),
-            );
+            let data = comments::list(
+                host,
+                s,
+                CommentsQuery {
+                    state: a.default("state", "all".into())?,
+                    offset: a.default("offset", 0)?,
+                    limit: a.default("limit", 50)?,
+                    message_offset: a.default("message_offset", 0)?,
+                    message_limit: a.default("message_limit", 50)?,
+                },
+            )?;
+            return read(engine, data);
         }
         "comments_add" => {
             let id = a.default("thread_id", Uuid::new_v4())?;
             let message = a.default("message_id", Uuid::new_v4())?;
             extras = json!({"thread_id":id,"message_id":message});
-            Command::CreateComment {
-                id,
-                message,
-                anchor: a.get("anchor")?,
-                layer: a
-                    .optional::<String>("layer")?
-                    .map(|l| edit::layer(s, &l))
-                    .transpose()?,
-                text: a.get("text")?,
-            }
+            comments::command(
+                host,
+                s,
+                CommentsAction::Create {
+                    id,
+                    message,
+                    anchor: a.get("anchor")?,
+                    layer: CommentLayer::Explicit(
+                        a.optional::<String>("layer")?
+                            .map(|l| edit::layer(s, &l))
+                            .transpose()?,
+                    ),
+                    text: a.get("text")?,
+                },
+            )?
         }
         "comments_reply" => {
             let message = a.default("message_id", Uuid::new_v4())?;
             extras = json!({"thread_id":a.get::<Uuid>("thread_id")?,"message_id":message});
-            Command::Reply {
-                id: a.get("thread_id")?,
-                message,
-                text: a.get("text")?,
-            }
+            comments::command(
+                host,
+                s,
+                CommentsAction::Reply {
+                    id: a.get("thread_id")?,
+                    message,
+                    text: a.get("text")?,
+                },
+            )?
         }
-        "comments_resolve" | "comments_reopen" => Command::Resolve {
-            id: a.get("thread_id")?,
-            resolved: name == "comments_resolve",
-        },
+        "comments_resolve" | "comments_reopen" => comments::command(
+            host,
+            s,
+            CommentsAction::Resolve {
+                id: a.get("thread_id")?,
+                resolved: name == "comments_resolve",
+            },
+        )?,
         "history_read" => {
             let entries: Vec<_> = engine.history().collect();
             let offset: usize = a.default("offset", 0)?;

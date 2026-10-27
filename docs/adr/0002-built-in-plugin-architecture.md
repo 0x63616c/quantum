@@ -8,7 +8,8 @@ and interaction also dispatch through enabled overlay bindings. Export formats
 and byte encoding dispatch through the enabled exporters registry. Palette state,
 library operations and palette commands dispatch through an enabled panel binding.
 Project extensions retain raw section bytes; enabled owners migrate and validate
-their sections through capability-scoped data access during load.
+their sections through capability-scoped data access during load. Discussions and
+pin placement dispatch through the comments panel/tool, and pins through its overlay.
 
 ## Context
 
@@ -47,7 +48,7 @@ defaults. IDs and setting keys are namespaced; data section names are scoped by
 plugin ID and never grant access to core `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx`,
-`TransformCx`, `OverlayCx`, `PaletteCx`, `DataCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
+`TransformCx`, `OverlayCx`, `PaletteCx`, `CommentsCx`, `DataCx` and `ExportCx` traits, never the app, a GPUI context or an unrestricted
 service locator.
 `ActivateCx` scopes activation capabilities separately. `CommandCx` and
 `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
@@ -59,13 +60,13 @@ command/value types and the shared GLB/PNG byte encoders;
 plugin crates still depend only on the API.
 
 `Plugin` exposes `manifest`, `contribute`, default-unbound `tool(id)` and
-`command_transform(id)`, `overlay(id)`, `palette_panel(id)` and `exporter(id)` implementation lookups, and default no-op
+`command_transform(id)`, `overlay(id)`, `palette_panel(id)`, `comments_panel(id)` and `exporter(id)` implementation lookups, and default no-op
 `activate`/`deactivate` hooks. The host owns API compatibility checks, cross-plugin
 conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool lookup and invocation are admitted
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.6.0`, independently of plugin implementation versions and `.voxl` or
+is `0.7.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -86,8 +87,11 @@ types. Existing required trait methods and contribution construction are unchang
 The compatible `0.5.2` addition supplies `DataSection`, `DataCx`, `DataMigration`
 and default `data_migrations`/`load_data` hooks. No existing plugin must implement
 a new required method. The core `Document` now stores project extensions.
-The `0.6.0` bump adds palette choice origins and identities, manager edit/preview
+The `0.7.0` bump adds palette choice origins and identities, manager edit/preview
 actions, recent colors, and import/export metadata to public palette types.
+The `0.6.0` bump adds the `Pin` variant to the exhaustive `OverlayPrimitive` enum,
+portable discussion panel types and a default-unbound `comments_panel` lookup.
+Optional overlay projection/picking/discussion queries default to no capability.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -357,6 +361,67 @@ edit invalidates the attached recipe like any other document change. Tests cover
 old golden files, raw JSON/byte round trips and durable saving, disabled owners,
 scoped writes, ordered migrations, failures/panics, and replay/undo preservation.
 
+## Comments and pins (PR 11)
+
+`voxelite-plugin-comments` (`dev.voxelite.comments`) now owns discussion command
+proposals, voxel/region placement, transient selection and numbering, filtering,
+thread presentation data, pin visibility/occlusion descriptions and MCP listing.
+It contributes `dev.voxelite.comments.tool`, `.panel` and `.pins` alongside the
+existing `.comment` command, retaining its C shortcut, icon, menu and order.
+The separate placement mode remains separate from the six voxel tool choices.
+
+**Storage remains core content.** Comments already reside in `Snapshot::comments`
+and the existing `.voxl` `comments` field, including named versions and history.
+This extraction deliberately declares no extension-data section and does not copy
+or migrate that content into PR 10's namespace. Core validates anchors, messages,
+attribution and budgets, and executes `CreateComment`, `Reply`, `Reanchor` and
+`Resolve`; core also retains undo/redo. Existing files and canonical bytes are
+unchanged, including unknown comment/message metadata. Disabled or absent plugins
+cannot remove comments from saves, history or restored versions.
+
+`CommentsCx` exposes immutable displayed/live snapshots, preview status and the
+last admitted transient `CommentsState`. `CommentsPanel` returns portable list,
+thread and outline data, typed command proposals, and presentation requests.
+The shell admits a proposal through its existing human transaction boundary before
+adopting state, clearing the text field or scrolling. Invalid text or rejected
+transactions leave the draft and document untouched. Single commands retain the
+original history shape and labels. GPUI layout, text input, focus, scrolling and
+pin hit targets remain shell adapters, as with the palette panel; the plugin has
+no GPUI, renderer, filesystem or engine dependency.
+
+The registered placement tool consumes the host's existing visible-voxel hit or
+keyboard coordinate. Region corner construction and draft posting live in the
+panel binding. The registered overlay uses optional host projection and picking
+queries to emit `OverlayPrimitive::Pin`: normalized position, stable number,
+resolved/selected/dimmed flags and tooltip text. The shell preserves the original
+32px hit target, offset and paint order, and dispatches selection through the
+panel. Pins remain contextual to the Comments tab. Owner settings, staged output,
+timing and panic quarantine use the existing overlay host boundary.
+
+Disabling comments removes its tool, panel, command and overlay declarations,
+hides the tab and pins, and cancels a pending draft. Filters, numbers and stored
+threads remain available when enabled again. Core saving, camera navigation and
+undo do not depend on comment enablement. Panel binding/view/interaction/list
+callbacks are timed and panic-isolated; failures expose no partial state.
+Conformance exercises the panel, tool and overlay across enable/disable/enable.
+
+MCP retains every existing comment tool name, argument schema, validation,
+attribution, receipt and pagination shape. The adapter parses wire arguments and
+resolves layer selectors, then dispatches typed requests through the live panel.
+Automatic human layer association and explicit/absent agent layer association
+remain distinct. Standalone MCP installs the standard plugin; attached MCP uses
+the editor's host and refreshes its advertised tools when comments availability
+changes. Disabled calls return `comments_unavailable` without touching history.
+
+Characterization ran before extraction for add/reply/reanchor, resolve/reopen,
+undo/redo removal and restoration, file round trips, and pin projection/picking.
+The original feature has no edit-message or delete-thread command or UI. This
+behavior-preserving step therefore tests existing edits and undoing creation as
+removal; it introduces no new editing or deletion semantics. Existing MCP contract
+tests also passed before moving its logic. Regression tests cover registered
+placement/selection/filtering, failed-post rollback, preview protection, disabled
+and missing bindings, byte-identical saves, MCP availability, and callback panics.
+
 ## Crate layout and dependency rule
 
 Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
@@ -394,7 +459,7 @@ Repeated enable/disable requests are no-ops; transitions call their hook once.
 API compatibility ignores build metadata and requires exact version precedence
 for prereleases, which have no compatibility guarantee.
 
-Plugin entry points, including data migration/validation and tool, transform, overlay, palette and export binding and invocation, are
+Plugin entry points, including data migration/validation and tool, transform, overlay, palette, comments and export binding and invocation, are
 guarded with `catch_unwind`. A hook panic marks the plugin
 `Faulted`, discards its declarations and prevents retries for that host's lifetime;
 a manifest panic is a registration rejection because no identity is established.
@@ -407,7 +472,7 @@ Transform panics abort the pending outcome before transaction admission and
 quarantine the plugin; later editing can proceed without that transform.
 The public `conformance::check` harness validates a plugin and exercises a full
 enable/disable/enable cycle, recollecting metadata to detect residue and checking
-that every declared tool, transform and exporter and each supplied overlay/palette binding is available
+that every declared tool, transform and exporter and each supplied overlay/palette/comments binding is available
 only while enabled. Required
 plugins also have their cleanup hooks exercised without exposing a public bypass
 of their disablement policy. Panic isolation requires unwinding and cannot recover

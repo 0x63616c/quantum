@@ -12,6 +12,7 @@ fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>)
         AttachedSession {
             session,
             palette_enabled: true,
+            comments_enabled: true,
             tools: Arc::new(RwLock::new(crate::exports::tools(&crate::exports::host()))),
             export_formats: crate::exports::host()
                 .registry()
@@ -327,4 +328,65 @@ fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_docu
     );
     assert_eq!(document.project().to_bytes().unwrap(), before);
     assert_eq!(document.engine.revision(), revision);
+}
+
+#[test]
+fn comment_requests_and_catalog_follow_live_host_without_losing_core_data() {
+    let (mut attachment, mut document, send) = attachment();
+    let mut host = crate::exports::host();
+    let model = document.engine.document().id;
+    let thread = Uuid::new_v4();
+    let message = Uuid::new_v4();
+    let args = json!({"model_id":model,"expected_epoch":attachment.session.epoch,
+        "expected_revision":"0","operation_id":Uuid::new_v4(),
+        "thread_id":thread,"message_id":message,"anchor":{"kind":"voxel","at":[0,0,0]},"text":"Keep this thread"});
+    let mut add = queue(&send, "voxelite_comments_add", args.clone());
+    attachment.poll_with_host(&mut document, &mut host);
+    let added = result(&mut add);
+    assert_eq!(added["ok"], true, "{added}");
+    assert_eq!(added["data"]["thread_id"], thread.to_string());
+    let before = document.project().to_bytes().unwrap();
+    let history = document.engine.history().count();
+    host.disable(voxelite_plugin_comments::PLUGIN_ID).unwrap();
+    let mut read = queue(&send, "voxelite_comments_list", json!({"model_id":model}));
+    let mut reply_args = args;
+    reply_args["expected_revision"] = document.engine.revision().to_string().into();
+    reply_args["operation_id"] = Uuid::new_v4().to_string().into();
+    reply_args.as_object_mut().unwrap().remove("anchor");
+    reply_args["message_id"] = Uuid::new_v4().to_string().into();
+    let mut reply = queue(&send, "voxelite_comments_reply", reply_args);
+    attachment.poll_with_host(&mut document, &mut host);
+    assert_eq!(result(&mut read)["error"]["code"], "comments_unavailable");
+    assert_eq!(result(&mut reply)["error"]["code"], "comments_unavailable");
+    assert!(
+        attachment
+            .tools
+            .read()
+            .unwrap()
+            .iter()
+            .all(|t| !t.name.starts_with("voxelite_comments_"))
+    );
+    assert_eq!(document.project().to_bytes().unwrap(), before);
+    assert_eq!(document.engine.history().count(), history);
+    host.enable(voxelite_plugin_comments::PLUGIN_ID).unwrap();
+    let mut read = queue(&send, "voxelite_comments_list", json!({"model_id":model}));
+    attachment.poll_with_host(&mut document, &mut host);
+    let data = result(&mut read);
+    assert_eq!(
+        data["data"]["comments"][0]["thread"]["messages"][0]["text"],
+        "Keep this thread"
+    );
+    assert_eq!(
+        data["data"]["comments"][0]["thread"]["messages"][0]["origin"],
+        "agent"
+    );
+    assert!(
+        attachment
+            .tools
+            .read()
+            .unwrap()
+            .iter()
+            .any(|t| t.name == "voxelite_comments_add")
+    );
+    assert_eq!(document.project().to_bytes().unwrap(), before);
 }

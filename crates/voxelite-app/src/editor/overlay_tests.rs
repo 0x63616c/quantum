@@ -160,7 +160,12 @@ fn disabled_and_absent_overlays_leave_editing_navigation_saving_and_undo_usable(
             editor.set_plugin_enabled(PLUGIN_ID, false).unwrap();
         }
         assert!(!editor.grid());
-        assert!(editor.overlays(editor.camera, None).is_empty());
+        assert!(
+            editor
+                .overlays(editor.camera, None)
+                .iter()
+                .all(|frame| frame.primitives.is_empty())
+        );
         assert!(
             editor
                 .interact_overlay(

@@ -2,7 +2,7 @@
 
 `voxelite-plugin-palette` owns manager behavior. Its only normal dependency is
 `voxelite-plugin-api`; filesystem writes, settings admission, brush assignment and
-core transactions remain with the host. API version 0.6.0 adds public fields and
+core transactions remain with the host. API version 0.7.0 adds public fields and
 exhaustive action variants. The app continues to persist an outcome before adopting
 its state, so write failures preserve the previous library, selection and brush.
 

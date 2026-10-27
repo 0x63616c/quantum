@@ -7,6 +7,7 @@
 #[cfg(unix)]
 pub mod attached;
 mod catalog;
+mod comments;
 mod edit;
 mod error;
 mod exports;
