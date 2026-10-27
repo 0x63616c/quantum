@@ -17,6 +17,7 @@ mod viewport;
 use keyboard_guide::keyboard_guide;
 mod overlays;
 use comments::Panel;
+mod palette_layout;
 mod palettes;
 mod save_flow;
 mod settings;
@@ -212,7 +213,7 @@ impl EditorView {
             cx.notify();
         })
         .detach();
-        let palettes = palettes::PaletteManager::new(cx);
+        let palettes = palettes::PaletteManager::new(window, cx);
         let library_error = editor
             .load_palette_library()
             .err()
@@ -463,7 +464,7 @@ impl EditorView {
             _ => self.run(op, cx),
         }
         window.focus(
-            if self.info.is_some() {
+            if self.info.is_some() || self.palettes.open {
                 &self.modal_focus
             } else {
                 &self.focus
@@ -645,6 +646,11 @@ impl EditorView {
             self.pending_key(&e.keystroke, cx);
             return;
         }
+        // The palette dialog owns cancellation, text commits and grid navigation.
+        // Its descendants must receive these keys before viewport shortcuts.
+        if self.palettes.open && !self.save_flow.dialog_open() {
+            return;
+        }
         if self.palette_focus.is_focused(window) {
             let delta = match e.keystroke.key.as_str() {
                 "left" => Some(-1),
@@ -692,8 +698,7 @@ impl EditorView {
             return;
         }
         if key != "escape"
-            && (self.palettes.name.read(cx).focused(window)
-                || self.palettes.hex.read(cx).focused(window)
+            && (self.palettes.field_focused(window, cx)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window))
         {
@@ -2178,9 +2183,10 @@ impl EditorView {
                                         "palette",
                                         "Manage palettes…",
                                         cx,
-                                        |this, _, cx| {
+                                        |this, window, cx| {
                                             this.palette_open = false;
                                             this.manage_palettes(cx);
+                                            window.focus(&this.modal_focus, cx);
                                             cx.notify();
                                         },
                                     )),
@@ -2232,12 +2238,7 @@ impl Render for EditorView {
             let _ = window.drop_image(image);
         }
         self.viewport.release_retired_image(window);
-        self.palettes
-            .name
-            .update(cx, |f, cx| f.appearance(self.theme, cx));
-        self.palettes
-            .hex
-            .update(cx, |f, cx| f.appearance(self.theme, cx));
+        self.palettes.appearance(self.theme, cx);
         self.discussion
             .text
             .update(cx, |f, cx| f.appearance(self.theme, cx));
@@ -2293,8 +2294,7 @@ impl Render for EditorView {
             .id("editor-root")
             .key_context(if settings_open {
                 "Settings"
-            } else if self.palettes.name.read(cx).focused(window)
-                || self.palettes.hex.read(cx).focused(window)
+            } else if self.palettes.field_focused(window, cx)
                 || self.discussion.text.read(cx).focused(window)
                 || self.timeline.name.read(cx).focused(window)
             {
@@ -2369,6 +2369,11 @@ impl Render for EditorView {
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(|this, _, window, cx| {
+                            if this.palettes.open {
+                                this.close_palettes(window, cx);
+                                cx.stop_propagation();
+                                return;
+                            }
                             window.focus(&this.focus, cx);
                             #[cfg(target_family = "wasm")]
                             {
