@@ -5993,6 +5993,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "voxelite-bench"
+version = "0.2.0"
+dependencies = [
+ "png 0.18.1",
+ "serde",
+ "serde_json",
+ "voxelite-core",
+ "voxelite-format",
+ "voxelite-render",
+]
+
+[[package]]
 name = "voxelite-core"
 version = "0.2.0"
 dependencies = [
