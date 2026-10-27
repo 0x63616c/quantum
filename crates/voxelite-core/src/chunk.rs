@@ -45,7 +45,8 @@ impl Chunk {
     pub fn is_dense(&self) -> bool {
         matches!(self.cells, Cells::Dense(_))
     }
-    pub(crate) fn get(&self, index: u16) -> u16 {
+    /// Read a local `x + 16*y + 256*z` index in `0..4096`, returning zero for air.
+    pub fn get(&self, index: u16) -> u16 {
         match &self.cells {
             Cells::Sparse(v) => v
                 .binary_search_by_key(&index, |c| c.0)
