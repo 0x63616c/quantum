@@ -42,7 +42,12 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
     let dir = direction / scale;
     let size = UVec3::new(data[4], data[5], data[6]).as_ivec3();
     let bricks = UVec3::new(data[8], data[9], data[10]);
-    let words = &data[12..];
+    let words = &data[20..];
+    let amin = IVec3::new(data[12] as i32, data[13] as i32, data[14] as i32);
+    let amax = IVec3::new(data[16] as i32, data[17] as i32, data[18] as i32);
+    if amin.cmpgt(amax).any() {
+        return false;
+    }
     let mut cell = origin.floor().as_ivec3();
     // WGSL sign(0) == 0 (unlike Rust f32::signum).
     let step = IVec3::from_array(dir.to_array().map(|d| {
@@ -54,6 +59,7 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
             0
         }
     }));
+    let supers = (bricks + UVec3::splat(3)) / 4;
     for _iteration in 0..768 {
         if cell.cmplt(IVec3::ZERO).any() || cell.cmpge(size).any() {
             return false;
@@ -65,37 +71,20 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
         let word = brick * 16 + bit / 32;
         let mask = data[11] + brick / 32;
         if words[mask as usize] & (1 << (brick % 32)) == 0 {
-            let lo = (cell / 8) * 8;
-            let hi = lo + IVec3::splat(7);
-            let mut end = Vec3::ZERO;
+            let mut past = false;
             for a in 0..3 {
-                end[a] = crossing(origin[a], dir[a], if step[a] > 0 { hi[a] } else { lo[a] });
+                past |= (step[a] >= 0 && cell[a] > amax[a]) || (step[a] <= 0 && cell[a] < amin[a]);
             }
-            let axis = first_axis(end);
-            let time = end[axis];
-            for a in 0..3 {
-                if step[a] == 0 {
-                    continue;
-                }
-                let mut candidate =
-                    ((origin[a] + dir[a] * time).floor() as i32).clamp(lo[a], hi[a]);
-                while (candidate - cell[a]) * step[a] > 0
-                    && !precedes(
-                        crossing(origin[a], dir[a], candidate - step[a]),
-                        a,
-                        time,
-                        axis,
-                    )
-                {
-                    candidate -= step[a];
-                }
-                while candidate >= lo[a]
-                    && candidate <= hi[a]
-                    && precedes(crossing(origin[a], dir[a], candidate), a, time, axis)
-                {
-                    candidate += step[a];
-                }
-                cell[a] = candidate;
+            if past {
+                return false;
+            }
+            let s = b / 4;
+            let sup = s.x + supers.x * (s.y + supers.y * s.z);
+            let super_mask = data[7] + sup / 32;
+            if words[super_mask as usize] & (1 << (sup % 32)) == 0 {
+                cell = skip_box(origin, dir, step, cell, 32);
+            } else {
+                cell = skip_box(origin, dir, step, cell, 8);
             }
         } else {
             if words[word as usize] & (1 << (bit % 32)) != 0 {
@@ -110,4 +99,38 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
         }
     }
     false
+}
+fn skip_box(origin: Vec3, dir: Vec3, step: IVec3, mut cell: IVec3, edge: i32) -> IVec3 {
+    let lo = (cell / edge) * edge;
+    let hi = lo + IVec3::splat(edge - 1);
+    let mut end = Vec3::ZERO;
+    for a in 0..3 {
+        end[a] = crossing(origin[a], dir[a], if step[a] > 0 { hi[a] } else { lo[a] });
+    }
+    let axis = first_axis(end);
+    let time = end[axis];
+    for a in 0..3 {
+        if step[a] == 0 {
+            continue;
+        }
+        let mut candidate = ((origin[a] + dir[a] * time).floor() as i32).clamp(lo[a], hi[a]);
+        while (candidate - cell[a]) * step[a] > 0
+            && !precedes(
+                crossing(origin[a], dir[a], candidate - step[a]),
+                a,
+                time,
+                axis,
+            )
+        {
+            candidate -= step[a];
+        }
+        while candidate >= lo[a]
+            && candidate <= hi[a]
+            && precedes(crossing(origin[a], dir[a], candidate), a, time, axis)
+        {
+            candidate += step[a];
+        }
+        cell[a] = candidate;
+    }
+    cell
 }

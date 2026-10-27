@@ -292,7 +292,7 @@ fn occupancy_storage_layout_and_epsilon_match_the_host() {
     };
     assert_eq!(
         members.iter().map(|m| m.offset).collect::<Vec<_>>(),
-        vec![0, 16, 32, 48]
+        vec![0, 16, 32, 48, 64, 80]
     );
     let (_, epsilon) = module
         .constants

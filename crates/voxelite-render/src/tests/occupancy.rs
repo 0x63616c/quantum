@@ -28,7 +28,16 @@ fn sync(cache: &mut OccupancyCache, snapshot: &Snapshot, uploaded: &mut Vec<u32>
     cache.sync(snapshot).unwrap();
     let grid = cache.grid_mut().unwrap();
     let rebuilt = Occupancy::from_snapshot(snapshot).unwrap();
-    assert_eq!(grid.words(), rebuilt.words());
+    // Words 12..20 hold the grow-only occupied box: an incremental grid may keep a
+    // box larger than a fresh rebuild, but it must always contain it.
+    let (a, b) = (grid.words(), rebuilt.words());
+    assert_eq!(a[..12], b[..12]);
+    assert_eq!(a[20..], b[20..]);
+    for axis in 0..3 {
+        let empty = b[12 + axis] > b[16 + axis];
+        assert!(empty || a[12 + axis] <= b[12 + axis], "box min shrank");
+        assert!(empty || a[16 + axis] >= b[16 + axis], "box max shrank");
+    }
     if uploaded.len() != grid.words().len() {
         uploaded.resize(grid.words().len(), 0);
     }
