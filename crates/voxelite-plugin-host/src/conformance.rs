@@ -95,6 +95,18 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         .into_iter()
         .filter(|id| host.has_overlay(id).expect("overlay binding panicked"))
         .collect();
+    let formats: Vec<_> = host
+        .registry()
+        .formats()
+        .filter(|(_, f)| f.export)
+        .map(|(_, f)| f.id.clone())
+        .collect();
+    for format in &formats {
+        assert!(
+            host.has_exporter(format).expect("export binding panicked"),
+            "unbound exporter: {format}"
+        );
+    }
     host.enable(id).expect("repeated enable must be a no-op");
     assert_eq!(host.timings().get(id, "activate").unwrap().count, 1);
 
@@ -128,6 +140,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
             "disabled overlay remains bound: {overlay}"
         );
     }
+    for format in &formats {
+        assert!(
+            !host.has_exporter(format).unwrap(),
+            "disabled exporter remains bound: {format}"
+        );
+    }
     assert_eq!(host.timings().get(id, "deactivate").unwrap().count, 1);
     for transform in &transforms {
         assert!(
@@ -144,6 +162,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    for format in &formats {
+        assert!(
+            host.has_exporter(format)
+                .expect("export binding panicked after reenable")
+        );
+    }
     for overlay in &overlays {
         assert!(
             host.has_overlay(overlay)

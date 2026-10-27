@@ -364,7 +364,7 @@ pub fn raycast(snapshot: &Snapshot, ray: Ray) -> Option<Hit> {
 pub struct Editor {
     pub(crate) session: DocumentSession,
     // Hover/preview queries also record host timings and isolate plugin panics.
-    plugins: RefCell<Host>,
+    pub(crate) plugins: RefCell<Host>,
     /// Persistent software viewport occupancy, shared with background render tasks.
     pub raster: voxelite_render::RasterCache,
     /// Read-only preview, separate from the live authority.
@@ -585,6 +585,42 @@ impl Editor {
     /// Enabled declarations, lifecycle state and tool invocation timings.
     pub fn plugin_host(&self) -> Ref<'_, Host> {
         self.plugins.borrow()
+    }
+    /// Find a format by extension in the live registry, without a built-in format table.
+    pub fn export_format(
+        &self,
+        extension: &str,
+    ) -> EditorResult<voxelite_plugin_api::FormatContribution> {
+        self.plugins
+            .borrow()
+            .registry()
+            .formats()
+            .find(|(_, format)| {
+                format.export
+                    && format
+                        .extensions
+                        .iter()
+                        .any(|ext| ext.eq_ignore_ascii_case(extension))
+            })
+            .map(|(_, format)| format.clone())
+            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
+    }
+    /// Resolve an export format in the live registry before starting background work.
+    pub fn prepare_export(&self, id: &str) -> EditorResult<voxelite_plugin_host::ExportJob> {
+        self.plugins
+            .borrow_mut()
+            .prepare_export(id)?
+            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
+    }
+    /// Admit completed bytes only while the format's plugin remains enabled.
+    pub fn finish_export(
+        &self,
+        result: voxelite_plugin_host::ExportCompletion,
+    ) -> EditorResult<Vec<u8>> {
+        self.plugins
+            .borrow_mut()
+            .finish_export(result)?
+            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
     }
     /// Draw the enabled portable overlays against the displayed document and camera.
     pub fn overlays(&self, camera: OrbitCamera, hovered: Option<(&str, u32)>) -> Vec<OverlayFrame> {
@@ -1269,3 +1305,7 @@ mod tests {
 
 #[cfg(test)]
 mod overlay_tests;
+
+#[cfg(test)]
+#[path = "export_tests.rs"]
+mod export_tests;

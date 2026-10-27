@@ -13,8 +13,8 @@ mod registry;
 mod timings;
 
 pub use host::{
-    EnabledSet, Host, HostError, HostEvent, ManifestError, Phase, PluginState, RegistrationError,
-    api_compatible, validate_manifest,
+    EnabledSet, ExportCompletion, ExportJob, Host, HostError, HostEvent, ManifestError, Phase,
+    PluginState, RegistrationError, SnapshotExport, api_compatible, validate_manifest,
 };
 pub use registry::{Conflict, ContributionOwner, Registry};
 pub use timings::{BudgetExceeded, Timing, Timings};

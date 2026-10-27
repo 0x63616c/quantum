@@ -42,9 +42,22 @@ pub trait TransformCx {
 
 /// Host-provided capabilities for exporting document content.
 ///
-/// This trait is a stub. Snapshot and output capabilities will be added with
-/// exporters, without granting general app or filesystem access.
-pub trait ExportCx {}
+/// The snapshot is immutable; rendering is limited to the host-selected view.
+/// No engine, history, GUI, filesystem or arbitrary service access is supplied.
+pub trait ExportCx {
+    /// Document content captured for this export, including visible and hidden layers.
+    fn snapshot(&self) -> &crate::Snapshot;
+    /// Stable palette slots in the captured document.
+    fn palette(&self) -> &crate::Palette {
+        &self.snapshot().palette
+    }
+    /// Finite, half-open bounds of the captured document.
+    fn bounds(&self) -> crate::Region {
+        self.snapshot().bounds
+    }
+    /// Render the host-selected view or contact sheet as straight-alpha RGBA8.
+    fn render_view(&self) -> crate::ExportResult<crate::ExportImage>;
+}
 
 /// Host-provided capabilities available during plugin activation.
 ///

@@ -17,7 +17,7 @@ impl Editor {
     pub fn poll_attachment(&mut self, attachment: &mut AttachedSession) -> AttachmentUpdate {
         let revision = self.session.engine.revision();
         let clients = attachment.clients();
-        let events = attachment.poll(&mut self.session);
+        let events = attachment.poll_with_host(&mut self.session, self.plugins.get_mut());
         let changed = self.session.engine.revision() != revision;
         if changed {
             self.agent_updated();

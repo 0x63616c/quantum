@@ -4,7 +4,7 @@ use crate::{
     catalog::Spec,
     edit,
     error::{Args, Failure, Result},
-    files, images,
+    exports, files, images,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use rmcp::model::{CallToolResult, ContentBlock};
@@ -151,12 +151,25 @@ impl Session {
         r
     }
     pub fn call(&mut self, spec: &Spec, args: Value) -> CallToolResult {
-        match self.execute(spec, &args) {
+        self.call_with_host(spec, args, &mut exports::host())
+    }
+    pub(crate) fn call_with_host(
+        &mut self,
+        spec: &Spec,
+        args: Value,
+        host: &mut voxelite_plugin_host::Host,
+    ) -> CallToolResult {
+        match self.execute(spec, &args, host) {
             Ok(r) => r,
             Err(e) => self.error(e),
         }
     }
-    fn execute(&mut self, spec: &Spec, args: &Value) -> Result<CallToolResult> {
+    fn execute(
+        &mut self,
+        spec: &Spec,
+        args: &Value,
+        host: &mut voxelite_plugin_host::Host,
+    ) -> Result<CallToolResult> {
         if let Err(e) = spec.validator.validate(args) {
             return Err(
                 Failure::invalid(format!("arguments do not match schema: {:?}", e.kind()))
@@ -204,7 +217,7 @@ impl Session {
         }
         let (data, images) = match name {
             "capabilities_get" => (
-                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":["voxl","png","glb","hex","gpl"],"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(info).collect::<Vec<_>>()}),
+                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":exports::extensions(host),"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(info).collect::<Vec<_>>()}),
                 vec![],
             ),
             "document_create" | "document_open" => (self.open(name, &a)?, vec![]),
@@ -232,7 +245,7 @@ impl Session {
                         return Err(e);
                     }
                 }
-                dispatch(&self.root, self.id, doc, name, &a)?
+                dispatch(&self.root, self.id, doc, name, &a, host)?
             }
         };
         let result = self.success(data, images);
@@ -333,6 +346,7 @@ fn dispatch(
     doc: &mut DocumentSession,
     name: &str,
     a: &Args<'_>,
+    host: &mut voxelite_plugin_host::Host,
 ) -> Result<(Value, Vec<ContentBlock>)> {
     if name == "document_info" {
         return Ok((info(doc), vec![]));
@@ -362,11 +376,9 @@ fn dispatch(
         }
         "palette_export" => {
             let format: String = a.get("format")?;
-            let text = if format == "hex" {
-                s.palette.to_hex()
-            } else {
-                s.palette.to_gpl(&s.name)?
-            };
+            let bytes = exports::snapshot(host, &format, s)?;
+            let text = String::from_utf8(bytes)
+                .map_err(|e| Failure::new("export_failed", e.to_string()))?;
             return read(engine, json!({"format":format,"text":text}));
         }
         "voxels_get" => {
@@ -581,7 +593,11 @@ fn dispatch(
                     "export_png needs one PNG; use contact_sheet or one individual view",
                 ));
             }
-            let images = images::render(s, a)?;
+            let images = if name == "export_png" {
+                images::export(s, a, host)?
+            } else {
+                images::render(s, a)?
+            };
             if name == "export_png" {
                 if images.pngs.len() != 1 {
                     return Err(Failure::invalid(
@@ -611,7 +627,7 @@ fn dispatch(
         }
         "export_glb" => {
             let path = files::path(root, &a.get::<String>("path")?)?;
-            let bytes = voxelite_export::glb(s)?;
+            let bytes = exports::snapshot(host, "glb", s)?;
             files::write(&path, &bytes)?;
             return read(
                 engine,

@@ -94,9 +94,20 @@ pub struct PanelContribution {
     pub icon: Option<String>,
 }
 
+/// Content offered by a format, so shells can build context-specific lists.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FormatContent {
+    /// A whole document or rendered view.
+    Document,
+    /// Palette colors in display order.
+    Palette,
+}
+
 /// Metadata for a host-bound file format implementation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FormatContribution {
+    /// Content category used to select the appropriate save/export surface.
+    pub content: FormatContent,
     /// Stable namespaced ID; see [`Contribution::id`].
     pub id: String,
     /// Localization key for the display label.

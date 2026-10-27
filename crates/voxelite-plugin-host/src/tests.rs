@@ -4,6 +4,9 @@ use voxelite_plugin_api::*;
 
 use super::*;
 
+#[path = "export_tests.rs"]
+mod export_tests;
+
 #[path = "overlay_tests.rs"]
 mod overlay_tests;
 
@@ -140,6 +143,7 @@ fn all_kinds() -> Vec<Contribution> {
             icon: None,
         }),
         Contribution::Format(FormatContribution {
+            content: FormatContent::Document,
             id: "dev.example.format".into(),
             label_key: "format.label".into(),
             extensions: vec!["png".into()],
@@ -648,6 +652,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Tool => "tool",
                         Phase::CommandTransform => "command_transform",
                         Phase::Overlay => "overlay",
+                        Phase::Export => "export",
                     }
                 )
                 .unwrap()
