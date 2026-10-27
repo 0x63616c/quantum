@@ -4,6 +4,8 @@ use super::*;
 
 pub(super) struct State {
     pub enabled: bool,
+    // A surface-size failure only suspends GPU rendering at this physical size.
+    pub limited_size: Option<[u32; 2]>,
     #[cfg(target_os = "macos")]
     pub renderer: Option<voxelite_render::gpu::Worker>,
     #[cfg(target_os = "macos")]
@@ -23,6 +25,7 @@ impl State {
         let enabled = false;
         Self {
             enabled,
+            limited_size: None,
             #[cfg(target_os = "macos")]
             renderer: None,
             #[cfg(target_os = "macos")]
@@ -61,14 +64,18 @@ impl EditorView {
                     .await;
                 let keep_running = this.update(cx, |this, cx| {
                     if let Some(error) = gpui_apple::metal_renderer::take_surface_error() {
-                        this.gpu_fallback(voxelite_render::RenderError::Invalid(error), cx);
+                        this.gpu_fallback(
+                            voxelite_render::RenderError::Invalid(error),
+                            this.viewport.render_size,
+                            cx,
+                        );
                     }
                     if let Some(renderer) = &this.viewport.gpu.renderer
                         && let Err(error) = renderer.check_health()
                     {
-                        this.gpu_fallback(error, cx);
+                        this.gpu_fallback(error, this.viewport.render_size, cx);
                     }
-                    this.viewport.gpu.enabled
+                    this.viewport.gpu.enabled || this.viewport.gpu.limited_size.is_some()
                 });
                 if !matches!(keep_running, Ok(true)) {
                     break;
@@ -77,9 +84,23 @@ impl EditorView {
         })
         .detach();
     }
-    fn gpu_fallback(&mut self, error: voxelite_render::RenderError, cx: &mut Context<Self>) {
-        self.viewport.fallback_to_cpu();
-        self.status = format!("GPU viewport unavailable; using CPU: {error}").into();
+    fn gpu_fallback(
+        &mut self,
+        error: voxelite_render::RenderError,
+        size: [u32; 2],
+        cx: &mut Context<Self>,
+    ) {
+        self.viewport.fallback_to_cpu(&error, size);
+        self.status = if self.viewport.gpu.limited_size.is_some() {
+            // Describe the failed request so this remains true after a resize recovers.
+            format!(
+                "GPU viewport could not render at {}×{} pixels: {error}",
+                size[0], size[1]
+            )
+        } else {
+            format!("GPU viewport unavailable; using CPU: {error}")
+        }
+        .into();
         cx.notify();
     }
 
@@ -172,7 +193,7 @@ impl EditorView {
                         }
                     }
                     Err(error) => {
-                        this.gpu_fallback(error, cx);
+                        this.gpu_fallback(error, identity.size, cx);
                     }
                 }
                 // Multiple input events coalesce to the latest camera at layout.

@@ -120,8 +120,8 @@ impl Viewport {
         collect: bool,
         profile: bool,
     ) -> RenderResult<Self> {
-        // These formats/sample counts are required for every frame; never silently
-        // lower resolution, disable AO/shadows, or drop AA during interaction.
+        // These formats/sample counts are required at every surface size; never
+        // disable AO/shadows or drop MSAA during interaction.
         for format in [
             wgpu::TextureFormat::Rgba8Unorm,
             wgpu::TextureFormat::Rgba16Float,
@@ -321,9 +321,10 @@ impl Viewport {
             stats.occupancy_upload_ms = elapsed_ms(upload_start);
             stats.occupancy_bytes = self.occupancy.as_ref().map_or(0, |b| b.size());
         }
-        // Render the scene at 2x *device* dimensions, then chroma subsample.
-        // Budget the actual MSAA/resolve/pool allocations, never silently reduce
-        // moving-frame quality. Oversized viewports use the software fallback.
+        // Preserve the display aspect when NV12 rounds a reduced target to even pixels.
+        let aspect = size[0] as f32 / size[1] as f32;
+        // Prefer 2x device dimensions, stepping down to 1.5x or 1x to fit the
+        // MSAA/resolve/pool budget and device limit before using software fallback.
         let size = super::surface_size(size, self.device.limits().max_texture_dimension_2d)?;
         let mesh_start = self.stats.as_ref().map(|_| Instant::now());
         {
@@ -389,7 +390,6 @@ impl Viewport {
         let right = forward.cross(up).normalize();
         let up = right.cross(forward);
         let light = (-right * 0.55 + up * 0.7 - forward * 0.65 + Vec3::Y * 0.65).normalize();
-        let aspect = size[0] as f32 / size[1] as f32;
         let projection = match camera.projection {
             Projection::Orthographic { height } => {
                 let h = height as f32 * 0.5;
