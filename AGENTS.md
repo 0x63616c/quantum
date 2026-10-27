@@ -279,16 +279,20 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 - Edit site templates in `crates/voxelite-site/templates/`, article bodies in
   `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
   in `skills/`. Run `scripts/build-site.sh`, or `--skip-web` with a verified bundle.
-- Let the generator update `site/docs/`, Markdown aliases, `site/llms.txt`,
-  `site/llms-full.txt`, MCP schemas, integrations and downloadable copies. Do not
-  maintain generated integrations separately; their source is
-  `crates/voxelite-site/src/install.rs` and its templates.
+- Generated site pages, Markdown/LLM exports, crawl files, MCP schemas and
+  downloadable skill/integration copies are ignored. Do not commit them: CI
+  builds the site on PRs and `main`, then publishes trusted `main` builds to
+  `site-dist`. Keep authored assets, `site/content/`, `site/vercel.json` and the
+  input `site/appcast.xml` tracked.
+- The generator also updates the tracked root `integrations/` examples. Do not
+  maintain them separately; their source is `crates/voxelite-site/src/install.rs`
+  and its templates.
 - Generate signed appcasts through the release workflow and
   `scripts/generate-macos-appcast.sh`; fetch release feeds with
   `scripts/fetch-macos-appcast.py`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
-- Review generated diffs and relative links. Keep `web/dist/`, `site/app/` and
-  local benchmark outputs out of source commits.
+- Review built output and relative links. Keep generated site output,
+  `web/dist/` and local benchmark outputs out of source commits.
 
 ## Commits and PRs
 

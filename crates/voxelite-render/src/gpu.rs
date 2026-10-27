@@ -14,6 +14,7 @@ use std::{
 };
 use voxelite_core::{Pos, Snapshot};
 
+mod diagnostics;
 mod headless;
 mod stats;
 pub use headless::{AdapterInfo, Headless, HeadlessFrame, HeadlessOptions};
@@ -120,8 +121,8 @@ impl Viewport {
         collect: bool,
         profile: bool,
     ) -> RenderResult<Self> {
-        // These formats/sample counts are required for every frame; never silently
-        // lower resolution, disable AO/shadows, or drop AA during interaction.
+        // These formats/sample counts are required at every surface size; never
+        // disable AO/shadows or drop MSAA during interaction.
         for format in [
             wgpu::TextureFormat::Rgba8Unorm,
             wgpu::TextureFormat::Rgba16Float,
@@ -135,11 +136,13 @@ impl Viewport {
                 return Err(error(format!("{format:?} lacks 4x MSAA")));
             }
         }
-        let timed = profile && adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
+        let timestamps = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("Voxelite viewport"),
-                required_features: if timed {
+                // Enable the capability up front so diagnostics can be toggled without
+                // replacing the device. No queries or buffers exist until enabled.
+                required_features: if timestamps {
                     wgpu::Features::TIMESTAMP_QUERY
                 } else {
                     wgpu::Features::empty()
@@ -255,7 +258,7 @@ impl Viewport {
         if let Some(e) = scope.pop().await {
             return Err(error(e));
         }
-        let timer = timed.then(|| GpuTimer::new(&device, &queue));
+        let timer = (collect && profile && timestamps).then(|| GpuTimer::new(&device, &queue));
         Ok(Self {
             device,
             errors,
@@ -321,9 +324,10 @@ impl Viewport {
             stats.occupancy_upload_ms = elapsed_ms(upload_start);
             stats.occupancy_bytes = self.occupancy.as_ref().map_or(0, |b| b.size());
         }
-        // Render the scene at 2x *device* dimensions, then chroma subsample.
-        // Budget the actual MSAA/resolve/pool allocations, never silently reduce
-        // moving-frame quality. Oversized viewports use the software fallback.
+        // Preserve the display aspect when NV12 rounds a reduced target to even pixels.
+        let aspect = size[0] as f32 / size[1] as f32;
+        // Prefer 2x device dimensions, stepping down to 1.5x or 1x to fit the
+        // MSAA/resolve/pool budget and device limit before using software fallback.
         let size = super::surface_size(size, self.device.limits().max_texture_dimension_2d)?;
         let mesh_start = self.stats.as_ref().map(|_| Instant::now());
         {
@@ -389,7 +393,6 @@ impl Viewport {
         let right = forward.cross(up).normalize();
         let up = right.cross(forward);
         let light = (-right * 0.55 + up * 0.7 - forward * 0.65 + Vec3::Y * 0.65).normalize();
-        let aspect = size[0] as f32 / size[1] as f32;
         let projection = match camera.projection {
             Projection::Orthographic { height } => {
                 let h = height as f32 * 0.5;
@@ -508,7 +511,9 @@ impl Viewport {
             pass.draw(0..3, 0..1);
         }
         if let Some(stats) = &mut self.stats {
-            stats.draw_calls = self.buffers.len() as u32;
+            stats.resident_chunks = self.buffers.len() as u32;
+            (stats.occupied_bricks, stats.total_bricks) = occupancy.brick_counts();
+            stats.draw_calls = stats.resident_chunks;
             stats.shadow_draw_calls = if redraw_shadow { stats.draw_calls } else { 0 };
             stats.vertices = self.buffers.values().map(|c| u64::from(c.vertices)).sum();
             stats.triangles = stats.vertices / 3;

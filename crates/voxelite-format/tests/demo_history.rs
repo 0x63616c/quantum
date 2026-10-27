@@ -32,6 +32,18 @@ fn generated_demo_is_identical_to_original_and_reproducible() {
 }
 
 #[test]
+fn finishing_steps_describe_the_note_and_named_version() {
+    let project = from_bytes(DEMO).unwrap();
+    let steps = &project.build_history().unwrap().steps;
+    let note = &steps[steps.len() - 2];
+    assert!(matches!(note.command, Command::CreateComment { .. }));
+    assert_eq!(note.label, "Add a composition review note");
+    let version = steps.last().unwrap();
+    assert!(matches!(version.command, Command::SaveVersion { .. }));
+    assert_eq!(version.label, "Create named version");
+}
+
+#[test]
 fn stored_demo_scrubs_undoes_and_redoes_every_real_edit() {
     let project = from_bytes(DEMO).unwrap();
     let recipe = project.build_history().unwrap();
