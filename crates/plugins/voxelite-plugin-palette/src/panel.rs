@@ -2,7 +2,7 @@ use crate::{PRESET_SETTING, PalettePlugin, Preset, library, manager};
 use voxelite_plugin_api::{
     Command, Palette, PaletteAction, PaletteChoice, PaletteCx, PaletteEdit, PaletteError,
     PaletteId, PaletteKind, PaletteOutcome, PalettePanel, PalettePresentation, PalettePreview,
-    PaletteState, PaletteView, SettingValue, Swatch,
+    PaletteState, PaletteView, RecentColorTarget, SettingValue, Swatch,
 };
 
 const CHOICES: [(&str, &str, Option<Preset>); 8] = [
@@ -49,10 +49,14 @@ impl PalettePanel for PalettePlugin {
             .map(|p| &p.library)
             .unwrap_or(&out.state.library)
             .clone();
+        let before_recent = out.state.recent_colors.clone();
+        let mut recent = None;
         let mut persist = true;
         match action {
             PaletteAction::LoadLibrary(bytes) => {
-                out.state.library = library::load(bytes.as_deref())?;
+                let loaded = library::load_state(bytes.as_deref())?;
+                out.state.library = loaded.library;
+                out.state.recent_colors = loaded.recent_colors;
                 if !out
                     .state
                     .library
@@ -105,7 +109,7 @@ impl PalettePanel for PalettePlugin {
                 color,
             } => {
                 let edit = manager::legacy(&view, operation, name, color)?;
-                manager::edit(&view, &mut out, edit)?;
+                recent = manager::edit(&view, &mut out, edit)?;
             }
             PaletteAction::SetColor { rgb, commit } => {
                 if !commit && out.state.preview.is_none() {
@@ -115,18 +119,28 @@ impl PalettePanel for PalettePlugin {
                         slot: out.state.slot,
                     });
                 }
-                manager::edit(&view, &mut out, manager::Edit::SetColor(rgb))?;
+                recent = manager::edit(&view, &mut out, manager::Edit::SetColor(rgb))?;
                 persist = commit;
                 if commit {
                     out.state.preview = None;
                 }
             }
             PaletteAction::CommitColor => {
-                out.state.preview = None;
+                if out.state.preview.take().is_some() {
+                    recent = view
+                        .palette
+                        .order
+                        .get(view.state.slot)
+                        .and_then(|slot| view.palette.get(*slot))
+                        .map(|s| {
+                            let [r, g, b, _] = s.rgba;
+                            [r, g, b]
+                        });
+                }
             }
             PaletteAction::CancelColor => {}
             PaletteAction::AddSwatch { rgb: [r, g, b], at } => {
-                manager::edit(
+                recent = manager::edit(
                     &view,
                     &mut out,
                     manager::Edit::Add {
@@ -142,7 +156,21 @@ impl PalettePanel for PalettePlugin {
                 manager::edit(&view, &mut out, manager::Edit::Move { from, to })?;
             }
             PaletteAction::DuplicateSwatch(position) => {
-                manager::edit(&view, &mut out, manager::Edit::DuplicateSwatch(position))?;
+                recent = manager::edit(&view, &mut out, manager::Edit::DuplicateSwatch(position))?;
+            }
+            PaletteAction::UseRecentColor { index, target } => {
+                let [r, g, b] =
+                    *out.state.recent_colors.get(index).ok_or_else(|| {
+                        PaletteError::Message("Recent color no longer exists".into())
+                    })?;
+                let edit = match target {
+                    RecentColorTarget::SelectedSwatch => manager::Edit::SetColor([r, g, b]),
+                    RecentColorTarget::NewSwatch { at } => manager::Edit::Add {
+                        color: Swatch::rgb(r, g, b),
+                        at,
+                    },
+                };
+                recent = manager::edit(&view, &mut out, edit)?;
             }
             PaletteAction::ImportLibrary { name, format, text } => {
                 let palette = import(&format, &text)?;
@@ -182,8 +210,18 @@ impl PalettePanel for PalettePlugin {
                 append(cx.palette(), import(&format, &text)?, &mut out)?
             }
         }
-        if persist && out.state.library != before {
-            out.library_bytes = Some(library::encode(&out.state.library)?);
+        if persist {
+            if let Some(rgb) = recent.or_else(|| {
+                out.color.as_ref().map(|s| {
+                    let [r, g, b, _] = s.rgba;
+                    [r, g, b]
+                })
+            }) {
+                library::remember(&mut out.state, rgb);
+            }
+            if out.state.library != before || out.state.recent_colors != before_recent {
+                out.library_bytes = Some(library::encode_state(&out.state)?);
+            }
         }
         Ok(out)
     }

@@ -42,6 +42,9 @@ pub struct PaletteState {
     pub slot: usize,
     /// Original library and selection while a picker gesture is active.
     pub preview: Option<PalettePreview>,
+    /// Up to sixteen distinct committed sRGB colors, most recent first.
+    /// Persisted beside entries in the existing local library bytes.
+    pub recent_colors: Vec<[u8; 3]>,
 }
 
 /// Origin and editing policy of a palette in the manager.
@@ -135,6 +138,18 @@ pub enum PaletteOperation {
     MoveRight,
 }
 
+/// Destination for a committed color from the recent-color list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecentColorTarget {
+    /// Replace the selected manager swatch, preserving its name.
+    SelectedSwatch,
+    /// Insert and select a swatch; None appends and overflow clamps.
+    NewSwatch {
+        /// Requested display position.
+        at: Option<usize>,
+    },
+}
+
 /// Typed input from the shell or agent adapter.
 #[derive(Clone, Debug)]
 pub enum PaletteAction {
@@ -179,6 +194,13 @@ pub enum PaletteAction {
     },
     /// Copy a swatch and its name immediately after its display position; select it.
     DuplicateSwatch(usize),
+    /// Commit a recent color to the manager without changing the brush.
+    UseRecentColor {
+        /// Current zero-based MRU position; invalid positions are rejected.
+        index: usize,
+        /// Replace the selected swatch or insert a new one.
+        target: RecentColorTarget,
+    },
     /// Select a brush swatch by display position.
     SelectSwatch(usize),
     /// Move the brush selection, wrapping in display order.

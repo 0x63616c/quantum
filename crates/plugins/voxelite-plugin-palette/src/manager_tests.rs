@@ -284,3 +284,121 @@ fn stepping_accepts_extreme_deltas_without_overflow() {
     cx.apply(PaletteAction::StepSwatch(isize::MAX));
     cx.apply(PaletteAction::StepSwatch(isize::MIN));
 }
+
+#[test]
+fn recent_colors_are_committed_mru_distinct_bounded_and_persisted() {
+    let mut cx = Context::custom(Palette::default());
+    for value in 0..20 {
+        cx.apply(PaletteAction::SetColor {
+            rgb: [value; 3],
+            commit: true,
+        });
+    }
+    assert_eq!(
+        cx.state.recent_colors,
+        (4..20).rev().map(|v| [v; 3]).collect::<Vec<_>>()
+    );
+    cx.apply(PaletteAction::SetColor {
+        rgb: [10; 3],
+        commit: false,
+    });
+    assert_eq!(cx.state.recent_colors[0], [19; 3]);
+    cx.apply(PaletteAction::CommitColor);
+    assert_eq!(cx.state.recent_colors[0], [10; 3]);
+    assert_eq!(cx.state.recent_colors[1], [19; 3]);
+    assert_eq!(cx.state.recent_colors.len(), 16);
+    let out = cx.apply(PaletteAction::SetColor {
+        rgb: [10; 3],
+        commit: true,
+    });
+    assert!(out.library_bytes.is_none());
+    let before = cx.state.recent_colors.clone();
+    cx.apply(PaletteAction::SelectSlot(0));
+    assert_eq!(cx.state.recent_colors, before);
+    let brush = cx.brush.clone();
+    cx.apply(PaletteAction::UseRecentColor {
+        index: 1,
+        target: RecentColorTarget::NewSwatch { at: Some(0) },
+    });
+    assert_eq!(cx.state.recent_colors[0], [19; 3]);
+    assert_eq!(
+        cx.view()
+            .palette
+            .get(cx.view().palette.order[0])
+            .unwrap()
+            .rgba,
+        [19, 19, 19, 255]
+    );
+    cx.apply(PaletteAction::UseRecentColor {
+        index: 1,
+        target: RecentColorTarget::SelectedSwatch,
+    });
+    assert_eq!(cx.state.recent_colors[0], [10; 3]);
+    assert_eq!(cx.brush, brush);
+    cx.rejects(
+        PaletteAction::UseRecentColor {
+            index: 16,
+            target: RecentColorTarget::SelectedSwatch,
+        },
+        "no longer exists",
+    );
+    let bytes = library::encode_state(&cx.state).unwrap();
+    let mut fresh = Context::default();
+    let out = fresh.apply(PaletteAction::LoadLibrary(Some(bytes)));
+    assert!(out.library_bytes.is_none());
+    assert_eq!(fresh.state.recent_colors, cx.state.recent_colors);
+    assert_eq!(fresh.state.library, cx.state.library);
+}
+
+#[test]
+fn brush_choices_update_recent_colors_without_touching_manager_selection_or_document() {
+    let mut cx = Context {
+        palette: Preset::Pico8.palette(),
+        ..Default::default()
+    };
+    cx.apply(PaletteAction::SelectSlot(3));
+    let out = cx.apply(PaletteAction::SelectSwatch(12));
+    assert!(out.library_bytes.is_some());
+    assert_eq!(cx.state.slot, 3);
+    assert_eq!(cx.state.recent_colors, [[41, 173, 255]]);
+    assert!(
+        cx.apply(PaletteAction::SelectSwatch(12))
+            .library_bytes
+            .is_none()
+    );
+    let out = cx.apply(PaletteAction::StepSwatch(1));
+    assert!(out.library_bytes.is_some());
+    assert_eq!(cx.state.recent_colors, [[131, 118, 156], [41, 173, 255]]);
+    assert_eq!(cx.palette, Preset::Pico8.palette());
+    assert!(cx.state.library.entries.is_empty());
+}
+
+#[test]
+fn old_library_fixtures_and_optional_recent_colors_load_with_strict_bounds() {
+    let old = br#"{"entries":[{"id":"00000000-0000-0000-0000-000000000001","name":"Old","palette":{"slots":[{"index":255,"rgba":[1,2,3,255],"name":"Named"},{"index":8,"rgba":[4,5,6,255]}],"order":[8,255]}}]}"#;
+    let state = library::load_state(Some(old)).unwrap();
+    assert!(state.recent_colors.is_empty());
+    assert_eq!(state.library.entries[0].palette.order, [8, 255]);
+    let encoded = library::encode_state(&state).unwrap();
+    assert!(
+        !String::from_utf8(encoded.clone())
+            .unwrap()
+            .contains("recent_colors")
+    );
+    assert_eq!(library::load_state(Some(&encoded)).unwrap(), state);
+    for text in [
+        r#"{"entries":[],"recent_colors":[[1,2,3],[1,2,3]]}"#.to_owned(),
+        r#"{"entries":[],"recent_colors":[[256,0,0]]}"#.to_owned(),
+        r#"{"entries":[],"recent_colors":[[1,2]]}"#.to_owned(),
+        r#"{"entries":[],"recent_colors":null}"#.to_owned(),
+        format!(
+            r#"{{"entries":[],"recent_colors":{}}}"#,
+            json::to_string(&(0..17).map(|i| [i, 0, 0]).collect::<Vec<_>>()).unwrap()
+        ),
+    ] {
+        assert!(
+            library::load_state(Some(text.as_bytes())).is_err(),
+            "{text}"
+        );
+    }
+}

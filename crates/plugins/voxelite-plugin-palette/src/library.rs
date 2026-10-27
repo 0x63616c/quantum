@@ -1,19 +1,74 @@
 use voxelite_plugin_api::{
-    LibraryPalette, Palette, PaletteError, PaletteLibrary, Swatch, Uuid, json, validate_name,
+    LibraryPalette, Palette, PaletteError, PaletteLibrary, PaletteState, Swatch, Uuid, json,
+    validate_name,
 };
 
 type Result<T> = std::result::Result<T, PaletteError>;
 
+#[cfg(test)]
 pub(crate) fn load(bytes: Option<&[u8]>) -> Result<PaletteLibrary> {
+    Ok(load_state(bytes)?.library)
+}
+
+pub(crate) fn load_state(bytes: Option<&[u8]>) -> Result<PaletteState> {
     let Some(bytes) = bytes else {
-        return Ok(PaletteLibrary::default());
+        return Ok(PaletteState::default());
     };
     if bytes.len() > 4 * 1024 * 1024 {
         return Err(PaletteError::Message("Settings file too large".into()));
     }
-    let library = json::from_slice(bytes).map_err(|e| PaletteError::Message(e.to_string()))?;
+    let value: json::Value = json::from_slice(bytes).map_err(json_error)?;
+    let recent_colors: Vec<[u8; 3]> = value
+        .get("recent_colors")
+        .cloned()
+        .map(json::from_value)
+        .transpose()
+        .map_err(json_error)?
+        .unwrap_or_default();
+    validate_recent(&recent_colors)?;
+    let library = json::from_value(value).map_err(json_error)?;
     validate(&library)?;
-    Ok(library)
+    Ok(PaletteState {
+        library,
+        recent_colors,
+        ..Default::default()
+    })
+}
+
+fn json_error(error: json::Error) -> PaletteError {
+    PaletteError::Message(error.to_string())
+}
+
+fn validate_recent(recent: &[[u8; 3]]) -> Result<()> {
+    if recent.len() > 16
+        || recent
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != recent.len()
+    {
+        return Err(PaletteError::Message(
+            "Recent colors must contain at most 16 distinct RGB colors".into(),
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn remember(state: &mut PaletteState, rgb: [u8; 3]) {
+    state.recent_colors.retain(|color| *color != rgb);
+    state.recent_colors.insert(0, rgb);
+    state.recent_colors.truncate(16);
+}
+
+pub(crate) fn encode_state(state: &PaletteState) -> Result<Vec<u8>> {
+    validate_recent(&state.recent_colors)?;
+    if state.recent_colors.is_empty() {
+        return encode(&state.library);
+    }
+    validate(&state.library)?;
+    let mut value = json::to_value(&state.library).map_err(json_error)?;
+    value["recent_colors"] = json::to_value(&state.recent_colors).map_err(json_error)?;
+    json::to_vec_pretty(&value).map_err(json_error)
 }
 
 pub(crate) fn validate(library: &PaletteLibrary) -> Result<()> {
