@@ -149,7 +149,7 @@ wait_title 'Untitled — Voxelite'
 stop_app
 # Inspect preset previews and the truthful local-session guide in both themes.
 for theme in dark light; do
-  start_app 1 "$theme"
+  start_app 1 "$theme" --example
   xdotool windowsize "$window" 1440 900
   sleep 6
   search 'choose palette'
@@ -183,7 +183,7 @@ done
 # Large logical windows at fractional and high pixel density, both themes.
 for scale in 1.5 2; do
   for theme in dark light; do
-    start_app "$scale" "$theme"
+    start_app "$scale" "$theme" --example
     read -r width height < <(python3 - "$scale" <<'PY'
 import sys
 s=float(sys.argv[1]); print(int(1440*s), int(900*s))

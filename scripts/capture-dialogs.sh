@@ -37,7 +37,7 @@ cleanup() {
   rm -rf "$XDG_RUNTIME_DIR"
 }
 trap cleanup EXIT
-"$BIN" --theme dark --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/app.sock" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+"$BIN" --example --theme dark --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/app.sock" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
 app_pid=$!
 for attempt in {1..100}; do
   window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Autumn Workshop.*Voxelite' 2>/dev/null | head -1 || true)"

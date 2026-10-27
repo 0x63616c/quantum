@@ -15,6 +15,8 @@ menu Voxelite
 menu File
   New | New project | icon=file-plus | shortcut=⌘N | os= | checked=false | disabled=false
   Open | Open project… | icon=folder-open | shortcut=⌘O | os= | checked=false | disabled=false
+  menu Open Recent
+    ClearRecents | Clear Recent Projects | icon=trash-2 | shortcut= | os= | checked=false | disabled=false
   Save | Save | icon=save | shortcut=⌘S | os= | checked=false | disabled=false
   SaveAs | Save as… | icon=file-output | shortcut=⇧⌘S | os= | checked=false | disabled=false
 menu Edit
@@ -58,12 +60,13 @@ menu Agent
 menu Extensions
   Extensions | Extensions | icon=puzzle | shortcut= | os= | checked=false | disabled=false
 menu Window
+  Welcome | Welcome | icon=cube | shortcut=⇧⌘1 | os= | checked=false | disabled=false
   Minimize | Minimize | icon=square | shortcut=⌘M | os= | checked=false | disabled=false
   ZoomWindow | Zoom | icon=square | shortcut= | os= | checked=false | disabled=false
 menu Help
   Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
 in-window menus
-  File: [New, Open, Save, SaveAs, Quit]
+  File: [New, Open, OpenRecent, ClearRecents, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
   View: [Frame, Front, Right, Top, Grid, Theme, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
@@ -71,11 +74,13 @@ in-window menus
   Palette: [ShowPalette, Palette, ManagePalettes]
   Agent: [Agent]
   Extensions: [Extensions]
-  Window: [Minimize, ZoomWindow]
+  Window: [Welcome, Minimize, ZoomWindow]
   Help: [Help, About]
 Cmd-K
   New | New project | file-plus | ⌘N
   Open | Open project… | folder-open | ⌘O
+  OpenRecent | Open Recent | folder-open | 
+  ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | ⌘S
   SaveAs | Save as… | file-output | ⇧⌘S
   Quit | Quit Voxelite | log-out | ⌘Q
@@ -106,6 +111,7 @@ Cmd-K
   ManagePalettes | Manage palettes… | sliders-horizontal | 
   Agent | Agent connection | spark | 
   Extensions | Extensions | puzzle | 
+  Welcome | Welcome | cube | ⇧⌘1
   Minimize | Minimize | square | ⌘M
   ZoomWindow | Zoom | square | 
   Help | Keyboard & mouse guide | keyboard | 
@@ -117,6 +123,8 @@ Cmd-K
 shortcut sheet
   New | File | ⌘N
   Open | File | ⌘O
+  OpenRecent | File | 
+  ClearRecents | File | 
   Save | File | ⌘S
   SaveAs | File | ⇧⌘S
   Quit | Voxelite | ⌘Q
@@ -148,6 +156,7 @@ shortcut sheet
   ManagePalettes | Palette | 
   Agent | Agent | 
   Extensions | Extensions | 
+  Welcome | Window | ⇧⌘1
   Minimize | Window | ⌘M
   ZoomWindow | Window | 
   Help | Help | 
@@ -178,6 +187,7 @@ bindings
   MirrorY | shift-y | Editor && !SharedTextInput
   MirrorZ | shift-z | Editor && !SharedTextInput
   Comment | c | Editor && !SharedTextInput
+  Welcome | super-shift-1 | global
   Minimize | super-m | Editor && !SharedTextInput
   Hide | super-h | global
   HideOthers | alt-super-h | global
@@ -189,6 +199,8 @@ WindowsLinux
 menu File
   New | New project | icon=file-plus | shortcut=Ctrl+N | os= | checked=false | disabled=false
   Open | Open project… | icon=folder-open | shortcut=Ctrl+O | os= | checked=false | disabled=false
+  menu Open Recent
+    ClearRecents | Clear Recent Projects | icon=trash-2 | shortcut= | os= | checked=false | disabled=false
   Save | Save | icon=save | shortcut=Ctrl+S | os= | checked=false | disabled=false
   SaveAs | Save as… | icon=file-output | shortcut=Ctrl+Shift+S | os= | checked=false | disabled=false
   Quit | Quit Voxelite | icon=log-out | shortcut=Ctrl+Q | os= | checked=false | disabled=false
@@ -234,13 +246,14 @@ menu Agent
 menu Extensions
   Extensions | Extensions | icon=puzzle | shortcut= | os= | checked=false | disabled=false
 menu Window
+  Welcome | Welcome | icon=cube | shortcut=Ctrl+Shift+1 | os= | checked=false | disabled=false
   Minimize | Minimize | icon=square | shortcut=Ctrl+M | os= | checked=false | disabled=false
   ZoomWindow | Zoom | icon=square | shortcut= | os= | checked=false | disabled=false
 menu Help
   Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
   About | About Voxelite | icon=cube | shortcut= | os= | checked=false | disabled=false
 in-window menus
-  File: [New, Open, Save, SaveAs, Quit]
+  File: [New, Open, OpenRecent, ClearRecents, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
   View: [Frame, Front, Right, Top, Grid, Theme, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
@@ -248,11 +261,13 @@ in-window menus
   Palette: [ShowPalette, Palette, ManagePalettes]
   Agent: [Agent]
   Extensions: [Extensions]
-  Window: [Minimize, ZoomWindow]
+  Window: [Welcome, Minimize, ZoomWindow]
   Help: [Help, About]
 Cmd-K
   New | New project | file-plus | Ctrl+N
   Open | Open project… | folder-open | Ctrl+O
+  OpenRecent | Open Recent | folder-open | 
+  ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | Ctrl+S
   SaveAs | Save as… | file-output | Ctrl+Shift+S
   Quit | Quit Voxelite | log-out | Ctrl+Q
@@ -283,6 +298,7 @@ Cmd-K
   ManagePalettes | Manage palettes… | sliders-horizontal | 
   Agent | Agent connection | spark | 
   Extensions | Extensions | puzzle | 
+  Welcome | Welcome | cube | Ctrl+Shift+1
   Minimize | Minimize | square | Ctrl+M
   ZoomWindow | Zoom | square | 
   Help | Keyboard & mouse guide | keyboard | 
@@ -290,6 +306,8 @@ Cmd-K
 shortcut sheet
   New | File | Ctrl+N
   Open | File | Ctrl+O
+  OpenRecent | File | 
+  ClearRecents | File | 
   Save | File | Ctrl+S
   SaveAs | File | Ctrl+Shift+S
   Quit | File | Ctrl+Q
@@ -321,6 +339,7 @@ shortcut sheet
   ManagePalettes | Palette | 
   Agent | Agent | 
   Extensions | Extensions | 
+  Welcome | Window | Ctrl+Shift+1
   Minimize | Window | Ctrl+M
   ZoomWindow | Window | 
   Help | Help | 
@@ -347,6 +366,7 @@ bindings
   MirrorY | shift-y | Editor && !SharedTextInput
   MirrorZ | shift-z | Editor && !SharedTextInput
   Comment | c | Editor && !SharedTextInput
+  Welcome | ctrl-shift-1 | global
   Minimize | ctrl-m | Editor && !SharedTextInput
   Clipboard::Cut | ctrl-x | TextField
   Clipboard::Copy | ctrl-c | TextField
