@@ -378,6 +378,8 @@ pub struct Editor {
     /// Selected brush color; imported lazily as part of the edit transaction.
     pub color: Swatch,
     pub(crate) palette_state: voxelite_plugin_api::PaletteState,
+    /// Last admitted transient discussion state.
+    pub comments_state: voxelite_plugin_api::CommentsState,
     /// Camera state, unaffected by undo/redo.
     pub camera: OrbitCamera,
     /// First corner of an uncommitted box.
@@ -430,6 +432,7 @@ impl Editor {
             tool: Tool::Place,
             color,
             palette_state: Default::default(),
+            comments_state: Default::default(),
             camera,
             box_start: None,
             #[cfg(test)]
@@ -716,6 +719,11 @@ impl Editor {
         if !host.has_tool(self.tool.id())? {
             self.box_start = None;
         }
+        if !host.has_comments_panel(voxelite_plugin_comments::PANEL_ID)? {
+            self.comments_state.placing = false;
+            self.comments_state.first = None;
+            self.comments_state.draft = None;
+        }
         Ok(())
     }
     /// Region outlined for a tool hover or an unfinished box.
@@ -738,6 +746,15 @@ impl Editor {
         ray: Option<Ray>,
         gesture: ToolGesture,
     ) -> EditorResult<Option<ToolOutcome>> {
+        self.registered_tool_outcome(tool.id(), ray, gesture, self.box_start)
+    }
+    pub(crate) fn registered_tool_outcome(
+        &self,
+        id: &str,
+        ray: Option<Ray>,
+        gesture: ToolGesture,
+        anchor: Option<Pos>,
+    ) -> EditorResult<Option<ToolOutcome>> {
         let hit = ray
             .and_then(|ray| raycast(self.snapshot(), ray))
             .map(|hit| ToolHit {
@@ -752,14 +769,10 @@ impl Editor {
             ray,
             hit,
         };
-        Ok(self.plugins.borrow_mut().dispatch_tool(
-            tool.id(),
-            &cx,
-            ToolInput {
-                gesture,
-                anchor: self.box_start,
-            },
-        )?)
+        Ok(self
+            .plugins
+            .borrow_mut()
+            .dispatch_tool(id, &cx, ToolInput { gesture, anchor })?)
     }
     /// Apply a pointer click, sampling without mutation when the picker is active.
     pub fn click(&mut self, ray: Ray, sample_only: bool) -> EditorResult<bool> {

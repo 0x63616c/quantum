@@ -359,11 +359,8 @@ impl EditorView {
                 .retired
                 .extend(old.views.into_iter().map(|v| v.2));
         }
-        self.discussion.selected = None;
-        self.discussion.numbers.clear();
-        self.discussion.draft = None;
-        self.discussion.placing = false;
-        self.discussion.first = None;
+        editor.comments_state.region = self.editor.comments_state.region;
+        editor.comments_state.filter = self.editor.comments_state.filter;
 
         editor.retain_palette_library(&self.editor);
         self.editor = editor;
@@ -739,9 +736,7 @@ impl EditorView {
             return;
         }
         if key == "escape" {
-            self.discussion.placing = false;
-            self.discussion.draft = None;
-            self.discussion.selected = None;
+            self.discussion_action(voxelite_plugin_api::CommentsAction::Cancel, cx);
             if self.editor.preview.is_some() {
                 self.editor.return_live();
                 self.refresh_preview(cx);
@@ -863,7 +858,7 @@ impl EditorView {
             self.hover = Some(self.cursor);
             cx.stop_propagation();
         }
-        if key == "enter" && self.discussion.placing {
+        if key == "enter" && self.editor.comments_state.placing {
             self.anchor_comment(self.cursor, cx);
             return;
         }
@@ -1263,12 +1258,12 @@ impl EditorView {
                         return;
                     }
                     if let Some(ray) = this.viewport.ray(&this.editor, e.position) {
-                        if this.discussion.placing {
-                            if let Some(hit) =
-                                voxelite_app::editor::raycast(this.editor.display_snapshot(), ray)
-                            {
-                                this.anchor_comment(hit.at, cx);
-                            }
+                        if this.editor.comments_state.placing && this.editor.comments_enabled() {
+                            this.place_comment(
+                                Some(ray),
+                                voxelite_plugin_api::ToolGesture::Click,
+                                cx,
+                            );
                             return;
                         }
                         let r = this.editor.click(ray, e.modifiers.alt);
@@ -2289,15 +2284,15 @@ impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         #[cfg(target_family = "wasm")]
         crate::web::set_unsaved(self.editor.engine.is_dirty());
-        for comment in self
-            .editor
-            .snapshot()
-            .comments
-            .iter()
-            .chain(self.editor.display_snapshot().comments.iter())
-        {
-            let next = self.discussion.numbers.len() + 1;
-            self.discussion.numbers.entry(comment.id).or_insert(next);
+        if let Some(view) = self.editor.comments_view() {
+            self.editor.comments_state = view.state;
+        } else {
+            if self.panel == Panel::Comments {
+                self.panel = Panel::Session;
+            }
+            self.editor.comments_state.placing = false;
+            self.editor.comments_state.first = None;
+            self.editor.comments_state.draft = None;
         }
         for image in self.agent.retired.drain(..) {
             let _ = window.drop_image(image);

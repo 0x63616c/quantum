@@ -1,6 +1,7 @@
 //! Model-space pins and docked, revision-aware discussion threads.
 use super::*;
-use voxelite_core::{Anchor, AnchorState, Origin, Uuid};
+use voxelite_core::Origin;
+use voxelite_plugin_api::{CommentsAction, CommentsOutcome, CommentsView, ToolGesture};
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Panel {
     Session,
@@ -8,93 +9,79 @@ pub(super) enum Panel {
     History,
 }
 pub(super) struct Discussion {
-    pub selected: Option<Uuid>,
-    pub numbers: std::collections::BTreeMap<Uuid, usize>,
-    pub placing: bool,
-    pub region: bool,
-    pub first: Option<Pos>,
-    pub draft: Option<Anchor>,
-    pub filter: usize,
     pub scroll: ScrollHandle,
     pub text: Entity<crate::text_field::TextField>,
 }
 impl Discussion {
     pub fn new(cx: &mut App) -> Self {
         Self {
-            selected: None,
-            numbers: Default::default(),
-            placing: false,
-            region: false,
-            first: None,
-            draft: None,
-            filter: 0,
             scroll: ScrollHandle::new(),
             text: crate::text_field::TextField::new("Write a comment…", cx),
         }
     }
 }
 impl EditorView {
-    pub(super) fn begin_comment(&mut self, cx: &mut Context<Self>) {
-        if self.editor.preview.is_some() {
-            self.status = "Return to live to add a comment".into();
-            cx.notify();
-            return;
+    fn discussion_outcome(
+        &mut self,
+        result: voxelite_app::editor::EditorResult<Option<CommentsOutcome>>,
+        cx: &mut Context<Self>,
+    ) {
+        match result {
+            Ok(Some(out)) => {
+                if out.open_panel {
+                    self.panel = Panel::Comments;
+                }
+                if let Some(status) = out.status {
+                    self.status = status.into();
+                }
+                if out.clear_text {
+                    self.discussion
+                        .text
+                        .update(cx, |f, cx| f.set(String::new(), cx));
+                }
+                if out.scroll_bottom {
+                    self.discussion.scroll.scroll_to_bottom();
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                self.status = error.to_string().into();
+            }
         }
-        self.panel = Panel::Comments;
-        self.discussion.placing = true;
-        self.discussion.first = None;
-        self.discussion.selected = None;
-        self.discussion.draft = None;
-        self.status = if self.discussion.region {
-            "Click two corners to anchor a region"
-        } else {
-            "Click a voxel to anchor a comment"
-        }
-        .into();
         cx.notify();
+    }
+    pub(super) fn discussion_action(&mut self, action: CommentsAction, cx: &mut Context<Self>) {
+        let result = self.editor.comments_action(action);
+        self.discussion_outcome(result, cx);
+    }
+    pub(super) fn begin_comment(&mut self, cx: &mut Context<Self>) {
+        self.discussion_action(
+            CommentsAction::Command(voxelite_plugin_comments::COMMAND_ID.into()),
+            cx,
+        );
     }
     pub(super) fn anchor_comment(&mut self, at: Pos, cx: &mut Context<Self>) {
-        let anchor = if self.discussion.region {
-            if let Some(first) = self.discussion.first.take() {
-                Anchor::Region {
-                    min: std::array::from_fn(|a| first[a].min(at[a])),
-                    max: std::array::from_fn(|a| first[a].max(at[a]) + 1),
-                }
-            } else {
-                self.discussion.first = Some(at);
-                self.status = "Click the opposite corner".into();
-                cx.notify();
-                return;
-            }
-        } else {
-            Anchor::Voxel { at }
-        };
-        self.discussion.draft = Some(anchor);
-        self.discussion.placing = false;
-        self.discussion
-            .text
-            .update(cx, |f, cx| f.set(String::new(), cx));
-        cx.notify();
+        self.place_comment(None, ToolGesture::ApplyAt(at), cx);
+    }
+    pub(super) fn place_comment(
+        &mut self,
+        ray: Option<voxelite_app::editor::Ray>,
+        gesture: ToolGesture,
+        cx: &mut Context<Self>,
+    ) {
+        let result = self.editor.comment_gesture(ray, gesture);
+        self.discussion_outcome(result, cx);
     }
     fn post_comment(&mut self, cx: &mut Context<Self>) {
-        let text = self.discussion.text.read(cx).text.trim().to_string();
-        let result = if let Some(anchor) = self.discussion.draft.clone() {
-            self.editor.comment(anchor, text).map(|id| {
-                self.discussion.selected = Some(id);
-                self.discussion.draft = None;
-            })
-        } else if let Some(id) = self.discussion.selected {
-            self.editor.reply(id, text).map(|_| ())
-        } else {
-            return;
-        };
-        if result.is_ok() {
-            self.discussion.scroll.scroll_to_bottom();
-            self.discussion
-                .text
-                .update(cx, |f, cx| f.set(String::new(), cx));
+        let text = self.discussion.text.read(cx).text.clone();
+        match self.editor.comments_action(CommentsAction::Post(text)) {
+            Ok(Some(outcome)) if !outcome.commands.is_empty() => {
+                self.discussion_outcome(Ok(Some(outcome)), cx);
+                self.report(Ok(()), "Comment saved", cx);
+            }
+            Ok(_) => {}
+            Err(error) => self.report::<()>(Err(error), "Comment saved", cx),
         }
-        self.report(result, "Comment saved", cx);
     }
     pub(super) fn panel_tabs(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
@@ -111,6 +98,7 @@ impl EditorView {
                     (Panel::History, "History"),
                 ]
                 .into_iter()
+                .filter(|(panel, _)| *panel != Panel::Comments || self.editor.comments_enabled())
                 .enumerate()
                 .map(|(i, (panel, label))| {
                     self.control(("panel-tab", i), "", label, cx, move |this, window, cx| {
@@ -132,9 +120,11 @@ impl EditorView {
     }
     pub(super) fn comments_panel(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
-        let mut comments: Vec<_> = self.editor.display_snapshot().comments.iter().collect();
-        comments.sort_by_key(|c| self.discussion.numbers.get(&c.id).copied().unwrap_or(0));
-        if let Some(thread) = self.thread_panel(cx) {
+        let Some(view) = self.editor.comments_view() else {
+            return div();
+        };
+        let comments = &view.comments;
+        if let Some(thread) = self.thread_panel(&view, cx) {
             return div()
                 .flex_1()
                 .min_h(px(0.0))
@@ -142,11 +132,6 @@ impl EditorView {
                 .flex_col()
                 .child(thread);
         }
-        let matching = |c: &&voxelite_core::Comment| match self.discussion.filter {
-            0 => !c.resolved,
-            1 => c.resolved,
-            _ => true,
-        };
         div()
             .flex_1()
             .min_h(px(120.0))
@@ -176,12 +161,14 @@ impl EditorView {
                                 label,
                                 cx,
                                 move |this, _, cx| {
-                                    this.discussion.filter = i;
+                                    this.discussion_action(CommentsAction::Filter(i), cx);
                                     cx.notify();
                                 },
                             )
                             .border_0()
-                            .when(self.discussion.filter == i, |d| d.bg(t.selected()))
+                            .when(self.editor.comments_state.filter == i, |d| {
+                                d.bg(t.selected())
+                            })
                         }),
                 ),
             )
@@ -189,15 +176,14 @@ impl EditorView {
                 self.control(
                     "region-anchor",
                     "box",
-                    if self.discussion.region {
+                    if self.editor.comments_state.region {
                         "Anchor: Region"
                     } else {
                         "Anchor: Voxel"
                     },
                     cx,
                     |this, _, cx| {
-                        this.discussion.region = !this.discussion.region;
-                        this.discussion.first = None;
+                        this.discussion_action(CommentsAction::ToggleRegion, cx);
                         cx.notify();
                     },
                 )
@@ -209,190 +195,143 @@ impl EditorView {
                     .flex_1()
                     .min_h(px(0.0))
                     .overflow_y_scroll()
-                    .when(!comments.iter().any(&matching), |d| {
-                        d.child(div().py(px(16.0)).text_color(t.muted()).child(
-                            if comments.is_empty() {
-                                "Pin a discussion to your model."
-                            } else {
-                                "No threads in this filter."
-                            },
-                        ))
+                    .when(comments.is_empty(), |d| {
+                        d.child(
+                            div()
+                                .py(px(16.0))
+                                .text_color(t.muted())
+                                .child(if view.empty {
+                                    "Pin a discussion to your model."
+                                } else {
+                                    "No threads in this filter."
+                                }),
+                        )
                     })
-                    .children(
-                        comments
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, c)| matching(c))
-                            .map(|(i, c)| {
-                                let id = c.id;
-                                let first = &c.messages[0];
+                    .children(comments.iter().enumerate().map(|(i, c)| {
+                        let id = c.id;
+                        let first = &c.messages[0];
+                        div()
+                            .id(("thread", i))
+                            .tab_index(0)
+                            .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                            .active(move |d| d.bg(t.selected()))
+                            .p(px(12.0))
+                            .mb(px(8.0))
+                            .rounded(px(8.0))
+                            .border_b_1()
+                            .border_color(if self.editor.comments_state.selected == Some(id) {
+                                t.accent()
+                            } else {
+                                t.line()
+                            })
+                            .cursor_pointer()
+                            .hover(move |d| d.bg(t.hover()))
+                            .child(
+                                row()
+                                    .gap(px(8.0))
+                                    .child(
+                                        mono(
+                                            self.editor
+                                                .comments_state
+                                                .numbers
+                                                .get(&id)
+                                                .copied()
+                                                .unwrap_or(i + 1)
+                                                .to_string(),
+                                        )
+                                        .text_color(t.accent()),
+                                    )
+                                    .child(
+                                        icon(if c.resolved { "check" } else { "comment" })
+                                            .text_color(t.muted()),
+                                    )
+                                    .child(div().font_weight(FontWeight::MEDIUM).child(
+                                        if first.origin == Origin::Human {
+                                            "Human"
+                                        } else {
+                                            "Agent"
+                                        },
+                                    )),
+                            )
+                            .child(
                                 div()
-                                    .id(("thread", i))
-                                    .tab_index(0)
-                                    .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
-                                    .active(move |d| d.bg(t.selected()))
-                                    .p(px(12.0))
-                                    .mb(px(8.0))
-                                    .rounded(px(8.0))
-                                    .border_b_1()
-                                    .border_color(if self.discussion.selected == Some(id) {
-                                        t.accent()
-                                    } else {
-                                        t.line()
-                                    })
-                                    .cursor_pointer()
-                                    .hover(move |d| d.bg(t.hover()))
-                                    .child(
-                                        row()
-                                            .gap(px(8.0))
-                                            .child(
-                                                mono(
-                                                    self.discussion
-                                                        .numbers
-                                                        .get(&id)
-                                                        .copied()
-                                                        .unwrap_or(i + 1)
-                                                        .to_string(),
-                                                )
-                                                .text_color(t.accent()),
-                                            )
-                                            .child(
-                                                icon(if c.resolved { "check" } else { "comment" })
-                                                    .text_color(t.muted()),
-                                            )
-                                            .child(div().font_weight(FontWeight::MEDIUM).child(
-                                                if first.origin == Origin::Human {
-                                                    "Human"
-                                                } else {
-                                                    "Agent"
-                                                },
-                                            )),
-                                    )
-                                    .child(
-                                        div().mt(px(8.0)).child(
-                                            first.text.chars().take(160).collect::<String>(),
-                                        ),
-                                    )
-                                    .child(
-                                        mono(format!(
-                                            "{} messages · {:?}",
-                                            c.messages.len(),
-                                            self.editor.display_snapshot().anchor_state(c)
-                                        ))
-                                        .mt(px(6.0))
-                                        .text_color(t.muted()),
-                                    )
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        this.discussion.selected = Some(id);
-                                        this.discussion.draft = None;
-                                        this.discussion.placing = false;
-                                        this.discussion
-                                            .text
-                                            .update(cx, |f, cx| f.set(String::new(), cx));
-                                        window.focus(&this.focus, cx);
-                                        cx.notify();
-                                    }))
-                            }),
-                    ),
+                                    .mt(px(8.0))
+                                    .child(first.text.chars().take(160).collect::<String>()),
+                            )
+                            .child(
+                                mono(format!(
+                                    "{} messages · {:?}",
+                                    c.messages.len(),
+                                    self.editor.display_snapshot().anchor_state(c)
+                                ))
+                                .mt(px(6.0))
+                                .text_color(t.muted()),
+                            )
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.discussion_action(CommentsAction::Select(Some(id)), cx);
+                                this.discussion
+                                    .text
+                                    .update(cx, |f, cx| f.set(String::new(), cx));
+                                window.focus(&this.focus, cx);
+                                cx.notify();
+                            }))
+                    })),
             )
     }
     pub(super) fn comment_pins(&self, cx: &Context<Self>) -> Vec<AnyElement> {
         // Pins are contextual annotations, not unexplained badges over the art.
-        if self.panel != Panel::Comments {
+        if self.panel != Panel::Comments || !self.editor.comments_enabled() {
             return Vec::new();
         }
         let t = self.theme;
         let b = self.viewport.bounds();
         let aspect = f64::from(f32::from(b.size.width) / f32::from(b.size.height).max(1.0));
         self.editor
-            .display_snapshot()
-            .comments
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| match self.discussion.filter {
-                0 => !c.resolved,
-                1 => c.resolved,
-                _ => true,
-            })
-            .filter_map(|(i, c)| {
-                let (uv, occluded) = voxelite_app::comments::project_pin(
-                    self.editor.display_snapshot(),
-                    c,
-                    self.viewport.display_camera(),
-                    aspect,
-                )?;
-                let id = c.id;
-                let dim = occluded
-                    || self.editor.display_snapshot().anchor_state(c) != AnchorState::Visible;
-                Some(
-                    row()
-                        .id(("comment-pin", i))
-                        .absolute()
-                        .left(relative(uv[0] as f32))
-                        .top(relative(uv[1] as f32))
-                        .ml(px(-16.0))
-                        .mt(px(-32.0))
-                        .size(px(32.0))
-                        .justify_center()
-                        .rounded(px(8.0))
-                        .border_1()
-                        .border_color(if self.discussion.selected == Some(id) {
-                            t.accent()
-                        } else {
-                            t.line()
-                        })
-                        .bg(t.background())
-                        .text_color(if dim { t.muted() } else { t.accent() })
-                        .shadow_sm()
-                        .cursor_pointer()
-                        .tooltip(hint(
-                            format!(
-                                "{}{}",
-                                if dim { "Occluded / detached · " } else { "" },
-                                c.messages[0].text.chars().take(100).collect::<String>()
-                            ),
-                            t,
-                        ))
-                        .when(c.resolved, |d| {
-                            d.child(icon("check").text_color(t.accent()))
-                        })
-                        .when(!c.resolved, |d| {
-                            d.child(
-                                self.discussion
-                                    .numbers
-                                    .get(&id)
-                                    .copied()
-                                    .unwrap_or(i + 1)
-                                    .to_string(),
-                            )
-                        })
-                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                        .on_mouse_move(|_, _, cx| cx.stop_propagation())
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            window.focus(&this.focus, cx);
-                            this.panel = Panel::Comments;
-                            this.discussion.selected = Some(id);
-                            this.discussion.draft = None;
-                            this.discussion.placing = false;
-                            cx.notify();
-                        }))
-                        .into_any_element(),
-                )
+            .comment_pins(self.viewport.display_camera(), aspect)
+            .into_iter()
+            .map(|pin| {
+                let id = pin.id;
+                let i = pin.index;
+                let uv = pin.uv;
+                let dim = pin.dim;
+                row()
+                    .id(("comment-pin", i))
+                    .absolute()
+                    .left(relative(uv[0] as f32))
+                    .top(relative(uv[1] as f32))
+                    .ml(px(-16.0))
+                    .mt(px(-32.0))
+                    .size(px(32.0))
+                    .justify_center()
+                    .rounded(px(8.0))
+                    .border_1()
+                    .border_color(if pin.selected { t.accent() } else { t.line() })
+                    .bg(t.background())
+                    .text_color(if dim { t.muted() } else { t.accent() })
+                    .shadow_sm()
+                    .cursor_pointer()
+                    .tooltip(hint(pin.tooltip, t))
+                    .when(pin.resolved, |d| {
+                        d.child(icon("check").text_color(t.accent()))
+                    })
+                    .when(!pin.resolved, |d| d.child(pin.number.to_string()))
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_mouse_move(|_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        window.focus(&this.focus, cx);
+                        this.panel = Panel::Comments;
+                        this.discussion_action(CommentsAction::Select(Some(id)), cx);
+                        cx.notify();
+                    }))
+                    .into_any_element()
             })
             .collect()
     }
     /// Keep discussions in the sidebar so the artwork and its anchors remain visible.
-    fn thread_panel(&self, cx: &Context<Self>) -> Option<AnyElement> {
+    fn thread_panel(&self, view: &CommentsView, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
-        let thread = self.discussion.selected.and_then(|id| {
-            self.editor
-                .display_snapshot()
-                .comments
-                .iter()
-                .enumerate()
-                .find(|(_, c)| c.id == id)
-        });
-        if thread.is_none() && self.discussion.draft.is_none() {
+        let thread = view.thread.as_ref().map(|(i, c)| (*i, c));
+        if thread.is_none() && self.editor.comments_state.draft.is_none() {
             return None;
         }
         let preview = self.editor.preview.is_some();
@@ -414,8 +353,7 @@ impl EditorView {
                                 "All comments",
                                 cx,
                                 |this, window, cx| {
-                                    this.discussion.selected = None;
-                                    this.discussion.draft = None;
+                                    this.discussion_action(CommentsAction::Select(None), cx);
                                     window.focus(&this.focus, cx);
                                     cx.notify();
                                 },
@@ -426,7 +364,12 @@ impl EditorView {
                             mono(thread.map_or("New".into(), |(i, c)| {
                                 format!(
                                     "#{}",
-                                    self.discussion.numbers.get(&c.id).copied().unwrap_or(i + 1)
+                                    self.editor
+                                        .comments_state
+                                        .numbers
+                                        .get(&c.id)
+                                        .copied()
+                                        .unwrap_or(i + 1)
                                 )
                             }))
                             .text_color(t.muted()),
