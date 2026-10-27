@@ -1,9 +1,20 @@
 //! Timeline slider and named version library.
 use super::*;
 use voxelite_app::history::{HISTORY_STEP_INTERVAL, PreviewSource, display_label};
-use voxelite_core::{Origin, Uuid};
+use voxelite_core::{Changes, Origin, Uuid};
 
 const RECENT_STEPS: usize = 5;
+
+pub(super) fn change_summary(label: &str, changes: &Changes) -> String {
+    if changes.voxel_count() == 0 {
+        display_label(label).to_string()
+    } else {
+        format!(
+            "+{} −{} · {} painted",
+            changes.added, changes.removed, changes.recolored
+        )
+    }
+}
 
 /// Chronological indices to render; callers reverse them for newest-first rows.
 fn visible_steps(count: usize, expanded: bool) -> std::ops::Range<usize> {
@@ -500,7 +511,62 @@ impl EditorView {
 
 #[cfg(test)]
 mod tests {
-    use super::{RECENT_STEPS, expanded_for_selection, step_child_index, visible_steps};
+    use super::{
+        RECENT_STEPS, change_summary, expanded_for_selection, step_child_index, visible_steps,
+    };
+    use voxelite_app::editor::Editor;
+    use voxelite_core::Changes;
+
+    #[test]
+    fn demo_non_voxel_changes_describe_the_edit() {
+        let editor = Editor::example().unwrap();
+        for label in [
+            "Name the autumn garden layer",
+            "Add a composition review note",
+            "Create named version",
+            "Warm the window and lantern glass",
+        ] {
+            let entry = editor.engine.history().find(|e| e.label == label).unwrap();
+            assert_eq!(entry.changes.voxel_count(), 0);
+            assert_eq!(change_summary(&entry.label, &entry.changes), label);
+        }
+    }
+
+    #[test]
+    fn non_voxel_changes_preserve_custom_labels_and_humanize_protocol_labels() {
+        let metadata = Changes {
+            metadata_changed: true,
+            ..Changes::default()
+        };
+        assert_eq!(change_summary("Rename layer", &metadata), "Rename layer");
+        assert_eq!(change_summary("comments add", &metadata), "Add comment");
+        // Named versions change the document without setting snapshot change flags.
+        assert_eq!(
+            change_summary("versions save", &Changes::default()),
+            "Save named version"
+        );
+    }
+
+    #[test]
+    fn voxel_changes_keep_counts_even_when_metadata_also_changes() {
+        for (added, removed, recolored, expected) in [
+            (1, 0, 0, "+1 −0 · 0 painted"),
+            (0, 2, 0, "+0 −2 · 0 painted"),
+            (0, 0, 3, "+0 −0 · 3 painted"),
+            (4, 5, 6, "+4 −5 · 6 painted"),
+        ] {
+            for metadata_changed in [false, true] {
+                let changes = Changes {
+                    added,
+                    removed,
+                    recolored,
+                    metadata_changed,
+                    ..Changes::default()
+                };
+                assert_eq!(change_summary("Edit voxels", &changes), expected);
+            }
+        }
+    }
 
     #[test]
     fn recent_window_handles_empty_short_and_long_timelines() {
