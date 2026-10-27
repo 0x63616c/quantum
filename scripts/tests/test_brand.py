@@ -58,14 +58,16 @@ class BrandTests(unittest.TestCase):
         )
 
     def test_window_app_ids(self):
-        # This branch uses app_id literals, not an APP_ID constant.
+        self.assert_capture(
+            "crates/voxelite-app/src/lib.rs", r'pub\s+const\s+APP_ID\s*:\s*&str\s*=\s*"([^"]+)"',
+            self.current("window_app_id"),
+        )
+        self.assertEqual(self.current("window_app_id"), self.current("bundle_id"))
         for path in ["ui/welcome.rs", "ui/settings.rs"]:
-            values = re.findall(
-                r'app_id\s*:\s*Some\(\s*"([^"]+)"\.into\(\)\s*\)',
-                self.source("crates/voxelite-app/src/" + path),
-            )
-            self.assertTrue(values, path)
-            self.assertEqual(set(values), {self.current("window_app_id")}, path)
+            source = self.source("crates/voxelite-app/src/" + path)
+            with self.subTest(path=path):
+                self.assertIn("app_id: Some(voxelite_app::APP_ID.into())", source)
+                self.assertNotRegex(source, r'app_id\s*:\s*Some\(\s*"')
 
     def test_package_prefix_and_binaries(self):
         workspace = tomllib.loads(self.source("Cargo.toml"))["workspace"]
