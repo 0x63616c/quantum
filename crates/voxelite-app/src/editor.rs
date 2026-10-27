@@ -14,11 +14,25 @@ use voxelite_format::{
     session::{DocumentSession, SessionError},
 };
 use voxelite_plugin_api::{
-    OverlayFrame, OverlayInput, OverlayNavigation, OverlayOutcome, SettingValue, ToolCx, ToolError,
-    ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
+    ExportImage, ExportResult, OverlayFrame, OverlayInput, OverlayNavigation, OverlayOutcome,
+    SettingValue, ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
 };
 use voxelite_plugin_host::{Host, HostError};
-use voxelite_render::{Camera, PresetView, Projection};
+use voxelite_render::{Camera, PresetView, Projection, RenderOptions};
+
+/// Supply the CPU-rendered view selected by the app to a snapshot exporter.
+pub fn render_view(
+    options: &RenderOptions,
+) -> impl Fn(&Snapshot) -> ExportResult<ExportImage> + '_ {
+    move |snapshot| {
+        let image = voxelite_render::render(snapshot, options)?;
+        Ok(ExportImage {
+            width: image.width,
+            height: image.height,
+            rgba: image.rgba,
+        })
+    }
+}
 
 /// Failures presented by the shell without dropping the current document.
 #[derive(Debug, thiserror::Error)]

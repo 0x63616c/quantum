@@ -128,6 +128,7 @@ Create the Cargo workspace and implement these foundations in this order. M0 use
 | --- | --- |
 | `crates/voxelite-core` | Pure Rust model, sparse chunks, palette/layers, comments/versions, typed commands, validation, undo/history, primitives/transforms and shared geometry helpers. No file encoding, GPUI, OS handles, GPU, sockets, or Tokio. Domain types live here; external wire adapters map onto them. Compiles natively and to wasm. |
 | `crates/voxelite-format` | Canonical JSON `.voxl` parsing/writing, schema/version/migration rules and portable snapshot encoding over core values; no filesystem I/O. |
+| `crates/voxelite-mesh` | Deterministic greedy geometry over immutable core snapshots, shared by export and rendering; no renderer dependency. |
 | `crates/voxelite-export` | Deterministic GLB geometry/material encoding, bounded PNG RGBA encoder and palette `.hex`/`.gpl` interchange; core snapshots in, bytes out; no UI or GPU requirement. |
 | `crates/voxelite-plugin` | Versioned host ABI, native script/WASM adapters, built-in tool plugins, lifecycle and toolbar/menu/command contributions. Host capabilities mediate project files, optional network/outside-project access and validated commands; no GPUI dependency. |
 | `crates/voxelite-render` | CPU software rasterizer first: immutable core snapshot → bounded RGBA image, cameras/depth/lighting/AO and picking. Feature-gated `wgpu` provides accelerated native/web viewports and offscreen rendering; `voxelite-export` encodes PNG. No GPUI initialization for CPU rendering; never edits documents. |
@@ -164,9 +165,12 @@ graph TD
     MCP --> RMCP[rmcp / native runtime]
     SESSION --> CORE
     RENDER --> CORE
+    RENDER --> MESH[voxelite-mesh]
+    MESH --> CORE
     RENDER -. GPU feature only .-> WGPU[wgpu]
     FORMAT[voxelite-format] --> CORE
     EXPORT[voxelite-export] --> CORE
+    EXPORT --> MESH
     PLUGIN[voxelite-plugin] --> CORE
     SESSION --> FORMAT
     SESSION --> EXPORT

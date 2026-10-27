@@ -1,6 +1,6 @@
 //! The only unsafe boundary: CoreVideo-owned IOSurface planes imported into wgpu.
 use super::*;
-use crate::OccupancyCache;
+use crate::occupancy::OccupancyCache;
 use objc2_core_foundation::{CFBoolean, CFDictionary, CFNumber, CFRetained, CFType};
 use objc2_core_video::*;
 use objc2_metal::{MTLDevice, MTLPixelFormat, MTLTextureType, MTLTextureUsage};
@@ -232,7 +232,7 @@ fn status(code: CVReturn) -> RenderResult<()> {
     }
 }
 impl Surfaces {
-    pub fn new(device: &wgpu::Device) -> RenderResult<Self> {
+    pub(super) fn new(device: &wgpu::Device) -> RenderResult<Self> {
         // SAFETY: the HAL guard stays alive for the call. CoreVideo retains the
         // same MTLDevice that owns all wgpu textures; no cross-device import.
         let cache = unsafe {
@@ -460,7 +460,7 @@ impl Surfaces {
             Ok(texture.create_view(&Default::default()))
         }
     }
-    pub async fn present(
+    pub(super) async fn present(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,

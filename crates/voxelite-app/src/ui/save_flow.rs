@@ -255,7 +255,7 @@ impl EditorView {
         let task = executor.spawn(async move {
             job.run(&voxelite_plugin_host::SnapshotExport {
                 snapshot: &snapshot,
-                options: &options,
+                render_view: &voxelite_app::editor::render_view(&options),
             })
         });
         cx.spawn(async move |this, cx| {

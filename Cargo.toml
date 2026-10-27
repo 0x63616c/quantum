@@ -13,6 +13,7 @@ license = "MIT"
 [workspace.dependencies]
 voxelite-core = { path = "crates/voxelite-core" }
 voxelite-format = { path = "crates/voxelite-format" }
+voxelite-mesh = { path = "crates/voxelite-mesh" }
 voxelite-plugin-api = { path = "crates/voxelite-plugin-api" }
 voxelite-plugin-host = { path = "crates/voxelite-plugin-host" }
 voxelite-render = { path = "crates/voxelite-render" }
@@ -39,6 +40,9 @@ codegen-units = 1
 
 # Keep CPU viewport interaction responsive in the native development build.
 [profile.dev.package.voxelite-render]
+opt-level = 3
+
+[profile.dev.package.voxelite-mesh]
 opt-level = 3
 
 [profile.dev.package.voxelite-core]

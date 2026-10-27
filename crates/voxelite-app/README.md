@@ -135,7 +135,8 @@ replaced document (even the same project ID) or viewport size are discarded.
 Fitted views adapt to resizing until the user navigates. Top is an exact Y-axis
 view; every named view fits its own projected bounds. Unchanged clicks and color
 sampling do not trigger a new CPU render.
-Development profiles optimize the CPU renderer and core to keep iteration usable.
+Development profiles optimize the CPU renderer, shared mesh generation and core
+to keep iteration usable.
 
 Dirty projects show “Edited” next to the in-app title and the native macOS close
 button indicator. Clean projects have no status subtitle.

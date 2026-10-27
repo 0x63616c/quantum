@@ -6027,6 +6027,7 @@ dependencies = [
  "thiserror 2.0.21",
  "voxelite-core",
  "voxelite-format",
+ "voxelite-mesh",
  "voxelite-render",
 ]
 
@@ -6064,6 +6065,16 @@ dependencies = [
  "voxelite-plugin-host",
  "voxelite-plugin-palette",
  "voxelite-render",
+]
+
+[[package]]
+name = "voxelite-mesh"
+version = "0.2.0"
+dependencies = [
+ "glam",
+ "proptest",
+ "thiserror 2.0.21",
+ "voxelite-core",
 ]
 
 [[package]]
@@ -6128,7 +6139,6 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-plugin-api",
- "voxelite-render",
 ]
 
 [[package]]
@@ -6171,8 +6181,10 @@ dependencies = [
  "objc2-metal 0.3.2",
  "pollster",
  "proptest",
- "thiserror 2.0.21",
+ "serde_json",
  "voxelite-core",
+ "voxelite-format",
+ "voxelite-mesh",
  "wgpu",
 ]
 
