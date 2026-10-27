@@ -135,7 +135,10 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
     }
     return false;
 }
-@fragment fn fs_main(v: Varying) -> Fragment {
+fn surface_illumination(v: Varying) -> f32 {
+    // light.w is the shared render plan's ambient-only flag. Return before AO
+    // or exact shadow traversal; enabled arithmetic remains byte-for-byte intact.
+    if globals.light.w != 0.0 { return 0.44; }
     let diffuse = max(0.0, dot(v.normal, globals.light.xyz));
     var shadow = 1.0;
     if diffuse > 0.0 {
@@ -146,7 +149,10 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
     if globals.ambient_occlusion.x != 1.0 {
         ao = 1.0 - (1.0 - ao) * globals.ambient_occlusion.x;
     }
-    let illumination = (0.44 + 0.56 * diffuse * shadow) * ao;
+    return (0.44 + 0.56 * diffuse * shadow) * ao;
+}
+@fragment fn fs_main(v: Varying) -> Fragment {
+    let illumination = surface_illumination(v);
     var out: Fragment;
     out.color = vec4(v.color_ao.rgb * illumination, 1.0);
     let face = dot(abs(v.normal), vec3(1.0, 3.0, 5.0)) + max(0.0, dot(v.normal, vec3(1.0)));

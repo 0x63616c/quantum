@@ -302,6 +302,7 @@ impl EditorView {
         };
         let snapshot = self.editor.snapshot().clone();
         let options = RenderOptions {
+            passes: self.editor.render_plan(),
             width: 1024,
             height: 768,
             view: View::Camera(self.editor.camera.camera()),

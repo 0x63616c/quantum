@@ -17,6 +17,7 @@ voxelite-mesh = { path = "crates/voxelite-mesh" }
 voxelite-plugin-api = { path = "crates/voxelite-plugin-api" }
 voxelite-plugin-host = { path = "crates/voxelite-plugin-host" }
 voxelite-render = { path = "crates/voxelite-render" }
+voxelite-render-plan = { path = "crates/voxelite-render-plan" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 semver = "1.0"

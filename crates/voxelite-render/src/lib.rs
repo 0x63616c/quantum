@@ -14,6 +14,7 @@ mod raster;
 pub use ambient_occlusion::AmbientOcclusionStrength;
 pub use camera::{Camera, PresetView, Projection, visible_bounds};
 pub use raster::{RasterCache, RenderOptions, RenderedImage, View, render};
+pub use voxelite_render_plan::*;
 
 /// Shared geometry/render validation error. This alias preserves existing error
 /// variants, display strings and caller conversions after geometry moved to mesh.

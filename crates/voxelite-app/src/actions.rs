@@ -707,8 +707,13 @@ mod tests {
                         .registry()
                         .formats()
                         .any(|(owner, _)| owner.as_str() == plugin)
+                    || host
+                        .registry()
+                        .render_passes()
+                        .any(|(owner, _)| owner.as_str() == plugin)
             );
             host.disable(&plugin).unwrap();
+            assert!(host.registry().for_plugin(&plugin).is_none());
             for index in 0..MENUS.len() {
                 assert!(
                     menu_items(index, &host)

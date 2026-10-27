@@ -101,8 +101,18 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         .render_passes()
         .map(|(_, p)| p.id.clone())
         .collect();
-    // Render passes can also bind renderer-specific behavior in future. Exercise
-    // every portable binding that this plugin supplies.
+    let passes: Vec<_> = overlays
+        .iter()
+        .filter(|id| host.has_render_pass(id).expect("pass binding panicked"))
+        .cloned()
+        .collect();
+    let baseline_plan = host.render_plan();
+    assert_eq!(
+        host.state(id),
+        Some(&PluginState::Enabled),
+        "pass description panicked"
+    );
+    // Exercise every portable overlay binding that this plugin supplies.
     let overlays: Vec<_> = overlays
         .into_iter()
         .filter(|id| host.has_overlay(id).expect("overlay binding panicked"))
@@ -152,6 +162,13 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         "disabled declarations remain published"
     );
     assert!(host.enabled_set().as_set().is_empty());
+    assert!(host.render_plan().passes().is_empty());
+    for pass in &passes {
+        assert!(
+            !host.has_render_pass(pass).unwrap(),
+            "disabled pass remains bound: {pass}"
+        );
+    }
     for panel in &comment_panels {
         assert!(!host.has_comments_panel(panel).unwrap());
     }
@@ -195,6 +212,13 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    assert_eq!(host.render_plan(), baseline_plan);
+    for pass in &passes {
+        assert!(
+            host.has_render_pass(pass)
+                .expect("pass binding panicked after reenable")
+        );
+    }
     for panel in &comment_panels {
         assert!(
             host.has_comments_panel(panel)

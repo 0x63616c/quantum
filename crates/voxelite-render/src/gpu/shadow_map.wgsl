@@ -86,7 +86,9 @@ fn shadow_visibility(world: vec3<f32>, normal: vec3<f32>, diffuse: f32) -> f32 {
     }
     return visibility / 9.0;
 }
-@fragment fn fs_main(v: Varying) -> Fragment {
+fn surface_illumination(v: Varying) -> f32 {
+    // Same ambient-only plan as the exact-shadow shader; no shadow sampling.
+    if globals.light.w != 0.0 { return 0.44; }
     let diffuse = max(0.0, dot(v.normal, globals.light.xyz));
     let shadow = 0.2 + 0.8 * shadow_visibility(v.world, v.normal, diffuse);
     // Keep the original interpolated value untouched at the default strength.
@@ -94,7 +96,10 @@ fn shadow_visibility(world: vec3<f32>, normal: vec3<f32>, diffuse: f32) -> f32 {
     if globals.ambient_occlusion.x != 1.0 {
         ao = 1.0 - (1.0 - ao) * globals.ambient_occlusion.x;
     }
-    let illumination = (0.44 + 0.56 * diffuse * shadow) * ao;
+    return (0.44 + 0.56 * diffuse * shadow) * ao;
+}
+@fragment fn fs_main(v: Varying) -> Fragment {
+    let illumination = surface_illumination(v);
     var out: Fragment;
     out.color = vec4(v.color_ao.rgb * illumination, 1.0);
     let face = dot(abs(v.normal), vec3(1.0, 3.0, 5.0)) + max(0.0, dot(v.normal, vec3(1.0)));

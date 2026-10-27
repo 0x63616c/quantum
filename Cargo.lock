@@ -5978,10 +5978,12 @@ dependencies = [
  "voxelite-mcp",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
+ "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",
  "voxelite-plugin-host",
  "voxelite-plugin-mirror",
  "voxelite-plugin-palette",
+ "voxelite-plugin-shadows-lighting",
  "voxelite-plugin-tools",
  "voxelite-plugins-builtin",
  "voxelite-render",
@@ -6047,6 +6049,7 @@ dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
  "voxelite-plugin-host",
+ "voxelite-plugin-shadows-lighting",
  "voxelite-plugins-builtin",
  "voxelite-render",
 ]
@@ -6080,6 +6083,7 @@ dependencies = [
  "thiserror 2.0.21",
  "voxelite-core",
  "voxelite-mesh",
+ "voxelite-render-plan",
 ]
 
 [[package]]
@@ -6129,6 +6133,7 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-plugin-api",
+ "voxelite-render-plan",
 ]
 
 [[package]]
@@ -6145,6 +6150,16 @@ version = "0.3.1"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
+]
+
+[[package]]
+name = "voxelite-plugin-shadows-lighting"
+version = "0.3.1"
+dependencies = [
+ "voxelite-plugin-api",
+ "voxelite-plugin-exporters",
+ "voxelite-plugin-host",
+ "voxelite-render",
 ]
 
 [[package]]
@@ -6166,6 +6181,7 @@ dependencies = [
  "voxelite-plugin-host",
  "voxelite-plugin-mirror",
  "voxelite-plugin-palette",
+ "voxelite-plugin-shadows-lighting",
  "voxelite-plugin-tools",
 ]
 
@@ -6190,8 +6206,13 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-mesh",
+ "voxelite-render-plan",
  "wgpu",
 ]
+
+[[package]]
+name = "voxelite-render-plan"
+version = "0.3.1"
 
 [[package]]
 name = "voxelite-site"

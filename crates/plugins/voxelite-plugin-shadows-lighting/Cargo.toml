@@ -1,0 +1,18 @@
+[package]
+name = "voxelite-plugin-shadows-lighting"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+voxelite-plugin-api.workspace = true
+
+[dev-dependencies]
+voxelite-plugin-host.workspace = true
+voxelite-render.workspace = true
+voxelite-plugin-exporters = { path = "../voxelite-plugin-exporters" }
+
+[lints]
+workspace = true

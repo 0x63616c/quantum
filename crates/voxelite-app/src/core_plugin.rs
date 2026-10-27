@@ -417,6 +417,7 @@ mod tests {
                 "dev.voxelite.tools",
                 "dev.voxelite.mirror",
                 "dev.voxelite.gizmo-grid",
+                "dev.voxelite.shadows-lighting",
                 "dev.voxelite.palette",
                 "dev.voxelite.comments",
                 "dev.voxelite.agent",

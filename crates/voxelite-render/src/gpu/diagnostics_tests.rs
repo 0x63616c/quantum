@@ -48,6 +48,7 @@ fn runtime_diagnostics_release_resources_and_preserve_pixels() {
         let snapshot = engine.document().content.clone();
         let camera = Camera::fit(&snapshot, crate::PresetView::Iso, 1.0, false).unwrap();
         let style = Style {
+            lighting: crate::Lighting::Exact,
             background: [0., 0., 0., 1.],
             outline: true,
             ambient_occlusion_strength: Default::default(),

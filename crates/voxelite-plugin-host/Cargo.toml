@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
+voxelite-render-plan.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
