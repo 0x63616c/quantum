@@ -77,13 +77,15 @@ pub(super) fn trace(data: &[u32], origin: [f32; 3], direction: [f32; 3]) -> bool
         let bit = p.x % 8 + 8 * (p.y % 8) + 64 * (p.z % 8);
         let word = brick * 16 + bit / 32;
         let mask = data[11] + brick / 32;
-        let s = b / 4;
-        let sup = s.x + supers.x * (s.y + supers.y * s.z);
-        let super_mask = data[7] + sup / 32;
-        if words[super_mask as usize] & (1 << (sup % 32)) == 0 {
-            cell = skip_box(origin, dir, step, cell, 32);
-        } else if words[mask as usize] & (1 << (brick % 32)) == 0 {
-            cell = skip_box(origin, dir, step, cell, 8);
+        if words[mask as usize] & (1 << (brick % 32)) == 0 {
+            let s = b / 4;
+            let sup = s.x + supers.x * (s.y + supers.y * s.z);
+            let super_mask = data[7] + sup / 32;
+            if words[super_mask as usize] & (1 << (sup % 32)) == 0 {
+                cell = skip_box(origin, dir, step, cell, 32);
+            } else {
+                cell = skip_box(origin, dir, step, cell, 8);
+            }
         } else {
             if words[word as usize] & (1 << (bit % 32)) != 0 {
                 return true;

@@ -112,13 +112,17 @@ fn trace_shadow(origin: vec3<f32>, direction: vec3<f32>) -> bool {
         let bit = p.x % 8u + 8u * (p.y % 8u) + 64u * (p.z % 8u);
         let word = brick * 16u + bit / 32u;
         let mask = occupancy.bricks.w + brick / 32u;
-        let s = b / 4u;
-        let sup = s.x + supers.x * (s.y + supers.y * s.z);
-        let super_mask = occupancy.size.w + sup / 32u;
-        if (occupancy.words[super_mask] & (1u << (sup % 32u))) == 0u {
-            cell = skip_box(origin, dir, step, cell, 32);
-        } else if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
-            cell = skip_box(origin, dir, step, cell, 8);
+        // Test the brick first: dense regions pay only the original brick-mask read.
+        // The coarse level is consulted only once the brick is known to be empty.
+        if (occupancy.words[mask] & (1u << (brick % 32u))) == 0u {
+            let s = b / 4u;
+            let sup = s.x + supers.x * (s.y + supers.y * s.z);
+            let super_mask = occupancy.size.w + sup / 32u;
+            if (occupancy.words[super_mask] & (1u << (sup % 32u))) == 0u {
+                cell = skip_box(origin, dir, step, cell, 32);
+            } else {
+                cell = skip_box(origin, dir, step, cell, 8);
+            }
         } else {
             if (occupancy.words[word] & (1u << (bit % 32u))) != 0u { return true; }
             var next: vec3<f32>;
