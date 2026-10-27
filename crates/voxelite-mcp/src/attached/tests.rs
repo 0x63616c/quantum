@@ -2,6 +2,105 @@ use super::*;
 use serde_json::json;
 use voxelite_core::{Document, Limits};
 
+#[test]
+fn socket_is_private_at_publication_boundaries() {
+    use std::{fs, os::unix::net::UnixStream, process::Command};
+
+    // Set umask only in a child, never in the multithreaded test runner.
+    const CHILD: &str = "VOXELITE_SOCKET_PERMISSIONS_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let status = Command::new("sh")
+            .args(["-c", "umask 000; exec \"$@\"", "socket-permissions"])
+            .arg(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "attached::tests::socket_is_private_at_publication_boundaries",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        return;
+    }
+
+    let dir = tempfile::tempdir().unwrap();
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o1777)).unwrap();
+    let path = dir.path().join("session.sock");
+    let mut stages = Vec::new();
+    let (listener, metadata) = bind_private_socket_with(&path, |stage, staged| {
+        // The binder cannot advance until these observations finish.
+        assert_eq!(
+            fs::symlink_metadata(&path).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        assert_eq!(
+            fs::metadata(staged.parent().unwrap())
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        match stage {
+            SocketStage::Created => assert!(!staged.exists()),
+            SocketStage::Bound | SocketStage::Secured => assert_eq!(
+                fs::metadata(staged).unwrap().permissions().mode() & 0o777,
+                if stage == SocketStage::Bound {
+                    0o777
+                } else {
+                    0o600
+                }
+            ),
+        }
+        stages.push(stage);
+    })
+    .unwrap();
+    assert_eq!(
+        stages,
+        [
+            SocketStage::Created,
+            SocketStage::Bound,
+            SocketStage::Secured
+        ]
+    );
+    let published = fs::symlink_metadata(&path).unwrap();
+    assert_eq!(published.permissions().mode() & 0o777, 0o600);
+    assert_eq!(
+        (published.dev(), published.ino()),
+        (metadata.dev(), metadata.ino())
+    );
+    UnixStream::connect(&path).unwrap();
+    assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
+    drop(listener);
+    fs::remove_file(path).unwrap();
+    assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn shared_socket_parents_require_sticky_protection_and_a_trusted_owner() {
+    let uid = 1000;
+    // In particular, ordinary users must be able to bind in root-owned /tmp.
+    for owner in [0, uid] {
+        for mode in [0o700, 0o755, 0o1777, 0o1770] {
+            check_socket_parent(mode, owner, uid).unwrap();
+        }
+        for mode in [0o777, 0o770, 0o757] {
+            assert_eq!(
+                check_socket_parent(mode, owner, uid).unwrap_err().kind(),
+                io::ErrorKind::PermissionDenied
+            );
+        }
+    }
+    // Even with the sticky bit, a foreign owner could substitute the staging dir.
+    for mode in [0o1777, 0o1770, 0o1757] {
+        assert_eq!(
+            check_socket_parent(mode, uid + 1, uid).unwrap_err().kind(),
+            io::ErrorKind::PermissionDenied
+        );
+    }
+}
+
 fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>) {
     let project = Project::new(Document::new(Uuid::new_v4(), Uuid::new_v4())).unwrap();
     let document = DocumentSession::new(project.clone(), None, Limits::default()).unwrap();
