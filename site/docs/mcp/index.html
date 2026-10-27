@@ -354,7 +354,7 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
             &quot;maxLength&quot;: 16
           },
           &quot;minItems&quot;: 1,
-          &quot;maxItems&quot;: 5
+          &quot;maxItems&quot;: 6
         },
         &quot;presets&quot;: {
           &quot;type&quot;: &quot;array&quot;,
@@ -6985,7 +6985,7 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       }
     }
   ]
-}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_palette_export"><h3 id="voxelite_palette_export">voxelite_palette_export</h3><p>Return palette as .hex or .gpl text in display order; GPL preserves representable names. Read-only, no filesystem side effects.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>format</code></td><td>Yes</td><td>string; enum: [&quot;hex&quot;,&quot;gpl&quot;]</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
+}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_palette_export"><h3 id="voxelite_palette_export">voxelite_palette_export</h3><p>Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>revision</code></td><td>Optional</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>format</code></td><td>Yes</td><td>string; enum: [&quot;hex&quot;,&quot;gpl&quot;,&quot;pal&quot;]</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
   &quot;type&quot;: &quot;object&quot;,
   &quot;properties&quot;: {
     &quot;model_id&quot;: {
@@ -7001,7 +7001,8 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       &quot;type&quot;: &quot;string&quot;,
       &quot;enum&quot;: [
         &quot;hex&quot;,
-        &quot;gpl&quot;
+        &quot;gpl&quot;,
+        &quot;pal&quot;
       ]
     }
   },
@@ -7049,7 +7050,8 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
           &quot;type&quot;: &quot;string&quot;,
           &quot;enum&quot;: [
             &quot;hex&quot;,
-            &quot;gpl&quot;
+            &quot;gpl&quot;,
+            &quot;pal&quot;
           ]
         }
       },
@@ -7144,7 +7146,7 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       }
     }
   ]
-}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_palette_import"><h3 id="voxelite_palette_import">voxelite_palette_import</h3><p>Append colors from bounded .hex or .gpl text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>expected_epoch</code></td><td>Yes</td><td>string</td></tr><tr><td><code>operation_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>expected_revision</code></td><td>Yes</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>label</code></td><td>Optional</td><td>string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.</td></tr><tr><td><code>format</code></td><td>Yes</td><td>string; enum: [&quot;hex&quot;,&quot;gpl&quot;]</td></tr><tr><td><code>text</code></td><td>Yes</td><td>string; maxLength: 65536</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
+}</code></pre></details></section><section class="tool" aria-labelledby="voxelite_palette_import"><h3 id="voxelite_palette_import">voxelite_palette_import</h3><p>Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.</p><div class="table-scroll"><table><thead><tr><th scope="col">Argument</th><th scope="col">Required</th><th scope="col">Type / constraints</th></tr></thead><tbody><tr><td><code>expected_epoch</code></td><td>Yes</td><td>string</td></tr><tr><td><code>operation_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>model_id</code></td><td>Yes</td><td>string</td></tr><tr><td><code>expected_revision</code></td><td>Yes</td><td>string. Captured monotonic revision, encoded as a decimal u64 string.</td></tr><tr><td><code>label</code></td><td>Optional</td><td>string; maxLength: 80. Nonempty text, at most 80 UTF-8 bytes, without control characters. The byte limit is also checked at runtime.</td></tr><tr><td><code>format</code></td><td>Yes</td><td>string; enum: [&quot;hex&quot;,&quot;gpl&quot;,&quot;pal&quot;]</td></tr><tr><td><code>text</code></td><td>Yes</td><td>string; maxLength: 65536</td></tr></tbody></table></div><details><summary>Complete input schema</summary><pre><code class="language-json">{
   &quot;type&quot;: &quot;object&quot;,
   &quot;properties&quot;: {
     &quot;expected_epoch&quot;: {
@@ -7175,7 +7177,8 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
       &quot;type&quot;: &quot;string&quot;,
       &quot;enum&quot;: [
         &quot;hex&quot;,
-        &quot;gpl&quot;
+        &quot;gpl&quot;,
+        &quot;pal&quot;
       ]
     },
     &quot;text&quot;: {

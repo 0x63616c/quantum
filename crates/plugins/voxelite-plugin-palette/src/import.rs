@@ -66,3 +66,52 @@ fn bounded_text(input: &str) -> Result<(), CoreError> {
     }
     Ok(())
 }
+
+/// Import JASC-PAL 0100 text with an exact 1..=256 color count.
+/// Accepts Aseprite's optional alpha column only when it is fully opaque.
+pub fn from_pal(input: &str) -> Result<Palette, CoreError> {
+    bounded_text(input)?;
+    let mut lines = input.lines().map(str::trim);
+    if lines.next() != Some("JASC-PAL") {
+        return Err(Error::Invalid("missing JASC-PAL header".into()));
+    }
+    if lines.next() != Some("0100") {
+        return Err(Error::Invalid("JASC-PAL requires version 0100".into()));
+    }
+    let count = lines
+        .next()
+        .and_then(|line| line.parse::<usize>().ok())
+        .filter(|count| (1..=256).contains(count))
+        .ok_or_else(|| Error::Limit("JASC-PAL requires 1..=256 colors".into()))?;
+    let mut colors = Vec::with_capacity(count);
+    for line in lines.filter(|line| !line.is_empty()) {
+        if colors.len() == count {
+            return Err(Error::Invalid(
+                "JASC-PAL color count does not match header".into(),
+            ));
+        }
+        let mut columns = line.split_whitespace();
+        let mut rgb = [0; 3];
+        for channel in &mut rgb {
+            *channel = columns
+                .next()
+                .and_then(|v| v.parse::<u8>().ok())
+                .ok_or_else(|| Error::Invalid("JASC-PAL requires three RGB bytes".into()))?;
+        }
+        if let Some(alpha) = columns.next()
+            && alpha.parse::<u8>() != Ok(255)
+        {
+            return Err(Error::Invalid("JASC-PAL colors must be opaque".into()));
+        }
+        if columns.next().is_some() {
+            return Err(Error::Invalid("unexpected JASC-PAL color columns".into()));
+        }
+        colors.push(Swatch::rgb(rgb[0], rgb[1], rgb[2]));
+    }
+    if colors.len() != count {
+        return Err(Error::Invalid(
+            "JASC-PAL color count does not match header".into(),
+        ));
+    }
+    Palette::from_colors(colors)
+}

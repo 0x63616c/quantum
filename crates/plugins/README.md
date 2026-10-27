@@ -26,3 +26,16 @@ and agent built-ins live alongside it and currently contribute command metadata
 only; execution remains in the app. They ship enabled and can be disabled by the
 host, though the shell does not expose enablement preferences yet. This layout
 does not add third-party loading, WASM or scripting.
+
+The palette plugin owns the headless palette manager: typed choices with stable
+identities and read-only origins, automatic custom copies on source edits, stable
+slot/display-order edits, cancellable RGB previews, and sixteen persisted recent
+colors. Legacy `PaletteAction::Edit` operations remain supported. All mutations
+return `PaletteOutcome`; the host persists `library_bytes` before adopting state.
+No palette plugin callback reads or writes files or mutates a document directly.
+
+`PaletteView::formats` and `voxelite_plugin_palette::FORMATS` list HEX, GPL and
+JASC-PAL for import/export grouping. `ExportLibrary` returns text in the outcome;
+the PAL exporter is also registered as `dev.voxelite.palette.pal`. Existing HEX/GPL
+exporters remain with the exporters plugin. See [the manager contract](../../docs/palette-manager.md)
+for preview, naming, selection and persistence details.

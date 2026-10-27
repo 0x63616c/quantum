@@ -40,8 +40,9 @@ value or swatch name as synonyms for slot identity.
 
 `Palette` holds opaque `Swatch` colors in stable slots plus an independent display
 `order` in [crates/voxelite-core/src/palette.rs](crates/voxelite-core/src/palette.rs).
-That file also defines the separate `PaletteLibrary` collection, whose selection
-alone does not mutate the document.
+The separate `PaletteLibrary` collection is defined in
+[crates/voxelite-plugin-api/src/palette.rs](crates/voxelite-plugin-api/src/palette.rs);
+selecting it alone does not mutate the document.
 Use “document palette” when disambiguating; avoid conflating it with a library
 palette, a single swatch or the command palette.
 

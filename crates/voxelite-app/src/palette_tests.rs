@@ -198,7 +198,7 @@ fn picker_preview_and_recent_colors_are_adopted_only_after_successful_persistenc
     assert_eq!(preview.state.library.entries.len(), 1);
     assert!(preview.state.recent_colors.is_empty());
     assert_eq!(editor.color, brush);
-    let failed = |_| Err(EditorError::Gesture("write failed".into()));
+    let failed = |_: &[u8]| Err(EditorError::Gesture("write failed".into()));
     assert!(
         editor
             .palette_action_with(PaletteAction::CommitColor, failed)

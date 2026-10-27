@@ -297,8 +297,23 @@ fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_docu
                 .read()
                 .unwrap()
                 .iter()
-                .all(|t| !t.name.contains("export"))
+                .all(|t| !t.name.starts_with("voxelite_export_"))
         );
+        assert!(
+            attachment
+                .tools
+                .read()
+                .unwrap()
+                .iter()
+                .any(|t| t.name == "voxelite_palette_export")
+        );
+        let mut receive = queue(
+            &send,
+            "voxelite_palette_export",
+            json!({"model_id":model,"format":"pal"}),
+        );
+        attachment.poll_with_host(&mut document, &mut host);
+        assert_eq!(result(&mut receive)["ok"], true);
         host.enable("dev.voxelite.exporters").unwrap();
     }
     attachment.poll_with_host(&mut document, &mut host);

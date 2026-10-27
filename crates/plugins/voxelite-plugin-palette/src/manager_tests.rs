@@ -402,3 +402,38 @@ fn old_library_fixtures_and_optional_recent_colors_load_with_strict_bounds() {
         );
     }
 }
+
+#[test]
+fn manager_exports_formats_and_registry_pal_encoder_use_the_same_bytes() {
+    use voxelite_plugin_host::{Host, SnapshotExport};
+    let mut cx = Context {
+        palette: Preset::Pico8.palette(),
+        ..Default::default()
+    };
+    assert_eq!(cx.view().formats, FORMATS);
+    let before = cx.state.clone();
+    for format in FORMATS {
+        let out = cx.apply(PaletteAction::ExportLibrary {
+            format: format.id.into(),
+        });
+        assert!(out.library_bytes.is_none() && out.commands.is_empty() && out.color.is_none());
+        let exported = out.export.unwrap();
+        assert_eq!(exported.format, *format);
+        assert_eq!(import(format.id, &exported.text).unwrap(), cx.palette);
+        assert_eq!(cx.state, before);
+    }
+    let mut host = Host::new(vec![Box::new(PalettePlugin)]);
+    let snapshot: Snapshot = json::from_slice(include_bytes!(
+        "../../../voxelite-export/tests/golden/scene.json"
+    ))
+    .unwrap();
+    let export_cx = SnapshotExport {
+        snapshot: &snapshot,
+        options: &Default::default(),
+    };
+    let bytes = host.dispatch_export(PAL, &export_cx).unwrap().unwrap();
+    assert_eq!(bytes, to_pal(&snapshot.palette).unwrap().as_bytes());
+    host.disable("dev.voxelite.palette").unwrap();
+    assert!(host.dispatch_export(PAL, &export_cx).unwrap().is_none());
+    assert_eq!(host.registry().formats().count(), 0);
+}

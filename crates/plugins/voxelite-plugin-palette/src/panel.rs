@@ -1,8 +1,8 @@
-use crate::{PRESET_SETTING, PalettePlugin, Preset, library, manager};
+use crate::{PRESET_SETTING, PalettePlugin, Preset, import, library, manager};
 use voxelite_plugin_api::{
     Command, Palette, PaletteAction, PaletteChoice, PaletteCx, PaletteEdit, PaletteError,
-    PaletteId, PaletteKind, PaletteOutcome, PalettePanel, PalettePresentation, PalettePreview,
-    PaletteState, PaletteView, RecentColorTarget, SettingValue, Swatch,
+    PaletteExport, PaletteId, PaletteKind, PaletteOutcome, PalettePanel, PalettePresentation,
+    PalettePreview, PaletteState, PaletteView, RecentColorTarget, SettingValue, Swatch,
 };
 
 const CHOICES: [(&str, &str, Option<Preset>); 8] = [
@@ -181,6 +181,12 @@ impl PalettePanel for PalettePlugin {
                 )?);
                 out.state.slot = out.state.slot.min(palette.order.len().saturating_sub(1));
             }
+            PaletteAction::ExportLibrary { format } => {
+                out.export = Some(PaletteExport {
+                    format: crate::format(&format)?,
+                    text: crate::export(&format, &view.palette, &view.name)?,
+                });
+            }
             PaletteAction::Command(id) => {
                 out.presentation = Some(match id.as_str() {
                     "dev.voxelite.palette.show_palette" => PalettePresentation::Focus,
@@ -280,6 +286,7 @@ fn view(cx: &dyn PaletteCx, state: &PaletteState) -> PaletteView {
     let mut state = state.clone();
     state.slot = state.slot.min(palette.order.len().saturating_sub(1));
     PaletteView {
+        formats: crate::FORMATS.to_vec(),
         selected: selected
             .map(|e| PaletteId::Custom(e.id))
             .unwrap_or(PaletteId::Source(preset)),
@@ -295,19 +302,6 @@ fn view(cx: &dyn PaletteCx, state: &PaletteState) -> PaletteView {
         preset,
         state,
     }
-}
-
-/// Parse an existing bounded palette interchange format.
-pub fn import(format: &str, text: &str) -> Result<Palette, PaletteError> {
-    Ok(match format {
-        "hex" => crate::from_hex(text)?,
-        "gpl" => crate::from_gpl(text)?,
-        _ => {
-            return Err(PaletteError::Message(
-                "Choose a .hex or .gpl palette".into(),
-            ));
-        }
-    })
 }
 
 fn preset(name: &str) -> Result<Palette, PaletteError> {

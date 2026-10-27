@@ -65,7 +65,7 @@ conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool loo
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.5.2`, independently of plugin implementation versions and `.voxl` or
+is `0.6.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -86,6 +86,8 @@ types. Existing required trait methods and contribution construction are unchang
 The compatible `0.5.2` addition supplies `DataSection`, `DataCx`, `DataMigration`
 and default `data_migrations`/`load_data` hooks. No existing plugin must implement
 a new required method. The core `Document` now stores project extensions.
+The `0.6.0` bump adds palette choice origins and identities, manager edit/preview
+actions, recent colors, and import/export metadata to public palette types.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -241,12 +243,14 @@ disabled.
 ## Palette panel and local library boundary
 
 `voxelite-plugin-palette` (`dev.voxelite.palette`) owns the exact built-in presets,
-HEX/GPL import, local library validation and serialization, swatch selection,
+HEX/GPL/JASC-PAL import, local library validation and serialization, swatch selection,
 add/remove/color/name edits, duplication, and display-order moves. Preset construction
-and manual left/right ordering are the existing generation/order behavior; this
-extraction introduces no new generator or sorting command. Core retains `Palette`,
+and manual ordering introduce no generator or sorting command. Manager drag moves
+change display order while preserving stable slots. Source palettes copy on edit. Core retains `Palette`,
 `PaletteSlot`, `Swatch`, their invariants and `Command::Palette` execution, undo and
-redo. The existing HEX/GPL export encoders remain on the exporters path.
+redo. The existing HEX/GPL export encoders remain on the exporters path; the
+palette plugin adds its JASC-PAL exporter to the same registry. Manager text exports
+for all three formats are also available as a palette interaction outcome.
 
 The plugin declares `dev.voxelite.palette.panel`, its three existing shell commands,
 and the Choice setting `dev.voxelite.palette.preset`. The choice drives the existing
@@ -277,12 +281,12 @@ the previous library and selection. Background imports recheck the enabled bindi
 on completion. New/Open preserves the window's library/custom selection while
 resetting its project/preset choice, as before.
 
-MCP keeps the same palette tool names, schemas, slot mappings, errors and command
-batch structure. Set-slot, preset and import requests dispatch through the same
+MCP keeps the same palette tool names, slot mappings, errors and command
+batch structure, adding `pal` to the import/export schemas. Set-slot, preset and import requests dispatch through the same
 binding against the live document palette, producing typed core commands only.
 Standalone MCP installs the standard palette plugin; attached MCP uses the editor's
 host and refreshes its tool list when palette availability changes. Palette export
-remains independently owned by exporters.
+uses the exporter registry: HEX/GPL belong to exporters, PAL to the palette plugin.
 
 Disabling the palette plugin removes its panel, commands and setting from the
 registry, closes stale palette surfaces, and filters menu/search entries. Tools
@@ -450,3 +454,6 @@ widget drawing, cancellation, disablement, restart, typed edit atomicity and
 byte-identical undo/redo. The unchanged shell golden still covers command placement,
 icons and shortcuts. Host tests exercise scoped settings, missing bindings, timing,
 partial-draw disposal, error handling and panic quarantine.
+
+The palette manager contract, preview lifecycle, and backward-compatible recent
+color persistence are described in [palette-manager.md](../palette-manager.md).

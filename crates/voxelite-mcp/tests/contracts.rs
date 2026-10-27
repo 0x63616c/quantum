@@ -805,3 +805,33 @@ fn open_edit_save_preserves_inert_unknown_project_metadata() {
     );
     assert_eq!(roundtrip["layers"][0]["name"], "Renamed");
 }
+
+#[test]
+fn jasc_pal_import_and_export_preserve_existing_document_slots() {
+    let f = Fixture::new();
+    let before = f.read("palette_list", json!({}))["palette"].clone();
+    let result = f.edit(
+        "palette_import",
+        json!({"format":"pal","text":"JASC-PAL\n0100\n2\n1 2 3\n1 2 3\n"}),
+    );
+    assert_eq!(
+        result["slot_mapping"],
+        json!([{"source":1,"slot":2},{"source":2,"slot":3}])
+    );
+    let after = f.read("palette_list", json!({}))["palette"].clone();
+    assert_eq!(after["slots"][0], before["slots"][0]);
+    let exported = f.read("palette_export", json!({"format":"pal"}));
+    assert!(
+        exported["text"]
+            .as_str()
+            .unwrap()
+            .starts_with("JASC-PAL\n0100\n3\n")
+    );
+    assert!(
+        exported["text"]
+            .as_str()
+            .unwrap()
+            .ends_with("1 2 3\n1 2 3\n")
+    );
+    assert_eq!(f.read("palette_list", json!({}))["palette"], after);
+}

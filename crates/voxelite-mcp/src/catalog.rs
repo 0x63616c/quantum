@@ -333,7 +333,7 @@ fn data_schema(name: &str, scope: u8) -> Value {
             req("limits", object(["open_documents", "request_bytes", "result_bytes", "batch_operations", "explicit_voxels", "read_voxels", "work_units", "operation_receipts", "receipt_bytes"].into_iter().map(|key| req(key, count())).collect())),
             req("documents", array(object(document_fields()), 0, 8)),
             req("renderer", json!({"const":"cpu"})),
-            req("formats", array(string(16), 1, 5)), req("presets", array(string(32), 1, 7)),
+            req("formats", array(string(16), 1, 6)), req("presets", array(string(32), 1, 7)),
             req("durability", json!({"const":"memory"})),
         ]),
         "document_create" | "document_open" | "document_info" => fields = document_fields(),
@@ -366,7 +366,7 @@ fn data_schema(name: &str, scope: u8) -> Value {
             req("presets", array(string(32), 1, 7)),
         ]),
         "palette_import" | "palette_apply_preset" => fields.push(req("slot_mapping", array(object(vec![req("source", integer(1, 256)), req("slot", integer(1, 256))]), 1, 256))),
-        "palette_export" => fields.extend([req("text", string(65536)), req("format", choice(&["hex", "gpl"]))]),
+        "palette_export" => fields.extend([req("text", string(65536)), req("format", choice(&["hex", "gpl", "pal"]))]),
         "render" => fields.extend(render_output_fields()),
         "comments_list" => fields.extend([
             req("comments", array(object(vec![
@@ -645,17 +645,17 @@ fn build() -> Vec<Spec> {
     );
     add(
         "palette_import",
-        "Append colors from bounded .hex or .gpl text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.",
+        "Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.",
         vec![
-            req("format", choice(&["hex", "gpl"])),
+            req("format", choice(&["hex", "gpl", "pal"])),
             req("text", string(65536)),
         ],
         2,
     );
     add(
         "palette_export",
-        "Return palette as .hex or .gpl text in display order; GPL preserves representable names. Read-only, no filesystem side effects.",
-        vec![req("format", choice(&["hex", "gpl"]))],
+        "Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.",
+        vec![req("format", choice(&["hex", "gpl", "pal"]))],
         1,
     );
     add(

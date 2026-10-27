@@ -82,9 +82,31 @@ pub struct PaletteChoice {
     pub palette: Palette,
 }
 
+/// A text interchange format supported by the palette manager.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PaletteFormat {
+    /// Identifier accepted by import/export actions, without a dot.
+    pub id: &'static str,
+    /// Human-readable format label.
+    pub label: &'static str,
+    /// File extension, without a dot.
+    pub extension: &'static str,
+}
+
+/// Exported manager palette text; the host chooses the destination and writes it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PaletteExport {
+    /// Format metadata for save dialogs or downloads.
+    pub format: PaletteFormat,
+    /// Encoded text in display order.
+    pub text: String,
+}
+
 /// Read-only presentation data, with no GUI objects or callbacks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaletteView {
+    /// Supported import/export formats in menu order.
+    pub formats: Vec<PaletteFormat>,
     /// Selected palette's stable identity.
     pub selected: PaletteId,
     /// Selected palette's origin.
@@ -214,7 +236,7 @@ pub enum PaletteAction {
         /// Current hex field.
         color: String,
     },
-    /// Import a custom library entry from bounded HEX/GPL text.
+    /// Import a custom library entry from bounded HEX/GPL/JASC-PAL text.
     ImportLibrary {
         /// Filename stem, truncated by the implementation as before.
         name: String,
@@ -222,6 +244,11 @@ pub enum PaletteAction {
         format: String,
         /// File contents; reading is the host's responsibility.
         text: String,
+    },
+    /// Export the selected manager palette without filesystem access.
+    ExportLibrary {
+        /// Format identifier from PaletteView::formats.
+        format: String,
     },
     /// Execute one of the owner's declared shell commands.
     Command(String),
@@ -238,7 +265,7 @@ pub enum PaletteAction {
     AppendPreset(String),
     /// Append imported colors without recoloring existing geometry.
     AppendImport {
-        /// Lowercase HEX/GPL format.
+        /// Lowercase HEX/GPL/PAL format identifier.
         format: String,
         /// Bounded source text.
         text: String,
@@ -259,6 +286,8 @@ pub enum PalettePresentation {
 /// Proposed state and typed edits; only the host can admit these effects.
 #[derive(Clone, Debug, Default)]
 pub struct PaletteOutcome {
+    /// Encoded manager palette, if an export was requested.
+    pub export: Option<PaletteExport>,
     /// Source name when this interaction automatically copied a read-only palette.
     pub copied_from: Option<String>,
     /// Next panel state, installed after successful persistence/edit admission.
