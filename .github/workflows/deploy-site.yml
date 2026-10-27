@@ -119,3 +119,20 @@ jobs:
           fi
           git commit -m "Deploy site from ${GITHUB_SHA}"
           git push origin HEAD:site-dist
+
+      - name: Deploy site to Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Identifiers, not credentials: team "Calums Projects" and project "voxelite".
+          VERCEL_ORG_ID: team_9RGvkGZTIxuS3X5hhsvfHK6N
+          VERCEL_PROJECT_ID: prj_m4pSJixQnOROg4B2Ak54pABlCQyR
+        run: |
+          set -euo pipefail
+          # The Vercel project has no Git integration, so pushing site-dist never
+          # deploys by itself. Deploy the exact built bytes (signed appcast included).
+          if [[ -z "${VERCEL_TOKEN:-}" ]]; then
+            echo '::warning::VERCEL_TOKEN is not set; site-dist was pushed but nothing was deployed to Vercel.'
+            exit 0
+          fi
+          cd site-dist
+          npx --yes vercel@65.4.0 deploy --prod --yes --token "$VERCEL_TOKEN"
