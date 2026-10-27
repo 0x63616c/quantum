@@ -182,7 +182,7 @@ pub(crate) fn open_editor(editor: Editor, cx: &mut App) -> anyhow::Result<()> {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             titlebar: if cfg!(target_os = "macos") {
                 Some(TitlebarOptions {
-                    title: Some("Voxelite".into()),
+                    title: Some("Quantum".into()),
                     appears_transparent: true,
                     traffic_light_position: Some(point(px(20.), px(24.))),
                 })
@@ -227,7 +227,7 @@ pub(crate) fn show(cx: &mut App) -> anyhow::Result<WindowHandle<WelcomeView>> {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             window_min_size: Some(size(px(640.), px(500.))),
             titlebar: Some(TitlebarOptions {
-                title: Some("Welcome to Voxelite".into()),
+                title: Some("Welcome to Quantum".into()),
                 appears_transparent: true,
                 traffic_light_position: Some(point(px(18.), px(23.))),
             }),
@@ -645,7 +645,7 @@ impl Render for WelcomeView {
                                 div()
                                     .text_size(px(type_size::DISPLAY))
                                     .font_weight(type_size::BOLD)
-                                    .child("Voxelite"),
+                                    .child("Quantum"),
                             )
                             .child(
                                 div()

@@ -29,7 +29,7 @@ start_app() {
   app_pid=$!
   window=''
   for attempt in {1..100}; do
-    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Voxelite$' 2>/dev/null | head -1 || true)"
+    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Quantum$' 2>/dev/null | head -1 || true)"
     [[ -n "$window" ]] && break
     kill -0 "$app_pid" || { cat "$XDG_RUNTIME_DIR/app.log"; exit 1; }
     sleep 0.1
@@ -72,40 +72,40 @@ xdotool key ctrl+k
 xdotool type --clearmodifiers 'paint'
 capture command-search
 xdotool key Escape
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 search 'choose tool'
 capture tools
 xdotool type --clearmodifiers 'paint'
 xdotool key Return
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 # Camera-axis controls must navigate without placing a voxel through the overlay.
 xdotool mousemove 632 174 click 1
 sleep 4
 capture axis-right
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 xdotool mousemove 608 126 click 1
 sleep 4
 capture axis-top
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 search 'frame model'
 sleep 4
 # Mirror controls disclose only while active; command search remains the entry.
 search 'mirror x'
 capture mirror-active
 search 'mirror x'
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 search 'choose palette'
 xdotool key Down Down Down Down Down Down Down
 capture palettes
 xdotool key Return
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 # A keyboard edit, then Save & continue must save once and finish New.
 xdotool key b Return
-wait_title 'Autumn Workshop • — Voxelite'
+wait_title 'Autumn Workshop • — Quantum'
 xdotool key ctrl+n
 capture unsaved
 xdotool key Return
-wait_title 'Untitled — Voxelite'
+wait_title 'Untitled — Quantum'
 python3 - "$project" <<'PY'
 import json,sys
 project=json.load(open(sys.argv[1]))
@@ -121,11 +121,11 @@ for attempt in {1..100}; do
 done
 [[ -n "$file_dialog" ]] || { cat "$XDG_RUNTIME_DIR/app.log"; exit 1; }
 xdotool key --window "$window" b Return Right Return
-wait_title 'Untitled — Voxelite'
+wait_title 'Untitled — Quantum'
 xdotool windowfocus "$file_dialog" key Escape
 sleep 0.5
 xdotool windowfocus "$window"
-wait_title 'Untitled — Voxelite'
+wait_title 'Untitled — Quantum'
 # Open through the real chooser, then exercise Cancel and Discard by keyboard.
 xdotool key ctrl+o
 sleep 0.6
@@ -139,13 +139,13 @@ sleep 0.5
 dialog_width="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/WIDTH=//p')"
 dialog_height="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/HEIGHT=//p')"
 xdotool mousemove --window "$file_dialog" "$((dialog_width - 80))" "$((dialog_height - 24))" click 1
-wait_title 'Autumn Workshop — Voxelite'
+wait_title 'Autumn Workshop — Quantum'
 xdotool windowfocus "$window" key Right Return
-wait_title 'Autumn Workshop • — Voxelite'
+wait_title 'Autumn Workshop • — Quantum'
 xdotool key ctrl+n Left Return
-wait_title 'Autumn Workshop • — Voxelite'
+wait_title 'Autumn Workshop • — Quantum'
 xdotool key ctrl+n Left Left Return
-wait_title 'Untitled — Voxelite'
+wait_title 'Untitled — Quantum'
 stop_app
 # Inspect preset previews and the truthful local-session guide in both themes.
 for theme in dark light; do
@@ -158,7 +158,7 @@ for theme in dark light; do
   xdotool mousemove 1200 302 click 1
   capture "guide-$theme"
   xdotool key Escape
-  wait_title 'Autumn Workshop — Voxelite'
+  wait_title 'Autumn Workshop — Quantum'
   stop_app
 done
 # Boundary layout: 128-byte names, 64 layers and all 256 palette slots.

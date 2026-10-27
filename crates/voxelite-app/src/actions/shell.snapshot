@@ -1,17 +1,17 @@
 Apple
-menu Voxelite
-  About | About Voxelite | icon=cube | shortcut= | os= | checked=false | disabled=false
+menu Quantum
+  About | About Quantum | icon=cube | shortcut= | os= | checked=false | disabled=false
   CheckUpdates | Check for Updates… | icon=download | shortcut= | os= | checked=false | disabled=false
   ---
   Settings | Settings… | icon=settings | shortcut=⌘, | os= | checked=false | disabled=false
   ---
   system Services
   ---
-  Hide | Hide Voxelite | icon=eye-off | shortcut=⌘H | os= | checked=false | disabled=false
+  Hide | Hide Quantum | icon=eye-off | shortcut=⌘H | os= | checked=false | disabled=false
   HideOthers | Hide Others | icon=eye-off | shortcut=⌥⌘H | os= | checked=false | disabled=false
   ShowAll | Show All | icon=eye | shortcut= | os= | checked=false | disabled=false
   ---
-  Quit | Quit Voxelite | icon=log-out | shortcut=⌘Q | os= | checked=false | disabled=false
+  Quit | Quit Quantum | icon=log-out | shortcut=⌘Q | os= | checked=false | disabled=false
 menu File
   New | New project | icon=file-plus | shortcut=⌘N | os= | checked=false | disabled=false
   Open | Open project… | icon=folder-open | shortcut=⌘O | os= | checked=false | disabled=false
@@ -84,7 +84,7 @@ Cmd-K
   ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | ⌘S
   SaveAs | Save as… | file-output | ⇧⌘S
-  Quit | Quit Voxelite | log-out | ⌘Q
+  Quit | Quit Quantum | log-out | ⌘Q
   Undo | Undo | undo | ⌘Z
   Redo | Redo | redo | ⇧⌘Z
   Settings | Settings… | settings | ⌘,
@@ -117,9 +117,9 @@ Cmd-K
   Minimize | Minimize | square | ⌘M
   ZoomWindow | Zoom | square | 
   Help | Keyboard & mouse guide | keyboard | 
-  About | About Voxelite | cube | 
+  About | About Quantum | cube | 
   CheckUpdates | Check for Updates… | download | 
-  Hide | Hide Voxelite | eye-off | ⌘H
+  Hide | Hide Quantum | eye-off | ⌘H
   HideOthers | Hide Others | eye-off | ⌥⌘H
   ShowAll | Show All | eye | 
 shortcut sheet
@@ -129,11 +129,11 @@ shortcut sheet
   ClearRecents | File | 
   Save | File | ⌘S
   SaveAs | File | ⇧⌘S
-  Quit | Voxelite | ⌘Q
+  Quit | Quantum | ⌘Q
   Undo | Edit | ⌘Z
   Redo | Edit | ⇧⌘Z
   Commands | Edit | ⌘K
-  Settings | Voxelite | ⌘,
+  Settings | Quantum | ⌘,
   Frame | View | F
   Front | View | 
   Right | View | 
@@ -163,11 +163,11 @@ shortcut sheet
   Minimize | Window | ⌘M
   ZoomWindow | Window | 
   Help | Help | 
-  About | Voxelite | 
-  CheckUpdates | Voxelite | 
-  Hide | Voxelite | ⌘H
-  HideOthers | Voxelite | ⌥⌘H
-  ShowAll | Voxelite | 
+  About | Quantum | 
+  CheckUpdates | Quantum | 
+  Hide | Quantum | ⌘H
+  HideOthers | Quantum | ⌥⌘H
+  ShowAll | Quantum | 
 bindings
   New | super-n | Editor && !SharedTextInput
   Open | super-o | Editor && !SharedTextInput
@@ -207,7 +207,7 @@ menu File
     ClearRecents | Clear Recent Projects | icon=trash-2 | shortcut= | os= | checked=false | disabled=false
   Save | Save | icon=save | shortcut=Ctrl+S | os= | checked=false | disabled=false
   SaveAs | Save as… | icon=file-output | shortcut=Ctrl+Shift+S | os= | checked=false | disabled=false
-  Quit | Quit Voxelite | icon=log-out | shortcut=Ctrl+Q | os= | checked=false | disabled=false
+  Quit | Quit Quantum | icon=log-out | shortcut=Ctrl+Q | os= | checked=false | disabled=false
 menu Edit
   Undo | Undo | icon=undo | shortcut=Ctrl+Z | os=Undo | checked=false | disabled=false
   Redo | Redo | icon=redo | shortcut=Ctrl+Shift+Z | os=Redo | checked=false | disabled=false
@@ -256,7 +256,7 @@ menu Window
   ZoomWindow | Zoom | icon=square | shortcut= | os= | checked=false | disabled=false
 menu Help
   Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
-  About | About Voxelite | icon=cube | shortcut= | os= | checked=false | disabled=false
+  About | About Quantum | icon=cube | shortcut= | os= | checked=false | disabled=false
 in-window menus
   File: [New, Open, OpenRecent, ClearRecents, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
@@ -275,7 +275,7 @@ Cmd-K
   ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | Ctrl+S
   SaveAs | Save as… | file-output | Ctrl+Shift+S
-  Quit | Quit Voxelite | log-out | Ctrl+Q
+  Quit | Quit Quantum | log-out | Ctrl+Q
   Undo | Undo | undo | Ctrl+Z
   Redo | Redo | redo | Ctrl+Shift+Z
   Settings | Settings… | settings | Ctrl+,
@@ -308,7 +308,7 @@ Cmd-K
   Minimize | Minimize | square | Ctrl+M
   ZoomWindow | Zoom | square | 
   Help | Keyboard & mouse guide | keyboard | 
-  About | About Voxelite | cube | 
+  About | About Quantum | cube | 
 shortcut sheet
   New | File | Ctrl+N
   Open | File | Ctrl+O

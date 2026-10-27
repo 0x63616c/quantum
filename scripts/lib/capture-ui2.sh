@@ -102,7 +102,7 @@ xdotool mousemove --window "$window" 1145 191 click 1
 xdotool key --clearmodifiers ctrl+comma
 settings_window=''
 for attempt in {1..50}; do
-  settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Voxelite Settings$' 2>/dev/null | head -1 || true)"
+  settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Quantum Settings$' 2>/dev/null | head -1 || true)"
   [[ -n "$settings_window" ]] && break
   sleep 0.2
 done

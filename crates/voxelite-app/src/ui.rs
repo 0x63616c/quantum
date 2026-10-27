@@ -515,7 +515,7 @@ impl EditorView {
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
-            Op::About => self.info = Some(("About Voxelite", InfoContent::About)),
+            Op::About => self.info = Some(("About Quantum", InfoContent::About)),
             Op::CheckUpdates => check_for_updates(),
             Op::Hide => cx.hide(),
             Op::HideOthers => cx.hide_other_apps(),
@@ -1005,7 +1005,7 @@ impl EditorView {
                     .font_weight(FontWeight::SEMIBOLD)
                     .text_size(px(type_size::TITLE))
                     .mr(px(space::SECTION))
-                    .child("Voxelite"),
+                    .child("Quantum"),
             )
             .children(MENUS.iter().enumerate().map(|(i, (name, _))| {
                 Button::custom(("menu", i), *name)
@@ -2338,7 +2338,7 @@ impl Render for EditorView {
         let size = window.viewport_size();
         self.layout_viewport(window, cx);
         let title = format!(
-            "{}{} — Voxelite",
+            "{}{} — Quantum",
             self.editor.display_snapshot().name,
             if self.editor.engine.is_dirty() && !cfg!(target_os = "macos") {
                 " •"
