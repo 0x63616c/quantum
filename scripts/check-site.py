@@ -111,7 +111,7 @@ def check_seo(path, page):
     description = page.meta('description')
     assert 120 <= len(description) <= 160, f'Description length: {len(description)}'
     if path.is_relative_to(SITE / 'docs'):
-        assert title.endswith(': Voxelite docs'), f'Docs title: {title}'
+        assert title.endswith(': Quantum docs'), f'Docs title: {title}'
         assert 'documentation: documentation' not in description.lower(), description
 
     canonical = [attrs for attrs in page.tags('link') if 'canonical' in attrs.get('rel', '').split()]
@@ -131,7 +131,7 @@ def check_seo(path, page):
         'og:description': description,
         'og:url': page_url(path),
         'og:type': 'website',
-        'og:site_name': 'Voxelite',
+        'og:site_name': 'Quantum',
     }.items():
         assert page.meta(key, 'property') == expected, f'Incorrect {key}'
     image = page.meta('og:image', 'property')
@@ -195,7 +195,7 @@ application = json.loads(home.structured_data[0])
 for key, expected in {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    'name': 'Voxelite',
+    'name': 'Quantum',
     'description': home.meta('description'),
     'applicationCategory': 'DesignApplication',
     'operatingSystem': 'Web, macOS',
@@ -237,12 +237,12 @@ def markdown_links(text):
 
 llms = (SITE / 'llms.txt').read_text()
 full = (SITE / 'llms-full.txt').read_text()
-assert llms.startswith('# Voxelite\n\n> '), 'llms.txt must start with an H1 and summary blockquote'
+assert llms.startswith('# Quantum\n\n> '), 'llms.txt must start with an H1 and summary blockquote'
 assert '\n## Documentation\n\n' in llms, 'Missing llms.txt documentation section'
 entries = re.findall(r'^- \[([^\]]+)\]\(([^)]+)\): (.+)$', llms, flags=re.M)
 assert len(entries) == len(doc_pages), 'llms.txt must list each doc exactly once'
 assert {url for _, url, _ in entries} == markdown_urls, 'llms.txt must link to every canonical .md page'
-assert full.startswith('# Voxelite documentation\n\n> '), 'Missing full documentation heading'
+assert full.startswith('# Quantum documentation\n\n> '), 'Missing full documentation heading'
 assert full.count('\nSource: [') == len(doc_pages), 'llms-full.txt must contain each doc exactly once'
 for html, page in doc_pages.items():
     url = page_url(html).rstrip('/') + '.md'
@@ -250,7 +250,7 @@ for html, page in doc_pages.items():
     markdown = path.read_text()
     alias = html.with_suffix('.md')
     assert alias.read_bytes() == path.read_bytes(), f'Markdown aliases differ: {path}'
-    title = page.titles[0].removesuffix(': Voxelite docs')
+    title = page.titles[0].removesuffix(': Quantum docs')
     assert markdown.startswith(f'# {title}\n\n'), f'Incorrect Markdown heading: {path}'
     assert (title, url, page.meta('description')) in entries, f'Stale llms.txt entry: {path}'
     assert f'\nSource: [{url}]({url})\n\n{markdown}' in full, f'Stale llms-full.txt content: {path}'
