@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn ao_comparisons() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::env::args()
         .nth(2)
-        .unwrap_or_else(|| "docs/screenshots/ao".into());
+        .unwrap_or_else(|| "docs/images".into());
     std::fs::create_dir_all(&output)?;
     let autumn =
         voxelite_format::from_bytes(include_bytes!("../bench/scenes/autumn-workshop.voxl"))?

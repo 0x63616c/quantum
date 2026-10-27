@@ -225,12 +225,14 @@ bash scripts/capture-native.sh
 ```
 
 The capture script uses real GPUI windows under Xvfb, not HTML or a composited
-mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`.
+mockup, and writes `screenshots/app-dark.png` and `screenshots/app-light.png`
+to the ignored capture directory.
 It also captures both themes at 1024×640. The round 2 capture workflow verifies
 palette authoring, a human reply, a named version and
 preview isolation by querying the live app through MCP. `bash scripts/review-polish-2.sh`
 exercises real native HEX/GPL file dialogs, Save and Save As. Earlier review
-captures and reports remain historical evidence for the preceding shell revision.
+captures are in the [private archive](https://github.com/0x63616c/quantum-archive); the reports remain
+historical evidence for the preceding shell revision.
 Use `VOXELITE_CAPTURE_UI_ONLY=1 VOXELITE_CAPTURE_DIR=/tmp/voxelite-shots bash scripts/capture-native.sh`
 for the focused UI capture suite: both main-window sizes, settings sections,
 appearance persistence, clipboard search, window reuse/reopen and box telemetry.
@@ -250,8 +252,8 @@ the full resolved dependency graph in `Cargo.lock`. These are the Apache-2.0
 [GPUI Archipelago registry distribution](https://github.com/gpui-archipelago/gpui-unofficial)
 of Zed's GPUI family. Native platform features are X11, Wayland and font-kit;
 the browser build uses the same editor through `gpui_web`. Geist and Geist Mono
-are copied into the crate with their OFL notices; `design/` is never a build-time
-mutable output. The default example is embedded at compile time.
+are copied into the crate with their OFL notices. The default example is embedded
+at compile time.
 
 See [product direction](../../docs/adr/0003-product-direction.md) for product scope
 and deferred work. The app registers statically linked built-in plugins through

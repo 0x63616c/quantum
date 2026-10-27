@@ -103,6 +103,9 @@ tests validate fresh generator output, Markdown aliases, LLM indexes, navigation
 and the live MCP catalog. Browser checks cover complete Markdown copying,
 download/clipboard failures, and viewing raw Markdown without JavaScript.
 
+Capture output is ignored by Git. Historical captures and verification records
+are in the [private archive](https://github.com/0x63616c/quantum-archive).
+
 The browser script requires the local server and the repository's Playwright
 installation (`npm ci`, `npx playwright install chromium` when absent). It captures
 1440×900 and 390×900 homepages (full page and first viewport) in both themes,

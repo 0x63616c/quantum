@@ -60,7 +60,9 @@ The script verifies project downloads, GLB/PNG signatures, upload/save equality,
 and preservation of the open project after a malformed upload. It rejects
 browser errors and blank captures. Results and browser version are recorded in
 `screenshots/web-verification.json`; captures are `screenshots/web-{dark,light}.png`
-plus `-webgl` and `-fallback` variants. Inspect captures as well as test results.
+plus `-webgl` and `-fallback` variants, all ignored by Git. Inspect captures as
+well as test results. Historical evidence is in the
+[private archive](https://github.com/0x63616c/quantum-archive).
 
 ## Missing on web
 
@@ -77,7 +79,7 @@ plus `-webgl` and `-fallback` variants. Inspect captures as well as test results
 ### 2026-10-25 — web burst 1
 
 - Committed the plugin core deferral and retained built-in tools as internal
-  modules. Left `design/` untouched.
+  modules.
 - Added a wasm library entry, shared GPUI views, matching GPUI web platform,
   bounded uploads, browser downloads and settings storage. Native MCP and
   filesystem persistence are gated out of the web dependency graph.
