@@ -1,5 +1,9 @@
 # App polish round 1
 
+> Layout update (2026-10-26): the toolbar Save button described in this historical
+> review has been removed. Save remains in File and Cmd/Ctrl+S. Settings is now
+> an always-visible bottom-left cog beside the optional keyboard guide.
+
 Baseline: `739f767`, `build-v1`, 2026-10-25. Reviewed the actual 1440×900
 native screenshots against `PLAN.md` §§8–9, `design/ART-CHECKLIST.md`, Concept A's
 HTML, both concept themes and the palette reference. This is a deliberately

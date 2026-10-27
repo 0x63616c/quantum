@@ -13,6 +13,7 @@ pub struct TextField {
     drag_anchor: Option<usize>,
     placeholder: &'static str,
     theme: Theme,
+    embedded: bool,
     layout: Option<ShapedLine>,
     bounds: Bounds<Pixels>,
 }
@@ -28,6 +29,7 @@ impl TextField {
             drag_anchor: None,
             placeholder,
             theme: Theme::Dark,
+            embedded: false,
             layout: None,
             bounds: Bounds::default(),
         })
@@ -44,6 +46,10 @@ impl TextField {
             self.theme = theme;
             cx.notify();
         }
+    }
+    /// Let a surrounding search control provide the background and focus border.
+    pub fn embed(&mut self) {
+        self.embedded = true;
     }
     pub fn focused(&self, window: &Window) -> bool {
         self.focus.is_focused(window)
@@ -277,6 +283,13 @@ impl Render for TextField {
             .border_1()
             .border_color(if focused { t.accent() } else { t.line() })
             .bg(t.background())
+            .when(self.embedded, |d| {
+                d.h(px(30.0))
+                    .px(px(0.0))
+                    .py(px(5.0))
+                    .border_0()
+                    .bg(transparent_black())
+            })
             .overflow_hidden()
             .cursor_text()
             .on_key_down(cx.listener(Self::key))

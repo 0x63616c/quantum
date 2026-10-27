@@ -8,6 +8,10 @@
 > remove these controls. Current restoration and verification are recorded at
 > the end of this report.
 
+> Settings redesign (2026-10-26): toolbar Save and Settings buttons described
+> below are superseded. Save remains in File and Cmd/Ctrl+S; Settings is the
+> always-visible bottom-left cog beside the optional keyboard guide.
+
 Baseline: `12cfee0`, branch `build-v1`, 2026-10-25. Reviewed the supplied
 screenshots, Concept A, PLAN.md §§1/7–9/17 and design/ART-CHECKLIST.md, then the
 native app and attached MCP implementation. This reviewer did not implement the

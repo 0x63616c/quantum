@@ -82,6 +82,7 @@ pub struct EditorView {
     focus: FocusHandle,
     viewport: viewport::Viewport,
     last_title: String,
+    last_edited: Option<bool>,
     zoom_reference_span: f64,
     camera_view: Option<Op>,
     camera_fitted: bool,
@@ -305,6 +306,7 @@ impl EditorView {
             theme,
             focus,
             last_title: String::new(),
+            last_edited: None,
             hover: None,
             drag: None,
             gizmo_drag: None,
@@ -1094,7 +1096,7 @@ impl EditorView {
             .child(icon("cube").text_color(t.muted()).size(px(22.0)))
             .child(
                 div()
-                    .w(px(if compact { 184.0 } else { 232.0 }))
+                    .w(px(if compact { 260.0 } else { 340.0 }))
                     .min_w(px(0.0))
                     .flex_shrink_0()
                     .child(
@@ -1107,26 +1109,19 @@ impl EditorView {
                                     .min_w(px(0.0))
                                     .overflow_hidden()
                                     .text_ellipsis()
-                                    .child(self.editor.display_snapshot().name.clone()),
+                                    .child(format!("{}.voxl", self.editor.display_snapshot().name)),
                             )
-                            .child(
-                                div()
-                                    .flex_shrink_0()
-                                    .text_size(px(13.0))
-                                    .font_weight(FontWeight::NORMAL)
-                                    .text_color(t.muted())
-                                    .child(".voxl"),
-                            ),
-                    )
-                    .child(div().text_size(px(12.0)).text_color(t.muted()).child(
-                        if self.editor.engine.is_dirty() {
-                            "Unsaved changes"
-                        } else if self.editor.path.is_some() {
-                            "Saved locally"
-                        } else {
-                            "Not saved yet"
-                        },
-                    )),
+                            .when(self.editor.engine.is_dirty(), |d| {
+                                d.child(
+                                    div()
+                                        .flex_shrink_0()
+                                        .text_size(px(13.0))
+                                        .font_weight(FontWeight::NORMAL)
+                                        .text_color(t.muted())
+                                        .child("— Edited"),
+                                )
+                            }),
+                    ),
             )
             .child(div().flex_1())
             .child(
@@ -1140,20 +1135,6 @@ impl EditorView {
                 .h(px(36.0))
                 .gap(px(12.0))
                 .child(action_shortcut(Op::Commands)),
-            )
-            .child(div().w(px(1.0)).h(px(26.0)).bg(t.line()))
-            .child(self.button("settings", "sliders-horizontal", "", Op::Settings, cx))
-            .child(
-                self.button("save", "save", "Save", Op::Save, cx)
-                    .w(px(96.0))
-                    .h(px(36.0))
-                    .justify_center()
-                    .flex_shrink_0()
-                    .border_1()
-                    .border_color(t.text())
-                    .font_weight(FontWeight::MEDIUM)
-                    .bg(t.text())
-                    .text_color(t.background()),
             )
     }
     fn viewport(&self, cx: &Context<Self>) -> Stateful<Div> {
@@ -1214,15 +1195,17 @@ impl EditorView {
                 )
             })
             .child(self.orientation(cx))
-            .when(self.preferences.navigation_hints, |d| {
-                d.child(
-                    div()
-                        .absolute()
-                        .bottom(px(20.0))
-                        .left(px(24.0))
-                        .child(self.button("view-help", "keyboard", "", Op::Help, cx)),
-                )
-            })
+            .child(
+                row()
+                    .absolute()
+                    .bottom(px(20.0))
+                    .left(px(24.0))
+                    .gap(px(4.0))
+                    .child(self.button("view-settings", "settings", "", Op::Settings, cx))
+                    .when(self.preferences.navigation_hints, |d| {
+                        d.child(self.button("view-help", "keyboard", "", Op::Help, cx))
+                    }),
+            )
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
                     row()
@@ -2341,7 +2324,7 @@ impl Render for EditorView {
         let title = format!(
             "{}{} — Voxelite",
             self.editor.display_snapshot().name,
-            if self.editor.engine.is_dirty() {
+            if self.editor.engine.is_dirty() && !cfg!(target_os = "macos") {
                 " •"
             } else {
                 ""
@@ -2350,6 +2333,11 @@ impl Render for EditorView {
         if title != self.last_title {
             window.set_window_title(&title);
             self.last_title = title;
+        }
+        let edited = self.editor.engine.is_dirty();
+        if self.last_edited != Some(edited) {
+            window.set_window_edited(edited);
+            self.last_edited = Some(edited);
         }
         if cfg!(target_os = "macos") && window.is_window_active() {
             cx.set_menus(crate::actions::menus(
