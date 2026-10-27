@@ -1,4 +1,5 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+mod about;
 #[cfg(not(target_family = "wasm"))]
 mod agent;
 #[cfg(target_family = "wasm")]
@@ -126,6 +127,8 @@ fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut Ap
 }
 
 enum InfoContent {
+    About,
+    Acknowledgements,
     Text(String),
     Guide,
 }
@@ -460,12 +463,19 @@ impl EditorView {
             }
             _ => self.run(op, cx),
         }
-        window.focus(&self.focus, cx);
+        window.focus(
+            if self.info.is_some() {
+                &self.modal_focus
+            } else {
+                &self.focus
+            },
+            cx,
+        );
     }
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
-            Op::About => self.info = Some(("About Voxelite", InfoContent::Text(format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION"))))),
+            Op::About => self.info = Some(("About Voxelite", InfoContent::About)),
             Op::CheckUpdates => check_for_updates(),
             Op::Hide => cx.hide(),
             Op::HideOthers => cx.hide_other_apps(),
@@ -667,25 +677,13 @@ impl EditorView {
             && !self.save_flow.needs_confirmation()
             && !self.commands.is_open()
             && self.menu.is_none()
-            && self.info.is_none()
         {
-            if e.keystroke.modifiers.shift {
+            if self.palettes.open || self.agent.open || self.info.is_some() {
+                Dialog::trap_tab(&self.modal_focus, e.keystroke.modifiers.shift, window, cx);
+            } else if e.keystroke.modifiers.shift {
                 window.focus_prev(cx);
             } else {
                 window.focus_next(cx);
-            }
-            if self.palettes.open || self.agent.open {
-                // Focus traversal wraps. Skip controls behind the modal sheet.
-                for _ in 0..256 {
-                    if self.modal_focus.contains_focused(window, cx) {
-                        break;
-                    }
-                    if e.keystroke.modifiers.shift {
-                        window.focus_prev(cx);
-                    } else {
-                        window.focus_next(cx);
-                    }
-                }
             }
             cx.stop_propagation();
             return;
@@ -1901,6 +1899,12 @@ impl EditorView {
                     .into_any_element(),
             );
         }
+        if let Some((_, InfoContent::About | InfoContent::Acknowledgements)) = &self.info {
+            return Some(self.about_dialog(
+                matches!(self.info, Some((_, InfoContent::Acknowledgements))),
+                cx,
+            ));
+        }
         if let Some((title, content)) = &self.info {
             return Some(
                 div()
@@ -1929,16 +1933,19 @@ impl EditorView {
                                             .child(*title),
                                     )
                                     .child(
-                                        row()
-                                            .id("close-info")
-                                            .size(px(32.0))
-                                            .justify_center()
-                                            .cursor_pointer()
-                                            .child(icon("close").text_color(t.muted()))
-                                            .on_click(cx.listener(|this, _, _, cx| {
+                                        voxelite_ui::IconButton::button(
+                                            "close-info",
+                                            "close",
+                                            "Close dialog",
+                                            t,
+                                        )
+                                        .build()
+                                        .on_click(
+                                            cx.listener(|this, _, _, cx| {
                                                 this.info = None;
                                                 cx.notify();
-                                            })),
+                                            }),
+                                        ),
                                     ),
                             )
                             .child(match content {
@@ -1947,6 +1954,9 @@ impl EditorView {
                                     .line_height(px(26.0))
                                     .child(text.clone()),
                                 InfoContent::Guide => keyboard_guide(t),
+                                InfoContent::About | InfoContent::Acknowledgements => {
+                                    unreachable!("handled above")
+                                }
                             }),
                     )
                     .into_any_element(),
