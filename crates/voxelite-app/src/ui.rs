@@ -1744,15 +1744,18 @@ impl EditorView {
                                             )
                                             .child(
                                                 mono(format!(
-                                                    "{} · +{} −{} · {} painted",
+                                                    "{} · {}",
                                                     match entry.actor.origin {
                                                         voxelite_core::Origin::Human => "Human",
                                                         voxelite_core::Origin::Agent => "Agent",
                                                     },
-                                                    entry.changes.added,
-                                                    entry.changes.removed,
-                                                    entry.changes.recolored
+                                                    history::change_summary(
+                                                        &entry.label,
+                                                        &entry.changes
+                                                    )
                                                 ))
+                                                .text_ellipsis()
+                                                .overflow_hidden()
                                                 .text_color(t.muted())
                                                 .mt(px(space::XS)),
                                             ),
