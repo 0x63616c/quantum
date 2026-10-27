@@ -1,0 +1,127 @@
+name: Rendering checks
+
+on:
+  pull_request:
+    paths:
+      - 'crates/voxelite-render/**'
+      - 'crates/voxelite-core/**'
+      - 'crates/voxelite-bench/**'
+      - 'xtask/**'
+      - 'bench/**'
+      - 'examples/*.voxl'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
+      - '.github/workflows/render-checks.yml'
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Rendering check or explicit baseline generation
+        type: choice
+        options: [visual, bench, rebaseline-visual, bench-baseline]
+        default: visual
+        required: true
+      runs:
+        description: Benchmark repetitions in one process
+        type: string
+        default: '3'
+      scenes:
+        description: Space-separated scenes (empty selects autumn terrain1m sponge1m)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    # Only owner-triggered, same-repository code may use the golden machine.
+    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, macOS, ARM64, xcode]
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
+      RENDER_COMMAND: ${{ inputs.command || 'visual' }}
+      RENDER_RUNS: ${{ inputs.runs || '3' }}
+      RENDER_SCENES: ${{ inputs.scenes }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up runner tools
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+      - name: Visual gate and determinism
+        if: env.RENDER_COMMAND == 'visual' || env.RENDER_COMMAND == 'rebaseline-visual'
+        shell: bash
+        run: |
+          args=(visual --determinism)
+          if [[ "$RENDER_COMMAND" == rebaseline-visual ]]; then
+            args+=(--rebaseline)
+          fi
+          read -r -a scenes <<< "$RENDER_SCENES"
+          for scene in "${scenes[@]}"; do
+            case "$scene" in
+              autumn|terrain1m|sponge1m|terrain10m) args+=(--scene "$scene") ;;
+              *) echo "Unknown scene: $scene" >&2; exit 2 ;;
+            esac
+          done
+          cargo xtask "${args[@]}"
+      - name: Diagnostic performance comparison or explicit baseline
+        if: github.event_name == 'workflow_dispatch' && (env.RENDER_COMMAND == 'bench' || env.RENDER_COMMAND == 'bench-baseline')
+        # Performance on this shared runner is diagnostic; visuals remain a hard gate.
+        continue-on-error: ${{ inputs.command == 'bench' }}
+        shell: bash
+        run: |
+          [[ "$RENDER_RUNS" =~ ^[1-9][0-9]*$ ]] || { echo 'runs must be a positive integer' >&2; exit 2; }
+          args=(bench --runs "$RENDER_RUNS" --out target/bench/results.json --markdown target/bench/report.md)
+          if [[ "$RENDER_COMMAND" == bench-baseline ]]; then
+            args+=(--update-baseline)
+          else
+            args+=(--compare)
+          fi
+          read -r -a scenes <<< "$RENDER_SCENES"
+          for scene in "${scenes[@]}"; do
+            case "$scene" in
+              autumn|terrain1m|sponge1m|terrain10m) args+=(--scene "$scene") ;;
+              *) echo "Unknown scene: $scene" >&2; exit 2 ;;
+            esac
+          done
+          cargo xtask "${args[@]}"
+      - name: Upload visual reports and mismatch images
+        if: always() && (env.RENDER_COMMAND == 'visual' || env.RENDER_COMMAND == 'rebaseline-visual')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-report-${{ github.run_id }}
+          path: target/visual/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload performance JSON and markdown
+        if: always() && (env.RENDER_COMMAND == 'bench' || env.RENDER_COMMAND == 'bench-baseline')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bench-report-${{ github.run_id }}
+          path: target/bench/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload explicitly generated goldens
+        if: success() && env.RENDER_COMMAND == 'rebaseline-visual'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-goldens-${{ github.run_id }}
+          path: bench/golden/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload explicitly generated performance baseline
+        if: success() && env.RENDER_COMMAND == 'bench-baseline'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bench-baseline-${{ github.run_id }}
+          path: bench/baseline/
+          if-no-files-found: error
+          retention-days: 14
