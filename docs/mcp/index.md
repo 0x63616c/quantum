@@ -6,7 +6,7 @@ This reference is generated from the Rust server's live discovery catalog, API `
 
 ## Install MCP
 
-[Install Voxelite for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
+[Install Quantum for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
 
 ### Cursor
 

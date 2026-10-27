@@ -2,7 +2,7 @@
 
 Built-in features. One shared core.
 
-Voxelite's plugins are statically linked Rust crates shipped with the editor. They declare features through `voxelite-plugin-api`; `voxelite-plugin-host` validates and enables them. This page describes the implemented boundaries in this development build, including the parts of the plugin architecture still to come.
+Quantum's plugins are statically linked Rust crates shipped with the editor. They declare features through `voxelite-plugin-api`; `voxelite-plugin-host` validates and enables them. This page describes the implemented boundaries in this development build, including the parts of the plugin architecture still to come.
 
 ## What stays in core
 

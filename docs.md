@@ -2,7 +2,7 @@
 
 A small world starts with a good first step.
 
-Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, and a browser build of the same editor. Create with an agent, work by hand, or move between both in a native session.
+Quantum is a voxel editor with an MCP interface, a native Rust/GPUI workspace, and a browser build of the same editor. Create with an agent, work by hand, or move between both in a native session.
 
 - [**Getting started**Install the app, connect a host, and make your first model.](https://voxelite.worldwidewebb.co/docs/getting-started.md)
 - [**MCP tools**The actual server catalog, with parameters and complete schemas.](https://voxelite.worldwidewebb.co/docs/mcp.md)
@@ -20,4 +20,4 @@ Voxelite is a voxel editor with an MCP interface, a native Rust/GPUI workspace, 
 
 These docs describe the implementation on the development branch. The [native Mac download](https://voxelite.worldwidewebb.co/download/) is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Linux builds and Chromium software graphics are verified; Safari/Firefox qualification remains pending.
 
-Everything stays local. No account, cloud relay, or model-provider key is required by Voxelite, and your projects never leave your machine. This website uses cookie-free Vercel Web Analytics and Speed Insights for anonymous page-view and performance counts; nothing you build is collected. Your chosen agent host may have its own requirements.
+Everything stays local. No account, cloud relay, or model-provider key is required by Quantum, and your projects never leave your machine. This website uses cookie-free Vercel Web Analytics and Speed Insights for anonymous page-view and performance counts; nothing you build is collected. Your chosen agent host may have its own requirements.

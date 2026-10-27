@@ -2,11 +2,11 @@
 
 Teach the workflow once. Keep the creative loop moving.
 
-These portable skills teach agents how to use the implemented Voxelite MCP tools. They cover atomic edits, palette choices, primitive composition, real image inspection and recovery from conflicts.
+These portable skills teach agents how to use the implemented Quantum MCP tools. They cover atomic edits, palette choices, primitive composition, real image inspection and recovery from conflicts.
 
 ## Install MCP
 
-[Install Voxelite for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
+[Install Quantum for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
 
 ### Cursor
 
@@ -136,7 +136,7 @@ npx skills add 0x63616c/voxelite --skill voxelite-workflow
 
 ## Give it a first brief
 
-> Use the Voxelite workflow to build a warm brass lantern within 32 × 32 × 32 cells. Save a blockout version, inspect iso/front/right/back renders, repair the handle silhouette, then save .voxl and GLB.
+> Use the Quantum workflow to build a warm brass lantern within 32 × 32 × 32 cells. Save a blockout version, inspect iso/front/right/back renders, repair the handle silhouette, then save .voxl and GLB.
 
 The render-review skill uses `voxelite_render` for real PNG feedback. There is no screenshot-named MCP tool in this build. Primitive guidance also stays within today's catalog: boxes and explicit voxel batches, without invented cylinder or ellipsoid calls.
 

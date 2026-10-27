@@ -1,6 +1,6 @@
 # Getting started
 
-Install Voxelite. Connect your agent. Make your first model.
+Install Quantum. Connect your agent. Make your first model.
 
 - [Download for Mac](https://voxelite.worldwidewebb.co/download/)
 - [Connect MCP](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
