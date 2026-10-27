@@ -176,6 +176,7 @@ mod tests {
     }
 
     /// libm differences across platforms may move linearised colours by one ulp; everything else is exact.
+    #[allow(clippy::chunks_exact_to_as_chunks)]
     fn assert_glb_matches(actual: &[u8], expected: &[u8]) {
         assert_eq!(actual.len(), expected.len());
         let json_len = u32::from_le_bytes(expected[12..16].try_into().unwrap()) as usize;

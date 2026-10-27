@@ -109,6 +109,7 @@ fn pre_plugin_export_bytes() {
 }
 
 /// libm differences across platforms may move linearised colours by one ulp; everything else is exact.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 fn assert_glb_matches(actual: &[u8], expected: &[u8], name: &str) {
     assert_eq!(actual.len(), expected.len(), "{name} length");
     // GLB header (12) + JSON chunk header (8) + JSON; the BIN chunk follows.
