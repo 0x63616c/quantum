@@ -105,6 +105,7 @@ fn png(cx: &dyn ExportCx) -> ExportResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use voxelite_plugin_api::ExportImage;
     use voxelite_plugin_host::{Host, SnapshotExport};
 
     #[test]
@@ -126,7 +127,14 @@ mod tests {
         };
         let cx = SnapshotExport {
             snapshot: &snapshot,
-            options: &options,
+            render_view: &|snapshot| {
+                let image = voxelite_render::render(snapshot, &options)?;
+                Ok(ExportImage {
+                    width: image.width,
+                    height: image.height,
+                    rgba: image.rgba,
+                })
+            },
         };
         let mut host = Host::new(vec![Box::new(ExportersPlugin)]);
         for (id, golden) in [

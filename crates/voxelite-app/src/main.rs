@@ -99,7 +99,7 @@ fn main() -> anyhow::Result<()> {
         };
         let bytes = editor.finish_export(job.run(&voxelite_plugin_host::SnapshotExport {
             snapshot: editor.snapshot(),
-            options: &options,
+            render_view: &voxelite_app::editor::render_view(&options),
         }))?;
         std::fs::write(path, bytes)?;
         return Ok(());

@@ -2,8 +2,10 @@
 //! four-sample MSAA and shader outlines. CPU rendering remains for exports.
 //!
 //! Presentation stays on the GPU: IOSurface planes consumed by GPUI on macOS.
+use crate::chunk_mesh::{ChunkMeshes, MeshVertex};
+use crate::occupancy::Occupancy;
 use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
-use crate::{Camera, ChunkMeshes, MeshVertex, Occupancy, Projection, RenderError, RenderResult};
+use crate::{Camera, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use std::{
     collections::BTreeMap,

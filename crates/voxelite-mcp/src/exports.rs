@@ -1,7 +1,19 @@
 //! Resolve wire export requests against the enabled host registry.
 use crate::error::{Failure, Result};
-use voxelite_plugin_api::{ExportCx, FormatContent, Snapshot};
+use voxelite_plugin_api::{ExportCx, ExportImage, ExportResult, FormatContent, Snapshot};
 use voxelite_plugin_host::{Host, SnapshotExport};
+use voxelite_render::RenderOptions;
+
+fn render_view(options: &RenderOptions) -> impl Fn(&Snapshot) -> ExportResult<ExportImage> + '_ {
+    move |snapshot| {
+        let image = voxelite_render::render(snapshot, options)?;
+        Ok(ExportImage {
+            width: image.width,
+            height: image.height,
+            rgba: image.rgba,
+        })
+    }
+}
 
 pub(crate) fn host() -> Host {
     Host::new(vec![
@@ -43,7 +55,7 @@ pub(crate) fn snapshot(host: &mut Host, extension: &str, snapshot: &Snapshot) ->
         &format,
         &SnapshotExport {
             snapshot,
-            options: &Default::default(),
+            render_view: &render_view(&Default::default()),
         },
     )
 }
