@@ -1,5 +1,5 @@
 use super::*;
-use voxelite_render::{Lighting as Shading, PASS_GRAPH, RenderPlan, ScheduledPass};
+use voxelite_render_plan::{Lighting as Shading, PASS_GRAPH, RenderPlan, ScheduledPass};
 
 struct PassPlugin {
     id: &'static str,

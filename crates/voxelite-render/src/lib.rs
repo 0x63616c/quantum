@@ -8,11 +8,10 @@ mod camera;
 mod camera_transition;
 pub use camera_transition::*;
 mod occupancy;
-mod passes;
 mod raster;
 pub use camera::{Camera, PresetView, Projection, visible_bounds};
-pub use passes::*;
 pub use raster::{RasterCache, RenderOptions, RenderedImage, View, render};
+pub use voxelite_render_plan::*;
 
 /// Shared geometry/render validation error. This alias preserves existing error
 /// variants, display strings and caller conversions after geometry moved to mesh.

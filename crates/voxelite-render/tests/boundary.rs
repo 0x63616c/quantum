@@ -50,7 +50,7 @@ fn normal_workspace_dependencies_preserve_renderer_boundary() {
             .intersection(&workspace_names)
             .copied()
             .collect::<BTreeSet<_>>(),
-        BTreeSet::from(["voxelite-core", "voxelite-mesh"])
+        BTreeSet::from(["voxelite-core", "voxelite-mesh", "voxelite-render-plan"])
     );
     for name in [
         "voxelite-export",

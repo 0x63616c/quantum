@@ -1,7 +1,7 @@
 use super::*;
 use std::time::Instant;
 use voxelite_plugin_api::{PassCx, RenderKernel, RenderPassSlot};
-use voxelite_render::{RenderPlan, ScheduledPass};
+use voxelite_render_plan::{RenderPlan, ScheduledPass};
 
 struct PassContext {
     slot: RenderPassSlot,

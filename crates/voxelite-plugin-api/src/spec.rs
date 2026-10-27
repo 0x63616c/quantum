@@ -120,7 +120,7 @@ pub struct FormatContribution {
     pub export: bool,
 }
 
-pub use voxelite_render::RenderPassSlot;
+pub use voxelite_render_plan::RenderPassSlot;
 
 /// Metadata for a host-bound render pass; contains no renderer resources.
 #[derive(Clone, Debug, PartialEq, Eq)]

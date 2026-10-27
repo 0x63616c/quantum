@@ -6097,7 +6097,7 @@ dependencies = [
  "thiserror 2.0.21",
  "voxelite-core",
  "voxelite-export",
- "voxelite-render",
+ "voxelite-render-plan",
 ]
 
 [[package]]
@@ -6142,7 +6142,7 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-plugin-api",
- "voxelite-render",
+ "voxelite-render-plan",
 ]
 
 [[package]]
@@ -6198,8 +6198,13 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-mesh",
+ "voxelite-render-plan",
  "wgpu",
 ]
+
+[[package]]
+name = "voxelite-render-plan"
+version = "0.3.0"
 
 [[package]]
 name = "voxelite-site"

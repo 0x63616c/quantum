@@ -1,7 +1,7 @@
 //! Capability-scoped descriptions of renderer-owned passes; no GPU resources.
 use crate::{RenderPassSlot, SettingValue};
 
-pub use voxelite_render::RenderKernel;
+pub use voxelite_render_plan::RenderKernel;
 
 /// Read-only owner settings and a staged, slot-scoped kernel selection sink.
 /// No document mutations, renderer handles or unrestricted services are exposed.

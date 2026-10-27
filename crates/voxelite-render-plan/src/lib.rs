@@ -1,4 +1,5 @@
-//! Logical pass graph shared by software rendering and the GPU viewport.
+//! Logical render pass graph and plan, shared by plugin APIs, hosts and the renderer.
+//! Dependency-free so plugin crates never need the renderer itself.
 //!
 //! `BeforeScene -> Geometry -> Lighting -> AfterScene -> Overlay -> PostProcess`.
 //! Geometry/depth, coverage, outlines and resolve remain core operations. Portable

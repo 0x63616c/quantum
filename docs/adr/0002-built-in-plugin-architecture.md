@@ -57,7 +57,7 @@ service locator.
 voxel and face normal, bounded work-plane intersection, visible composite sample,
 layer voxel lookup, palette, selected color, active layer, visibility/lock state
 and document bounds. It exposes no engine, mutations, mirror settings or GUI.
-The API depends on `voxelite-core`, `voxelite-export` and `voxelite-render` and
+The API depends on `voxelite-core`, `voxelite-export` and `voxelite-render-plan` and
 re-exports core command/value types, the shared GLB/PNG byte encoders and portable
 render graph/kernel declarations;
 plugin crates still depend only on the API.
@@ -106,7 +106,7 @@ binary ABI or an external code loader.
 
 ## Render pass graph and shadows/lighting
 
-`voxelite-render::PASS_GRAPH` documents the logical order:
+`voxelite-render-plan::PASS_GRAPH` (re-exported by `voxelite-render`) documents the logical order:
 `BeforeScene -> Geometry -> Lighting -> AfterScene -> Overlay -> PostProcess`.
 Core owns geometry/depth, coverage, outlines, antialiasing resolve and presentation.
 The host sorts contributions by slot, preserving plugin/declaration registration
@@ -122,8 +122,8 @@ ID `RenderKernel::ExactShadowsLighting` (diagnostic ID
 sink. This kernel is accepted only in Lighting; unsupported slot/kernel pairs
 return false without modifying the plan. Repeated selections replace the same
 surface implementation, never multiply its illumination. The API re-exports
-portable graph/kernel data from the renderer, already a transitive dependency
-through export, and exposes no GPU resource types. Built-ins still depend only
+portable graph/kernel data from the dependency-free `voxelite-render-plan` crate,
+so plugin crates and hosts never depend on the renderer, and exposes no GPU resource types. Built-ins still depend only
 on `voxelite-plugin-api`.
 
 This is deliberately an implementation selection, with no new lighting parameters.
