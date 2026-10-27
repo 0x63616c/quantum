@@ -1,7 +1,9 @@
 //! Compact viewport telemetry for newly painted content, not display refresh.
-use super::{AnchoredTooltip, EditorView, STATUSBAR_HEIGHT, TooltipSide, icon, mono, row};
+use super::{AnchoredTooltip, EditorView, TooltipSide, row};
 use gpui::{prelude::*, *};
 use voxelite_core::Pos;
+use voxelite_ui::tokens::{space, type_size};
+use voxelite_ui::{COORDINATE_CELLS, StatusBar, StatusSegment, ToolbarSeparator};
 
 fn grouped(value: impl ToString) -> String {
     let value = value.to_string();
@@ -46,71 +48,116 @@ impl EditorView {
             .iter()
             .find(|layer| layer.id == self.editor.layer)
             .map_or("No layer", |layer| layer.name.as_str());
-        let position = self.hover.map_or_else(
-            || "X —  Y —  Z —".into(),
-            |p| {
-                format!(
-                    "X {}  Y {}  Z {}",
-                    grouped(p[0]),
-                    grouped(p[1]),
-                    grouped(p[2])
-                )
-            },
-        );
         let selection = self
             .editor
             .box_start
-            .map(|start| selection_metrics(start, self.hover.unwrap_or(self.cursor)));
-        let selection_label = selection.map_or_else(
-            || "Sel 0×0×0 · 0".into(),
-            |(size, count)| {
-                format!(
-                    "Sel {}×{}×{} · {}",
-                    grouped(size[0]),
-                    grouped(size[1]),
-                    grouped(size[2]),
-                    grouped(count)
-                )
-            },
-        );
+            .map(|start| selection_metrics(start, self.hover.unwrap_or(self.cursor)))
+            .unwrap_or(([0; 3], 0));
+        // Coordinate slots cover all i32 values. Selection and model dimensions
+        // deliberately use compact slots: '+' indicates overflow, with the exact
+        // (up to 2^96) count available in the tooltip. No live value changes width.
+        let extent_cells = if compact { 3 } else { 5 };
+        let count_cells = if compact { 6 } else { 10 };
+        let slot =
+            |label, value: String, cells| StatusSegment::new(label, Some(value), cells).build();
+        let position = row()
+            .flex_shrink_0()
+            .gap(px(space::XS))
+            .children((0..3).map(|axis| {
+                row()
+                    .flex_shrink_0()
+                    .child(slot(["X", "Y", "Z"][axis], String::new(), 0).text_color(t.axis(axis)))
+                    .child(
+                        StatusSegment::new("", self.hover.map(|p| p[axis]), COORDINATE_CELLS)
+                            .build(),
+                    )
+            }));
+        let selection_row = row().id("status-selection").flex_shrink_0()
+            .anchored_hint(format!("Box selection preview: {} × {} × {} · {} cells. No persistent selection remains after commit.", selection.0[0], selection.0[1], selection.0[2], selection.1), t, TooltipSide::Above)
+            .child(slot("Sel ", selection.0[0].to_string(), extent_cells))
+            .child(slot("×", selection.0[1].to_string(), extent_cells))
+            .child(slot("×", selection.0[2].to_string(), extent_cells))
+            .child(slot(" · ", selection.1.to_string(), count_cells));
         let zoom = self.zoom_reference_span / self.viewport.display_camera().span * 100.0;
         let renderer = self.viewport.frame_meter().renderer().label();
-        let performance = self.viewport.frame_meter().average().map_or_else(
-            || format!("{renderer} idle / — ms"),
-            |average| {
-                format!(
-                    "{renderer} {} FPS / {} ms",
-                    grouped(format!("{:.1}", average.fps)),
-                    grouped(format!("{:.1}", average.frame_ms))
-                )
-            },
-        );
-        let separator = || div().h(px(12.0)).w(px(1.0)).flex_shrink_0().bg(t.line());
-        let number = |text: String| mono(text).text_size(px(11.0)).flex_shrink_0();
-        row().h(px(STATUSBAR_HEIGHT)).flex_shrink_0().border_t_1().border_color(t.line())
-            .px(px(12.0)).gap(px(if compact { 10.0 } else { 16.0 })).text_size(px(11.0)).text_color(t.muted())
-            .child(row().gap(px(12.0)).flex_shrink_0()
-                .child(number(position))
-                .child(separator())
-                .child(row().id("status-selection").anchored_hint("Box selection preview: width × height × depth and cell count. No persistent selection is active after the box is committed.", t, TooltipSide::Above).child(number(selection_label)))
-                .child(separator())
-                .child(row().id("status-layer").gap(px(5.0)).anchored_hint(format!("Active layer: {layer}"), t, TooltipSide::Above)
-                    .child(icon("layer").size(px(12.0)))
-                    .child(div().max_w(px(if compact { 76.0 } else { 120.0 })).overflow_hidden().text_ellipsis().child(layer.to_owned())))
-                .child(div().child(self.editor.tool.name())))
-            .child(div().id("status-message").flex_1().min_w(px(0.0)).overflow_hidden().text_ellipsis()
-                .text_color(if self.error { t.danger() } else { t.muted() })
-                .anchored_hint(self.status.clone(), t, TooltipSide::Above)
-                .when(!compact, |d| d.child(self.status.clone()))
-                .when(compact && self.error, |d| d.child("!")))
-            .child(row().gap(px(12.0)).flex_shrink_0()
-                .child(row().id("status-zoom").anchored_hint("Zoom relative to the last fitted view", t, TooltipSide::Above).child(number(format!("{}%", grouped(format!("{zoom:.0}"))))))
-                .when(self.preferences.show_performance, |d| d.child(row().id("status-performance")
-                    .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above)
-                    .text_color(if self.viewport.rendering() { t.accent() } else { t.muted() }).child(number(performance))))
-                .child(separator())
-                .child(row().id("status-dimensions").anchored_hint(format!("Model dimensions · {} occupied voxels", grouped(voxels)), t, TooltipSide::Above)
-                    .child(number(format!("{}×{}×{}", grouped(dimensions[0]), grouped(dimensions[1]), grouped(dimensions[2]))))))
+        let average = self.viewport.frame_meter().average();
+        let performance = row().id("status-performance").flex_shrink_0()
+            .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above)
+            .text_color(if self.viewport.rendering() { t.accent() } else { t.muted() })
+            .child(slot("", renderer.to_owned(), 3))
+            .child(StatusSegment::new(" ", average.map(|a| format!("{:.1}", a.fps)), 6).build())
+            .child(StatusSegment::new(" FPS / ", average.map(|a| format!("{:.1}", a.frame_ms)), 7).build())
+            .child(slot(" ms", String::new(), 0));
+        StatusBar::row(t)
+            .child(
+                row()
+                    .gap(px(space::MD))
+                    .flex_shrink_0()
+                    .child(position)
+                    .child(ToolbarSeparator::line(t))
+                    .child(selection_row)
+                    .child(ToolbarSeparator::line(t))
+                    .child(
+                        StatusSegment::new("", Some(layer), if compact { 8 } else { 12 })
+                            .icon("layer")
+                            .build()
+                            .id("status-layer")
+                            .anchored_hint(format!("Active layer: {layer}"), t, TooltipSide::Above),
+                    )
+                    .child(slot("", self.editor.tool.name().to_owned(), 6)),
+            )
+            .child(
+                div()
+                    .id("status-message")
+                    .flex_1()
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .font_family(type_size::UI)
+                    .text_color(if self.error { t.danger() } else { t.muted() })
+                    .anchored_hint(self.status.clone(), t, TooltipSide::Above)
+                    .when(!compact, |d| d.child(self.status.clone()))
+                    .when(compact && self.error, |d| d.child("!")),
+            )
+            .child(
+                row()
+                    .gap(px(space::MD))
+                    .flex_shrink_0()
+                    .child(
+                        slot("", format!("{zoom:.0}%"), 6)
+                            .id("status-zoom")
+                            .anchored_hint(
+                                "Zoom relative to the last fitted view",
+                                t,
+                                TooltipSide::Above,
+                            ),
+                    )
+                    .when(self.preferences.show_performance, |d| d.child(performance))
+                    .child(ToolbarSeparator::line(t))
+                    .child(
+                        row()
+                            .id("status-dimensions")
+                            .flex_shrink_0()
+                            .anchored_hint(
+                                format!(
+                                    "Model dimensions: {} × {} × {} · {} occupied voxels",
+                                    dimensions[0],
+                                    dimensions[1],
+                                    dimensions[2],
+                                    grouped(voxels)
+                                ),
+                                t,
+                                TooltipSide::Above,
+                            )
+                            .children((0..3).map(|axis| {
+                                slot(
+                                    if axis == 0 { "" } else { "×" },
+                                    dimensions[axis].to_string(),
+                                    if compact { 3 } else { 5 },
+                                )
+                            })),
+                    ),
+            )
     }
 }
 #[cfg(test)]
