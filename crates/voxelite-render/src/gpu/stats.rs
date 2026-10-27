@@ -147,7 +147,9 @@ impl GpuTimer {
             u64::from(6 - first) * 8,
         );
     }
-    pub(super) fn read(&self, device: &wgpu::Device) -> RenderResult<GpuTimes> {
+    /// `None` when the driver left a timestamp unwritten (zero ticks), which some
+    /// Apple GPUs do for the final slot; the frame itself is still valid.
+    pub(super) fn read(&self, device: &wgpu::Device) -> RenderResult<Option<GpuTimes>> {
         let bytes = read_buffer(device, &self.readback)?;
         // Avoid alignment assumptions about a Vec<u8>.
         let ticks: Vec<_> = bytes
@@ -156,7 +158,12 @@ impl GpuTimer {
             .iter()
             .map(|v| u64::from_ne_bytes(*v))
             .collect();
-        timestamp_times(&ticks, self.period, self.shadow)
+        // Only the slots resolved this frame hold fresh values; the rest are stale.
+        let ticks = &ticks[..if self.shadow { 6 } else { 4 }];
+        if ticks.contains(&0) {
+            return Ok(None);
+        }
+        timestamp_times(ticks, self.period, self.shadow).map(Some)
     }
 }
 fn timestamp_times(ticks: &[u64], period: f64, shadow: bool) -> RenderResult<GpuTimes> {

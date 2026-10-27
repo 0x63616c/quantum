@@ -164,7 +164,7 @@ impl Headless {
         stats.occupancy_sync_ms = sync.occupancy_sync_ms;
         stats.mesh_sync_ms = sync.mesh_sync_ms;
         if let Some(timer) = &self.viewport.timer {
-            stats.gpu = Some(timer.read(&self.viewport.device)?);
+            stats.gpu = timer.read(&self.viewport.device)?;
         }
         #[cfg(target_os = "macos")]
         {
