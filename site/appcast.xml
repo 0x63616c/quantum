@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Voxelite updates</title>
+    <link>https://voxelite.worldwidewebb.co</link>
+    <description>Signed macOS releases will appear here when published.</description>
+  </channel>
+</rss>

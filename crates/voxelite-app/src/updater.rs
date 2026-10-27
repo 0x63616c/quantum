@@ -28,13 +28,25 @@ pub fn init() {
     });
 }
 
-/// Whether the bundled updater is available on the main thread.
+/// Whether the bundled updater currently allows a check on the main thread.
+///
+/// Menu and Settings validation must also disable checks while Sparkle is busy.
 pub fn is_available() -> bool {
     if MainThreadMarker::new().is_none() {
         return false;
     }
     init();
-    CONTROLLER.with(|slot| matches!(slot.get(), Some(Some(_))))
+    CONTROLLER.with(|slot| {
+        let Some(Some(controller)) = slot.get() else {
+            return false;
+        };
+        // SAFETY: The retained controller owns this non-null SPUUpdater. Both
+        // selectors match the pinned Sparkle headers and run on the main thread.
+        unsafe {
+            let updater: Retained<AnyObject> = msg_send![controller, updater];
+            msg_send![&updater, canCheckForUpdates]
+        }
+    })
 }
 
 /// Handle the macOS “Check for Updates…” menu action on GPUI's main thread.
