@@ -925,9 +925,7 @@ impl EditorView {
             })
             .active(move |d| d.bg(theme.selected()).text_color(theme.accent()))
             .anchored_hint(
-                if enabled && id == "view-settings" {
-                    "Settings".into()
-                } else if enabled {
+                if enabled {
                     HintText::from(op.label()).action(op)
                 } else {
                     format!("{} · {}", op.label(), disabled_reason).into()
