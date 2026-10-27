@@ -2,14 +2,15 @@
 //!
 //! Built-in plugins use this API to declare features without access to the app.
 //! Contributions contain data only; the host interprets localization keys,
-//! schemas, icons, menus and keybindings. Capability contexts are host-implemented
-//! trait stubs, with operations to be added as features move behind this boundary.
+//! schemas, icons, menus and keybindings. Tools return typed commands through
+//! read-only, host-implemented capabilities; only the host may apply edits.
 //! There is no GUI dependency, registry, enablement or lifecycle management here,
 //! and no third-party code loading, WASM or scripting.
 mod context;
 mod id;
 mod registrar;
 mod spec;
+mod tool;
 
 pub use context::{ActivateCx, CommandCx, ExportCx, ToolCx};
 pub use id::{InvalidPluginId, PluginId};
@@ -21,13 +22,18 @@ pub use spec::{
     FormatContribution, Manifest, PanelContribution, RenderPassContribution, RenderPassSlot,
     SettingContribution, SettingKind, SettingValue, ToolContribution,
 };
+pub use tool::{Tool, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome};
+pub use voxelite_core::{
+    Command, Error as CoreError, Mirror, Mode, Palette, PaletteEdit, PaletteSlot, Pos, Region,
+    Shape, Swatch, Uuid, Voxel,
+};
 
 /// Version of this Rust API contract, independent of plugin and `.voxl` versions.
 ///
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 2, 0);
+pub const API_VERSION: Version = Version::new(0, 3, 0);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -35,6 +41,10 @@ pub trait Plugin {
     fn manifest(&self) -> Manifest;
     /// Contribute declarations; hosts bind implementations later by ID.
     fn contribute(&self, registrar: &mut Registrar);
+    /// Bind a declared tool ID to its implementation. Hosts gate calls on enablement.
+    fn tool(&self, _id: &str) -> Option<&dyn Tool> {
+        None
+    }
     /// Initialize plugin state using only capabilities supplied by the host.
     fn activate(&mut self, _cx: &mut dyn ActivateCx) {}
     /// Release plugin state when the host deactivates this plugin.

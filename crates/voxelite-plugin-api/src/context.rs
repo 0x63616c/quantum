@@ -4,11 +4,30 @@
 /// and command feedback without exposing the app or its UI implementation.
 pub trait CommandCx {}
 
-/// Host-provided capabilities for an interactive viewport tool.
+/// Read-only document and picking capabilities for a tool invocation.
 ///
-/// This trait is a stub. Input, picking and edit operations will be added when
-/// tools are integrated; plugins will not receive the app or a GUI context.
-pub trait ToolCx {}
+/// No engine, app, GUI, mirror settings or mutation capabilities are exposed.
+/// Palette slot zero denotes air; queries use the live document, not a history preview.
+pub trait ToolCx {
+    /// Nearest visible voxel and face for this pointer, if any.
+    fn hovered_hit(&self) -> Option<crate::ToolHit>;
+    /// Pointer intersection with the bottom work plane, already bounded by the host.
+    fn ground_target(&self) -> Option<crate::Pos>;
+    /// Visible composite sample at an explicit coordinate (palette slot, layer).
+    fn sample(&self, at: crate::Pos) -> Option<(u16, crate::Uuid)>;
+    /// Palette slot in a specific layer, including zero for empty space.
+    fn voxel(&self, layer: crate::Uuid, at: crate::Pos) -> Result<u16, crate::CoreError>;
+    /// Stable palette slots and their original colors.
+    fn palette(&self) -> &crate::Palette;
+    /// Selected brush color, which may not yet belong to the document palette.
+    fn active_color(&self) -> &crate::Swatch;
+    /// Selected layer identity.
+    fn active_layer(&self) -> crate::Uuid;
+    /// Visibility and lock state of a layer, without granting access to its storage.
+    fn layer(&self, id: crate::Uuid) -> Result<crate::ToolLayer, crate::CoreError>;
+    /// Finite, half-open document bounds.
+    fn bounds(&self) -> crate::Region;
+}
 
 /// Host-provided capabilities for exporting document content.
 ///

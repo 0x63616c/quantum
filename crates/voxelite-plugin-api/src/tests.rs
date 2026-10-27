@@ -144,7 +144,7 @@ fn plugin_id_dns_length_limits_are_checked() {
 fn manifest_uses_independent_semver_versions_and_localization_keys() {
     let manifest = manifest();
     assert_eq!(manifest.version.to_string(), "2.3.4-beta.1+build.7");
-    assert_eq!(manifest.api_version, Version::new(0, 2, 0));
+    assert_eq!(manifest.api_version, Version::new(0, 3, 0));
     assert_ne!(manifest.version, manifest.api_version);
     assert_eq!(manifest.name_key, "plugins.tools.name");
     assert_eq!(manifest.description_key, "plugins.tools.description");
@@ -431,20 +431,55 @@ impl Plugin for TestPlugin {
     }
 }
 
-struct TestHost;
+#[derive(Default)]
+struct TestHost {
+    palette: Palette,
+}
 impl ActivateCx for TestHost {}
 impl CommandCx for TestHost {}
-impl ToolCx for TestHost {}
+impl ToolCx for TestHost {
+    fn hovered_hit(&self) -> Option<ToolHit> {
+        None
+    }
+    fn ground_target(&self) -> Option<Pos> {
+        None
+    }
+    fn sample(&self, _: Pos) -> Option<(u16, Uuid)> {
+        None
+    }
+    fn voxel(&self, _: Uuid, _: Pos) -> Result<u16, CoreError> {
+        Ok(0)
+    }
+    fn palette(&self) -> &Palette {
+        &self.palette
+    }
+    fn active_color(&self) -> &Swatch {
+        self.palette.get(1).unwrap()
+    }
+    fn active_layer(&self) -> Uuid {
+        Uuid::nil()
+    }
+    fn layer(&self, _: Uuid) -> Result<ToolLayer, CoreError> {
+        Ok(ToolLayer {
+            visible: true,
+            locked: false,
+        })
+    }
+    fn bounds(&self) -> Region {
+        Region::new([0; 3], [32; 3]).unwrap()
+    }
+}
 impl ExportCx for TestHost {}
 
 #[test]
 fn plugins_and_host_contexts_are_dyn_compatible_with_noop_lifecycle_defaults() {
-    let mut host = TestHost;
+    let mut host = TestHost::default();
     let _: &mut dyn CommandCx = &mut host;
     let _: &mut dyn ToolCx = &mut host;
     let _: &mut dyn ExportCx = &mut host;
     let mut plugin = TestPlugin;
     let plugin: &mut dyn Plugin = &mut plugin;
+    assert!(plugin.tool("dev.voxelite.tools.paint").is_none());
     let before = plugin.manifest();
     plugin.activate(&mut host);
     let mut registrar = Registrar::default();
@@ -472,7 +507,7 @@ fn plugins_can_override_lifecycle_hooks() {
         }
     }
     let mut plugin = StatefulPlugin { active: false };
-    let mut host = TestHost;
+    let mut host = TestHost::default();
     let active: &mut dyn Plugin = &mut plugin;
     active.activate(&mut host);
     assert!(plugin.active);

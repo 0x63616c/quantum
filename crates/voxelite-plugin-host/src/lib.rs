@@ -4,7 +4,8 @@
 //! plugins stay disabled until explicitly enabled after the conflict is resolved.
 //! Panicking hooks quarantine a plugin for the lifetime of the host; they are not
 //! retried. Isolation requires unwinding panics (not `panic = "abort"`).
-//! No app, GUI, dynamic loading or implementation binding is provided here.
+//! Tool implementations are resolved only for enabled declarations. No app, GUI
+//! or dynamic loading is provided here.
 
 pub mod conformance;
 mod host;
