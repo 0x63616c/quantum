@@ -131,6 +131,9 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
 | All Python regressions | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
+| Dependency licenses, advisories and sources | `cargo deny check` |
+| Unused dependencies | `cargo machete` |
 | Render harness help | `cargo xtask --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |

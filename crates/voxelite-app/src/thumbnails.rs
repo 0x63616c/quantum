@@ -138,7 +138,7 @@ mod tests {
         assert_eq!((reader.info().width, reader.info().height), (SIZE, SIZE));
         let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
         reader.next_frame(&mut pixels).unwrap();
-        assert!(pixels.chunks_exact(4).any(|pixel| pixel[3] > 0));
+        assert!(pixels.as_chunks::<4>().0.iter().any(|pixel| pixel[3] > 0));
         let cached_mtime = first.metadata().unwrap().modified().unwrap();
         assert_eq!(cache.ensure(&path).unwrap(), first);
         assert_eq!(first.metadata().unwrap().modified().unwrap(), cached_mtime);
