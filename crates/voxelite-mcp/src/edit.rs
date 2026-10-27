@@ -95,38 +95,3 @@ pub(crate) fn voxel_command(s: &Snapshot, kind: &str, a: &Args<'_>) -> Result<Co
         _ => return Err(Failure::invalid("unknown voxel operation")),
     })
 }
-pub(crate) fn preset(name: &str) -> Result<Palette> {
-    Ok(match name {
-        "pico8" => Preset::Pico8,
-        "endesga32" => Preset::Endesga32,
-        "sweetie16" => Preset::Sweetie16,
-        "grayscale" => Preset::Grayscale,
-        "neutral" => Preset::Neutral,
-        "warm" => Preset::Warm,
-        "vivid" => Preset::Vivid,
-        _ => return Err(Failure::invalid("unknown preset")),
-    }
-    .palette())
-}
-pub(crate) fn append_palette(s: &Snapshot, p: Palette) -> Result<(Command, Value)> {
-    let free: Vec<_> = (1..=256).filter(|i| s.palette.get(*i).is_none()).collect();
-    if free.len() < p.slots.len() {
-        return Err(Failure::new(
-            "limit_exceeded",
-            "not enough free palette slots; imports append without recoloring existing geometry",
-        ));
-    }
-    let mut commands = Vec::new();
-    let mut mapping = Vec::new();
-    for (source, target) in p.order.iter().zip(free) {
-        commands.push(Command::Palette(PaletteEdit::Add {
-            slot: Some(target),
-            color: p.get(*source).expect("validated palette").clone(),
-        }));
-        mapping.push(serde_json::json!({"source":source,"slot":target}));
-    }
-    Ok((
-        Command::Batch(commands),
-        serde_json::json!({"slot_mapping":mapping}),
-    ))
-}

@@ -31,7 +31,8 @@ use gpui::{prelude::*, *};
 use shortcut_hint::{HintText, action_shortcut, shortcut};
 use std::{cell::Cell, path::PathBuf, rc::Rc, sync::Arc};
 use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
-use voxelite_core::{Palette, Pos, Preset};
+use voxelite_core::{Palette, Pos};
+use voxelite_plugin_api::{PaletteAction, PalettePresentation};
 use voxelite_render::{PresetView, RenderOptions, View};
 
 // Keep render sizing and native layout on the same logical-pixel metrics.
@@ -96,7 +97,6 @@ pub struct EditorView {
     menu_index: usize,
     commands: command_palette::CommandPalette,
     palette_open: bool,
-    palette_index: usize,
     palette_cursor: usize,
     palette_scroll: ScrollHandle,
     swatch_scroll: ScrollHandle,
@@ -198,17 +198,6 @@ fn swatch_ink(color: [u8; 4]) -> Hsla {
     })
     .into()
 }
-const PALETTES: [(&str, Option<Preset>); 8] = [
-    ("Project colors", None),
-    ("PICO-8", Some(Preset::Pico8)),
-    ("ENDESGA 32", Some(Preset::Endesga32)),
-    ("Sweetie 16", Some(Preset::Sweetie16)),
-    ("Grayscale", Some(Preset::Grayscale)),
-    ("Neutral", Some(Preset::Neutral)),
-    ("Warm", Some(Preset::Warm)),
-    ("Vivid", Some(Preset::Vivid)),
-];
-
 impl EditorView {
     pub fn new(
         mut editor: Editor,
@@ -256,14 +245,11 @@ impl EditorView {
             cx.notify();
         })
         .detach();
-        let mut palettes = palettes::PaletteManager::new(cx);
-        let library = voxelite_app::palettes::PaletteLibrary::load(
-            &voxelite_app::palettes::data_dir().join("palettes.json"),
-        );
-        let library_error = library.as_ref().err().map(ToString::to_string);
-        if let Ok(library) = library {
-            palettes.library = library;
-        }
+        let palettes = palettes::PaletteManager::new(cx);
+        let library_error = editor
+            .load_palette_library()
+            .err()
+            .map(|error| error.to_string());
         let agent = agent::Agent::new(&editor, socket);
         #[cfg(not(target_family = "wasm"))]
         let agent_error = agent.as_ref().err().map(ToString::to_string);
@@ -317,7 +303,6 @@ impl EditorView {
             menu_index: 0,
             commands: command_palette::CommandPalette::default(),
             palette_open: false,
-            palette_index: 0,
             palette_cursor: 0,
             palette_scroll: ScrollHandle::new(),
             swatch_scroll: ScrollHandle::new(),
@@ -354,7 +339,7 @@ impl EditorView {
         }
         cx.notify();
     }
-    fn replace_editor(&mut self, editor: Editor, cx: &mut Context<Self>) {
+    fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.pause_history(cx);
         self.timeline.dragging = false;
         self.zoom_reference_span = editor.camera.span;
@@ -380,6 +365,7 @@ impl EditorView {
         self.discussion.placing = false;
         self.discussion.first = None;
 
+        editor.retain_palette_library(&self.editor);
         self.editor = editor;
         self.editor
             .set_grid(self.preferences.grid)
@@ -390,7 +376,6 @@ impl EditorView {
         self.hover = None;
         self.drag = None;
         self.cursor = self.editor.display_snapshot().bounds.min;
-        self.palette_index = 0;
         self.camera_view = Some(Op::Frame);
         self.camera_fitted = true;
         self.viewport.replace_editor(&mut self.editor);
@@ -398,17 +383,10 @@ impl EditorView {
         self.request_render(cx);
     }
     fn active_palette(&self) -> Palette {
-        if let Some(p) = self
-            .palettes
-            .custom
-            .and_then(|id| self.palettes.library.entries.iter().find(|e| e.id == id))
-        {
-            return p.palette.clone();
-        }
-        PALETTES[self.palette_index]
-            .1
-            .map(|p| p.palette())
-            .unwrap_or_else(|| self.editor.display_snapshot().palette.clone())
+        self.editor
+            .palette_view()
+            .map(|v| v.palette)
+            .unwrap_or_default()
     }
     fn availability(&self, op: Op) -> Result<(), &'static str> {
         op.availability_in(
@@ -500,6 +478,12 @@ impl EditorView {
             Op::Minimize => window.minimize_window(),
             Op::ZoomWindow => window.zoom_window(),
             Op::ShowPalette => {
+                if !self
+                    .palette_request(PaletteAction::Command(op.command_id().into()), cx)
+                    .is_some_and(|out| out.presentation == Some(PalettePresentation::Focus))
+                {
+                    return;
+                }
                 self.panel = Panel::Session;
                 self.sidebar_scroll.scroll_to_bottom();
                 window.focus(&self.palette_focus, cx);
@@ -603,8 +587,11 @@ impl EditorView {
             }
             Op::ManagePalettes => self.manage_palettes(cx),
             Op::Palette => {
-                self.palette_open = true;
-                self.palette_cursor = self.palette_index;
+                if self.palette_request(PaletteAction::Command(op.command_id().into()), cx)
+                    .is_some_and(|out| out.presentation == Some(PalettePresentation::Choose)) {
+                    self.palette_open = true;
+                    self.palette_cursor = self.palette_index();
+                }
             }
             Op::Commands | Op::ToolPicker => {
                 self.commands.open(op == Op::ToolPicker);
@@ -673,6 +660,7 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        self.reconcile_palette_panel(window, cx);
         #[cfg(target_family = "wasm")]
         if self.settings_modal.is_some() {
             return;
@@ -690,23 +678,10 @@ impl EditorView {
                 _ => None,
             };
             if let Some(delta) = delta {
-                let palette = self.active_palette();
-                if !palette.order.is_empty() {
-                    let current = palette
-                        .order
-                        .iter()
-                        .position(|slot| {
-                            palette
-                                .get(*slot)
-                                .is_some_and(|color| color.rgba == self.editor.color.rgba)
-                        })
-                        .unwrap_or(0);
-                    let next = (current as isize + delta).rem_euclid(palette.order.len() as isize)
-                        as usize;
-                    self.editor.color = palette
-                        .get(palette.order[next])
-                        .expect("palette slot")
-                        .clone();
+                if let Some(next) = self
+                    .palette_request(PaletteAction::StepSwatch(delta), cx)
+                    .and_then(|out| out.selected)
+                {
                     self.swatch_scroll
                         .set_offset(point(px(0.0), -px((next / 8) as f32 * 38.0)));
                     cx.notify();
@@ -796,15 +771,18 @@ impl EditorView {
             return;
         }
         if self.palette_open {
+            let choices = self.palette_choices();
+            if choices.is_empty() {
+                self.palette_open = false;
+                return;
+            }
             match key {
-                "down" => self.palette_cursor = (self.palette_cursor + 1) % PALETTES.len(),
+                "down" => self.palette_cursor = (self.palette_cursor + 1) % choices.len(),
                 "up" => {
-                    self.palette_cursor =
-                        (self.palette_cursor + PALETTES.len() - 1) % PALETTES.len()
+                    self.palette_cursor = (self.palette_cursor + choices.len() - 1) % choices.len()
                 }
                 "enter" => {
-                    self.palette_index = self.palette_cursor;
-                    self.palettes.custom = None;
+                    self.palette_request(PaletteAction::ChoosePreset(self.palette_cursor), cx);
                     self.palette_open = false;
                 }
                 _ => {}
@@ -895,25 +873,10 @@ impl EditorView {
             cx.stop_propagation();
         }
         if key == "[" || key == "]" {
-            let palette = self.active_palette();
-            let index = palette
-                .order
-                .iter()
-                .position(|slot| {
-                    palette
-                        .get(*slot)
-                        .is_some_and(|s| s.rgba == self.editor.color.rgba)
-                })
-                .unwrap_or(0);
-            let index = if key == "]" {
-                (index + 1) % palette.order.len()
-            } else {
-                (index + palette.order.len() - 1) % palette.order.len()
-            };
-            self.editor.color = palette
-                .get(palette.order[index])
-                .expect("valid palette")
-                .clone();
+            self.palette_request(
+                PaletteAction::StepSwatch(if key == "]" { 1 } else { -1 }),
+                cx,
+            );
             cx.stop_propagation();
         }
         cx.notify();
@@ -1361,7 +1324,7 @@ impl EditorView {
     fn palette_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let palette = self.active_palette();
-        let color = self.editor.color.rgba;
+        let color = self.editor.active_color().rgba;
         // Eight 32px swatches, 6px gaps and 2px focus-ring padding per row.
         let visible_rows = if compact { 2 } else { 5 };
         let swatch_height = visible_rows as f32 * 38.0 - 2.0;
@@ -1395,8 +1358,11 @@ impl EditorView {
                             )
                             .child(icon("chevron").size(px(14.0)).text_color(t.text()))
                             .on_click(cx.listener(|this, _, _, cx| {
-                                this.palette_open = !this.palette_open;
-                                this.palette_cursor = this.palette_index;
+                                if this.palette_open {
+                                    this.palette_open = false;
+                                } else {
+                                    this.run(Op::Palette, cx);
+                                }
                                 cx.notify();
                             })),
                     )
@@ -1443,7 +1409,7 @@ impl EditorView {
                                     d.child(icon("check").size(px(16.0)).text_color(swatch_ink(c)))
                                 })
                                 .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.editor.color = swatch.clone();
+                                    this.palette_request(PaletteAction::SelectSwatch(i), cx);
                                     this.error = false;
                                     cx.notify();
                                 }))
@@ -1819,7 +1785,21 @@ impl EditorView {
             })
             .when(self.panel == Panel::Session, |d| {
                 d.child(self.layers_panel(compact || self.agent.capture.is_some(), cx))
-                    .child(self.palette_panel(compact || self.agent.capture.is_some(), cx))
+                    .children({
+                        let panels: Vec<_> = self
+                            .editor
+                            .plugin_host()
+                            .registry()
+                            .panels()
+                            .map(|(_, p)| p.id.clone())
+                            .collect();
+                        panels
+                            .into_iter()
+                            .filter(|id| id == voxelite_plugin_palette::PANEL_ID)
+                            .map(|_| {
+                                self.palette_panel(compact || self.agent.capture.is_some(), cx)
+                            })
+                    })
             })
     }
     fn action_row(
@@ -2053,7 +2033,7 @@ impl EditorView {
             );
         }
         if self.commands.is_open() {
-            let matches = self.commands.filtered_actions();
+            let matches = self.commands.filtered_actions(&self.editor.plugin_host());
             return Some(
                 div()
                     .absolute()
@@ -2176,12 +2156,9 @@ impl EditorView {
                                     .track_scroll(&self.palette_scroll)
                                     .max_h(px(360.0))
                                     .overflow_y_scroll()
-                                    .children(PALETTES.iter().enumerate().map(
-                                        |(i, (name, preset))| {
-                                            let p =
-                                                preset.map(|p| p.palette()).unwrap_or_else(|| {
-                                                    self.editor.display_snapshot().palette.clone()
-                                                });
+                                    .children(self.palette_choices().iter().enumerate().map(
+                                        |(i, choice)| {
+                                            let p = &choice.palette;
                                             div()
                                                 .id(("preset", i))
                                                 .p(px(10.0))
@@ -2202,9 +2179,9 @@ impl EditorView {
                                                         .child(
                                                             div()
                                                                 .font_weight(FontWeight::MEDIUM)
-                                                                .child(*name),
+                                                                .child(choice.name.clone()),
                                                         )
-                                                        .when(i == self.palette_index, |d| {
+                                                        .when(i == self.palette_index(), |d| {
                                                             d.child(
                                                                 icon("check")
                                                                     .size(px(14.0))
@@ -2237,7 +2214,7 @@ impl EditorView {
                                                         .child(format!(
                                                             "{} colors{}{}",
                                                             p.order.len(),
-                                                            if preset.is_some() {
+                                                            if i != 0 {
                                                                 " · Preset"
                                                             } else {
                                                                 " · In this project"
@@ -2250,8 +2227,10 @@ impl EditorView {
                                                         )),
                                                 )
                                                 .on_click(cx.listener(move |this, _, _, cx| {
-                                                    this.palette_index = i;
-                                                    this.palettes.custom = None;
+                                                    this.palette_request(
+                                                        PaletteAction::ChoosePreset(i),
+                                                        cx,
+                                                    );
                                                     this.palette_open = false;
                                                     cx.notify();
                                                 }))
@@ -2378,6 +2357,7 @@ impl Render for EditorView {
         if self.overlay_drag.is_none() {
             self.overlay_hover = self.overlay_hit(window.mouse_position());
         }
+        self.reconcile_palette_panel(window, cx);
         let overlay = self.overlay(cx);
         div()
             .id("editor-root")

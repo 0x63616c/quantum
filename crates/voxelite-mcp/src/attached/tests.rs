@@ -11,6 +11,7 @@ fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>)
     (
         AttachedSession {
             session,
+            palette_enabled: true,
             tools: Arc::new(RwLock::new(crate::exports::tools(&crate::exports::host()))),
             export_formats: crate::exports::host()
                 .registry()
@@ -60,6 +61,51 @@ fn result(receive: &mut oneshot::Receiver<Result<CallToolResult, ErrorData>>) ->
         .unwrap()
         .structured_content
         .unwrap()
+}
+
+#[test]
+fn palette_requests_and_tool_catalog_follow_the_live_editor_host() {
+    let (mut attachment, mut document, send) = attachment();
+    let mut host = crate::exports::host();
+    let model = document.engine.document().id;
+    let before = document.project().to_bytes().unwrap();
+    host.disable("dev.voxelite.palette").unwrap();
+    let mut read = queue(&send, "voxelite_palette_list", json!({"model_id":model}));
+    let args = json!({"model_id":model,"expected_epoch":attachment.session.epoch,
+        "expected_revision":"0","operation_id":Uuid::new_v4(),"format":"hex","text":"112233\n112233"});
+    let mut import = queue(&send, "voxelite_palette_import", args);
+    attachment.poll_with_host(&mut document, &mut host);
+    assert_eq!(result(&mut read)["error"]["code"], "palette_unavailable");
+    assert_eq!(result(&mut import)["error"]["code"], "palette_unavailable");
+    assert!(
+        attachment.tools.read().unwrap().iter().all(
+            |t| !t.name.starts_with("voxelite_palette_") || t.name == "voxelite_palette_export"
+        )
+    );
+    assert_eq!(document.project().to_bytes().unwrap(), before);
+    host.enable("dev.voxelite.palette").unwrap();
+    let args = json!({"model_id":model,"expected_epoch":attachment.session.epoch,
+        "expected_revision":"0","operation_id":Uuid::new_v4(),"format":"hex","text":"112233\n112233"});
+    let mut import = queue(&send, "voxelite_palette_import", args);
+    attachment.poll_with_host(&mut document, &mut host);
+    let data = result(&mut import);
+    assert_eq!(data["ok"], true);
+    assert_eq!(
+        data["data"]["slot_mapping"],
+        json!([{"source":1,"slot":2},{"source":2,"slot":3}])
+    );
+    assert_eq!(
+        document.engine.document().content.palette.to_hex(),
+        "b48c64\n112233\n112233\n"
+    );
+    assert!(
+        attachment
+            .tools
+            .read()
+            .unwrap()
+            .iter()
+            .any(|t| t.name == "voxelite_palette_import")
+    );
 }
 
 #[test]

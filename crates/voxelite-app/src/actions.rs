@@ -16,7 +16,7 @@ macro_rules! operations {
             #[cfg(test)]
             pub const ALL: &[Self] = &[$($(#[$attr])* Self::$op),+];
 
-            fn command_id(self) -> &'static str {
+            pub(crate) fn command_id(self) -> &'static str {
                 match self { $($(#[$attr])* Self::$op => $id),+ }
             }
 

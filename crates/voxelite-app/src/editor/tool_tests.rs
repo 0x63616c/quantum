@@ -357,9 +357,10 @@ fn disabled_or_absent_mirror_keeps_tools_editable_and_reenable_restores_axes() {
                 e.set_mirror_axis(axis, true).unwrap();
             }
             if absent {
-                e.plugins = RefCell::new(Host::new(vec![Box::new(
-                    voxelite_plugin_tools::ToolsPlugin,
-                )]));
+                e.plugins = RefCell::new(Host::new(vec![
+                    Box::new(voxelite_plugin_tools::ToolsPlugin),
+                    Box::new(voxelite_plugin_palette::PalettePlugin),
+                ]));
             } else {
                 e.set_plugin_enabled("dev.voxelite.mirror", false).unwrap();
             }

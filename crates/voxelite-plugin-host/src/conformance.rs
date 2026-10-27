@@ -101,6 +101,18 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         .filter(|(_, f)| f.export)
         .map(|(_, f)| f.id.clone())
         .collect();
+    let panels: Vec<_> = host
+        .registry()
+        .panels()
+        .map(|(_, p)| p.id.clone())
+        .collect();
+    let panels: Vec<_> = panels
+        .into_iter()
+        .filter(|id| {
+            host.has_palette_panel(id)
+                .expect("palette binding panicked")
+        })
+        .collect();
     for format in &formats {
         assert!(
             host.has_exporter(format).expect("export binding panicked"),
@@ -128,6 +140,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         "disabled declarations remain published"
     );
     assert!(host.enabled_set().as_set().is_empty());
+    for panel in &panels {
+        assert!(
+            !host.has_palette_panel(panel).unwrap(),
+            "disabled palette panel remains bound: {panel}"
+        );
+    }
     for tool in &tools {
         assert!(
             !host.has_tool(tool).unwrap(),
@@ -162,6 +180,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    for panel in &panels {
+        assert!(
+            host.has_palette_panel(panel)
+                .expect("palette binding panicked after reenable")
+        );
+    }
     for format in &formats {
         assert!(
             host.has_exporter(format)

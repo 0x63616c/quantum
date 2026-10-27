@@ -11,6 +11,7 @@ voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
 voxelite-plugin-host.workspace = true
 voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
+voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 voxelite-export = { path = "../voxelite-export" }

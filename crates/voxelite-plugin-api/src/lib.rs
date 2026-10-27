@@ -10,6 +10,7 @@ mod context;
 mod export;
 mod id;
 mod overlay;
+mod palette;
 mod registrar;
 mod spec;
 mod tool;
@@ -19,8 +20,11 @@ pub use context::{ActivateCx, CommandCx, ExportCx, ToolCx, TransformCx};
 pub use export::*;
 pub use id::{InvalidPluginId, PluginId};
 pub use overlay::*;
+pub use palette::*;
 pub use registrar::{Contributions, Registrar, ValidationError, validate_contributions};
 pub use semver::Version;
+/// Portable JSON codecs for plugin-owned settings, without filesystem access.
+pub use serde_json as json;
 pub use serde_json::Value;
 pub use spec::{
     ApplicationMenuSection, CommandContribution, CommandTransformContribution, Contribution,
@@ -32,7 +36,7 @@ pub use tool::{Tool, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, Tool
 pub use transform::CommandTransform;
 pub use voxelite_core::{
     Command, Error as CoreError, Mirror, Mode, Palette, PaletteEdit, PaletteSlot, Pos, Region,
-    Shape, Snapshot, Swatch, Uuid, Voxel,
+    Shape, Snapshot, Swatch, Uuid, Voxel, validate_name,
 };
 
 /// Version of this Rust API contract, independent of plugin and `.voxl` versions.
@@ -40,7 +44,7 @@ pub use voxelite_core::{
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 5, 0);
+pub const API_VERSION: Version = Version::new(0, 5, 1);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -62,6 +66,10 @@ pub trait Plugin {
     }
     /// Bind a declared export format to a portable, stateless byte encoder.
     fn exporter(&self, _id: &str) -> Option<ExportCallback> {
+        None
+    }
+    /// Bind portable palette behavior to a declared panel, without GUI access.
+    fn palette_panel(&self, _id: &str) -> Option<&dyn PalettePanel> {
         None
     }
     /// Initialize plugin state using only capabilities supplied by the host.

@@ -49,6 +49,7 @@ impl From<HostError> for EditorError {
     fn from(error: HostError) -> Self {
         match error {
             HostError::Tool(ToolError::Core(error)) => Self::Core(error),
+            HostError::Palette(error) => error.into(),
             error => Self::Gesture(error.to_string()),
         }
     }
@@ -376,6 +377,7 @@ pub struct Editor {
     pub tool: Tool,
     /// Selected brush color; imported lazily as part of the edit transaction.
     pub color: Swatch,
+    pub(crate) palette_state: voxelite_plugin_api::PaletteState,
     /// Camera state, unaffected by undo/redo.
     pub camera: OrbitCamera,
     /// First corner of an uncommitted box.
@@ -425,6 +427,7 @@ impl Editor {
             layer,
             tool: Tool::Place,
             color,
+            palette_state: Default::default(),
             camera,
             box_start: None,
             #[cfg(test)]
@@ -743,6 +746,7 @@ impl Editor {
             });
         let cx = EditorToolCx {
             editor: self,
+            color: self.active_color().clone(),
             ray,
             hit,
         };
@@ -795,6 +799,7 @@ impl Editor {
 // Only read-only, mirror-agnostic queries cross the tool boundary.
 struct EditorToolCx<'a> {
     editor: &'a Editor,
+    color: Swatch,
     ray: Option<Ray>,
     hit: Option<ToolHit>,
 }
@@ -829,7 +834,7 @@ impl ToolCx for EditorToolCx<'_> {
         &self.editor.snapshot().palette
     }
     fn active_color(&self) -> &Swatch {
-        &self.editor.color
+        &self.color
     }
     fn active_layer(&self) -> Uuid {
         self.editor.layer
@@ -914,7 +919,11 @@ mod tests {
     #[test]
     fn palette_choice_and_noop_do_not_recolor_or_dirty_document() {
         let mut e = editor();
-        e.color = Preset::Pico8.palette().get(4).unwrap().clone();
+        e.color = voxelite_plugin_palette::Preset::Pico8
+            .palette()
+            .get(4)
+            .unwrap()
+            .clone();
         assert!(!e.engine.is_dirty());
         e.tool = Tool::Paint;
         assert!(!e.apply_at([2, 2, 2]).unwrap());

@@ -25,7 +25,7 @@ impl Agent {
         let path = match path {
             Some(p) => p,
             None => {
-                let dir = voxelite_app::palettes::data_dir();
+                let dir = voxelite_app::local_settings::data_dir();
                 std::fs::create_dir_all(&dir)?;
                 dir.join(format!("session-{}.sock", std::process::id()))
             }
