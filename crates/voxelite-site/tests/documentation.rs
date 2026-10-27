@@ -35,6 +35,55 @@ fn published_docs_match_a_fresh_build() {
 }
 
 #[test]
+fn plugins_are_discoverable_in_navigation_and_machine_readable_docs() {
+    let published = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site");
+    let read = |path: &str| std::fs::read_to_string(published.join(path)).unwrap();
+    for path in ["index.html", "download/index.html", "docs/index.html"] {
+        let html = read(path);
+        let navigation = html
+            .split("<nav aria-label=\"Main navigation\">")
+            .nth(1)
+            .unwrap()
+            .split("</nav>")
+            .next()
+            .unwrap();
+        assert!(
+            navigation.contains("href=\"/docs/plugins/\""),
+            "Missing Plugins navigation in {path}"
+        );
+    }
+    assert!(read("docs/index.html").contains("<b>Plugins</b>"));
+    for slug in ["getting-started", "mcp", "format", "skills", "plugins"] {
+        let html = read(&format!("docs/{slug}/index.html"));
+        let navigation = html
+            .split("<nav class=\"docs-nav\" aria-label=\"Documentation\">")
+            .nth(1)
+            .unwrap()
+            .split("</nav>")
+            .next()
+            .unwrap();
+        assert!(navigation.contains("href=\"/docs/plugins/\""));
+        if slug == "plugins" {
+            assert!(navigation.contains("href=\"/docs/plugins/\" aria-current=\"page\""));
+        }
+    }
+    let markdown = read("docs/plugins.md");
+    assert!(markdown.starts_with("# Plugins\n\n"));
+    assert_eq!(markdown, read("docs/plugins/index.md"));
+    assert!(read("docs.md").contains("https://voxelite.worldwidewebb.co/docs/plugins.md"));
+    assert!(markdown.contains("https://voxelite.worldwidewebb.co/docs/format/#plugin-data"));
+    assert!(
+        read("docs/format.md").contains("https://voxelite.worldwidewebb.co/docs/plugins/#data")
+    );
+    let url = "https://voxelite.worldwidewebb.co/docs/plugins";
+    assert!(read("llms.txt").contains(&format!("- [Plugins]({url}.md): ")));
+    assert!(read("llms-full.txt").contains(&format!("Source: [{url}.md]({url}.md)\n\n{markdown}")));
+    for suffix in ["/", ".md"] {
+        assert!(read("sitemap.xml").contains(&format!("<loc>{url}{suffix}</loc>")));
+    }
+}
+
+#[test]
 fn downloadable_project_is_valid_and_canonical() {
     let bytes = include_bytes!("../../../site/assets/minimal.voxl");
     let project = voxelite_format::from_bytes(bytes).expect("download must open");
