@@ -1,17 +1,19 @@
 use std::{fmt, str::FromStr};
 
-/// A lowercase, dotted plugin namespace, such as `voxelite.tools`.
+/// A stable reverse-DNS plugin namespace, such as `dev.voxelite.tools`.
 ///
-/// IDs have at least two dot-separated segments. Each segment starts with an
-/// ASCII lowercase letter and continues with lowercase letters, digits, `_` or
-/// `-`. Input is validated as written, without trimming or case folding.
+/// IDs have at least two dot-separated labels and at most 253 ASCII bytes.
+/// Each label has 1–63 bytes, starts with a lowercase letter, contains only
+/// lowercase letters, digits or hyphens, and ends with a letter or digit.
+/// Input is validated as written, without trimming or case folding. Validation
+/// checks syntax only, not domain ownership; an ID must remain stable on rename.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PluginId(String);
 
-/// A plugin ID does not follow the lowercase dotted namespace grammar.
+/// A plugin ID does not follow the lowercase reverse-DNS namespace grammar.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[error(
-    "invalid plugin id {id:?}: expected at least two dot-separated segments matching [a-z][a-z0-9_-]*"
+    "invalid plugin id {id:?}: expected a lowercase reverse-DNS namespace (2+ labels, 1–63 bytes each, 253 bytes total)"
 )]
 pub struct InvalidPluginId {
     /// The rejected input.
@@ -63,16 +65,15 @@ impl TryFrom<String> for PluginId {
 }
 
 pub(crate) fn is_namespaced(id: &str) -> bool {
-    id.contains('.')
+    id.len() <= 253
+        && id.contains('.')
         && id.split('.').all(|segment| {
-            segment
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_lowercase)
-                && segment.bytes().all(|byte| {
-                    byte.is_ascii_lowercase()
-                        || byte.is_ascii_digit()
-                        || matches!(byte, b'_' | b'-')
-                })
+            let bytes = segment.as_bytes();
+            (1..=63).contains(&bytes.len())
+                && bytes.first().is_some_and(u8::is_ascii_lowercase)
+                && bytes.last().is_some_and(u8::is_ascii_alphanumeric)
+                && bytes
+                    .iter()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
         })
 }

@@ -6041,9 +6041,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "voxelite-plugin"
+name = "voxelite-plugin-api"
 version = "0.2.0"
 dependencies = [
+ "semver",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 
