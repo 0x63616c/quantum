@@ -75,6 +75,18 @@ impl PaletteManager {
                 }
             })
             .detach();
+            // Enter is a text-field action, not a key event the dialog sees.
+            cx.subscribe(
+                &field,
+                move |this, _, event: &voxelite_ui::TextFieldEvent, cx| {
+                    if matches!(event, voxelite_ui::TextFieldEvent::Committed) && this.palettes.open
+                    {
+                        this.commit_palette_field(index, cx);
+                        cx.notify();
+                    }
+                },
+            )
+            .detach();
         }
         manager
     }
@@ -207,7 +219,7 @@ impl EditorView {
         ];
         for (field, text) in self.palettes.fields().into_iter().zip(&values) {
             field.update(cx, |field, cx| {
-                if field.text != *text {
+                if field.text() != text.as_str() {
                     field.set(text.clone(), cx);
                 }
             });
@@ -231,7 +243,7 @@ impl EditorView {
         }
     }
     fn commit_palette_field(&mut self, index: usize, cx: &mut Context<Self>) -> bool {
-        let text = self.palettes.fields()[index].read(cx).text.clone();
+        let text = self.palettes.fields()[index].read(cx).text().to_string();
         if text == self.palettes.synced[index] {
             return true;
         }
@@ -484,7 +496,7 @@ impl EditorView {
                 .fields()
                 .iter()
                 .enumerate()
-                .any(|(i, f)| f.read(cx).text != self.palettes.synced[i])
+                .any(|(i, f)| f.read(cx).text() != self.palettes.synced[i])
             {
                 self.sync_palette_fields(false, cx);
                 self.palettes.error = None;
