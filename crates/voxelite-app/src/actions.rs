@@ -50,6 +50,7 @@ operations! {
     Top => "dev.voxelite.core.top",
     Grid => "dev.voxelite.core.grid",
     Theme => "dev.voxelite.core.theme",
+    FullScreen => "dev.voxelite.core.fullscreen",
     Place => "dev.voxelite.tools.place",
     Erase => "dev.voxelite.tools.erase",
     Paint => "dev.voxelite.tools.paint",
@@ -109,7 +110,9 @@ impl ShellCommands {
 
     fn available_on(&self, op: Op, platform: ShortcutPlatform) -> bool {
         match op {
-            Op::Quit | Op::Minimize | Op::ZoomWindow => !cfg!(target_family = "wasm"),
+            Op::Quit | Op::Minimize | Op::ZoomWindow | Op::FullScreen => {
+                !cfg!(target_family = "wasm")
+            }
             _ if self.command(op).menu.as_deref() == Some("Voxelite") => {
                 !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
             }
@@ -130,7 +133,19 @@ impl ShellCommands {
             .filter(|op| {
                 *op != Op::Commands
                     && (!tools_only || op.is_tool())
-                    && label(self.command(*op)).to_lowercase().contains(&query)
+                    && (label(self.command(*op)).to_lowercase().contains(&query)
+                        || (*op == Op::FullScreen
+                            && [
+                                "fullscreen",
+                                "full screen",
+                                "full",
+                                "fs",
+                                "toggle full",
+                                "enter full screen",
+                                "exit full screen",
+                            ]
+                            .iter()
+                            .any(|keyword| keyword.contains(query.trim()))))
             })
             .collect()
     }
@@ -203,6 +218,19 @@ impl Op {
         label(self.command())
     }
 
+    /// Window-state label shared by native menus and command palette rows.
+    pub fn display_label(self, fullscreen: bool) -> &'static str {
+        if self == Self::FullScreen {
+            if fullscreen {
+                "Exit Full Screen"
+            } else {
+                "Enter Full Screen"
+            }
+        } else {
+            self.label()
+        }
+    }
+
     /// Bundled Lucide asset shared by menus, search and toolbar controls.
     pub fn icon(self) -> &'static str {
         self.command().icon.as_deref().unwrap_or_default()
@@ -241,12 +269,15 @@ impl Op {
 
     /// Enabled commands return Ok; disabled commands carry their presentation reason.
     pub fn availability(self, context: CommandContext) -> Result<(), &'static str> {
+        if self == Self::FullScreen && cfg!(target_family = "wasm") {
+            return Err("Full screen is managed by your browser");
+        }
         let state = match context {
             CommandContext::Editor(state) => state,
             CommandContext::Settings { updates_available } => {
                 return match self {
                     Self::CheckUpdates if !updates_available => {
-                        Err("Automatic updates are not available in this build.")
+                        Err("Updates are unavailable in this build.")
                     }
                     Self::About
                     | Self::Settings
@@ -257,6 +288,7 @@ impl Op {
                     | Self::ShowAll
                     | Self::Minimize
                     | Self::ZoomWindow
+                    | Self::FullScreen
                     | Self::Help => Ok(()),
                     _ => Err("Return to the editor to use this command"),
                 };
@@ -296,7 +328,7 @@ impl Op {
             Self::Undo if !state.history_playing && !state.can_undo => Err("Nothing to undo"),
             Self::Redo if !state.history_playing && !state.can_redo => Err("Nothing to redo"),
             Self::CheckUpdates if !state.updates_available => {
-                Err("Automatic updates are not available in this build.")
+                Err("Updates are unavailable in this build.")
             }
             _ => Ok(()),
         }
@@ -438,13 +470,23 @@ pub fn menus(selected: impl Fn(Op) -> bool, enabled: impl Fn(Op) -> bool) -> Vec
     menus_for_platform(cfg!(target_os = "macos"), selected, enabled)
 }
 
-/// Build the editor's native menus from its currently enabled declarations.
-pub fn menus_from_host(
-    host: &Host,
+/// Build native menus for the active Settings window.
+pub fn menus_for_window(
+    fullscreen: bool,
     selected: impl Fn(Op) -> bool,
     enabled: impl Fn(Op) -> bool,
 ) -> Vec<Menu> {
-    ShellCommands::from_host(host).menus(cfg!(target_os = "macos"), selected, enabled)
+    SHELL.menus(cfg!(target_os = "macos"), fullscreen, selected, enabled)
+}
+
+/// Build the editor's native menus from its currently enabled declarations.
+pub fn menus_from_host(
+    host: &Host,
+    fullscreen: bool,
+    selected: impl Fn(Op) -> bool,
+    enabled: impl Fn(Op) -> bool,
+) -> Vec<Menu> {
+    ShellCommands::from_host(host).menus(cfg!(target_os = "macos"), fullscreen, selected, enabled)
 }
 
 fn menus_for_platform(
@@ -452,13 +494,14 @@ fn menus_for_platform(
     selected: impl Fn(Op) -> bool,
     enabled: impl Fn(Op) -> bool,
 ) -> Vec<Menu> {
-    SHELL.menus(apple, selected, enabled)
+    SHELL.menus(apple, false, selected, enabled)
 }
 
 impl ShellCommands {
     fn menus(
         &self,
         apple: bool,
+        fullscreen: bool,
         selected: impl Fn(Op) -> bool,
         enabled: impl Fn(Op) -> bool,
     ) -> Vec<Menu> {
@@ -470,7 +513,7 @@ impl ShellCommands {
                 Op::Redo => {
                     MenuItem::os_action(label(self.command(op)).to_owned(), op, OsAction::Redo)
                 }
-                _ => MenuItem::action(label(self.command(op)).to_owned(), op),
+                _ => MenuItem::action(op.display_label(fullscreen), op),
             };
             item.checked(selected(op)).disabled(!enabled(op))
         };
@@ -534,7 +577,10 @@ impl ShellCommands {
 pub fn install(cx: &mut App) {
     let platform = ShortcutPlatform::current();
     if cfg!(target_os = "macos") {
-        cx.set_menus(menus(|_| false, |_| true));
+        cx.set_menus(menus(
+            |_| false,
+            |op| op != Op::CheckUpdates || crate::ui::updates_available(),
+        ));
     }
     cx.bind_keys(key_bindings(platform));
 }
@@ -675,7 +721,12 @@ mod tests {
                     assert_eq!(actual.keystrokes(), expected.keystrokes());
                     assert_eq!(actual.predicate(), expected.predicate());
                 }
-                let menus = shell.menus(platform == ShortcutPlatform::Apple, |_| false, |_| true);
+                let menus = shell.menus(
+                    platform == ShortcutPlatform::Apple,
+                    false,
+                    |_| false,
+                    |_| true,
+                );
                 let menu_ops: Vec<_> = menus
                     .iter()
                     .flat_map(|menu| &menu.items)
@@ -979,6 +1030,7 @@ mod tests {
             Op::ShowAll,
             Op::Minimize,
             Op::ZoomWindow,
+            Op::FullScreen,
             Op::Help,
         ];
         for op in Op::ALL {
@@ -1002,7 +1054,7 @@ mod tests {
             };
             assert_eq!(
                 Op::CheckUpdates.availability(CommandContext::Editor(state)),
-                Err("Automatic updates are not available in this build.")
+                Err("Updates are unavailable in this build.")
             );
             for op in Op::ALL {
                 assert_eq!(
@@ -1073,6 +1125,67 @@ mod tests {
             }
         );
         assert!(search_on("updates", false, ShortcutPlatform::WindowsLinux).is_empty());
+    }
+
+    #[test]
+    fn unavailable_updates_are_disabled_in_menus_with_a_short_reason() {
+        let state = CommandContext::Editor(EditorState::default());
+        let menus = SHELL.menus(true, false, |_| false, |op| op.availability(state).is_ok());
+        let updates = menus.iter().flat_map(|menu| &menu.items).find(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(&Op::CheckUpdates)));
+        assert!(matches!(
+            updates,
+            Some(MenuItem::Action { disabled: true, .. })
+        ));
+        assert_eq!(
+            Op::CheckUpdates.availability(state),
+            Err("Updates are unavailable in this build.")
+        );
+        assert!(search_on("updates", false, ShortcutPlatform::Apple).contains(&Op::CheckUpdates));
+    }
+
+    #[test]
+    fn fullscreen_uses_native_bindings_and_window_state_labels() {
+        assert_eq!(Op::FullScreen.display_label(false), "Enter Full Screen");
+        assert_eq!(Op::FullScreen.display_label(true), "Exit Full Screen");
+        for (platform, key) in [
+            (ShortcutPlatform::Apple, "ctrl-cmd-f"),
+            (ShortcutPlatform::WindowsLinux, "f11"),
+        ] {
+            for query in [
+                "fullscreen",
+                "full screen",
+                "full",
+                "fs",
+                "toggle full",
+                "enter full",
+                "exit full",
+            ] {
+                assert_eq!(
+                    search_on(query, false, platform),
+                    if cfg!(target_family = "wasm") {
+                        vec![]
+                    } else {
+                        vec![Op::FullScreen]
+                    }
+                );
+            }
+            if !cfg!(target_family = "wasm") {
+                let binding = Op::FullScreen.binding(platform).unwrap();
+                assert_eq!(
+                    binding.keystrokes(),
+                    KeyBinding::new(key, Op::FullScreen, None).keystrokes()
+                );
+            }
+        }
+        for fullscreen in [false, true] {
+            let menus = SHELL.menus(true, fullscreen, |_| false, |_| true);
+            let view = menus
+                .iter()
+                .find(|menu| menu.name.as_ref() == "View")
+                .unwrap();
+            assert_eq!(view.items.iter().filter(|item| matches!(item, MenuItem::Action { name, action, .. }
+                if action.as_any().downcast_ref::<Op>() == Some(&Op::FullScreen) && name.as_ref() == Op::FullScreen.display_label(fullscreen))).count(), usize::from(!cfg!(target_family = "wasm")));
+        }
     }
 
     #[test]
@@ -1171,7 +1284,10 @@ mod tests {
     #[test]
     fn tool_and_mirror_bindings_are_platform_independent() {
         for op in MENUS.iter().flat_map(|(_, items)| items) {
-            let Some(key) = op.key().filter(|key| !key.contains("secondary")) else {
+            let Some(key) = op
+                .key()
+                .filter(|key| !key.contains("secondary") && *op != Op::FullScreen)
+            else {
                 continue;
             };
             let stroke = Keystroke::parse(key).unwrap();
@@ -1202,7 +1318,9 @@ mod tests {
                     "Palette",
                 ] {
                     let expected = match binding.action().as_any().downcast_ref::<Op>() {
-                        Some(Op::Settings | Op::Quit | Op::Hide | Op::HideOthers) => true,
+                        Some(
+                            Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::FullScreen,
+                        ) => true,
                         Some(_) => context == "Editor",
                         None => context == "TextField",
                     };

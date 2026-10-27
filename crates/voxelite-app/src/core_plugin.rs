@@ -165,6 +165,16 @@ impl Plugin for CorePlugin {
                 None,
             ),
             (
+                "dev.voxelite.core.fullscreen",
+                "Toggle Full Screen",
+                Some("ctrl-cmd-f"),
+                None,
+                "fit",
+                "View",
+                165,
+                None,
+            ),
+            (
                 "dev.voxelite.core.add_layer",
                 "Add layer",
                 None,

@@ -1,4 +1,5 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
+mod about;
 #[cfg(not(target_family = "wasm"))]
 mod agent;
 #[cfg(target_family = "wasm")]
@@ -6,6 +7,8 @@ mod agent;
 mod agent;
 #[cfg(target_family = "wasm")]
 mod browser;
+#[cfg(target_os = "linux")]
+mod capture;
 mod command_palette;
 mod comments;
 mod history;
@@ -34,16 +37,18 @@ use voxelite_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use voxelite_core::{Palette, Pos};
 use voxelite_plugin_api::{PaletteAction, PalettePresentation};
 use voxelite_render::{PresetView, RenderOptions, View};
+use voxelite_ui::tokens::{focus_ring, metrics, space, type_size};
+use voxelite_ui::{Button, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row};
 
 // Keep render sizing and native layout on the same logical-pixel metrics.
 const SIDEBAR_WIDTH: f32 = 352.0;
 const TOOL_RAIL_WIDTH: f32 = 56.0;
 const MENUBAR_HEIGHT: f32 = if cfg!(target_os = "macos") { 0.0 } else { 32.0 };
-const TOOLBAR_HEIGHT: f32 = 64.0;
-const STATUSBAR_HEIGHT: f32 = 28.0;
+const TOOLBAR_HEIGHT: f32 = metrics::TOOLBAR_HEIGHT;
+const STATUSBAR_HEIGHT: f32 = metrics::STATUS_HEIGHT;
 const PANEL_GUTTER: f32 = 24.0;
 
-fn updates_available() -> bool {
+pub(crate) fn updates_available() -> bool {
     #[cfg(target_os = "macos")]
     {
         crate::updater::is_available()
@@ -55,13 +60,11 @@ fn updates_available() -> bool {
 }
 
 // Both windows use Sparkle's own progress and result dialogs when available.
-fn check_for_updates() -> Option<&'static str> {
+fn check_for_updates() {
     #[cfg(target_os = "macos")]
     if updates_available() {
         crate::updater::check_for_updates();
-        return None;
     }
-    Some("Automatic updates are not available in this build.")
 }
 
 pub struct EditorView {
@@ -105,52 +108,14 @@ pub struct EditorView {
     status: HintText,
     error: bool,
 }
-fn icon(name: &'static str) -> Svg {
-    svg()
-        .path(format!("icons/{name}.svg"))
-        .size(px(17.0))
-        .flex_shrink_0()
-}
 struct Hint {
     text: HintText,
     theme: Theme,
 }
 impl Render for Hint {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        row()
-            .flex_none()
-            .whitespace_nowrap()
-            .px(px(10.0))
-            .py(px(7.0))
-            .rounded(px(6.0))
-            .border_1()
-            .border_color(self.theme.line())
-            .bg(self.theme.background())
-            .text_color(self.theme.text())
-            .font(gpui::font("Geist"))
-            .text_size(px(12.0))
-            .line_height(px(16.0))
-            .shadow_lg()
-            .child(self.text.clone())
+        voxelite_ui::tooltip(self.theme).child(self.text.clone())
     }
-}
-fn row() -> Div {
-    div().flex().items_center()
-}
-fn focus_ring(theme: Theme) -> Vec<BoxShadow> {
-    vec![BoxShadow {
-        inset: false,
-        color: theme.accent(),
-        offset: point(px(0.0), px(0.0)),
-        blur_radius: px(0.0),
-        spread_radius: px(2.0),
-    }]
-}
-fn mono(text: impl Into<SharedString>) -> Div {
-    div()
-        .font(gpui::font("Geist Mono"))
-        .text_size(px(12.0))
-        .child(text.into())
 }
 fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut App) -> AnyView {
     let text = text.into();
@@ -164,6 +129,8 @@ fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut Ap
 }
 
 enum InfoContent {
+    About,
+    Acknowledgements,
     Text(String),
     Guide,
 }
@@ -474,6 +441,11 @@ impl EditorView {
             }
             Op::Minimize => window.minimize_window(),
             Op::ZoomWindow => window.zoom_window(),
+            Op::FullScreen => {
+                #[cfg(not(target_family = "wasm"))]
+                window.toggle_fullscreen();
+                cx.notify();
+            }
             Op::ShowPalette => {
                 if !self
                     .palette_request(PaletteAction::Command(op.command_id().into()), cx)
@@ -490,17 +462,20 @@ impl EditorView {
             }
             _ => self.run(op, cx),
         }
-        window.focus(&self.focus, cx);
+        window.focus(
+            if self.info.is_some() {
+                &self.modal_focus
+            } else {
+                &self.focus
+            },
+            cx,
+        );
     }
     fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
-            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::ShowPalette => {},
-            Op::About => self.info = Some(("About Voxelite", InfoContent::Text(format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION"))))),
-            Op::CheckUpdates => {
-                let message = check_for_updates();
-                self.error = message.is_some();
-                self.status = message.unwrap_or("Checking for updates…").into();
-            }
+            Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
+            Op::About => self.info = Some(("About Voxelite", InfoContent::About)),
+            Op::CheckUpdates => check_for_updates(),
             Op::Hide => cx.hide(),
             Op::HideOthers => cx.hide_other_apps(),
             Op::ShowAll => cx.unhide_other_apps(),
@@ -657,6 +632,10 @@ impl EditorView {
         cx.notify();
     }
     fn key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        #[cfg(target_os = "linux")]
+        if self.capture_status(e, cx) {
+            return;
+        }
         self.reconcile_palette_panel(window, cx);
         #[cfg(target_family = "wasm")]
         if self.settings_modal.is_some() {
@@ -701,25 +680,13 @@ impl EditorView {
             && !self.save_flow.needs_confirmation()
             && !self.commands.is_open()
             && self.menu.is_none()
-            && self.info.is_none()
         {
-            if e.keystroke.modifiers.shift {
+            if self.palettes.open || self.agent.open || self.info.is_some() {
+                Dialog::trap_tab(&self.modal_focus, e.keystroke.modifiers.shift, window, cx);
+            } else if e.keystroke.modifiers.shift {
                 window.focus_prev(cx);
             } else {
                 window.focus_next(cx);
-            }
-            if self.palettes.open || self.agent.open {
-                // Focus traversal wraps. Skip controls behind the modal sheet.
-                for _ in 0..256 {
-                    if self.modal_focus.contains_focused(window, cx) {
-                        break;
-                    }
-                    if e.keystroke.modifiers.shift {
-                        window.focus_prev(cx);
-                    } else {
-                        window.focus_next(cx);
-                    }
-                }
             }
             cx.stop_propagation();
             return;
@@ -890,16 +857,24 @@ impl EditorView {
         let selected = self.selected(op) && id != "view-fit";
         let primary = id == "save";
         let disabled_reason = self.disabled_reason(op);
-        row()
-            .id(id)
+        let variant = if primary {
+            ButtonVariant::Primary
+        } else if label.is_empty() {
+            ButtonVariant::Icon
+        } else {
+            ButtonVariant::Ghost
+        };
+        let mut button = Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
+            .variant(variant)
+            .disabled(!enabled)
+            .selected(selected);
+        if !name.is_empty() {
+            button = button.icon(name);
+        }
+        button
+            .build()
             .aria_keyshortcuts(op.shortcut())
             .aria_label(op.label())
-            .when(enabled, |d| d.tab_index(0))
-            .focus_visible(move |d| {
-                d.bg(if primary { theme.text() } else { theme.hover() })
-                    .shadow(focus_ring(theme))
-            })
-            .active(move |d| d.bg(theme.selected()).text_color(theme.accent()))
             .anchored_hint(
                 if enabled {
                     HintText::from(op.label()).action(op)
@@ -915,45 +890,6 @@ impl EditorView {
                     TooltipSide::Below
                 },
             )
-            .h(px(32.0))
-            .min_w(px(32.0))
-            .px(px(9.0))
-            .gap(px(8.0))
-            .rounded(px(6.0))
-            .when(enabled, |d| d.cursor_pointer())
-            .text_color(if enabled {
-                theme.muted()
-            } else {
-                theme.disabled()
-            })
-            .when(selected, |d| {
-                d.bg(theme.selected()).text_color(theme.accent())
-            })
-            .when(enabled, |d| {
-                d.hover(move |d| {
-                    if primary {
-                        d.bg(theme.text().opacity(0.88))
-                            .text_color(theme.background())
-                    } else if selected {
-                        d.bg(theme.selected())
-                    } else {
-                        d.bg(theme.hover()).text_color(theme.text())
-                    }
-                })
-            })
-            .when(!name.is_empty(), |d| {
-                d.child(icon(name).text_color(if !enabled {
-                    theme.disabled()
-                } else if primary {
-                    theme.background()
-                } else if selected {
-                    theme.accent()
-                } else {
-                    theme.muted()
-                }))
-            })
-            .when(!label.is_empty(), |d| d.child(label))
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.invoke(op, window, cx);
             }))
@@ -1053,7 +989,7 @@ impl EditorView {
     }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        row()
+        Toolbar::row(t)
             .id("main-titlebar")
             .on_mouse_down(MouseButton::Left, |event, window, _| {
                 if event.click_count == 2 {
@@ -1062,13 +998,7 @@ impl EditorView {
                     window.start_window_move();
                 }
             })
-            .h(px(TOOLBAR_HEIGHT))
-            .flex_shrink_0()
-            .px(px(24.0))
             .when(cfg!(target_os = "macos"), |d| d.pl(px(104.0)))
-            .gap(px(16.0))
-            .border_b_1()
-            .border_color(t.line())
             .child(icon("cube").text_color(t.muted()).size(px(22.0)))
             .child(
                 div()
@@ -1184,13 +1114,7 @@ impl EditorView {
             )
             .child(
                 div().absolute().bottom(px(16.0)).right(px(24.0)).child(
-                    row()
-                        .gap(px(4.0))
-                        .p(px(4.0))
-                        .bg(t.background())
-                        .border_1()
-                        .border_color(t.line())
-                        .rounded(px(8.0))
+                    voxelite_ui::Segmented::row(t)
                         .children(
                             [
                                 ("view-iso", "Iso", Op::Frame),
@@ -1209,7 +1133,7 @@ impl EditorView {
                                     })
                             }),
                         )
-                        .child(div().h(px(20.0)).w(px(1.0)).mx(px(4.0)).bg(t.line()))
+                        .child(ToolbarSeparator::line(t).mx(px(space::XS)))
                         .child(self.button("view-fit", "fit", "", Op::Frame, cx)),
                 ),
             )
@@ -1802,53 +1726,53 @@ impl EditorView {
         op: Op,
         index: usize,
         selected: bool,
+        window: &Window,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let t = self.theme;
         let enabled = self.enabled(op);
-        row()
-            .id(("action-row", index))
-            .aria_keyshortcuts(op.shortcut())
-            .h(px(36.0))
-            .px(px(10.0))
-            .gap(px(10.0))
-            .rounded(px(6.0))
-            .when(enabled, |d| d.cursor_pointer())
-            .when(selected, |d| d.bg(t.hover()))
-            .text_color(if enabled { t.text() } else { t.disabled() })
-            .hover(move |d| d.bg(t.hover()))
-            .child(div().w(px(14.0)).when(self.selected(op), |d| {
-                d.child(icon("check").size(px(14.0)).text_color(t.accent()))
-            }))
-            .child(icon(op.icon()).text_color(if enabled { t.muted() } else { t.disabled() }))
-            .child(op.label())
-            .child(div().flex_1())
-            .child(
-                div()
-                    .when(enabled, |d| d.child(action_shortcut(op)))
-                    .when(!enabled, |d| d.child(mono(self.disabled_reason(op))))
-                    .text_color(t.muted()),
+        voxelite_ui::SidebarItem::row(
+            ("action-row", index),
+            op.display_label(window.is_fullscreen()),
+            op.icon(),
+            false,
+            t,
+        )
+        .tab_stop(false)
+        .role(Role::MenuItem)
+        .aria_selected(selected)
+        .aria_keyshortcuts(op.shortcut())
+        .when(selected, |d| d.bg(t.hover()).aria_active_descendant())
+        .text_color(if enabled { t.text() } else { t.disabled() })
+        .when(self.selected(op), |d| {
+            d.child(
+                icon("check")
+                    .size(px(metrics::ICON_SM))
+                    .text_color(t.accent()),
             )
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.invoke(op, window, cx);
-            }))
+        })
+        .child(
+            div()
+                .max_w(px(240.))
+                .text_size(px(type_size::CAPTION))
+                .text_color(t.muted())
+                .when(enabled, |d| d.child(action_shortcut(op)))
+                .when(!enabled, |d| {
+                    d.whitespace_normal().child(self.disabled_reason(op))
+                }),
+        )
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_click(cx.listener(move |this, _, window, cx| {
+            this.invoke(op, window, cx);
+        }))
     }
     fn floating(&self) -> Stateful<Div> {
-        div()
-            .id("floating-panel")
-            .track_focus(&self.modal_focus)
-            .tab_stop(false)
-            .occlude()
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        Dialog::panel("floating-panel", "Dialog", self.theme, &self.modal_focus)
             .bg(self.theme.background())
-            .border_1()
-            .border_color(self.theme.line())
-            .rounded(px(8.0))
-            .shadow_lg()
-            .p(px(6.0))
+            .p(px(space::SM))
     }
-    fn overlay(&self, cx: &Context<Self>) -> Option<AnyElement> {
+
+    fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
         #[cfg(target_family = "wasm")]
         if let Some(settings) = &self.settings_modal {
@@ -1976,6 +1900,12 @@ impl EditorView {
                     .into_any_element(),
             );
         }
+        if let Some((_, InfoContent::About | InfoContent::Acknowledgements)) = &self.info {
+            return Some(self.about_dialog(
+                matches!(self.info, Some((_, InfoContent::Acknowledgements))),
+                cx,
+            ));
+        }
         if let Some((title, content)) = &self.info {
             return Some(
                 div()
@@ -2004,16 +1934,19 @@ impl EditorView {
                                             .child(*title),
                                     )
                                     .child(
-                                        row()
-                                            .id("close-info")
-                                            .size(px(32.0))
-                                            .justify_center()
-                                            .cursor_pointer()
-                                            .child(icon("close").text_color(t.muted()))
-                                            .on_click(cx.listener(|this, _, _, cx| {
+                                        voxelite_ui::IconButton::button(
+                                            "close-info",
+                                            "close",
+                                            "Close dialog",
+                                            t,
+                                        )
+                                        .build()
+                                        .on_click(
+                                            cx.listener(|this, _, _, cx| {
                                                 this.info = None;
                                                 cx.notify();
-                                            })),
+                                            }),
+                                        ),
                                     ),
                             )
                             .child(match content {
@@ -2022,6 +1955,9 @@ impl EditorView {
                                     .line_height(px(26.0))
                                     .child(text.clone()),
                                 InfoContent::Guide => keyboard_guide(t),
+                                InfoContent::About | InfoContent::Acknowledgements => {
+                                    unreachable!("handled above")
+                                }
                             }),
                     )
                     .into_any_element(),
@@ -2030,26 +1966,16 @@ impl EditorView {
         if self.commands.is_open() {
             let matches = self.commands.filtered_actions(&self.editor.plugin_host());
             return Some(
-                div()
-                    .absolute()
-                    .size_full()
-                    .bg(rgba(0x00000070))
-                    .flex()
-                    .justify_center()
-                    .pt(px(140.0))
+                Dialog::scrim(t, false)
                     .child(
-                        self.floating()
-                            .w(px(560.0))
+                        Dialog::panel("command-palette", "Search commands", t, &self.modal_focus)
                             .h(px(440.0))
                             .flex()
                             .flex_col()
                             .child(
-                                row()
+                                voxelite_ui::TextField::search_row(t, true)
                                     .h(px(52.0))
-                                    .px(px(14.0))
-                                    .gap(px(12.0))
-                                    .border_b_1()
-                                    .border_color(t.line())
+                                    .flex_shrink_0()
                                     .child(icon("search").text_color(t.muted()))
                                     .child(
                                         row()
@@ -2093,7 +2019,13 @@ impl EditorView {
                                     .overflow_y_scroll()
                                     .py(px(6.0))
                                     .children(matches.iter().enumerate().map(|(i, op)| {
-                                        self.action_row(*op, i, self.commands.index() == i, cx)
+                                        self.action_row(
+                                            *op,
+                                            i,
+                                            self.commands.index() == i,
+                                            window,
+                                            cx,
+                                        )
                                     }))
                                     .when(matches.is_empty(), |d| {
                                         d.child(
@@ -2273,7 +2205,9 @@ impl EditorView {
                         crate::actions::menu_items(i, &self.editor.plugin_host())
                             .iter()
                             .enumerate()
-                            .map(|(j, op)| self.action_row(*op, j, j == self.menu_index, cx)),
+                            .map(|(j, op)| {
+                                self.action_row(*op, j, j == self.menu_index, window, cx)
+                            }),
                     ),
                 )
                 .into_any_element()
@@ -2333,6 +2267,7 @@ impl Render for EditorView {
         if cfg!(target_os = "macos") && window.is_window_active() {
             cx.set_menus(crate::actions::menus_from_host(
                 &self.editor.plugin_host(),
+                window.is_fullscreen(),
                 |op| self.selected(op),
                 |op| self.enabled(op),
             ));
@@ -2353,7 +2288,7 @@ impl Render for EditorView {
             self.overlay_hover = self.overlay_hit(window.mouse_position());
         }
         self.reconcile_palette_panel(window, cx);
-        let overlay = self.overlay(cx);
+        let overlay = self.overlay(window, cx);
         div()
             .id("editor-root")
             .key_context(if settings_open {
@@ -2424,7 +2359,7 @@ impl Render for EditorView {
                     .child(self.viewport(cx))
                     .child(self.sidebar(f32::from(size.height) < 760.0, cx)),
             )
-            .child(self.statusbar(f32::from(size.width) < 1200.0))
+            .child(self.statusbar(f32::from(size.width) < metrics::STATUS_COMPACT_WIDTH))
             .children(overlay.map(|overlay| {
                 div()
                     .id("overlay")

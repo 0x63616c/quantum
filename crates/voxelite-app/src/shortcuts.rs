@@ -29,6 +29,11 @@ impl ShortcutPlatform {
     // GPUI's `secondary` alias uses target_os, which cannot identify the host
     // of a wasm build. Resolve it explicitly before parsing or binding keys.
     pub fn binding_key(self, key: &str) -> String {
+        // The native full-screen convention is Control-Command-F on Apple,
+        // and F11 on Windows/Linux. Contributions retain the canonical binding.
+        if key == "ctrl-cmd-f" && self == Self::WindowsLinux {
+            return "f11".into();
+        }
         key.split('-')
             .map(|part| {
                 if part.eq_ignore_ascii_case("secondary") {
