@@ -1,5 +1,8 @@
 use crate::occupancy::{Occupancy, OccupancyCache, SHADOW_EPSILON, trace_shadow};
-use crate::{AmbientOcclusionStrength, Camera, PresetView, Projection, RenderError, RenderResult};
+use crate::{
+    AMBIENT_ILLUMINATION, AmbientOcclusionStrength, Camera, Lighting, PresetView, Projection,
+    RenderError, RenderPlan, RenderResult,
+};
 use glam::{DVec2, DVec3};
 use std::{
     collections::HashMap,
@@ -42,6 +45,9 @@ pub struct RenderOptions {
     pub shadows: bool,
     /// Darken silhouettes and visible creases.
     pub outline: bool,
+    /// Host-admitted pass graph. Standalone defaults retain the legacy appearance;
+    /// an empty plan uses cheap ambient shading on both CPU and GPU.
+    pub passes: RenderPlan,
 }
 impl Default for RenderOptions {
     fn default() -> Self {
@@ -58,6 +64,7 @@ impl Default for RenderOptions {
             ambient_occlusion_strength: AmbientOcclusionStrength::default(),
             shadows: true,
             outline: false,
+            passes: RenderPlan::standard(),
         }
     }
 }
@@ -141,7 +148,7 @@ impl RasterCache {
         snapshot: &Snapshot,
         options: &RenderOptions,
     ) -> RenderResult<RenderedImage> {
-        if !options.shadows {
+        if !options.shadows || options.passes.lighting() == Lighting::Ambient {
             return render(snapshot, options);
         }
         let mut cache = self
@@ -259,8 +266,13 @@ fn render_with_occupancy(
             );
         }
     }
-    let cells: HashMap<_, _> = snapshot.composite().into_iter().collect();
-    let built = (options.shadows && occupancy.is_none())
+    let exact = options.passes.lighting() == Lighting::Exact;
+    let cells: HashMap<_, _> = if exact && options.ambient_occlusion {
+        snapshot.composite().into_iter().collect()
+    } else {
+        HashMap::new()
+    };
+    let built = (exact && options.shadows && occupancy.is_none())
         .then(|| Occupancy::from_snapshot(snapshot))
         .transpose()?;
     let occupancy = occupancy.or(built.as_ref());
@@ -299,30 +311,34 @@ fn render_with_occupancy(
                     let (rgb, alpha) = if f.slot == 0 {
                         (bg, bg_alpha)
                     } else {
-                        let mut n = [0.0; 3];
-                        n[(f.face / 2) as usize] = if f.face % 2 == 1 { 1.0 } else { -1.0 };
-                        let normal = DVec3::from(n);
-                        let p = DVec3::from(f.world.map(f64::from));
-                        let diffuse = normal.dot(light).max(0.0);
-                        let shadow = options.shadows
-                            && diffuse > 0.0
-                            && trace_shadow(
-                                occupancy.as_ref().unwrap(),
-                                std::array::from_fn(|a| {
-                                    f.world[a] - snapshot.bounds.min[a] as f32
-                                        + n[a] as f32 * SHADOW_EPSILON
-                                }),
-                                light.as_vec3().to_array(),
-                            );
-                        let ao = if options.ambient_occlusion
-                            && options.ambient_occlusion_strength != AmbientOcclusionStrength::OFF
-                        {
-                            ambient(p, normal, &cells, options.ambient_occlusion_strength)
+                        let mut illumination = if exact {
+                            let mut n = [0.0; 3];
+                            n[(f.face / 2) as usize] = if f.face % 2 == 1 { 1.0 } else { -1.0 };
+                            let normal = DVec3::from(n);
+                            let p = DVec3::from(f.world.map(f64::from));
+                            let diffuse = normal.dot(light).max(0.0);
+                            let shadow = options.shadows
+                                && diffuse > 0.0
+                                && trace_shadow(
+                                    occupancy.as_ref().unwrap(),
+                                    std::array::from_fn(|a| {
+                                        f.world[a] - snapshot.bounds.min[a] as f32
+                                            + n[a] as f32 * SHADOW_EPSILON
+                                    }),
+                                    light.as_vec3().to_array(),
+                                );
+                            let ao = if options.ambient_occlusion
+                                && options.ambient_occlusion_strength
+                                    != AmbientOcclusionStrength::OFF
+                            {
+                                ambient(p, normal, &cells, options.ambient_occlusion_strength)
+                            } else {
+                                1.0
+                            };
+                            (0.44 + 0.56 * diffuse * if shadow { 0.2 } else { 1.0 }) * ao
                         } else {
-                            1.0
+                            AMBIENT_ILLUMINATION
                         };
-                        let mut illumination =
-                            (0.44 + 0.56 * diffuse * if shadow { 0.2 } else { 1.0 }) * ao;
                         if options.outline && edge(&fragments, width, height, sx, sy) {
                             illumination *= 0.55;
                         }

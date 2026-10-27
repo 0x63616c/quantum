@@ -18,6 +18,66 @@ fn viewport_shaders_validate() {
     }
 }
 
+#[test]
+fn both_gpu_lighting_paths_return_core_ambient_before_shadow_work() {
+    for source in [
+        include_str!("../gpu/viewport.wgsl"),
+        include_str!("../gpu/shadow_map.wgsl"),
+    ] {
+        let module = naga::front::wgsl::parse_str(source).unwrap();
+        let (_, function) = module
+            .functions
+            .iter()
+            .find(|(_, f)| f.name.as_deref() == Some("surface_illumination"))
+            .unwrap();
+        // Only expression evaluation may precede the guard. No calls (including
+        // shadow traversal/sampling) or stores are allowed before this early exit.
+        let first = function
+            .body
+            .iter()
+            .find(|s| !matches!(s, naga::Statement::Emit(_)))
+            .unwrap();
+        let naga::Statement::If {
+            condition,
+            accept,
+            reject,
+        } = first
+        else {
+            panic!("ambient guard must precede lighting work")
+        };
+        assert!(reject.is_empty());
+        let naga::Expression::Binary {
+            op: naga::BinaryOperator::NotEqual,
+            left,
+            right,
+        } = function.expressions[*condition]
+        else {
+            panic!("ambient flag guard")
+        };
+        assert_eq!(evaluate(&function.expressions, right, &[]), [0.0]);
+        let naga::Expression::Load { pointer } = function.expressions[left] else {
+            panic!("uniform flag")
+        };
+        let naga::Expression::AccessIndex { base, index: 3 } = function.expressions[pointer] else {
+            panic!("light.w flag")
+        };
+        let naga::Expression::AccessIndex { index: 2, .. } = function.expressions[base] else {
+            panic!("globals.light member")
+        };
+        let returned = accept
+            .iter()
+            .find_map(|s| match s {
+                naga::Statement::Return { value } => *value,
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(
+            evaluate(&function.expressions, returned, &[]),
+            [f64::from(crate::AMBIENT_ILLUMINATION as f32)]
+        );
+    }
+}
+
 // Evaluate pure shader math, rather than testing a duplicate CPU formula.
 // This supports the expression subset used by conversion and shadow gradients.
 fn evaluate(

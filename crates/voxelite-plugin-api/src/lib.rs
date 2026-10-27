@@ -13,6 +13,7 @@ mod export;
 mod id;
 mod overlay;
 mod palette;
+mod pass;
 mod registrar;
 mod spec;
 mod tool;
@@ -25,6 +26,7 @@ pub use export::*;
 pub use id::{InvalidPluginId, PluginId};
 pub use overlay::*;
 pub use palette::*;
+pub use pass::*;
 pub use registrar::{Contributions, Registrar, ValidationError, validate_contributions};
 pub use semver::Version;
 /// Portable JSON codecs for plugin-owned settings, without filesystem access.
@@ -51,7 +53,7 @@ pub use voxelite_mesh::{Mesh, MeshError, Quad, greedy_mesh};
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 8, 1);
+pub const API_VERSION: Version = Version::new(0, 9, 0);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -78,6 +80,10 @@ pub trait Plugin {
     }
     /// Bind a declared render pass to portable overlay drawing and interaction.
     fn overlay(&self, _id: &str) -> Option<&dyn Overlay> {
+        None
+    }
+    /// Bind a declared render pass to a capability-scoped kernel description.
+    fn render_pass(&self, _id: &str) -> Option<&dyn RenderPass> {
         None
     }
     /// Bind a declared export format to a portable, stateless byte encoder.

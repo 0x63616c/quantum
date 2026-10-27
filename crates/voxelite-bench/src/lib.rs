@@ -27,6 +27,7 @@ pub fn style(bounds: Region) -> Style {
         background: [0.0, 0.0, 0.0, 1.0],
         outline: false,
         ambient_occlusion_strength: Default::default(),
+        lighting: voxelite_render::Lighting::Exact,
         grid: Some([
             bounds.min[1] as f32 - 0.05,
             (bounds.min[0].min(bounds.min[2]) - 16) as f32,

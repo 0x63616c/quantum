@@ -15,8 +15,12 @@ pub(crate) struct Images {
     pub metadata: Value,
 }
 
-pub(crate) fn render(s: &Snapshot, a: &Args<'_>) -> Result<Images> {
-    render_with_encoder(s, a, |width, height, rgba| {
+pub(crate) fn render(
+    s: &Snapshot,
+    a: &Args<'_>,
+    passes: &voxelite_render::RenderPlan,
+) -> Result<Images> {
+    render_with_encoder(s, a, passes, |width, height, rgba| {
         Ok(png_rgba(width, height, rgba)?)
     })
 }
@@ -55,7 +59,8 @@ pub(crate) fn export(
     host: &mut voxelite_plugin_host::Host,
 ) -> Result<Images> {
     let format = crate::exports::format(host, "png")?;
-    render_with_encoder(s, a, |width, height, rgba| {
+    let passes = host.render_plan();
+    render_with_encoder(s, a, &passes, |width, height, rgba| {
         crate::exports::encode(
             host,
             &format,
@@ -91,6 +96,7 @@ impl voxelite_plugin_api::ExportCx for Pixels<'_> {
 fn render_with_encoder(
     s: &Snapshot,
     a: &Args<'_>,
+    passes: &voxelite_render::RenderPlan,
     mut encode: impl FnMut(u32, u32, &[u8]) -> Result<Vec<u8>>,
 ) -> Result<Images> {
     let width: u32 = a.default("width", 512)?;
@@ -193,6 +199,7 @@ fn render_with_encoder(
         let image = voxelite_render::render(
             s,
             &RenderOptions {
+                passes: passes.clone(),
                 width,
                 height,
                 view,
@@ -329,13 +336,40 @@ mod tests {
     }
 
     #[test]
+    fn render_and_export_use_the_same_disabled_lighting_plan() {
+        let snapshot = serde_json::from_slice(include_bytes!(
+            "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
+        ))
+        .unwrap();
+        let args = json!({"width":80,"height":64,"views":["iso"]});
+        let mut host = mcp_host();
+        let enabled = render(&snapshot, &Args(&args), &host.render_plan()).unwrap();
+        host.disable(voxelite_plugin_shadows_lighting::PLUGIN_ID)
+            .unwrap();
+        let disabled = render(&snapshot, &Args(&args), &host.render_plan()).unwrap();
+        assert_ne!(disabled.pngs, enabled.pngs);
+        assert_eq!(
+            export(&snapshot, &Args(&args), &mut host).unwrap().pngs,
+            disabled.pngs
+        );
+        host.enable(voxelite_plugin_shadows_lighting::PLUGIN_ID)
+            .unwrap();
+        assert_eq!(
+            render(&snapshot, &Args(&args), &host.render_plan())
+                .unwrap()
+                .pngs,
+            enabled.pngs
+        );
+    }
+
+    #[test]
     fn contact_sheet_export_characterization() {
         let snapshot = serde_json::from_slice(include_bytes!(
             "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
         ))
         .unwrap();
         let args = json!({"width":80,"height":64,"views":["iso","front"]});
-        let images = render(&snapshot, &Args(&args)).unwrap();
+        let images = render(&snapshot, &Args(&args), &mcp_host().render_plan()).unwrap();
         assert_eq!(images.pngs[0], include_bytes!("../tests/contact-sheet.png"));
         let exported = export(&snapshot, &Args(&args), &mut mcp_host()).unwrap();
         assert_eq!(exported.pngs, images.pngs);
@@ -349,12 +383,16 @@ mod tests {
         ))
         .unwrap();
         let mut args = json!({"width":80,"height":64,"views":["iso"],"image_mode":"individual"});
-        let original = render(&snapshot, &Args(&args)).unwrap();
+        let plan = mcp_host().render_plan();
+        let original = render(&snapshot, &Args(&args), &plan).unwrap();
         args["ambient_occlusion_strength"] = json!(1);
-        assert_eq!(original.pngs, render(&snapshot, &Args(&args)).unwrap().pngs);
+        assert_eq!(
+            original.pngs,
+            render(&snapshot, &Args(&args), &plan).unwrap().pngs
+        );
         for strength in [0.0, 0.5, 2.0] {
             args["ambient_occlusion_strength"] = json!(strength);
-            let rendered = render(&snapshot, &Args(&args)).unwrap();
+            let rendered = render(&snapshot, &Args(&args), &plan).unwrap();
             assert_ne!(original.pngs, rendered.pngs);
             assert_eq!(
                 rendered.pngs,
@@ -365,7 +403,7 @@ mod tests {
         }
         for value in [json!(-0.1), json!(2.1), json!(null), json!("1")] {
             args["ambient_occlusion_strength"] = value;
-            assert!(render(&snapshot, &Args(&args)).is_err());
+            assert!(render(&snapshot, &Args(&args), &plan).is_err());
         }
     }
 }

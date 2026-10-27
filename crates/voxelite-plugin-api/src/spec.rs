@@ -120,16 +120,7 @@ pub struct FormatContribution {
     pub export: bool,
 }
 
-/// A declarative insertion point relative to the core scene renderer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RenderPassSlot {
-    /// Preparation before core scene rendering, such as shadow data.
-    BeforeScene,
-    /// Rendering after the core scene, before overlays.
-    AfterScene,
-    /// Viewport overlays, such as a grid or gizmo.
-    Overlay,
-}
+pub use voxelite_render_plan::RenderPassSlot;
 
 /// Metadata for a host-bound render pass; contains no renderer resources.
 #[derive(Clone, Debug, PartialEq, Eq)]

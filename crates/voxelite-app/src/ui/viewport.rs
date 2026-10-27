@@ -11,6 +11,7 @@ mod gpu_viewport;
 /// resets its revision. Camera and dimensions bind picking to displayed pixels.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct FrameIdentity {
+    lighting: voxelite_render::Lighting,
     generation: u64,
     revision: u64,
     overlay_epoch: u64,
@@ -174,6 +175,7 @@ impl Viewport {
     }
     fn identity(&self, editor: &Editor) -> FrameIdentity {
         FrameIdentity {
+            lighting: editor.render_plan().lighting(),
             generation: self.document_generation,
             revision: editor.engine.revision(),
             overlay_epoch: self.overlay_epoch,
@@ -189,6 +191,7 @@ impl Viewport {
     fn accepts(&self, identity: FrameIdentity, editor: &Editor) -> bool {
         let current = self.identity(editor);
         identity.generation == current.generation
+            && identity.lighting == current.lighting
             && identity.revision == current.revision
             && identity.overlay_epoch == current.overlay_epoch
             && identity.ambient_occlusion_strength == current.ambient_occlusion_strength
@@ -329,9 +332,10 @@ impl EditorView {
         let snapshot = self.editor.display_snapshot().clone();
         let camera = self.editor.camera;
         let identity = self.frame_identity();
-        let options = self
+        let mut options = self
             .viewport
             .cpu_options(camera, self.preferences.antialiasing);
+        options.passes = self.editor.render_plan();
         let task = cx
             .background_executor()
             .spawn(self.editor.raster.task(snapshot, options));
@@ -822,6 +826,26 @@ mod tests {
         editor.set_grid(false).unwrap();
         assert!(viewport.sync_scene_grid(&editor));
         assert!(viewport.scene_grid.is_none());
+    }
+
+    #[test]
+    fn lighting_changes_reject_stale_cpu_and_gpu_frames() {
+        let (mut viewport, mut editor) = fixture();
+        for gpu in [false, true] {
+            viewport.gpu.enabled = gpu;
+            let enabled = viewport.identity(&editor);
+            editor
+                .set_plugin_enabled(voxelite_plugin_shadows_lighting::PLUGIN_ID, false)
+                .unwrap();
+            let disabled = viewport.identity(&editor);
+            assert_eq!(disabled.lighting, voxelite_render::Lighting::Ambient);
+            assert!(!viewport.accepts(enabled, &editor));
+            assert!(viewport.accepts(disabled, &editor));
+            editor
+                .set_plugin_enabled(voxelite_plugin_shadows_lighting::PLUGIN_ID, true)
+                .unwrap();
+            assert!(!viewport.accepts(disabled, &editor));
+        }
     }
 
     #[test]

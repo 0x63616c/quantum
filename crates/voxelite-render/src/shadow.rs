@@ -26,6 +26,21 @@ pub(crate) struct ShadowCache {
 }
 
 impl ShadowCache {
+    /// Ambient frames skip depth rendering. Discard the fit so re-enabling always
+    /// redraws, including after edits made while lighting was disabled.
+    pub fn update_lighting(
+        &mut self,
+        input: ShadowInput,
+        scene_changed: bool,
+        lighting: crate::Lighting,
+    ) -> bool {
+        if lighting == crate::Lighting::Ambient {
+            *self = Self::default();
+            false
+        } else {
+            self.update(input, scene_changed)
+        }
+    }
     /// Style-only frames reuse both the fit and the depth texture. Scene edits
     /// (including deleted chunks) invalidate depth even with identical bounds.
     pub fn update(&mut self, input: ShadowInput, scene_changed: bool) -> bool {
@@ -174,6 +189,20 @@ mod tests {
             "{point:?} -> {p:?}"
         );
         assert!((-0.0001..=1.0001).contains(&p.z), "{point:?} -> {p:?}");
+    }
+
+    #[test]
+    fn disabled_lighting_invalidates_depth_until_reenabled() {
+        let mut cache = ShadowCache::default();
+        let input = input(32.0);
+        assert!(cache.update_lighting(input, false, crate::Lighting::Exact));
+        assert!(!cache.update_lighting(input, false, crate::Lighting::Exact));
+        assert!(!cache.update_lighting(input, true, crate::Lighting::Ambient));
+        assert!(cache.fit.is_none());
+        assert!(!cache.update_lighting(input, false, crate::Lighting::Ambient));
+        // No new geometry update is sent on this style-only frame.
+        assert!(cache.update_lighting(input, false, crate::Lighting::Exact));
+        assert!(!cache.update_lighting(input, false, crate::Lighting::Exact));
     }
 
     #[test]

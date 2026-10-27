@@ -83,3 +83,5 @@ features = ["gpu"]
 
 [dev-dependencies]
 voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
+voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
+voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }
