@@ -127,7 +127,7 @@ impl EditorView {
                 div()
                     .id("status-message")
                     .flex_1()
-                    .min_w(px(0.))
+                    .min_w(px(space::NONE))
                     .overflow_hidden()
                     .text_ellipsis()
                     .font_family(type_size::UI)
