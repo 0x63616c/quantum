@@ -164,6 +164,14 @@ document-edit `Command` in
 [crates/voxelite-core/src/command.rs](crates/voxelite-core/src/command.rs) and MCP's
 `operation_id` retry identity.
 
+### UI component library
+
+`voxelite-ui` is the shell-only GPUI presentation crate in
+[crates/voxelite-ui](crates/voxelite-ui/README.md). It owns theme and geometry
+tokens, controls, grouped forms, dialog shells and fixed-width status slots.
+The app owns editor entities, domain state, command dispatch and modal lifecycle.
+Plugins depend on `voxelite-plugin-api`, never on the UI component library.
+
 ## Planned seams
 
 These names come from the architecture review; the linked files identify current

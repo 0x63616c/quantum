@@ -5985,6 +5985,7 @@ dependencies = [
  "voxelite-plugin-palette",
  "voxelite-plugin-tools",
  "voxelite-render",
+ "voxelite-ui",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -6177,6 +6178,13 @@ dependencies = [
  "uuid",
  "voxelite-format",
  "voxelite-mcp",
+]
+
+[[package]]
+name = "voxelite-ui"
+version = "0.2.0"
+dependencies = [
+ "gpui-unofficial",
 ]
 
 [[package]]
