@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Release events emitted with GITHUB_TOKEN do not start another workflow.
+  # workflow_run does, and checks out the trusted default branch, not tag code.
+  workflow_run:
+    workflows: ["Release macOS"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -19,6 +24,7 @@ defaults:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.actor.login == '0x63616c' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -40,26 +46,10 @@ jobs:
           rustup show
           rustup target add wasm32-unknown-unknown
 
-      - name: Download optional release appcast
+      - name: Download signed release appcast or empty initial feed
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          if gh release download --pattern appcast.xml --dir site --clobber \
-            2> "$RUNNER_TEMP/appcast-error"; then
-            test -s site/appcast.xml
-          else
-            # Only a missing release or asset is optional; other errors fail.
-            case "$(cat "$RUNNER_TEMP/appcast-error")" in
-              'release not found'|'no assets to download'|'no assets match the file pattern')
-                echo 'No release appcast available; continuing without a download.'
-                ;;
-              *)
-                cat "$RUNNER_TEMP/appcast-error" >&2
-                exit 1
-                ;;
-            esac
-          fi
+        run: python3 scripts/fetch-macos-appcast.py site/appcast.xml
 
       - name: Build site and wasm editor
         run: scripts/build-site.sh
@@ -67,6 +57,7 @@ jobs:
       - name: Verify site
         run: |
           python3 scripts/check-site.py
+          python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
           test -s site/index.html
           test -s site/llms.txt
           test -s site/app/voxelite_app_bg.wasm

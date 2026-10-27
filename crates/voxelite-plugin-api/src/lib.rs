@@ -6,6 +6,7 @@
 //! typed commands through read-only capabilities; only the host may apply edits.
 //! There is no GUI dependency, registry, enablement or lifecycle management here,
 //! and no third-party code loading, WASM or scripting.
+mod comments;
 mod context;
 mod data;
 mod export;
@@ -17,6 +18,7 @@ mod spec;
 mod tool;
 mod transform;
 
+pub use comments::*;
 pub use context::{ActivateCx, CommandCx, ExportCx, ToolCx, TransformCx};
 pub use data::*;
 pub use export::*;
@@ -37,8 +39,8 @@ pub use spec::{
 pub use tool::{Tool, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome};
 pub use transform::CommandTransform;
 pub use voxelite_core::{
-    Command, Error as CoreError, Mirror, Mode, Palette, PaletteEdit, PaletteSlot, Pos, Region,
-    Shape, Snapshot, Swatch, Uuid, Voxel, validate_name,
+    Anchor, AnchorState, Command, Comment, Error as CoreError, Mirror, Mode, Origin, Palette,
+    PaletteEdit, PaletteSlot, Pos, Region, Shape, Snapshot, Swatch, Uuid, Voxel, validate_name,
 };
 
 /// Version of this Rust API contract, independent of plugin and `.voxl` versions.
@@ -46,7 +48,7 @@ pub use voxelite_core::{
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 5, 2);
+pub const API_VERSION: Version = Version::new(0, 6, 0);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
@@ -81,6 +83,10 @@ pub trait Plugin {
     }
     /// Bind portable palette behavior to a declared panel, without GUI access.
     fn palette_panel(&self, _id: &str) -> Option<&dyn PalettePanel> {
+        None
+    }
+    /// Bind portable discussion behavior to a declared panel.
+    fn comments_panel(&self, _id: &str) -> Option<&dyn CommentsPanel> {
         None
     }
     /// Initialize plugin state using only capabilities supplied by the host.

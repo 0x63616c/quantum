@@ -65,6 +65,57 @@ class ReleaseTests(unittest.TestCase):
         self.assertLess(package, notes)  # Packaging clears dist/.
         self.assertLess(notes, appcast)
 
+    def test_tag_must_match_cargo_before_building(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cargo = root / "cargo"
+            cargo.write_text('''#!/usr/bin/env python3
+import json, os, pathlib, sys
+if sys.argv[1] == 'metadata':
+    print(json.dumps({'packages': [{'name':'voxelite-app', 'version':'1.2.3'}]}))
+else:
+    pathlib.Path(os.environ['BUILT']).touch()
+''')
+            cargo.chmod(0o755)
+            for tag, success in (("v1.2.4", False), ("v1.2.3", True)):
+                result = subprocess.run(
+                    ["bash", "-euo", "pipefail", "-c", workflow_step("Build app without signing credentials")],
+                    env=os.environ | {"PATH": str(root) + os.pathsep + os.environ["PATH"],
+                                      "TAG": tag, "BUILT": str(root / "built")},
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode == 0, success)
+                self.assertEqual((root / "built").exists(), success)
+
+    def test_site_release_trigger_and_shared_concurrency(self):
+        workflow = (ROOT / ".github/workflows/deploy-site.yml").read_text()
+        self.assertIn('workflows: ["Release macOS"]', workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        self.assertIn("github.event.workflow_run.actor.login == '0x63616c'", workflow)
+        self.assertIn("github.event.workflow_run.head_repository.full_name == github.repository", workflow)
+        self.assertIn("group: deploy-site-${{ github.ref }}", workflow)
+        self.assertIn("python3 scripts/fetch-macos-appcast.py site/appcast.xml", workflow)
+
+    def test_release_requires_all_apple_credentials_before_packaging(self):
+        names = ("MACOS_CERTIFICATE_P12_BASE64", "MACOS_CERTIFICATE_PASSWORD",
+                 "APPLE_API_KEY_P8_BASE64", "APPLE_API_KEY_ID", "APPLE_API_ISSUER_ID")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "scripts").mkdir()
+            package = root / "scripts/package-macos.sh"
+            package.write_text("#!/bin/sh\ntouch packaged\n")
+            package.chmod(0o755)
+            for missing in (*names, None):
+                credentials = {name: "fixture value" if name != missing else "" for name in names}
+                result = subprocess.run(
+                    ["bash", "-euo", "pipefail", "-c", workflow_step("Sign and package")],
+                    cwd=root, env=os.environ | credentials | {"TAG": "v1.2.3"},
+                    capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode == 0, missing is None)
+                self.assertEqual((root / "packaged").exists(), missing is None)
+                self.assertNotIn("fixture value", result.stdout + result.stderr)
+
     def test_publication_is_staged_and_immutable(self):
         for generated, failure in [(True, ""), (False, ""), (True, "create"), (True, "upload")]:
             with self.subTest(generated=generated, failure=failure), tempfile.TemporaryDirectory() as directory:
@@ -86,8 +137,11 @@ if sys.argv[2] == os.environ["FAIL_AT"]:
                         "CALLS": str(root / "calls"), "FAIL_AT": failure,
                     }, capture_output=True,
                 )
-                calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()]
-                self.assertEqual(result.returncode == 0, not failure)
+                calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()] if (root / "calls").exists() else []
+                self.assertEqual(result.returncode == 0, generated and not failure)
+                if not generated:
+                    self.assertEqual(calls, [])
+                    continue
                 self.assertIn("--draft", calls[0])
                 self.assertIn("--verify-tag", calls[0])
                 self.assertEqual(calls[0][calls[0].index("--notes-file") + 1],
@@ -99,6 +153,7 @@ if sys.argv[2] == os.environ["FAIL_AT"]:
                     self.assertNotIn("--clobber", calls[1])
                     self.assertIn("dist/Voxelite.dmg", calls[1])
                     self.assertIn("dist/Voxelite.dmg.sha256", calls[1])
+                    self.assertIn("dist/Voxelite.html", calls[1])
                     self.assertEqual("site/appcast.xml" in calls[1], generated)
                     if failure == "upload":
                         self.assertEqual(len(calls), 2)

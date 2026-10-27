@@ -13,6 +13,8 @@ mod overlay_tests;
 #[path = "transform_tests.rs"]
 mod transform_tests;
 
+#[path = "comments_tests.rs"]
+mod comments_tests;
 #[path = "data_tests.rs"]
 mod data_tests;
 #[path = "palette_tests.rs"]
@@ -671,6 +673,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Overlay => "overlay",
                         Phase::Export => "export",
                         Phase::Palette => "palette",
+                        Phase::Comments => "comments",
                     }
                 )
                 .unwrap()

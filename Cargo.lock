@@ -6047,6 +6047,7 @@ dependencies = [
  "voxelite-export",
  "voxelite-format",
  "voxelite-plugin-api",
+ "voxelite-plugin-comments",
  "voxelite-plugin-exporters",
  "voxelite-plugin-host",
  "voxelite-plugin-palette",

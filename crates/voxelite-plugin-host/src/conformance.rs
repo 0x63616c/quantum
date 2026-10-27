@@ -84,6 +84,18 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
             "unbound transform: {transform}"
         );
     }
+    let comment_panels: Vec<_> = host
+        .registry()
+        .panels()
+        .map(|(_, p)| p.id.clone())
+        .collect();
+    let comment_panels: Vec<_> = comment_panels
+        .into_iter()
+        .filter(|id| {
+            host.has_comments_panel(id)
+                .expect("comments binding panicked")
+        })
+        .collect();
     let overlays: Vec<_> = host
         .registry()
         .render_passes()
@@ -140,6 +152,9 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
         "disabled declarations remain published"
     );
     assert!(host.enabled_set().as_set().is_empty());
+    for panel in &comment_panels {
+        assert!(!host.has_comments_panel(panel).unwrap());
+    }
     for panel in &panels {
         assert!(
             !host.has_palette_panel(panel).unwrap(),
@@ -180,6 +195,12 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     );
 
     host.enable(id).expect("reactivation must succeed");
+    for panel in &comment_panels {
+        assert!(
+            host.has_comments_panel(panel)
+                .expect("comments binding panicked after reenable")
+        );
+    }
     for panel in &panels {
         assert!(
             host.has_palette_panel(panel)
