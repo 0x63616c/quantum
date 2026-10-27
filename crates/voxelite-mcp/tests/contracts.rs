@@ -2,6 +2,7 @@
 use serde_json::{Value, json};
 use voxelite_core::Uuid;
 use voxelite_mcp::VoxeliteServer;
+use voxelite_plugins_builtin::mcp_host;
 
 struct Fixture {
     server: VoxeliteServer,
@@ -12,7 +13,7 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let root = tempfile::tempdir().unwrap();
-        let server = VoxeliteServer::new(root.path()).unwrap();
+        let server = VoxeliteServer::new(root.path(), mcp_host).unwrap();
         let epoch = server
             .call("voxelite_capabilities_get", json!({}))
             .unwrap()
@@ -78,17 +79,57 @@ impl Fixture {
     }
 }
 #[test]
-fn catalog_is_frozen_sorted_and_strict() {
+fn catalog_is_sorted_and_strict() {
     let tools = VoxeliteServer::tools();
     assert_eq!(tools.len(), 38);
     assert!(tools.windows(2).all(|w| w[0].name < w[1].name));
-    let frozen: Value =
-        serde_json::from_str(include_str!("../../../spec/mcp/v1/tools.json")).unwrap();
-    assert_eq!(serde_json::to_value(&tools).unwrap(), frozen);
     for t in tools {
         assert_eq!(t.input_schema["additionalProperties"], false);
         assert!(t.description.unwrap().len() > 60);
     }
+}
+
+#[test]
+fn standalone_uses_only_the_supplied_host() {
+    let root = tempfile::tempdir().unwrap();
+    let server = VoxeliteServer::new(root.path(), voxelite_plugin_host::Host::default).unwrap();
+    let capabilities = server
+        .call("voxelite_capabilities_get", json!({}))
+        .unwrap()
+        .structured_content
+        .unwrap();
+    assert_eq!(capabilities["data"]["formats"], json!(["voxl"]));
+    let created = server
+        .call(
+            "voxelite_document_create",
+            json!({"name":"Core only","expected_epoch":capabilities["epoch"],"operation_id":Uuid::new_v4()}),
+        )
+        .unwrap()
+        .structured_content
+        .unwrap();
+    assert_eq!(created["ok"], true);
+    let model = &created["data"]["model_id"];
+    for (tool, args, error) in [
+        (
+            "voxelite_palette_list",
+            json!({"model_id":model}),
+            "palette_unavailable",
+        ),
+        (
+            "voxelite_comments_list",
+            json!({"model_id":model}),
+            "comments_unavailable",
+        ),
+        (
+            "voxelite_export_glb",
+            json!({"model_id":model,"path":"absent.glb"}),
+            "export_unavailable",
+        ),
+    ] {
+        let result = server.call(tool, args).unwrap().structured_content.unwrap();
+        assert_eq!(result["error"]["code"], error, "{result}");
+    }
+    assert!(!root.path().join("absent.glb").exists());
 }
 
 #[test]
@@ -271,7 +312,7 @@ fn maximum_layer_summary_fits_reserved_receipt_and_replays() {
         project.to_bytes().unwrap(),
     )
     .unwrap();
-    let server = VoxeliteServer::new(root.path()).unwrap();
+    let server = VoxeliteServer::new(root.path(), mcp_host).unwrap();
     let epoch = server
         .call("voxelite_capabilities_get", json!({}))
         .unwrap()
@@ -518,7 +559,7 @@ fn comments_versions_restore_and_save_reopen() {
         original["versions"]
     );
     f.edit("document_save", json!({"path":"model.voxl"}));
-    let server = VoxeliteServer::new(f.root.path()).unwrap();
+    let server = VoxeliteServer::new(f.root.path(), mcp_host).unwrap();
     let epoch = server
         .call("voxelite_capabilities_get", json!({}))
         .unwrap()

@@ -40,7 +40,7 @@ fn disabling_lighting_changes_pixels_without_changing_save_or_undo() {
         .unwrap();
     assert_eq!(
         bytes,
-        voxelite_plugin_api::encoding::png_rgba(32, 32, &fallback.rgba).unwrap()
+        voxelite_plugin_exporters::encoding::png_rgba(32, 32, &fallback.rgba).unwrap()
     );
     assert_eq!(editor.project().to_bytes().unwrap(), before);
     assert_eq!(editor.engine.revision(), revision);

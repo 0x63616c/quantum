@@ -8,7 +8,7 @@ fn host() -> Host {
 
 fn fixture() -> Snapshot {
     json::from_slice(include_bytes!(
-        "../../../voxelite-export/tests/golden/scene.json"
+        "../../voxelite-plugin-exporters/tests/golden/scene.json"
     ))
     .unwrap()
 }
@@ -34,8 +34,9 @@ fn enabled_and_ambient_golden_images_and_cached_reenable() {
     assert_eq!(cache.render(&snapshot, &options).unwrap(), enabled);
     // Reuse the pre-plugin PNG unchanged, including its exact encoding bytes.
     assert_eq!(
-        encoding::png_rgba(enabled.width, enabled.height, &enabled.rgba).unwrap(),
-        include_bytes!("../../../voxelite-export/tests/golden/scene.png")
+        voxelite_plugin_exporters::encoding::png_rgba(enabled.width, enabled.height, &enabled.rgba)
+            .unwrap(),
+        include_bytes!("../../voxelite-plugin-exporters/tests/golden/scene.png")
     );
     host.disable(PLUGIN_ID).unwrap();
     options.passes = host.render_plan();
@@ -43,7 +44,9 @@ fn enabled_and_ambient_golden_images_and_cached_reenable() {
     let ambient = render(&snapshot, &options).unwrap();
     assert_eq!(cache.render(&snapshot, &options).unwrap(), ambient);
     assert_eq!(render(&snapshot, &options).unwrap(), ambient);
-    let png = encoding::png_rgba(ambient.width, ambient.height, &ambient.rgba).unwrap();
+    let png =
+        voxelite_plugin_exporters::encoding::png_rgba(ambient.width, ambient.height, &ambient.rgba)
+            .unwrap();
     assert_eq!(png, include_bytes!("../tests/golden/ambient.png"));
     assert_ne!(ambient.rgba, enabled.rgba);
     assert_eq!(ambient.camera, enabled.camera);
@@ -51,8 +54,10 @@ fn enabled_and_ambient_golden_images_and_cached_reenable() {
     assert!(
         ambient
             .rgba
-            .chunks_exact(4)
-            .zip(enabled.rgba.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(enabled.rgba.as_chunks::<4>().0)
             .all(|(a, b)| a[3] == b[3])
     );
 

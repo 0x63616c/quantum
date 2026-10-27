@@ -5,6 +5,7 @@ use crate::{
 };
 use serde_json::{Value, json};
 use voxelite_core::Snapshot;
+use voxelite_plugin_api::{ExportError, ExportResult};
 use voxelite_render::{
     AmbientOcclusionStrength, Camera, PresetView, Projection, RenderOptions, View,
 };
@@ -20,8 +21,36 @@ pub(crate) fn render(
     passes: &voxelite_render::RenderPlan,
 ) -> Result<Images> {
     render_with_encoder(s, a, passes, |width, height, rgba| {
-        Ok(voxelite_export::png_rgba(width, height, rgba)?)
+        Ok(png_rgba(width, height, rgba)?)
     })
+}
+
+/// Encode bounded RGBA8 pixels as deterministic lossless sRGB PNG.
+/// Dimensions are independent of row layout; exactly width*height*4 bytes are required.
+fn png_rgba(width: u32, height: u32, rgba: &[u8]) -> ExportResult<Vec<u8>> {
+    let pixels = u64::from(width) * u64::from(height);
+    if width == 0
+        || height == 0
+        || width > 2048
+        || height > 2048
+        || pixels > 4_194_304
+        || pixels * 4 != rgba.len() as u64
+    {
+        return Err(ExportError::Invalid(
+            "RGBA dimensions/length exceed 2048² or mismatch".into(),
+        ));
+    }
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut bytes, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+        let mut writer = encoder.write_header()?;
+        writer.write_image_data(rgba)?;
+        writer.finish()?;
+    }
+    Ok(bytes)
 }
 
 pub(crate) fn export(
@@ -281,15 +310,39 @@ fn label(canvas: &mut [u8], stride: u32, tile: [u32; 4], text: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use voxelite_plugins_builtin::mcp_host;
+
+    #[test]
+    fn feedback_png_matches_straight_alpha_characterization() {
+        let pixels = [
+            255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 123, 45, 67, 255,
+        ];
+        assert_eq!(
+            png_rgba(2, 2, &pixels).unwrap(),
+            include_bytes!("../../plugins/voxelite-plugin-exporters/tests/golden/rgba.png")
+        );
+    }
+
+    #[test]
+    fn feedback_png_rejects_invalid_pixels_with_the_existing_error() {
+        for (width, height) in [(0, 1), (1, 0), (2049, 1), (u32::MAX, u32::MAX), (1, 1)] {
+            let error = Failure::from(png_rgba(width, height, &[]).unwrap_err());
+            assert_eq!(error.code, "export_failed");
+            assert_eq!(
+                error.message.as_ref(),
+                "export limit or input error: RGBA dimensions/length exceed 2048² or mismatch"
+            );
+        }
+    }
 
     #[test]
     fn render_and_export_use_the_same_disabled_lighting_plan() {
         let snapshot = serde_json::from_slice(include_bytes!(
-            "../../voxelite-export/tests/golden/scene.json"
+            "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
         ))
         .unwrap();
         let args = json!({"width":80,"height":64,"views":["iso"]});
-        let mut host = crate::exports::host();
+        let mut host = mcp_host();
         let enabled = render(&snapshot, &Args(&args), &host.render_plan()).unwrap();
         host.disable(voxelite_plugin_shadows_lighting::PLUGIN_ID)
             .unwrap();
@@ -312,18 +365,13 @@ mod tests {
     #[test]
     fn contact_sheet_export_characterization() {
         let snapshot = serde_json::from_slice(include_bytes!(
-            "../../voxelite-export/tests/golden/scene.json"
+            "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
         ))
         .unwrap();
         let args = json!({"width":80,"height":64,"views":["iso","front"]});
-        let images = render(
-            &snapshot,
-            &Args(&args),
-            &crate::exports::host().render_plan(),
-        )
-        .unwrap();
+        let images = render(&snapshot, &Args(&args), &mcp_host().render_plan()).unwrap();
         assert_eq!(images.pngs[0], include_bytes!("../tests/contact-sheet.png"));
-        let exported = export(&snapshot, &Args(&args), &mut crate::exports::host()).unwrap();
+        let exported = export(&snapshot, &Args(&args), &mut mcp_host()).unwrap();
         assert_eq!(exported.pngs, images.pngs);
         assert_eq!(exported.metadata, images.metadata);
     }
@@ -331,21 +379,24 @@ mod tests {
     #[test]
     fn ao_override_is_explicit_and_shared_by_render_and_export() {
         let snapshot = serde_json::from_slice(include_bytes!(
-            "../../voxelite-export/tests/golden/scene.json"
+            "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
         ))
         .unwrap();
         let mut args = json!({"width":80,"height":64,"views":["iso"],"image_mode":"individual"});
-        let plan = crate::exports::host().render_plan();
+        let plan = mcp_host().render_plan();
         let original = render(&snapshot, &Args(&args), &plan).unwrap();
         args["ambient_occlusion_strength"] = json!(1);
-        assert_eq!(original.pngs, render(&snapshot, &Args(&args), &plan).unwrap().pngs);
+        assert_eq!(
+            original.pngs,
+            render(&snapshot, &Args(&args), &plan).unwrap().pngs
+        );
         for strength in [0.0, 0.5, 2.0] {
             args["ambient_occlusion_strength"] = json!(strength);
             let rendered = render(&snapshot, &Args(&args), &plan).unwrap();
             assert_ne!(original.pngs, rendered.pngs);
             assert_eq!(
                 rendered.pngs,
-                export(&snapshot, &Args(&args), &mut crate::exports::host())
+                export(&snapshot, &Args(&args), &mut mcp_host())
                     .unwrap()
                     .pngs
             );

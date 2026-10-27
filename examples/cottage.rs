@@ -1,5 +1,5 @@
 //! Export the original MIT-licensed Autumn Workshop and its reproducible build history.
-//! Run: cargo run --release -p voxelite-export --example cottage
+//! Run: cargo run --release -p voxelite-plugin-exporters --example cottage
 #[path = "support/autumn_workshop.rs"]
 mod autumn_workshop;
 use std::path::Path;
@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write("examples/autumn-workshop.voxl", project.to_bytes()?)?;
     std::fs::write(
         Path::new(&output).join("autumn-workshop.glb"),
-        voxelite_export::glb(&project.document.content)?,
+        voxelite_plugin_exporters::encoding::glb(&project.document.content)?,
     )?;
     for (name, direction, perspective, size) in [
         ("autumn-workshop", PresetView::Iso, false, 1024),
@@ -37,7 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..RenderOptions::default()
         };
         let image = voxelite_render::render(&project.document.content, &options)?;
-        let png = voxelite_export::png_rgba(image.width, image.height, &image.rgba)?;
+        let png =
+            voxelite_plugin_exporters::encoding::png_rgba(image.width, image.height, &image.rgba)?;
         std::fs::write(Path::new(&output).join(format!("{name}.png")), png)?;
         eprintln!("{name}: {:?}", start.elapsed());
     }
@@ -61,14 +62,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn ao_comparisons() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::env::args()
         .nth(2)
-        .unwrap_or_else(|| "docs/screenshots/ao".into());
+        .unwrap_or_else(|| "docs/images".into());
     std::fs::create_dir_all(&output)?;
     let autumn =
         voxelite_format::from_bytes(include_bytes!("../bench/scenes/autumn-workshop.voxl"))?
             .document
             .content;
     let step = serde_json::from_slice(include_bytes!(
-        "../crates/voxelite-export/tests/golden/scene.json"
+        "../crates/plugins/voxelite-plugin-exporters/tests/golden/scene.json"
     ))?;
     let voxel = voxelite_format::from_bytes(include_bytes!(
         "../spec/voxl/1.0/fixtures/populated.canonical.voxl"
@@ -96,7 +97,11 @@ fn ao_comparisons() -> Result<(), Box<dyn std::error::Error>> {
                     ..Default::default()
                 },
             )?;
-            let png = voxelite_export::png_rgba(image.width, image.height, &image.rgba)?;
+            let png = voxelite_plugin_exporters::encoding::png_rgba(
+                image.width,
+                image.height,
+                &image.rgba,
+            )?;
             assert!(png.len() < 400_000, "keep documentation images small");
             let path = Path::new(&output).join(format!("{name}-{suffix}.png"));
             std::fs::write(&path, &png)?;

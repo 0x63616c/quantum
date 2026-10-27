@@ -191,7 +191,7 @@ pub(crate) fn open_editor(editor: Editor, cx: &mut App) -> anyhow::Result<()> {
             },
             app_owns_titlebar_drag: cfg!(target_os = "macos"),
             window_min_size: Some(size(px(1024.), px(640.))),
-            app_id: Some("dev.voxelite.editor".into()),
+            app_id: Some(voxelite_app::APP_ID.into()),
             ..Default::default()
         },
         |window, cx| cx.new(|cx| EditorView::new(editor, None, socket, window, cx)),
@@ -237,7 +237,7 @@ pub(crate) fn show(cx: &mut App) -> anyhow::Result<WindowHandle<WelcomeView>> {
             } else {
                 WindowBackgroundAppearance::Opaque
             },
-            app_id: Some("dev.voxelite.editor".into()),
+            app_id: Some(voxelite_app::APP_ID.into()),
             ..Default::default()
         },
         |window, cx| cx.new(|cx| WelcomeView::new(window, cx)),

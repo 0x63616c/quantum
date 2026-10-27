@@ -39014,7 +39014,7 @@
         },
         "elapsed_ms": 2820000,
         "id": "5f261025-0000-4000-8000-000000000094",
-        "label": "Review the finished composition",
+        "label": "Add a composition review note",
         "origin": "agent"
       },
       {
@@ -39027,7 +39027,7 @@
         },
         "elapsed_ms": 2880000,
         "id": "5f261025-0000-4000-8000-000000000095",
-        "label": "Save Autumn Workshop",
+        "label": "Create named version",
         "origin": "agent"
       }
     ],

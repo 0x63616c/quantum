@@ -7,9 +7,10 @@
   piecemeal. Use real names in commands, paths and identifiers.
 - Build an Aseprite-style 3D voxel editor with a Rust/GPUI native macOS shell,
   shared wasm editor, `.voxl` projects, GLB/PNG exports and MCP agent workflows.
-- Verify behavior in code and manifests. [PLAN.md](PLAN.md),
-  [GLOSSARY.md](GLOSSARY.md) and older reviews contain planned or superseded seams.
-  Do not present those as implemented features.
+- Verify behavior in code and manifests. [Product direction](docs/adr/0003-product-direction.md)
+  and the [domain glossary](docs/glossary.md) distinguish current implementation
+  from deferred work and proposed seams. Do not present those as implemented
+  features.
 - Keep changes scoped to the task. Preserve unrelated work, identifiers,
   file-format compatibility and published release assets.
 
@@ -23,13 +24,13 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 | `voxelite-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
 | `voxelite-format` → `voxelite-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
 | `voxelite-mesh` → `voxelite-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |
-| `voxelite-export` → `voxelite-core`, `voxelite-mesh` | Encode bounded GLB/PNG bytes. Accept supplied pixels; no normal renderer dependency. |
 | `voxelite-render` → `voxelite-core`, `voxelite-mesh` | Render immutable snapshots; own cameras, rasterization, occupancy, shadows and GPU resources. No document mutations or host/encoder/plugin dependencies. |
-| `voxelite-plugin-api` → `voxelite-core`, `voxelite-export` | Expose portable manifests, contributions, capabilities and selected shared types/encoders. No GPUI, app, registry lifecycle or renderer. |
+| `voxelite-plugin-api` → `voxelite-core`, `voxelite-mesh` | Expose portable manifests, contributions, capabilities, export errors and selected shared types/geometry. No GPUI, app, registry lifecycle or renderer. |
 | `voxelite-plugin-host` → `voxelite-core`, `voxelite-plugin-api` | Own registration, compatibility, enabled declarations, dispatch, fault quarantine, timings and conformance. No shell, GPUI or renderer. |
 | `crates/plugins/*` → `voxelite-plugin-api` | Implement optional features through portable capabilities; return proposals without accessing app internals. |
 | `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
-| `voxelite-mcp` | Adapt core/format/render/export and built-in host capabilities to stdio and Unix-socket sessions. No app or GPUI dependency. |
+| `voxelite-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
+| `voxelite-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
 | `voxelite-app` | Compose editor state, plugins, native/web UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
 | `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
 | `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
@@ -39,14 +40,15 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 - Keep tools in `voxelite-plugin-tools`, command mirroring in
   `voxelite-plugin-mirror`, camera gizmo/grid in `voxelite-plugin-gizmo-grid`,
   palettes in `voxelite-plugin-palette`, discussions/pins in
-  `voxelite-plugin-comments`, export callbacks in `voxelite-plugin-exporters`,
-  and agent command metadata in `voxelite-plugin-agent`.
+  `voxelite-plugin-comments`, bounded GLB/PNG encoders and export callbacks in
+  `voxelite-plugin-exporters`, and agent command metadata in `voxelite-plugin-agent`.
 - Keep `voxelite-plugin-example` a declaration-only template outside the app.
   Do not imply dynamic loading, scripting or a plugin enablement UI exists.
 - Admit edits through `Engine` transactions. Preserve atomic failure, no-op,
   revision, actor, history, lock/visibility and palette-slot semantics. Playback
   inspects immutable previews; never replay commands into the live engine.
 - Register features in [core_plugin.rs](crates/voxelite-app/src/core_plugin.rs).
+  Append optional built-ins through `voxelite-plugins-builtin::register_all`.
   Keep labels, icons, menu placement, bindings and order in contributions.
   [actions.rs](crates/voxelite-app/src/actions.rs) maps IDs to `Op` and builds shell
   metadata from enabled registry entries. Derive menus, command search, shortcut
@@ -67,7 +69,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 - Run `normal_workspace_dependencies_preserve_renderer_boundary` in
   [boundary.rs](crates/voxelite-render/tests/boundary.rs). It checks the renderer's
   two normal workspace dependencies and forbids normal renderer dependencies in
-  export, format, plugin API/host and the exporters plugin:
+  format, plugin API/host and the exporters plugin:
 
 ```sh
 cargo test -p voxelite-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
@@ -78,9 +80,13 @@ cargo test -p voxelite-render --locked --test boundary normal_workspace_dependen
 - Allow only `voxelite-plugin-api` plus external crates in plugin normal/build
   dependencies, including optional, renamed and target-specific dependencies.
   Keep GPUI out of plugins. Expose required domain types through the API rather
-  than directly depending on core, export, UI or app crates.
+  than directly depending on core, mesh, UI or app crates.
 - Use dev-dependencies for `voxelite_plugin_host::conformance::check`. Exercise
   enable/disable/enable, validation, errors and panic isolation as appropriate.
+- MCP accepts a host factory from its composition root. Its default `standalone`
+  feature links `voxelite-plugins-builtin` for the binary; library consumers disable
+  default features. Concrete plugins are allowed only as MCP dev-dependencies.
+  Verify library isolation with `cargo check -p voxelite-mcp --locked --lib --no-default-features`.
 - Follow [the plugin guide](crates/plugins/README.md) and run:
 
 ```sh
@@ -131,6 +137,9 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
 | All Python regressions | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
+| Dependency licenses, advisories and sources | `cargo deny check` |
+| Unused dependencies | `cargo machete` |
 | Render harness help | `cargo xtask --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
@@ -279,16 +288,25 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 - Edit site templates in `crates/voxelite-site/templates/`, article bodies in
   `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
   in `skills/`. Run `scripts/build-site.sh`, or `--skip-web` with a verified bundle.
-- Let the generator update `site/docs/`, Markdown aliases, `site/llms.txt`,
-  `site/llms-full.txt`, MCP schemas, integrations and downloadable copies. Do not
-  maintain generated integrations separately; their source is
-  `crates/voxelite-site/src/install.rs` and its templates.
+- The site reads the committed `spec/mcp/v1/tools.json` catalog without linking
+  `voxelite-mcp`. After changing MCP tool metadata or schemas, refresh and commit
+  it with `UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
+  The MCP test checks exact bytes against `VoxeliteServer::tools()`; the site
+  preserves that tool and JSON key order in its generated references.
+- Generated site pages, Markdown/LLM exports, crawl files, MCP catalog copies and
+  downloadable skill/integration copies are ignored. Do not commit them: CI
+  builds the site on PRs and `main`, then publishes trusted `main` builds to
+  `site-dist`. Keep authored assets, `site/content/`, `site/vercel.json` and the
+  input `site/appcast.xml` tracked.
+- The generator also updates the tracked root `integrations/` examples. Do not
+  maintain them separately; their source is `crates/voxelite-site/src/install.rs`
+  and its templates.
 - Generate signed appcasts through the release workflow and
   `scripts/generate-macos-appcast.sh`; fetch release feeds with
   `scripts/fetch-macos-appcast.py`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
-- Review generated diffs and relative links. Keep `web/dist/`, `site/app/` and
-  local benchmark outputs out of source commits.
+- Review built output and relative links. Keep generated site output,
+  `web/dist/` and local benchmark outputs out of source commits.
 
 ## Commits and PRs
 
@@ -322,8 +340,8 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
   through `pull_request_target`.
 - Never commit secrets, private keys or machine-specific credentials.
   `python3 scripts/scan-pii.py` scans source/assets and reachable Git history and
-  rewrites `docs/reviews/pii-scan.md` with redacted findings. Run it when relevant,
-  review its report deliberately, and do not treat it as proof of no secrets.
+  prints redacted findings to stdout. Run it when relevant, review its report
+  deliberately, and do not treat it as proof of no secrets.
   Keep private values out of logs and PRs.
 - Write release-worthy subjects: `scripts/generate-macos-release-notes.py`
   includes non-merge commit subjects in public release notes.
@@ -349,12 +367,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
-| [PLAN.md](PLAN.md) | Direction and historical/deferred scope; verify implementation. |
-| [GLOSSARY.md](GLOSSARY.md) | Domain terminology; distinguish proposed seams from current code. |
+| [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
+| [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |
 | [Core architecture](docs/architecture/core.md) | Document/transaction invariants. |
 | [Plugin guide](crates/plugins/README.md), [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) | API, host and built-in ownership. |
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
 | [UI library](crates/voxelite-ui/README.md), [UI rules](crates/voxelite-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
-| [Reviews](docs/reviews/), [history playback](docs/reviews/history-playback.md) | Regression evidence and preview invariants. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |

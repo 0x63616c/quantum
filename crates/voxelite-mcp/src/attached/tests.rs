@@ -1,20 +1,121 @@
 use super::*;
 use serde_json::json;
 use voxelite_core::{Document, Limits};
+use voxelite_plugins_builtin::mcp_host;
+
+#[test]
+fn socket_is_private_at_publication_boundaries() {
+    use std::{fs, os::unix::net::UnixStream, process::Command};
+
+    // Set umask only in a child, never in the multithreaded test runner.
+    const CHILD: &str = "VOXELITE_SOCKET_PERMISSIONS_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let status = Command::new("sh")
+            .args(["-c", "umask 000; exec \"$@\"", "socket-permissions"])
+            .arg(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "attached::tests::socket_is_private_at_publication_boundaries",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        return;
+    }
+
+    let dir = tempfile::tempdir().unwrap();
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o1777)).unwrap();
+    let path = dir.path().join("session.sock");
+    let mut stages = Vec::new();
+    let (listener, metadata) = bind_private_socket_with(&path, |stage, staged| {
+        // The binder cannot advance until these observations finish.
+        assert_eq!(
+            fs::symlink_metadata(&path).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        assert_eq!(
+            fs::metadata(staged.parent().unwrap())
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        match stage {
+            SocketStage::Created => assert!(!staged.exists()),
+            SocketStage::Bound | SocketStage::Secured => assert_eq!(
+                fs::metadata(staged).unwrap().permissions().mode() & 0o777,
+                if stage == SocketStage::Bound {
+                    0o777
+                } else {
+                    0o600
+                }
+            ),
+        }
+        stages.push(stage);
+    })
+    .unwrap();
+    assert_eq!(
+        stages,
+        [
+            SocketStage::Created,
+            SocketStage::Bound,
+            SocketStage::Secured
+        ]
+    );
+    let published = fs::symlink_metadata(&path).unwrap();
+    assert_eq!(published.permissions().mode() & 0o777, 0o600);
+    assert_eq!(
+        (published.dev(), published.ino()),
+        (metadata.dev(), metadata.ino())
+    );
+    UnixStream::connect(&path).unwrap();
+    assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
+    drop(listener);
+    fs::remove_file(path).unwrap();
+    assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn shared_socket_parents_require_sticky_protection_and_a_trusted_owner() {
+    let uid = 1000;
+    // In particular, ordinary users must be able to bind in root-owned /tmp.
+    for owner in [0, uid] {
+        for mode in [0o700, 0o755, 0o1777, 0o1770] {
+            check_socket_parent(mode, owner, uid).unwrap();
+        }
+        for mode in [0o777, 0o770, 0o757] {
+            assert_eq!(
+                check_socket_parent(mode, owner, uid).unwrap_err().kind(),
+                io::ErrorKind::PermissionDenied
+            );
+        }
+    }
+    // Even with the sticky bit, a foreign owner could substitute the staging dir.
+    for mode in [0o1777, 0o1770, 0o1757] {
+        assert_eq!(
+            check_socket_parent(mode, uid + 1, uid).unwrap_err().kind(),
+            io::ErrorKind::PermissionDenied
+        );
+    }
+}
 
 fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>) {
     let project = Project::new(Document::new(Uuid::new_v4(), Uuid::new_v4())).unwrap();
     let document = DocumentSession::new(project.clone(), None, Limits::default()).unwrap();
-    let mut session = Session::new(PathBuf::new());
+    let mut session = Session::new(PathBuf::new(), mcp_host);
     session.attach(project).unwrap();
     let (send, requests) = mpsc::sync_channel(16);
     (
         AttachedSession {
             session,
+            configured_root: PathBuf::new(),
             palette_enabled: true,
             comments_enabled: true,
-            tools: Arc::new(RwLock::new(crate::exports::tools(&crate::exports::host()))),
-            export_formats: crate::exports::host()
+            tools: Arc::new(RwLock::new(crate::exports::tools(&mcp_host()))),
+            export_formats: mcp_host()
                 .registry()
                 .formats()
                 .map(|(_, f)| f.clone())
@@ -65,9 +166,63 @@ fn result(receive: &mut oneshot::Receiver<Result<CallToolResult, ErrorData>>) ->
 }
 
 #[test]
+fn attachment_roots_are_absolute_directories_and_failed_changes_are_atomic() {
+    let (mut attachment, _, _) = attachment();
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("Documents/Voxelite");
+    attachment.set_root(&root).unwrap();
+    assert!(root.is_dir());
+    let canonical = root.canonicalize().unwrap();
+    assert_eq!(attachment.session.root, canonical);
+    let file = dir.path().join("file.voxl");
+    std::fs::write(&file, b"existing").unwrap();
+    for invalid in [Path::new("relative-root"), file.as_path()] {
+        assert!(attachment.set_root(invalid).is_err());
+        assert_eq!(attachment.configured_root, root);
+        assert_eq!(attachment.session.root, canonical);
+    }
+}
+
+#[test]
+fn root_and_ancestor_replacement_cannot_redirect_queued_exports() {
+    use std::{fs, os::unix::fs::symlink};
+
+    for replace_ancestor in [false, true] {
+        let (mut attachment, mut document, send) = attachment();
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let ancestor = dir.path().join("ancestor");
+        let root = ancestor.join("root");
+        let outside_root = if replace_ancestor {
+            outside.path().join("root")
+        } else {
+            outside.path().to_path_buf()
+        };
+        fs::create_dir_all(&outside_root).unwrap();
+        attachment.set_root(&root).unwrap();
+        let established = attachment.session.root.clone();
+        let mut export = queue(
+            &send,
+            "voxelite_export_glb",
+            json!({"model_id":document.engine.document().id,"path":"escape.glb"}),
+        );
+        let replaced = if replace_ancestor { &ancestor } else { &root };
+        fs::rename(replaced, dir.path().join("original")).unwrap();
+        symlink(outside.path(), replaced).unwrap();
+
+        // The editor repeats set_root on every poll, even without a lifecycle change.
+        attachment.set_root(&root).unwrap();
+        assert_eq!(attachment.session.root, established);
+        attachment.poll(&mut document);
+        assert_eq!(result(&mut export)["error"]["code"], "path_outside_root");
+        assert_eq!(fs::read_dir(outside_root).unwrap().count(), 0);
+    }
+}
+
+#[test]
 fn palette_requests_and_tool_catalog_follow_the_live_editor_host() {
     let (mut attachment, mut document, send) = attachment();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let before = document.project().to_bytes().unwrap();
     host.disable("dev.voxelite.palette").unwrap();
@@ -265,9 +420,9 @@ fn attached_reads_share_the_owners_save_state_without_adopting_the_placeholder()
 fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_document() {
     let (mut attachment, mut document, send) = attachment();
     let root = tempfile::tempdir().unwrap();
-    attachment.session = Session::new(root.path().canonicalize().unwrap());
+    attachment.session = Session::new(root.path().canonicalize().unwrap(), mcp_host);
     attachment.session.attach(document.project()).unwrap();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let before = document.project().to_bytes().unwrap();
     let revision = document.engine.revision();
@@ -333,7 +488,7 @@ fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_docu
 #[test]
 fn comment_requests_and_catalog_follow_live_host_without_losing_core_data() {
     let (mut attachment, mut document, send) = attachment();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let thread = Uuid::new_v4();
     let message = Uuid::new_v4();

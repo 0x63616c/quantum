@@ -107,6 +107,12 @@ impl Viewport {
     pub(super) fn display_camera(&self) -> OrbitCamera {
         self.display_camera
     }
+    pub(super) fn frame_stats(&self) -> Option<&voxelite_render::diagnostics::FrameStats> {
+        self.gpu.stats.as_ref()
+    }
+    pub(super) fn clear_diagnostics(&mut self) {
+        self.gpu.clear_diagnostics();
+    }
     pub(super) fn frame_meter(&self) -> &FrameMeter {
         &self.frame_meter
     }
@@ -122,6 +128,7 @@ impl Viewport {
     }
 
     pub(super) fn invalidate_preview(&mut self) {
+        self.gpu.clear_diagnostics();
         self.document_generation = self.document_generation.wrapping_add(1);
     }
 
@@ -248,8 +255,10 @@ impl Viewport {
     }
 
     #[cfg(any(target_os = "macos", test))]
-    fn fallback_to_cpu(&mut self) {
+    fn fallback_to_cpu(&mut self, error: &voxelite_render::RenderError, size: [u32; 2]) {
         self.gpu.enabled = false;
+        self.gpu.limited_size =
+            matches!(error, voxelite_render::RenderError::SurfaceSize(_)).then_some(size);
         self.frame_meter = FrameMeter::new(RendererKind::Cpu);
         self.gpu.clear_frame();
         #[cfg(target_os = "macos")]
@@ -264,19 +273,29 @@ impl Viewport {
         self.render_pending = true;
     }
 
-    fn dimensions(&self, available: [f32; 2], scale_factor: f32) -> [u32; 2] {
+    fn dimensions(&mut self, available: [f32; 2], scale_factor: f32) -> [u32; 2] {
         let actual = self.bounds.get().size;
-        let (width, height) = if self.gpu.enabled && actual.width > px(0.) && actual.height > px(0.)
-        {
+        let (width, height) = if actual.width > px(0.) && actual.height > px(0.) {
             (f32::from(actual.width), f32::from(actual.height))
         } else {
             (available[0], available[1])
         };
-        let scale = if self.gpu.enabled {
-            scale_factor
-        } else {
-            (1024.0 / width.max(height)).min(1.0)
-        };
+        let physical = [
+            ((width * scale_factor).round() as u32).max(1),
+            ((height * scale_factor).round() as u32).max(1),
+        ];
+        if self.gpu.limited_size.is_some_and(|size| size != physical) {
+            self.gpu.limited_size = None;
+            self.gpu.enabled = true;
+            self.frame_meter = FrameMeter::new(RendererKind::Gpu);
+            // Force a fresh request even if the CPU budget matched the new size.
+            self.render_size = [0, 0];
+        }
+        if self.gpu.enabled {
+            return physical;
+        }
+        let [width, height] = available;
+        let scale = (1024.0 / width.max(height)).min(1.0);
         [
             ((width * scale).round() as u32).max(1),
             ((height * scale).round() as u32).max(1),
@@ -495,6 +514,7 @@ impl EditorView {
                 if visible.size.width > px(0.0) && visible.size.height > px(0.0) {
                     #[cfg(target_os = "macos")]
                     if let Some((frame, serial)) = gpu_frame {
+                        // GPUI scales the selected NV12 surface to these display bounds.
                         window.paint_surface(bounds, frame.pixel_buffer());
                         presented = Some((RendererKind::Gpu, serial));
                     }
@@ -582,6 +602,14 @@ mod tests {
     }
 
     #[test]
+    fn clearing_surface_content_discards_diagnostics() {
+        let mut state = super::gpu_viewport::State::new();
+        state.stats = Some(voxelite_render::diagnostics::FrameStats::default());
+        state.clear_frame();
+        assert!(state.stats.is_none());
+    }
+
+    #[test]
     fn five_k_gpu_fallback_waits_for_cpu_sizing_and_rejects_old_frame() {
         let (mut viewport, editor) = fixture();
         viewport.gpu.enabled = true;
@@ -595,7 +623,10 @@ mod tests {
         viewport.painted_frame.set(Some(old));
         viewport.interactive_render = true;
         viewport.rendering = true; // Consumer failure while producer is in flight.
-        viewport.fallback_to_cpu();
+        viewport.fallback_to_cpu(
+            &voxelite_render::RenderError::Invalid("consumer failure".into()),
+            old.size,
+        );
         assert!(!viewport.gpu_enabled());
         assert_eq!(viewport.frame_meter().renderer(), RendererKind::Cpu);
         assert_eq!(viewport.displayed, None);
@@ -624,6 +655,115 @@ mod tests {
         assert_eq!(viewport.dimensions([800., 600.], 2.), [1602, 1202]);
         viewport.bounds.set(Bounds::default());
         assert_eq!(viewport.dimensions([800., 600.], 2.), [1600, 1200]);
+    }
+
+    #[test]
+    fn size_limit_uses_cpu_until_physical_resize_then_retries_gpu() {
+        let (mut viewport, editor) = fixture();
+        viewport.gpu.enabled = true;
+        viewport
+            .bounds
+            .set(Bounds::new(Point::default(), size(px(3500.), px(2000.))));
+        viewport.render_size = viewport.dimensions([3500., 2000.], 2.);
+        let failed = viewport.identity(&editor);
+        let limit = voxelite_render::RenderError::SurfaceSize("target budget".into());
+        viewport.fallback_to_cpu(&limit, failed.size);
+        assert_eq!(viewport.gpu.limited_size, Some([7000, 4000]));
+        for _ in 0..3 {
+            viewport.render_size = viewport.dimensions([3500., 2000.], 2.);
+            assert_eq!(viewport.render_size, [1024, 585]);
+            assert!(!viewport.gpu_enabled());
+            assert_eq!(viewport.frame_meter().renderer(), RendererKind::Cpu);
+            assert!(!viewport.accepts(failed, &editor));
+        }
+        // CPU budget changes alone must not cause a GPU retry.
+        viewport.dimensions([3400., 1900.], 2.);
+        assert!(!viewport.gpu_enabled());
+        viewport
+            .bounds
+            .set(Bounds::new(Point::default(), size(px(2150.), px(1350.))));
+        assert_eq!(viewport.dimensions([2150., 1350.], 2.), [4300, 2700]);
+        assert!(viewport.gpu_enabled());
+        assert_eq!(viewport.gpu.limited_size, None);
+        assert_eq!(viewport.frame_meter().renderer(), RendererKind::Gpu);
+        assert_eq!(viewport.render_size, [0, 0]);
+        // A subsequent limit can suspend the GPU again; device failures cannot retry.
+        viewport.fallback_to_cpu(&limit, [4300, 2700]);
+        assert_eq!(viewport.dimensions([2150., 1350.], 2.), [1024, 643]);
+        viewport.fallback_to_cpu(
+            &voxelite_render::RenderError::Invalid("device lost".into()),
+            [4300, 2700],
+        );
+        assert_eq!(viewport.gpu.limited_size, None);
+        assert_eq!(viewport.dimensions([2150., 1350.], 1.), [1024, 643]);
+        assert!(!viewport.gpu_enabled());
+    }
+
+    #[test]
+    fn size_limit_retries_on_scale_change_even_when_cpu_dimensions_match() {
+        let (mut viewport, _) = fixture();
+        viewport.gpu.enabled = true;
+        let limit = voxelite_render::RenderError::SurfaceSize("device texture size".into());
+        viewport.fallback_to_cpu(&limit, [1602, 1202]);
+        viewport.render_size = viewport.dimensions([801., 601.], 2.);
+        assert_eq!(viewport.render_size, [801, 601]);
+        assert!(!viewport.gpu_enabled());
+        assert!(viewport.begin_render(web_time::Instant::now())); // CPU frame in flight.
+        let dimensions = viewport.dimensions([801., 601.], 1.);
+        assert_eq!(dimensions, [801, 601]);
+        assert!(viewport.gpu_enabled());
+        assert_eq!(viewport.render_size, [0, 0]); // Still schedule a GPU frame.
+        viewport.render_size = dimensions;
+        assert!(!viewport.begin_render(web_time::Instant::now()));
+        assert!(viewport.render_pending);
+        viewport.rendering = false; // CPU completion must allow the queued GPU request.
+        assert!(viewport.begin_render(web_time::Instant::now()));
+        assert!(!viewport.render_pending);
+    }
+
+    #[test]
+    fn stale_size_limit_completion_does_not_block_new_viewport_size() {
+        let (mut viewport, _) = fixture();
+        viewport.gpu.enabled = true;
+        viewport.render_size = viewport.dimensions([801., 601.], 2.);
+        viewport.fallback_to_cpu(
+            &voxelite_render::RenderError::SurfaceSize("old request size".into()),
+            [7000, 4000],
+        );
+        assert_eq!(viewport.dimensions([801., 601.], 2.), [1602, 1202]);
+        assert!(viewport.gpu_enabled());
+        assert_eq!(viewport.gpu.limited_size, None);
+    }
+
+    #[test]
+    fn mesh_quad_limit_does_not_retry_or_invalidate_cpu_presentation_on_resize() {
+        let (mut viewport, editor) = fixture();
+        viewport.gpu.enabled = true;
+        viewport.fallback_to_cpu(
+            &voxelite_render::RenderError::Limit("GPU chunk mesh quad budget".into()),
+            [1602, 1202],
+        );
+        viewport.render_size = viewport.dimensions([801., 601.], 2.);
+        let cpu = viewport.identity(&editor);
+        viewport.displayed = Some(cpu);
+        viewport.painted_frame.set(Some(cpu));
+        viewport.render_pending = false;
+        for (width, height, scale) in [(800., 600., 2.), (400., 300., 2.), (400., 300., 1.)] {
+            viewport
+                .bounds
+                .set(Bounds::new(Point::default(), size(px(width), px(height))));
+            assert_eq!(
+                viewport.dimensions([width, height], scale),
+                [width as u32, height as u32]
+            );
+            assert!(!viewport.gpu_enabled());
+            assert_eq!(viewport.gpu.limited_size, None);
+            assert_eq!(viewport.frame_meter().renderer(), RendererKind::Cpu);
+            assert_eq!(viewport.render_size, cpu.size);
+            assert_eq!(viewport.displayed, Some(cpu));
+            assert_eq!(viewport.painted_frame.get(), Some(cpu));
+            assert!(!viewport.render_pending);
+        }
     }
 
     #[test]

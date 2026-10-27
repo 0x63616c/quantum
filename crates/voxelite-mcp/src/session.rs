@@ -63,17 +63,19 @@ impl RenderTask {
 }
 
 pub(crate) struct Session {
+    pub host_factory: fn() -> voxelite_plugin_host::Host,
     pub id: Uuid,
     pub epoch: Uuid,
-    root: PathBuf,
+    pub(crate) root: PathBuf,
     pub(crate) documents: BTreeMap<Uuid, DocumentSession>,
     receipts: BTreeMap<Uuid, (String, CallToolResult)>,
     receipt_bytes: usize,
 }
 impl Session {
     /// Create a session with an existing, canonical project directory.
-    pub fn new(root: PathBuf) -> Self {
+    pub fn new(root: PathBuf, host_factory: fn() -> voxelite_plugin_host::Host) -> Self {
         Self {
+            host_factory,
             id: Uuid::new_v4(),
             epoch: Uuid::new_v4(),
             root,
@@ -158,7 +160,7 @@ impl Session {
         r
     }
     pub fn call(&mut self, spec: &Spec, args: Value) -> CallToolResult {
-        self.call_with_host(spec, args, &mut exports::host())
+        self.call_with_host(spec, args, &mut (self.host_factory)())
     }
     pub(crate) fn call_with_host(
         &mut self,
@@ -741,6 +743,7 @@ fn query(s: &Snapshot, a: &Args<'_>) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use voxelite_plugins_builtin::mcp_host;
 
     fn call(session: &mut Session, name: &str, args: Value) -> Value {
         let spec = crate::catalog::CATALOG
@@ -755,7 +758,7 @@ mod tests {
         for byte_limit in [false, true] {
             let root = tempfile::tempdir().unwrap();
             // Match the public entry points: temporary paths may contain symlinks.
-            let mut session = Session::new(root.path().canonicalize().unwrap());
+            let mut session = Session::new(root.path().canonicalize().unwrap(), mcp_host);
             let epoch = session.epoch;
             let mut models = Vec::new();
             for _ in 0..2 {
@@ -824,17 +827,18 @@ mod tests {
 #[cfg(test)]
 mod render_worker_tests {
     use super::*;
+    use voxelite_plugins_builtin::mcp_host;
     #[test]
     fn render_task_pins_revision_and_does_not_borrow_live_authority() {
         let dir = tempfile::tempdir().unwrap();
-        let mut session = Session::new(dir.path().canonicalize().unwrap());
+        let mut session = Session::new(dir.path().canonicalize().unwrap(), mcp_host);
         let doc = Document::new(Uuid::new_v4(), Uuid::new_v4());
         let model = doc.id;
         session.attach(Project::new(doc).unwrap()).unwrap();
         let task = session
             .prepare_render(
                 json!({"model_id":model,"revision":"0","views":["front"],"width":32,"height":32}),
-                exports::host().render_plan(),
+                mcp_host().render_plan(),
             )
             .unwrap();
         let engine = &mut session.documents.get_mut(&model).unwrap().engine;
@@ -858,7 +862,7 @@ mod render_worker_tests {
             session
                 .prepare_render(
                     json!({"model_id":model,"revision":"0"}),
-                    exports::host().render_plan()
+                    mcp_host().render_plan()
                 )
                 .is_err()
         );

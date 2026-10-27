@@ -7,6 +7,7 @@
 mod ambient_occlusion;
 mod camera;
 mod camera_transition;
+pub mod diagnostics;
 pub use camera_transition::*;
 mod occupancy;
 mod raster;

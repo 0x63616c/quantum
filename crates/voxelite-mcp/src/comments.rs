@@ -1,9 +1,9 @@
 //! Wire adapters for the enabled portable discussion panel.
 use crate::error::{Failure, Result};
+use voxelite_plugin_api::COMMENTS_PANEL_ID as PANEL_ID;
 use voxelite_plugin_api::{
     Command, CommentsAction, CommentsCx, CommentsQuery, CommentsState, Snapshot, Value,
 };
-use voxelite_plugin_comments::PANEL_ID;
 use voxelite_plugin_host::{Host, HostError};
 
 pub(crate) fn enabled(host: &Host) -> bool {

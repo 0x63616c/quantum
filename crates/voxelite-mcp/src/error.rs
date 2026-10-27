@@ -124,8 +124,8 @@ impl From<voxelite_render::RenderError> for Failure {
         Self::new("render_failed", e.to_string())
     }
 }
-impl From<voxelite_export::ExportError> for Failure {
-    fn from(e: voxelite_export::ExportError) -> Self {
+impl From<voxelite_plugin_api::ExportError> for Failure {
+    fn from(e: voxelite_plugin_api::ExportError) -> Self {
         Self::new("export_failed", e.to_string())
     }
 }
@@ -162,6 +162,21 @@ fn bounded(mut value: String, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn export_errors_keep_the_export_failure_code_and_message() {
+        for error in [
+            voxelite_plugin_api::ExportError::Invalid("bad view".into()),
+            voxelite_plugin_api::ExportError::from(std::io::Error::other("disk full")),
+        ] {
+            let expected = error.to_string();
+            let failure = Failure::from(error);
+            assert_eq!(failure.code, "export_failed");
+            assert_eq!(failure.message.as_ref(), expected);
+            assert!(!failure.retryable);
+        }
+    }
+
     #[test]
     fn errors_bound_untrusted_unicode_without_splitting_characters() {
         let error = Failure::invalid("🦀".repeat(2000)).at("🦀".repeat(500));

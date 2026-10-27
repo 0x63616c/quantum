@@ -8,7 +8,8 @@ license.workspace = true
 [dependencies]
 voxelite-core.workspace = true
 voxelite-render-plan.workspace = true
-voxelite-export = { path = "../voxelite-export" }
+voxelite-mesh.workspace = true
+png.workspace = true
 semver.workspace = true
 serde_json.workspace = true
 serde.workspace = true

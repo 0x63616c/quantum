@@ -41,9 +41,12 @@ class PluginDependencyTests(unittest.TestCase):
         self.api = package("voxelite-plugin-api", "/repo/crates/voxelite-plugin-api")
         self.core = package("voxelite-core", "/repo/crates/voxelite-core")
         self.host = package("voxelite-plugin-host", "/repo/crates/voxelite-plugin-host")
-        self.export = package("voxelite-export", "/repo/crates/voxelite-export")
+        self.mesh = package("voxelite-mesh", "/repo/crates/voxelite-mesh")
         self.other = package("voxelite-plugin-other", "/repo/crates/plugins/voxelite-plugin-other")
-        packages = [self.plugin, self.api, self.core, self.host, self.export, self.other]
+        self.mcp = package("voxelite-mcp", "/repo/crates/voxelite-mcp")
+        self.builtin = package("voxelite-plugins-builtin", "/repo/crates/voxelite-plugins-builtin")
+        packages = [self.plugin, self.api, self.core, self.host, self.mesh, self.other,
+                    self.mcp, self.builtin]
         self.metadata = {
             "workspace_root": "/repo",
             "workspace_members": [p["id"] for p in packages],
@@ -64,15 +67,71 @@ class PluginDependencyTests(unittest.TestCase):
         ]
         self.assertEqual(CHECKER.dependency_violations(self.metadata), [])
 
-    def test_export_encoders_must_be_reached_through_api(self):
-        self.api["dependencies"] = [self.workspace_dependency(self.export)]
+    def test_geometry_must_be_reached_through_api(self):
+        self.api["dependencies"] = [self.workspace_dependency(self.mesh)]
         self.plugin["dependencies"] = [self.workspace_dependency(self.api)]
         self.assertEqual(CHECKER.dependency_violations(self.metadata), [])
-        self.plugin["dependencies"].append(self.workspace_dependency(self.export))
+        self.plugin["dependencies"].append(self.workspace_dependency(self.mesh))
+        self.assertEqual(len(CHECKER.dependency_violations(self.metadata)), 1)
+
+    def test_mcp_allows_api_host_binary_composition_and_test_plugins(self):
+        self.mcp["dependencies"] = [
+            self.workspace_dependency(self.api),
+            self.workspace_dependency(self.host),
+            self.workspace_dependency(self.core),
+            self.workspace_dependency(self.builtin, optional=True),
+            self.workspace_dependency(self.plugin, kind="dev"),
+            dependency("png"),
+        ]
+        self.builtin["dependencies"] = [
+            self.workspace_dependency(self.host),
+            self.workspace_dependency(self.plugin),
+        ]
+        self.assertEqual(CHECKER.dependency_violations(self.metadata), [])
+
+    def test_mcp_rejects_concrete_plugins_in_all_production_dependency_forms(self):
+        for overrides in [
+            {}, {"rename": "feature"}, {"optional": True},
+            {"target": 'cfg(target_os = "macos")'}, {"kind": "build"},
+        ]:
+            with self.subTest(overrides=overrides):
+                self.mcp["dependencies"] = [self.workspace_dependency(self.plugin, **overrides)]
+                self.assertEqual(CHECKER.dependency_violations(self.metadata), [
+                    "crates/voxelite-mcp/Cargo.toml: "
+                    f"{overrides.get('kind', 'normal')} dependency on voxelite-plugin-example; "
+                    "MCP must receive plugins from its composition root",
+                ])
+
+    def test_mcp_composition_must_be_optional_and_not_a_build_dependency(self):
+        for overrides in [{}, {"kind": "build"}, {"kind": "build", "optional": True}]:
+            with self.subTest(overrides=overrides):
+                self.mcp["dependencies"] = [
+                    self.workspace_dependency(self.builtin, optional=True),
+                    self.workspace_dependency(self.builtin, **overrides),
+                ]
+                # A separate optional declaration must not exempt forbidden edges.
+                self.assertEqual(len(CHECKER.dependency_violations(self.metadata)), 1)
+
+    def test_mcp_checks_patched_plugin_dependencies_by_resolved_identity(self):
+        for kind in [None, "dev", "build"]:
+            with self.subTest(kind=kind):
+                self.mcp["dependencies"] = [dependency("voxelite-plugin-example", kind=kind)]
+                self.metadata["resolve"]["nodes"] = [{
+                    "id": self.mcp["id"],
+                    "deps": [{
+                        "name": "feature", "pkg": self.plugin["id"],
+                        "dep_kinds": [{"kind": kind, "target": None}],
+                    }],
+                }]
+                violations = CHECKER.dependency_violations(self.metadata)
+                self.assertEqual(len(violations), 0 if kind == "dev" else 1)
+
+    def test_composition_is_not_an_escape_hatch_for_plugins(self):
+        self.plugin["dependencies"] = [self.workspace_dependency(self.builtin)]
         self.assertEqual(len(CHECKER.dependency_violations(self.metadata)), 1)
 
     def test_rejects_other_workspace_dependencies(self):
-        for target in [self.core, self.host, self.export, self.other]:
+        for target in [self.core, self.host, self.mesh, self.other]:
             with self.subTest(target=target["name"]):
                 self.plugin["dependencies"] = [self.workspace_dependency(target)]
                 self.assertEqual(CHECKER.dependency_violations(self.metadata), [

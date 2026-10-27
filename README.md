@@ -13,7 +13,7 @@ skills, render-to-image feedback and live synchronization with a native editor
 window. Projects use the versioned `.voxl` format; geometry exports as glTF binary
 (`.glb`) and rendered views as `.png`.
 
-The current workspace version is **0.3.0**, from [Cargo.toml](Cargo.toml).
+The current workspace version is **0.3.1**, from [Cargo.toml](Cargo.toml).
 
 [Website](https://voxelite.worldwidewebb.co/) ·
 [User documentation](https://voxelite.worldwidewebb.co/docs/) ·
@@ -32,9 +32,9 @@ in light mode. These are real earlier review captures: their toolbar Save/Share
 controls and status copy predate the current shell. Current Save actions live in
 the File menu, and hosted sharing is not implemented.
 
-![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](screenshots/polish-3/agent-dark.png)
+![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](docs/images/agent-dark.png)
 
-![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](screenshots/polish-2/main-light.png)
+![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](docs/images/main-light.png)
 
 ## What is implemented
 
@@ -93,7 +93,8 @@ Manual checks are available from the application menu and Settings → Updates.
 Unbundled `cargo run` builds do not have the bundled updater available.
 
 Use the [browser editor](https://voxelite.worldwidewebb.co/app/) without installing
-the app. The published documentation is generated under [site/docs](site/docs/).
+the app. The [published documentation](https://voxelite.worldwidewebb.co/docs/)
+is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
 [the site generator](crates/voxelite-site/src/main.rs).
 
@@ -168,6 +169,8 @@ python3 -m http.server 8090 --directory site --bind 127.0.0.1
 The full site build includes the wasm editor. Once a verified `web/dist/` exists,
 `scripts/build-site.sh --skip-web` reuses it for documentation-only iteration.
 These scripts build locally; they do not deploy. See [site/README.md](site/README.md).
+Generated site output is ignored by Git. CI builds it on PRs and `main`, and
+publishes trusted `main` builds to `site-dist`; commit the sources, not the output.
 
 ### MCP and live synchronization
 
@@ -206,7 +209,6 @@ only a container.
 | [voxelite-format](crates/voxelite-format/) | Canonical, bounded `.voxl` JSON, build-history replay and document-session persistence. |
 | [voxelite-mesh](crates/voxelite-mesh/) | Deterministic greedy surface geometry shared by rendering and GLB export. |
 | [voxelite-render](crates/voxelite-render/) | Cameras, CPU rasterization, exact shadows and the optional GPU viewport/headless harness interface. |
-| [voxelite-export](crates/voxelite-export/) | Bounded, deterministic GLB and RGBA PNG byte encoding. |
 | [voxelite-plugin-api](crates/voxelite-plugin-api/) | Portable plugin manifests, contributions and capability-scoped behavior contracts. |
 | [voxelite-plugin-host](crates/voxelite-plugin-host/) | Registry, enablement, lifecycle, dispatch, fault isolation and conformance checks. |
 | [voxelite-ui](crates/voxelite-ui/) | Shared GPUI controls, design tokens, text editing and fixed-width status components. |
@@ -219,26 +221,25 @@ only a container.
 | [voxelite-plugin-gizmo-grid](crates/plugins/voxelite-plugin-gizmo-grid/) | Camera orientation widget, navigation interaction and ground-grid overlays. |
 | [voxelite-plugin-palette](crates/plugins/voxelite-plugin-palette/) | Presets, local palette management, portable panel behavior and palette interchange. |
 | [voxelite-plugin-comments](crates/plugins/voxelite-plugin-comments/) | Discussion panel, anchor-placement tool and viewport pins. |
-| [voxelite-plugin-exporters](crates/plugins/voxelite-plugin-exporters/) | Registered GLB/PNG and HEX/GPL export callbacks without filesystem access. |
+| [voxelite-plugin-exporters](crates/plugins/voxelite-plugin-exporters/) | Bounded, deterministic GLB/PNG encoders and registered HEX/GPL export callbacks without filesystem access. |
 | [voxelite-plugin-agent](crates/plugins/voxelite-plugin-agent/) | Agent/Extensions command declarations; execution remains in the app. |
 | [voxelite-plugin-example](crates/plugins/voxelite-plugin-example/) | Minimal declaration-only plugin template, not linked into the app. |
 
 | Top-level directory | Contents |
 | --- | --- |
 | [bench/](bench/) | Pinned scenes, machine identity, GPU goldens and performance baselines. |
-| [docs/](docs/) | Architecture, implementation guides, performance notes and reviews. |
-| [design/](design/) | Art direction, design assets, concepts and historical plans/reviews. |
+| [docs/](docs/) | Architecture, implementation guides, performance notes, reviews and retained images. |
+| [Art checklist](design/ART-CHECKLIST.md) | Visual direction for app and site work. |
 | [examples/](examples/) | Sample `.voxl` projects and Rust scene/history generators. |
 | [integrations/](integrations/) | Generated MCP configuration examples for supported agent hosts. |
 | [packaging/](packaging/) | macOS bundle metadata, icon, entitlements, public update key and release-note base. |
 | [scripts/](scripts/) | Build, packaging, release, validation and capture scripts, plus Python tests. |
-| [site/](site/) | Authored article fragments/assets and generated public website/docs. |
+| [site/](site/) | Tracked article fragments/assets and ignored website/docs build output. |
 | [skills/](skills/) | Portable agent workflows for modeling, palettes, primitives and render review. |
 | [spec/](spec/) | `.voxl` and MCP contracts and compatibility fixtures. |
 | [vendor/](vendor/) | Pinned GPUI Apple surface-lifetime patch and its upstream notices. |
 | [web/](web/) | Browser bootstrap HTML and ignored generated wasm bundle. |
 | [xtask/](xtask/) | Cargo launcher for the independent `bench` and `visual` tools. |
-| [screenshots/](screenshots/) | Checked-in native/web/site review captures and verification artifacts. |
 
 ## Architecture
 
@@ -363,17 +364,22 @@ rows, run spread and load in performance PRs.
 
 ### Site checks
 
-After building the site and browser bundle:
+Generator tests build into temporary directories and need no local site bundle:
 
 ```sh
 cargo test --locked -p voxelite-site
+```
+
+After building the site and browser bundle:
+
+```sh
 python3 scripts/check-site.py
 python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
 ```
 
-The site checker expects generated `site/app/` files. It validates links,
-Markdown exports, discovery metadata and source parity. With a local site server
-and Playwright installed, browser checks are available through
+The site checker expects the complete generated site, including `site/app/`.
+It validates links, Markdown exports, discovery metadata and source parity.
+With a local site server and Playwright installed, browser checks are available through
 `node scripts/check-site-install.mjs` and
 `node scripts/capture-site.mjs screenshots/site/final`; follow
 [the site guide](site/README.md) for setup. The web editor has its own
@@ -423,13 +429,12 @@ failed site deployment rather than replacing published release assets.
 | [Native editor guide](crates/voxelite-app/README.md) | Running the app, controls and platform notes. |
 | [MCP guide](docs/mcp.md), [integrations](integrations/README.md), [skills](skills/README.md) | Agent setup and workflows. |
 | [Web guide](docs/web.md), [site guide](site/README.md) | Browser builds and generated documentation. |
-| [Domain glossary](GLOSSARY.md) | Shared terminology and proposed architecture seams. |
+| [Domain glossary](docs/glossary.md) | Shared terminology and proposed architecture seams. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Decisions and the architecture review's recommended order. |
 | [Core architecture](docs/architecture/core.md), [built-in plugins](crates/plugins/README.md) | Model invariants and extension boundaries. |
 | [Format specification](spec/voxl/1.0/README.md), [MCP contract](spec/mcp/v1/contract.md) | File and protocol contracts. |
-| [PLAN.md](PLAN.md) | Product plan, including historical and deferred scope. |
-| [design/](design/), [art checklist](design/ART-CHECKLIST.md) | Visual direction and design history. |
-| [Reviews](docs/reviews/) | Recorded findings, screenshots and verification limits. |
+| [Product direction](docs/adr/0003-product-direction.md) | Product scope, core and built-in plugin boundaries, and deferred work. |
+| [Art checklist](design/ART-CHECKLIST.md), [private archive](https://github.com/0x63616c/quantum-archive) | Visual direction; historical concepts, review captures and design history. |
 | [Rendering harness](docs/perf/rendering-harness.md), [release guide](docs/releasing-macos.md) | Pixel/performance gates and distribution. |
 | [AGENTS.md](AGENTS.md) | Coding conventions, commands, UI rules and PR workflow. |
 

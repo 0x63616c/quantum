@@ -23,14 +23,11 @@ voxelite-ui = { path = "../voxelite-ui", optional = true }
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
 voxelite-plugin-host.workspace = true
-voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
+voxelite-plugins-builtin = { path = "../voxelite-plugins-builtin" }
 voxelite-plugin-mirror = { path = "../plugins/voxelite-plugin-mirror" }
 voxelite-plugin-gizmo-grid = { path = "../plugins/voxelite-plugin-gizmo-grid" }
-voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }
 voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
 voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
-voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
-voxelite-plugin-agent = { path = "../plugins/voxelite-plugin-agent" }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 glam.workspace = true
@@ -57,7 +54,7 @@ version = "0.11"
 optional = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-voxelite-mcp = { path = "../voxelite-mcp" }
+voxelite-mcp = { path = "../voxelite-mcp", default-features = false }
 tempfile = "3"
 png.workspace = true
 
@@ -83,3 +80,8 @@ uuid = { workspace = true, features = ["js"] }
 [target.'cfg(target_os = "macos")'.dependencies.voxelite-render]
 workspace = true
 features = ["gpu"]
+
+[dev-dependencies]
+voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
+voxelite-plugin-exporters = { path = "../plugins/voxelite-plugin-exporters" }
+voxelite-plugin-shadows-lighting = { path = "../plugins/voxelite-plugin-shadows-lighting" }

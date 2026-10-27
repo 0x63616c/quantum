@@ -45,12 +45,15 @@ pub use voxelite_core::{
     PaletteEdit, PaletteSlot, Pos, Region, Shape, Snapshot, Swatch, Uuid, Voxel, validate_name,
 };
 
+/// Deterministic geometry for portable exporters, without a renderer dependency.
+pub use voxelite_mesh::{Mesh, MeshError, Quad, greedy_mesh};
+
 /// Version of this Rust API contract, independent of plugin and `.voxl` versions.
 ///
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 8, 0);
+pub const API_VERSION: Version = Version::new(0, 9, 0);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {
