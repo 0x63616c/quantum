@@ -1,8 +1,13 @@
 //! Shared GPUI controls and presentation primitives for the Voxelite shell.
 //! Components own field editing and appearance; the app owns domain state.
+//! See `crates/voxelite-ui/AGENTS.md` for tokens, components and migration/verification rules.
 mod color;
 mod color_picker;
 mod components;
+mod navigation;
+mod surfaces;
+pub use navigation::*;
+pub use surfaces::*;
 mod menu;
 mod numeric_field;
 mod text_field;

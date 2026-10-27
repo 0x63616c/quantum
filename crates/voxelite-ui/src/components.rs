@@ -50,6 +50,27 @@ pub struct Button {
     tab_index: isize,
 }
 impl Button {
+    /// Custom-content action frame. Inherits typography and layout from its parent;
+    /// callers add their content, dimensions and existing event/focus behavior.
+    /// This is useful for menu triggers, rich choices and document rows.
+    pub fn custom(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
+        row()
+            .id(id)
+            .role(Role::Button)
+            .aria_label(label)
+            .rounded(px(radius::CONTROL))
+            .cursor_pointer()
+    }
+    /// Block-content action for rich tiles. Existing card corner geometry is retained.
+    pub fn tile(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
+        div()
+            .id(id)
+            .role(Role::Button)
+            .aria_label(label)
+            .rounded(px(radius::CONTROL))
+            .cursor_pointer()
+    }
+
     /// Construct a secondary button. Labels also name icon-only buttons for accessibility.
     pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
         Self {
@@ -110,10 +131,7 @@ impl Button {
         } else {
             t.text()
         };
-        row()
-            .id(self.id)
-            .role(Role::Button)
-            .aria_label(self.label.clone())
+        Self::custom(self.id, self.label.clone())
             .aria_selected(self.selected)
             .h(px(self.size.height()))
             .min_w(px(self.size.height()))
@@ -121,7 +139,6 @@ impl Button {
             .justify_center()
             .px(px(if icon_only { space::SM } else { space::LG }))
             .gap(px(space::MD))
-            .rounded(px(radius::MD))
             .font_family(type_size::UI)
             .text_size(px(type_size::BODY))
             .text_color(fg)
@@ -162,7 +179,7 @@ impl Button {
             .when(!icon_only && !self.label.is_empty(), |d| {
                 d.child(
                     div()
-                        .min_w(px(0.))
+                        .min_w(px(space::NONE))
                         .overflow_hidden()
                         .text_ellipsis()
                         .child(self.label),
@@ -176,37 +193,135 @@ impl RenderOnce for Button {
         self.build()
     }
 }
-/// A square button with an accessible label.
-pub struct IconButton;
+/// A square button with an accessible label and an optional overlaid corner badge.
+#[derive(IntoElement)]
+pub struct IconButton {
+    button: Button,
+    side: f32,
+    rail: bool,
+    badge: Option<SharedString>,
+}
 impl IconButton {
-    /// Construct an icon-only button; further configure it as a `Button`.
+    /// Square frame for caller-provided glyph content (for example independently colored icons).
+    pub fn custom(
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        size: ControlSize,
+    ) -> Stateful<Div> {
+        Button::custom(id, label)
+            .size(px(size.height()))
+            .justify_center()
+    }
+
+    /// Construct a square icon action. The label is accessible but not painted.
+    pub fn new(
+        id: impl Into<ElementId>,
+        name: impl Into<SharedString>,
+        label: impl Into<SharedString>,
+        theme: Theme,
+    ) -> Self {
+        Self {
+            button: Button::new(id, label, theme)
+                .variant(ButtonVariant::Icon)
+                .icon(name),
+            side: ControlSize::Md.height(),
+            rail: false,
+            badge: None,
+        }
+    }
+    /// Compatibility constructor, now returning an actual square `IconButton`.
     pub fn button(
         id: impl Into<ElementId>,
         name: impl Into<SharedString>,
         label: impl Into<SharedString>,
         theme: Theme,
-    ) -> Button {
-        Button::new(id, label, theme)
-            .variant(ButtonVariant::Icon)
-            .icon(name)
+    ) -> Self {
+        Self::new(id, name, label, theme)
+    }
+    /// A tool rail action with the same square geometry and border in every state.
+    pub fn rail(
+        id: impl Into<ElementId>,
+        name: impl Into<SharedString>,
+        label: impl Into<SharedString>,
+        theme: Theme,
+    ) -> Self {
+        Self {
+            side: metrics::RAIL_BUTTON,
+            rail: true,
+            ..Self::new(id, name, label, theme)
+        }
+    }
+    /// Set both dimensions together. Rail buttons always keep the rail metric.
+    pub fn size(mut self, size: ControlSize) -> Self {
+        if !self.rail {
+            self.side = size.height();
+        }
+        self
+    }
+    /// Overlay a small monospace badge without moving the centered glyph.
+    pub fn badge(mut self, text: impl Into<SharedString>) -> Self {
+        self.badge = Some(text.into());
+        self
+    }
+    /// Show persistent selection.
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.button = self.button.selected(selected);
+        self
+    }
+    /// Disable keyboard traversal and action colors.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.button = self.button.disabled(disabled);
+        self
+    }
+    /// Set keyboard traversal order.
+    pub fn tab_index(mut self, index: isize) -> Self {
+        self.button = self.button.tab_index(index);
+        self
+    }
+    /// Build a square frame; badges are absolutely positioned inside its border.
+    pub fn build(self) -> Stateful<Div> {
+        let t = self.button.theme;
+        let selected = self.button.selected;
+        self.button
+            .build()
+            .relative()
+            .size(px(self.side))
+            .min_w(px(self.side))
+            .max_w(px(self.side))
+            .min_h(px(self.side))
+            .max_h(px(self.side))
+            .px(px(space::NONE))
+            .gap(px(space::NONE))
+            .when(self.rail, |d| {
+                d.border_1().border_color(if selected {
+                    t.accent().opacity(0.4)
+                } else {
+                    t.background()
+                })
+            })
+            .when_some(self.badge, |d, badge| {
+                d.child(
+                    div()
+                        .absolute()
+                        .bottom(px(space::XXS))
+                        .right(px(space::XXS))
+                        .font_family(type_size::MONO)
+                        .text_size(px(type_size::BADGE))
+                        .line_height(px(type_size::BADGE))
+                        .child(badge),
+                )
+            })
     }
 }
-/// A compact group of related actions; child buttons own selection and callbacks.
-pub struct ButtonGroup;
-impl ButtonGroup {
-    /// Build a group that can contain any number of buttons.
-    pub fn row(theme: Theme) -> Div {
-        row()
-            .gap(px(space::XS))
-            .p(px(space::XS))
-            .rounded(px(radius::LG))
-            .border_1()
-            .border_color(theme.separator())
-            .bg(theme.surface())
+impl RenderOnce for IconButton {
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        self.build()
     }
 }
-/// Segmented choice group. Mark one child button as selected.
-pub type Segmented = ButtonGroup;
+/// Compatibility name for callers grouping buttons. Prefer `SegmentedControl` for choices.
+pub type ButtonGroup = crate::SegmentedControl;
+/// Compatibility name; segments now have their own component.
+pub type Segmented = crate::SegmentedControl;
 
 /// Presentation wrapper for a native editor entity or custom input content.
 /// The editor retains clipboard, IME, selection and focus ownership.
@@ -249,7 +364,7 @@ impl FieldFrame {
             .w_full()
             .px(px(space::LG))
             .py(px(space::MD))
-            .rounded(px(radius::MD))
+            .rounded(px(radius::CONTROL))
             .border_1()
             .border_color(if self.focused {
                 t.accent()
@@ -263,7 +378,7 @@ impl FieldFrame {
             .cursor_text()
             .when(self.embedded, |d| {
                 d.h(px(ControlSize::Md.height()))
-                    .px(px(0.))
+                    .px(px(space::NONE))
                     .py(px(space::SM))
                     .border_0()
                     .bg(transparent_black())
@@ -307,6 +422,38 @@ pub struct Swatch {
     size: ControlSize,
 }
 impl Swatch {
+    /// Left half of a previous/current color comparison. Only the exposed edge is rounded.
+    pub fn previous(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
+        div()
+            .id(id)
+            .role(Role::Button)
+            .aria_label(label)
+            .rounded_l(px(radius::CONTROL))
+            .cursor_pointer()
+    }
+
+    /// Canvas palette swatch, with an inset edge and the established two-pixel selection.
+    /// The manager's swatches keep their compact compatibility geometry in `build`.
+    pub fn canvas(
+        id: impl Into<ElementId>,
+        theme: Theme,
+        color: impl Into<Hsla>,
+        selected: bool,
+    ) -> Stateful<Div> {
+        row()
+            .id(id)
+            .size(px(ControlSize::Md.height()))
+            .justify_center()
+            .rounded(px(radius::CONTROL))
+            .border_1()
+            .border_color(theme.swatch_edge())
+            .bg(color.into())
+            .when(selected, |d| d.border_2().border_color(theme.text()))
+            .cursor_pointer()
+            .hover(move |d| d.border_color(theme.text()))
+            .active(move |d| d.border_2().border_color(theme.accent()))
+    }
+
     /// Construct a medium swatch. Add IDs, labels and listeners to the returned div.
     pub fn new(theme: Theme, color: impl Into<Hsla>) -> Self {
         Self {
@@ -350,8 +497,8 @@ impl Swatch {
                 d.child(
                     row()
                         .absolute()
-                        .bottom(px(0.))
-                        .right(px(0.))
+                        .bottom(px(space::NONE))
+                        .right(px(space::NONE))
                         .rounded(px(radius::SM))
                         .bg(t.card())
                         .child(
@@ -384,12 +531,7 @@ impl Card {
     /// Build rows with separators between them.
     pub fn rows(self, rows: impl IntoIterator<Item = impl IntoElement>) -> Div {
         let t = self.theme;
-        div()
-            .rounded(px(radius::XL))
-            .border_1()
-            .border_color(t.separator().opacity(0.55))
-            .overflow_hidden()
-            .bg(t.card())
+        crate::Panel::card(t)
             .when_some(self.header, |d, h| {
                 d.child(
                     div()
@@ -437,7 +579,7 @@ impl FormRow {
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(0.))
+                    .min_w(px(space::NONE))
                     .child(label.into())
                     .when(!detail.is_empty(), |d| {
                         d.child(
@@ -457,6 +599,16 @@ impl FormRow {
 /// A sidebar navigation row, also suitable for command results.
 pub struct SidebarItem;
 impl SidebarItem {
+    /// Rich document disclosure with an unrounded separator, preserving the list's
+    /// existing geometry. Content and expansion affordances belong to the caller.
+    pub fn disclosure(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
+        div()
+            .id(id)
+            .role(Role::Button)
+            .aria_label(label)
+            .cursor_pointer()
+    }
+
     /// Build a row with native focus styling; append a trailing element with `child`.
     pub fn row(
         id: impl Into<ElementId>,
@@ -475,7 +627,7 @@ impl SidebarItem {
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(0.))
+                    .min_w(px(space::NONE))
                     .overflow_hidden()
                     .text_ellipsis()
                     .child(label),
@@ -587,7 +739,8 @@ impl Dialog {
         theme: Theme,
         focus: &FocusHandle,
     ) -> Stateful<Div> {
-        div()
+        crate::Popover::new(theme)
+            .build()
             .id(id)
             .role(Role::Dialog)
             .aria_label(title)
@@ -600,14 +753,9 @@ impl Dialog {
             .max_h(relative(0.95))
             .flex()
             .flex_col()
-            .bg(theme.surface())
             .text_color(theme.text())
             .font_family(type_size::UI)
             .text_size(px(type_size::BODY_LG))
-            .border_1()
-            .border_color(theme.separator())
-            .rounded(px(radius::XL))
-            .shadow(tokens::panel_shadow())
             // GPUI 1.25 only masks a rectangle, inside the border. Inset
             // controls (including their focus rings) and round flush child
             // backgrounds explicitly. The panel shadow paints before this mask;
@@ -676,6 +824,29 @@ pub type Pill = Badge;
 /// A keyboard key cap. Use semantic shortcut tokens for platform-specific glyphs.
 pub struct Kbd;
 impl Kbd {
+    /// Inline keycap around already shaped shortcut glyphs, inheriting text color.
+    pub fn frame(color: Hsla) -> Div {
+        row()
+            .justify_center()
+            .flex_shrink_0()
+            .min_w(px(metrics::KEYCAP))
+            .h(px(metrics::KEYCAP))
+            .px(px(space::GLYPH))
+            .rounded(px(radius::SM))
+            .border_1()
+            .border_color(color.opacity(0.28))
+    }
+    /// Wider read-only shortcut well used in settings.
+    pub fn well(theme: Theme) -> Div {
+        row()
+            .min_w(px(metrics::SHORTCUT_WIDTH))
+            .h(px(metrics::SHORTCUT_HEIGHT))
+            .px(px(space::MD))
+            .justify_center()
+            .rounded(px(radius::CONTROL))
+            .bg(theme.control())
+    }
+
     /// Build a single key cap.
     pub fn key(label: impl Into<SharedString>, theme: Theme) -> Div {
         mono(label)
@@ -724,18 +895,97 @@ impl Toggle {
 }
 /// Shared tooltip appearance; the shell chooses placement and content.
 pub fn tooltip(theme: Theme) -> Div {
-    row()
+    crate::Popover::tooltip(theme)
+        .build()
+        .flex()
+        .items_center()
         .flex_none()
         .whitespace_nowrap()
         .px(px(space::LG))
         .py(px(space::SM))
-        .rounded(px(radius::MD))
-        .border_1()
-        .border_color(theme.separator())
-        .bg(theme.card())
         .text_color(theme.text())
         .font_family(type_size::UI)
         .text_size(px(type_size::BODY))
         .line_height(px(type_size::LINE_SM))
-        .shadow(tokens::panel_shadow())
+}
+
+#[cfg(test)]
+mod geometry_tests {
+    use super::{Button, IconButton};
+    use crate::{
+        Segment, Tab, Theme,
+        tokens::{ControlSize, metrics, radius},
+    };
+    use gpui::{Styled, px};
+
+    fn assert_control_corners(element: &mut impl Styled) {
+        let corners = &element.style().corner_radii;
+        let expected = Some(px(radius::CONTROL).into());
+        assert_eq!(corners.top_left, expected);
+        assert_eq!(corners.top_right, expected);
+        assert_eq!(corners.bottom_left, expected);
+        assert_eq!(corners.bottom_right, expected);
+    }
+
+    #[test]
+    fn actions_tabs_segments_and_rail_use_all_four_control_corners() {
+        for theme in [Theme::Dark, Theme::Light] {
+            for selected in [false, true] {
+                assert_control_corners(
+                    &mut Button::new("button", "Action", theme)
+                        .selected(selected)
+                        .build(),
+                );
+                assert_control_corners(
+                    &mut IconButton::rail("rail", "mirror", "Mirror X", theme)
+                        .selected(selected)
+                        .build(),
+                );
+                assert_control_corners(
+                    &mut Tab::new("tab", "History", theme).selected(selected).build(),
+                );
+                assert_control_corners(
+                    &mut Segment::new("segment", "Open", theme)
+                        .selected(selected)
+                        .build(),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn rail_geometry_is_identical_with_or_without_axis_badges() {
+        for badge in [None, Some("X"), Some("Y"), Some("Z")] {
+            for selected in [false, true] {
+                let mut button =
+                    IconButton::rail("rail", "mirror", "Mirror", Theme::Dark).selected(selected);
+                if let Some(badge) = badge {
+                    button = button.badge(badge);
+                }
+                let mut element = button.size(ControlSize::Lg).build();
+                let style = element.style();
+                let side = Some(px(metrics::RAIL_BUTTON).into());
+                assert_eq!(style.size.width, side);
+                assert_eq!(style.size.height, side);
+                assert_eq!(style.min_size.width, side);
+                assert_eq!(style.max_size.width, side);
+                assert_eq!(style.min_size.height, side);
+                assert_eq!(style.max_size.height, side);
+                assert_eq!(style.border_widths.left, Some(px(metrics::EDGE).into()));
+                assert_eq!(style.border_widths.right, style.border_widths.left);
+            }
+        }
+    }
+
+    #[test]
+    fn icon_control_sizes_remain_square() {
+        for size in [ControlSize::Sm, ControlSize::Md, ControlSize::Lg] {
+            let mut element = IconButton::new("icon", "close", "Close", Theme::Dark)
+                .size(size)
+                .build();
+            assert_eq!(element.style().size.width, Some(px(size.height()).into()));
+            let style = element.style();
+            assert_eq!(style.size.height, style.size.width);
+        }
+    }
 }

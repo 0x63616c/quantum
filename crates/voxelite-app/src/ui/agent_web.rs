@@ -20,25 +20,28 @@ impl Agent {
 }
 impl EditorView {
     pub(super) fn agent_popover(&self, _: &Context<Self>) -> AnyElement {
-        div().absolute().top(px(100.0)).right(px(24.0)).child(
-            self.floating().w(px(420.0)).p(px(20.0)).flex().flex_col().gap(px(12.0))
+        div().absolute().top(px(metrics::AGENT_POPOVER_TOP)).right(px(space::XXL)).child(
+            self.floating().w(px(metrics::WEB_AGENT_POPOVER_WIDTH)).p(px(space::PANEL)).flex().flex_col().gap(px(space::LG))
                 .child(section_title("Build with an agent"))
                 .child(div().text_color(self.theme.muted()).child("Connect an agent in the desktop app. Browser companion pairing is coming soon; you can edit and download this project here."))
         ).into_any_element()
     }
     pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
-        div()
+        Panel::section(self.theme)
             .px(px(PANEL_GUTTER))
-            .py(px(if compact { 16.0 } else { 20.0 }))
+            .py(px(if compact { space::XL } else { space::PANEL }))
             .child(section_title("Build with an agent"))
             .child(
                 div()
-                    .mt(px(6.0))
+                    .mt(px(space::SM))
                     .text_color(self.theme.muted())
                     .child("Agent sessions are available in the desktop app."),
             )
             .when(self.editor.engine.history().next().is_some(), |panel| {
-                panel.child(self.history_panel(true, cx).h(px(156.0)))
+                panel.child(
+                    self.history_panel(true, cx)
+                        .h(px(metrics::AGENT_HISTORY_HEIGHT)),
+                )
             })
     }
 }

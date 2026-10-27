@@ -9,9 +9,10 @@ use crate::{
 use gpui::{prelude::*, *};
 use voxelite_app::preferences::{Appearance, Preferences};
 use voxelite_render::AmbientOcclusionStrength;
-use voxelite_ui::tokens::{space, type_size};
+use voxelite_ui::tokens::{metrics, radius, space, type_size};
 use voxelite_ui::{
-    Button, Card, FormRow, IconButton, SidebarItem, SidebarSection, Slider, SliderRange, Toggle,
+    Button, Card, FormRow, IconButton, Panel, SidebarItem, SidebarSection, Slider, SliderRange,
+    Toggle,
 };
 
 #[derive(Clone)]
@@ -365,7 +366,8 @@ impl SettingsView {
     }
     fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
         self.history.visit(section);
-        self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
+        self.pane_scroll
+            .set_offset(point(px(space::NONE), px(space::NONE)));
         cx.notify();
     }
     fn history_step(&mut self, forward: bool, cx: &mut Context<Self>) {
@@ -374,7 +376,8 @@ impl SettingsView {
         } else {
             self.history.back();
         }
-        self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
+        self.pane_scroll
+            .set_offset(point(px(space::NONE), px(space::NONE)));
         cx.notify();
     }
     fn chrome_button(
@@ -452,58 +455,58 @@ impl SettingsView {
         let fill: Background = match appearance {
             Appearance::System => linear_gradient(
                 150.0,
-                linear_color_stop(rgb(0xfafafa), 0.5),
-                linear_color_stop(rgb(0x303030), 0.5),
+                linear_color_stop(Theme::Light.preview_background(), 0.5),
+                linear_color_stop(Theme::Dark.preview_background(), 0.5),
             ),
-            Appearance::Light => rgb(0xfafafa).into(),
-            Appearance::Dark => rgb(0x303030).into(),
+            Appearance::Light => Theme::Light.preview_background().into(),
+            Appearance::Dark => Theme::Dark.preview_background().into(),
         };
         div()
-            .h(px(90.0))
-            .rounded(px(8.0))
+            .h(px(metrics::APPEARANCE_PREVIEW_HEIGHT))
+            .rounded(px(radius::LG))
             .overflow_hidden()
             .bg(fill)
             .child(
                 row()
-                    .h(px(20.0))
-                    .px(px(8.0))
-                    .gap(px(4.0))
-                    .bg(rgba(0x88888822))
+                    .h(px(space::PANEL))
+                    .px(px(space::MD))
+                    .gap(px(space::XS))
+                    .bg(Theme::Dark.preview_chrome())
                     .children(
-                        [0xff6058, 0xffbd2e, 0x28c840]
-                            .map(|color| div().size(px(5.0)).rounded_full().bg(rgb(color))),
+                        Theme::preview_lights()
+                            .map(|color| div().size(px(space::GLYPH)).rounded_full().bg(color)),
                     ),
             )
             .child(
                 row()
-                    .h(px(70.0))
+                    .h(px(metrics::APPEARANCE_BODY_HEIGHT))
                     .items_stretch()
                     .child(
                         div()
                             .w(relative(0.28))
-                            .p(px(7.0))
-                            .bg(rgba(0x88888822))
+                            .p(px(space::OPTICAL))
+                            .bg(Theme::Dark.preview_chrome())
                             .children([1.0, 0.8, 0.6].map(|width| {
                                 div()
-                                    .mt(px(6.0))
-                                    .h(px(4.0))
+                                    .mt(px(space::SM))
+                                    .h(px(space::XS))
                                     .w(relative(width))
                                     .rounded_full()
-                                    .bg(rgba(0x99999988))
+                                    .bg(Theme::Dark.preview_content())
                             })),
                     )
                     .child(
                         div()
                             .flex_1()
-                            .p(px(10.0))
+                            .p(px(space::INSET))
                             .children([0.9, 0.65, 0.75].map(|width| {
                                 div()
-                                    .mt(px(4.0))
-                                    .mb(px(6.0))
-                                    .h(px(4.0))
+                                    .mt(px(space::XS))
+                                    .mb(px(space::SM))
+                                    .h(px(space::XS))
                                     .w(relative(width))
                                     .rounded_full()
-                                    .bg(rgba(0x99999988))
+                                    .bg(Theme::Dark.preview_content())
                             })),
                     ),
             )
@@ -561,15 +564,15 @@ impl SettingsView {
             Section::Appearance => self.group(
                 vec![
                     div()
-                        .p(px(18.0))
+                        .p(px(space::SECTION))
                         .child(
                             div()
                                 .font_weight(FontWeight::SEMIBOLD)
-                                .mb(px(16.0))
+                                .mb(px(space::XL))
                                 .child("Window appearance"),
                         )
                         .child(
-                            row().gap(px(12.0)).children(
+                            row().gap(px(space::LG)).children(
                                 [
                                     (Appearance::System, "System"),
                                     (Appearance::Light, "Light"),
@@ -579,16 +582,15 @@ impl SettingsView {
                                 .enumerate()
                                 .map(|(i, (appearance, label))| {
                                     let selected = p.appearance == appearance;
-                                    div()
-                                        .id(("appearance", i))
+                                    Button::tile(("appearance", i), label)
                                         .tab_index(0)
                                         .role(Role::Button)
                                         .aria_label(label)
                                         .aria_selected(selected)
                                         .flex_1()
-                                        .min_w(px(0.0))
-                                        .p(px(7.0))
-                                        .rounded(px(10.0))
+                                        .min_w(px(space::NONE))
+                                        .p(px(space::OPTICAL))
+                                        .rounded(px(radius::APPEARANCE))
                                         .when(selected, |d| d.bg(t.tint().opacity(0.08)))
                                         .cursor_pointer()
                                         .focus_visible(move |d| d.shadow(super::focus_ring(t)))
@@ -604,7 +606,7 @@ impl SettingsView {
                                         )
                                         .child(
                                             div()
-                                                .mt(px(9.0))
+                                                .mt(px(space::CAPTION_OFFSET))
                                                 .text_center()
                                                 .font_weight(FontWeight::SEMIBOLD)
                                                 .text_color(if selected {
@@ -622,8 +624,8 @@ impl SettingsView {
                         )
                         .child(
                             div()
-                                .mt(px(18.0))
-                                .text_size(px(12.0))
+                                .mt(px(space::SECTION))
+                                .text_size(px(type_size::BODY))
                                 .text_color(t.muted())
                                 .child("System follows your device’s light and dark appearance."),
                         ),
@@ -724,15 +726,9 @@ impl SettingsView {
                             op.label(),
                             op.menu(cfg!(target_os = "macos")),
                             row()
-                                .gap(px(8.0))
+                                .gap(px(space::MD))
                                 .child(
-                                    row()
-                                        .min_w(px(96.0))
-                                        .h(px(30.0))
-                                        .px(px(8.0))
-                                        .justify_center()
-                                        .rounded(px(6.0))
-                                        .bg(t.control())
+                                    voxelite_ui::Kbd::well(t)
                                         .child(super::shortcut_hint::sheet_shortcut(op)),
                                 )
                                 // The registry exposes fixed bindings, all already at their defaults.
@@ -861,7 +857,7 @@ impl Render for SettingsView {
         let mut sidebar_rows = div()
             .id("settings-sections")
             .flex_1()
-            .min_h(px(0.0))
+            .min_h(px(space::NONE))
             .overflow_y_scroll();
         let mut previous_group = "";
         let mut index = 0;
@@ -886,8 +882,8 @@ impl Render for SettingsView {
         if results.is_empty() {
             sidebar_rows = sidebar_rows.child(
                 div()
-                    .p(px(12.0))
-                    .text_size(px(12.0))
+                    .p(px(space::LG))
+                    .text_size(px(type_size::BODY))
                     .text_color(t.muted())
                     .child("No matching settings"),
             );
@@ -906,7 +902,7 @@ impl Render for SettingsView {
                 },
             ));
         }
-        div()
+        Panel::section(t)
             .flex()
             .flex_col()
             .id("settings-root")
@@ -921,9 +917,9 @@ impl Render for SettingsView {
             } else {
                 "Geist"
             }))
-            .text_size(px(13.0))
+            .text_size(px(type_size::BODY_LG))
             .text_color(t.text())
-            .rounded(px(14.0))
+            .rounded(px(radius::WINDOW))
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
@@ -986,16 +982,18 @@ impl Render for SettingsView {
             .child(
                 row()
                     .id("settings-titlebar")
-                    .h(px(62.0))
+                    .h(px(metrics::SETTINGS_TITLEBAR))
                     .flex_shrink_0()
-                    .px(px(16.0))
-                    .gap(px(16.0))
-                    .when(cfg!(target_os = "macos"), |d| d.pl(px(92.0)))
+                    .px(px(space::XL))
+                    .gap(px(space::XL))
+                    .when(cfg!(target_os = "macos"), |d| {
+                        d.pl(px(metrics::SETTINGS_TRAFFIC_INSET))
+                    })
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.start_window_move())
                     .child(
                         row()
-                            .p(px(3.0))
-                            .gap(px(2.0))
+                            .p(px(space::COMPACT))
+                            .gap(px(space::XXS))
                             .rounded_full()
                             .border_1()
                             .border_color(t.separator())
@@ -1054,8 +1052,8 @@ impl Render for SettingsView {
                     )
                     .child(
                         div()
-                            .min_w(px(0.0))
-                            .text_size(px(16.0))
+                            .min_w(px(space::NONE))
+                            .text_size(px(type_size::WINDOW_TITLE))
                             .font_weight(FontWeight::BOLD)
                             .child("Voxelite Settings"),
                     )
@@ -1068,20 +1066,21 @@ impl Render for SettingsView {
             .child(
                 row()
                     .flex_1()
-                    .min_h(px(0.0))
+                    .min_h(px(space::NONE))
                     .items_stretch()
                     .when(self.sidebar_visible, |d| {
                         d.child(
-                            div()
-                                .w(px(224.0))
+                            Panel::new(t)
+                                .build()
+                                .w(px(metrics::MENU_WIDTH))
                                 .flex_shrink_0()
-                                .m(px(10.0))
-                                .mt(px(0.0))
-                                .mr(px(0.0))
-                                .p(px(10.0))
+                                .m(px(space::INSET))
+                                .mt(px(space::NONE))
+                                .mr(px(space::NONE))
+                                .p(px(space::INSET))
                                 .flex()
                                 .flex_col()
-                                .rounded(px(12.0))
+                                .rounded(px(radius::XL))
                                 .border_1()
                                 .border_color(t.separator())
                                 .bg(t.sidebar())
@@ -1094,11 +1093,16 @@ impl Render for SettingsView {
                                     .mb(px(space::XS))
                                     .child(
                                         icon("search")
-                                            .size(px(15.0))
+                                            .size(px(metrics::ICON_DENSE))
                                             .flex_shrink_0()
                                             .text_color(t.muted()),
                                     )
-                                    .child(div().flex_1().min_w(px(0.0)).child(self.search.clone()))
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w(px(space::NONE))
+                                            .child(self.search.clone()),
+                                    )
                                     .when(
                                         !query.is_empty(),
                                         |d| {
@@ -1110,7 +1114,7 @@ impl Render for SettingsView {
                                                     true,
                                                     t,
                                                 )
-                                                .size(px(20.0))
+                                                .size(px(space::PANEL))
                                                 .on_click(cx.listener(|this, _, window, cx| {
                                                     this.search.update(cx, |field, cx| {
                                                         field.set(String::new(), cx)
@@ -1127,23 +1131,23 @@ impl Render for SettingsView {
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(0.0))
+                            .min_w(px(space::NONE))
                             .flex()
                             .flex_col()
                             .child(
                                 div()
                                     .id("settings-pane")
                                     .flex_1()
-                                    .min_h(px(0.0))
+                                    .min_h(px(space::NONE))
                                     .overflow_y_scroll()
                                     .track_scroll(&self.pane_scroll)
-                                    .px(px(28.0))
-                                    .pt(px(18.0))
-                                    .pb(px(28.0))
+                                    .px(px(space::PANE))
+                                    .pt(px(space::SECTION))
+                                    .pb(px(space::PANE))
                                     .child(
                                         div()
-                                            .mb(px(24.0))
-                                            .text_size(px(24.0))
+                                            .mb(px(space::XXL))
+                                            .text_size(px(type_size::DISPLAY))
                                             .font_weight(FontWeight::BOLD)
                                             .child(section.title()),
                                     )
@@ -1152,9 +1156,9 @@ impl Render for SettingsView {
                             .when_some(state.error, |d, message| {
                                 d.child(
                                     div()
-                                        .px(px(28.0))
-                                        .pb(px(18.0))
-                                        .text_size(px(12.0))
+                                        .px(px(space::PANE))
+                                        .pb(px(space::SECTION))
+                                        .text_size(px(type_size::BODY))
                                         .text_color(t.danger())
                                         .child(message),
                                 )
@@ -1190,17 +1194,27 @@ impl EditorView {
                 {
                     return;
                 }
-                let bounds = Bounds::centered(None, size(px(880.0), px(640.0)), cx);
+                let bounds = Bounds::centered(
+                    None,
+                    size(px(metrics::SETTINGS_WIDTH), px(metrics::SETTINGS_HEIGHT)),
+                    cx,
+                );
                 let view_owner = owner.clone();
                 let result = cx.open_window(
                     WindowOptions {
                         window_bounds: Some(WindowBounds::Windowed(bounds)),
                         app_owns_titlebar_drag: cfg!(target_os = "macos"),
-                        window_min_size: Some(size(px(760.0), px(520.0))),
+                        window_min_size: Some(size(
+                            px(metrics::SETTINGS_MIN_WIDTH),
+                            px(metrics::SETTINGS_MIN_HEIGHT),
+                        )),
                         titlebar: Some(TitlebarOptions {
                             title: Some("Voxelite Settings".into()),
                             appears_transparent: true,
-                            traffic_light_position: Some(point(px(18.0), px(23.0))),
+                            traffic_light_position: Some(point(
+                                px(space::SECTION),
+                                px(metrics::TRAFFIC_TOP),
+                            )),
                         }),
                         window_background: if cfg!(target_os = "macos") {
                             WindowBackgroundAppearance::Blurred

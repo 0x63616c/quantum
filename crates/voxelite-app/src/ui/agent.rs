@@ -93,10 +93,10 @@ impl EditorView {
             .as_ref()
             .map(|s| s.path().display().to_string())
             .unwrap_or_else(|| "Unavailable".into());
-        div().absolute().top(px(100.0)).right(px(24.0)).child(self.floating().w(px(460.0)).p(px(20.0)).flex().flex_col().gap(px(16.0))
+        div().absolute().top(px(metrics::AGENT_POPOVER_TOP)).right(px(space::XXL)).child(self.floating().w(px(metrics::AGENT_POPOVER_WIDTH)).p(px(space::PANEL)).flex().flex_col().gap(px(space::XL))
             .child(row().justify_between().child(section_title("Connect your agent")).child(mono("LOCAL MCP").text_color(t.muted())))
             .child(div().text_color(t.muted()).child("Use the MCP server as a stdio bridge to this window. Edits appear live and share your undo history."))
-            .child(mono("voxelite-mcp --connect")).child(mono(path).text_size(px(12.0)).overflow_hidden())
+            .child(mono("voxelite-mcp --connect")).child(mono(path).text_size(px(type_size::BODY)).overflow_hidden())
             .child(self.control("copy-mcp-config","copy","Copy MCP configuration",cx,|this,_,cx|{
                 if let Some(s)=&this.agent.session{
                     let command = std::env::current_exe().ok()
@@ -111,7 +111,7 @@ impl EditorView {
                     cx.write_to_clipboard(ClipboardItem::new_string(serde_json::to_string_pretty(&config).unwrap()));this.status="MCP configuration copied".into();cx.notify();
                 }
             }))
-            .child(div().text_size(px(12.0)).text_color(t.muted()).child("Uses the bundled MCP server, or voxelite-mcp on PATH for source builds. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
+            .child(div().text_size(px(type_size::BODY)).text_color(t.muted()).child("Uses the bundled MCP server, or voxelite-mcp on PATH for source builds. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
             .into_any_element()
     }
     pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
@@ -120,13 +120,13 @@ impl EditorView {
         if self.agent.events.is_empty() {
             let connected = self.agent.clients > 0;
             let has_history = self.editor.engine.history().next().is_some();
-            let invitation = div()
+            let invitation = Panel::section(t)
                 .px(px(PANEL_GUTTER))
-                .py(px(if compact { 16.0 } else { 20.0 }))
+                .py(px(if compact { space::XL } else { space::PANEL }))
                 .when(connected, |d| {
                     d.child(section_title("Ready for agent edits")).child(
                         div()
-                            .mt(px(6.0))
+                            .mt(px(space::SM))
                             .text_color(t.muted())
                             .child("Edits will appear here as they happen."),
                     )
@@ -149,17 +149,20 @@ impl EditorView {
                 .flex_col()
                 .child(invitation)
                 .when(has_history, |d| {
-                    d.child(self.history_panel(true, cx).h(px(156.0)))
+                    d.child(
+                        self.history_panel(true, cx)
+                            .h(px(metrics::AGENT_HISTORY_HEIGHT)),
+                    )
                 });
         }
-        div()
+        Panel::section(t)
             .flex_1()
-            .min_h(px(310.0))
+            .min_h(px(metrics::AGENT_FEED_MIN_HEIGHT))
             .flex()
             .flex_col()
             .px(px(PANEL_GUTTER))
-            .py(px(16.0))
-            .gap(px(12.0))
+            .py(px(space::XL))
+            .gap(px(space::LG))
             .child(
                 row()
                     .justify_between()
@@ -183,25 +186,24 @@ impl EditorView {
                     this.set_agent_view(view,cx);
                 }
                 cx.notify();
-            }).h(px(32.0)).border_0().tooltip(hint("Follow the agent’s requested preset views. Manual navigation turns following off.",t)))
+            }).h(px(space::XXXL)).border_0().tooltip(hint("Follow the agent’s requested preset views. Manual navigation turns following off.",t)))
             .child(
                 div()
                     .id("agent-feed")
                     .flex_1()
-                    .min_h(px(64.0))
+                    .min_h(px(metrics::AGENT_EVENT_MIN_HEIGHT))
                     .overflow_y_scroll()
                     .children(self.agent.events.iter().enumerate().rev().filter(|(_,e)| e.entry.is_some() || e.changes.voxel_count()>0 || !e.success).map(|(i, e)| {
                         let entry = e.entry;
                         let expanded = self.agent.expanded == Some(i);
-                        div()
-                            .id(("agent-event", i))
-                            .py(px(10.0))
+                        voxelite_ui::SidebarItem::disclosure(("agent-event", i), e.tool.clone())
+                            .py(px(space::INSET))
                             .border_b_1()
                             .border_color(t.line())
                             .cursor_pointer()
                             .child(
                                 row()
-                                    .gap(px(8.0))
+                                    .gap(px(space::MD))
                                     .child(
                                         icon(if e.success { "check" } else { "close" }).text_color(
                                             if e.success { t.accent() } else { t.danger() },
@@ -210,7 +212,7 @@ impl EditorView {
                                     .child(
                                         div()
                                             .flex_1()
-                                            .min_w(px(0.0))
+                                            .min_w(px(space::NONE))
                                             .text_ellipsis()
                                             .overflow_hidden()
                                             .font_weight(FontWeight::MEDIUM)
@@ -221,7 +223,7 @@ impl EditorView {
                                             ),
                                     )
                                     .child(mono(format!("r{}", e.revision)).text_color(t.muted()))
-                                    .child(icon(if expanded {"chevron"} else {"chevron-right"}).size(px(14.0)).text_color(t.muted())),
+                                    .child(icon(if expanded {"chevron"} else {"chevron-right"}).size(px(space::FOOTER)).text_color(t.muted())),
                             )
                             .child(
                                 mono(if e.changes.voxel_count() > 0 {
@@ -236,14 +238,14 @@ impl EditorView {
                                 } else {
                                     "Rejected · no edit".into()
                                 })
-                                .mt(px(6.0))
+                                .mt(px(space::SM))
                                 .text_color(t.muted()),
                             )
                             .when(expanded, |d| {
                                 d.child(
                                     div()
-                                        .mt(px(8.0))
-                                        .text_size(px(12.0))
+                                        .mt(px(space::MD))
+                                        .text_size(px(type_size::BODY))
                                         .text_color(t.muted())
                                         .child(e.error.clone().unwrap_or_else(|| {
                                             format!("{}\nBounds: {:?}", e.tool, e.changes.bounds)
@@ -261,7 +263,7 @@ impl EditorView {
                                                 this.report(r, "Agent edit reverted", cx);
                                             },
                                         )
-                                        .mt(px(8.0)),
+                                        .mt(px(space::MD)),
                                     )
                                 })
                             })
@@ -275,16 +277,16 @@ impl EditorView {
                 d.child(row().justify_between()
                     .child(div().font_weight(FontWeight::MEDIUM).child("Captured views"))
                     .child(mono(format!("r{:03}", capture.revision)).text_color(t.muted())))
-                .child(row().gap(px(6.0)).children(capture.views.iter().enumerate().map(|(i, (name, view, image))| {
+                .child(row().gap(px(space::SM)).children(capture.views.iter().enumerate().map(|(i, (name, view, image))| {
                     let view = *view;
-                    div().id(("capture-view", i)).flex_1().min_w(px(0.0)).h(px(100.0))
-                        .flex().flex_col().items_center().rounded(px(6.0)).border_1()
+                    Button::tile(("capture-view", i), name.clone()).flex_1().min_w(px(space::NONE)).h(px(metrics::CAPTURE_HEIGHT))
+                        .flex().flex_col().items_center().rounded(px(radius::CONTROL)).border_1()
                         .border_color(if i == capture.selected {t.accent()} else {t.line()})
                         .cursor_pointer().hover(move |d|d.bg(t.hover()))
                         .tooltip(hint(format!("{} view · captured at r{} · click to orient the live camera", name, capture.revision),t))
-                        .child(img(image.clone()).w(px(96.0)).h(px(76.0)).object_fit(ObjectFit::Contain))
-                        .child(row().gap(px(4.0)).text_size(px(12.0)).text_color(t.muted())
-                            .child(icon("camera").size(px(12.0)).text_color(t.muted()))
+                        .child(img(image.clone()).w(px(metrics::APP_ICON)).h(px(metrics::CAPTURE_IMAGE_HEIGHT)).object_fit(ObjectFit::Contain))
+                        .child(row().gap(px(space::XS)).text_size(px(type_size::BODY)).text_color(t.muted())
+                            .child(icon("camera").size(px(space::LG)).text_color(t.muted()))
                             .child(name[..1].to_uppercase() + &name[1..]))
                         .on_click(cx.listener(move |this,_,_,cx| {
                             if let Some(c) = &mut this.agent.capture {c.selected=i;}
@@ -294,7 +296,7 @@ impl EditorView {
                         }))
                 })))
             })
-            .when(self.agent.capturing, |d|d.child(div().text_size(px(12.0)).text_color(t.muted()).child("Capturing views…")))
+            .when(self.agent.capturing, |d|d.child(div().text_size(px(type_size::BODY)).text_color(t.muted()).child("Capturing views…")))
     }
 
     fn set_agent_view(&mut self, view: PresetView, cx: &mut Context<Self>) {
