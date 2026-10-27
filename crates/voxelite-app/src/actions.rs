@@ -2,137 +2,178 @@
 use crate::shortcuts::{ShortcutPlatform, format_shortcut};
 use gpui::{Action, App, KeyBinding, Menu, MenuItem, OsAction};
 use std::sync::LazyLock;
+use voxelite_plugin_api::{ApplicationMenuSection, CommandContribution};
+use voxelite_plugin_host::Host;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum ApplicationSection {
-    About,
-    Settings,
-    Visibility,
-    Quit,
-}
-
-struct Command {
-    label: &'static str,
-    shortcut: Option<Shortcut>,
-    icon: &'static str,
-    menu: &'static str,
-    application_section: Option<ApplicationSection>,
-}
-
-enum Shortcut {
-    Editor(&'static str),
-    Global(&'static str),
-}
-
-impl Shortcut {
-    fn key(&self) -> &'static str {
-        match self {
-            Self::Editor(key) | Self::Global(key) => key,
-        }
-    }
-
-    fn context(&self) -> Option<&'static str> {
-        match self {
-            Self::Editor(_) => Some("Editor"),
-            Self::Global(_) => None,
-        }
-    }
-}
-
-// Declaring an operation also registers it everywhere. Group and declaration
-// order are the menu/search order; macOS relocates application commands below.
-macro_rules! commands {
-    ($($menu:literal { $($(#[$attr:meta])* $op:ident =>
-        ($label:literal, $key:expr, $icon:literal, $application:expr)),+ $(,)? }),+ $(,)?) => {
+// Dispatch identities only. All presentation metadata belongs to contributions.
+macro_rules! operations {
+    ($($(#[$attr:meta])* $op:ident => $id:literal),+ $(,)?) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
         #[action(no_json)]
-        pub enum Op { $($($(#[$attr])* $op),+),+ }
+        pub enum Op { $($(#[$attr])* $op),+ }
 
         impl Op {
-            pub const ALL: &[Self] = &[$($($(#[$attr])* Self::$op),+),+];
+            #[cfg(test)]
+            pub const ALL: &[Self] = &[$($(#[$attr])* Self::$op),+];
 
-            fn command(self) -> &'static Command {
-                match self {
-                    $($($(#[$attr])* Self::$op => &Command {
-                        label: $label, shortcut: $key, icon: $icon, menu: $menu,
-                        application_section: $application,
-                    }),+),+
+            fn command_id(self) -> &'static str {
+                match self { $($(#[$attr])* Self::$op => $id),+ }
+            }
+
+            fn from_command_id(id: &str) -> Option<Self> {
+                match id {
+                    $($(#[$attr])* $id => Some(Self::$op),)+
+                    _ => None,
                 }
             }
         }
-
-        const MENU_NAMES: &[&str] = &[$($menu),+];
     };
 }
 
-commands! {
-    "File" {
-        New => ("New project", Some(Shortcut::Editor("secondary-n")), "file-plus", None),
-        Open => ("Open project…", Some(Shortcut::Editor("secondary-o")), "folder-open", None),
-        Save => ("Save", Some(Shortcut::Editor("secondary-s")), "save", None),
-        SaveAs => ("Save as…", Some(Shortcut::Editor("secondary-shift-s")), "file-output", None),
-        #[cfg(target_family = "wasm")]
-        ExportGlb => ("Export GLB…", None, "download", None),
-        #[cfg(target_family = "wasm")]
-        ExportPng => ("Export PNG…", None, "download", None),
-        Quit => ("Quit Voxelite", Some(Shortcut::Global("secondary-q")), "log-out", Some(ApplicationSection::Quit)),
-    },
-    "Edit" {
-        Undo => ("Undo", Some(Shortcut::Editor("secondary-z")), "undo", None),
-        Redo => ("Redo", Some(Shortcut::Editor("secondary-shift-z")), "redo", None),
-        Commands => ("Search commands…", Some(Shortcut::Editor("secondary-k")), "search", None),
-        Settings => ("Settings…", Some(Shortcut::Global("secondary-,")), "settings", Some(ApplicationSection::Settings)),
-    },
-    "View" {
-        Frame => ("Frame model", Some(Shortcut::Editor("f")), "cube", None),
-        Front => ("Front view", None, "panel-top", None),
-        Right => ("Right view", None, "panel-left", None),
-        Top => ("Top view", None, "square", None),
-        Grid => ("Toggle grid", None, "grid", None),
-        Theme => ("Appearance…", None, "sun", None),
-    },
-    "Tools" {
-        Place => ("Place", Some(Shortcut::Editor("b")), "place", None),
-        Erase => ("Erase", Some(Shortcut::Editor("e")), "erase", None),
-        Paint => ("Paint", Some(Shortcut::Editor("p")), "paint", None),
-        Fill => ("Fill", Some(Shortcut::Editor("g")), "fill", None),
-        Box => ("Box", Some(Shortcut::Editor("u")), "box", None),
-        Picker => ("Color picker", Some(Shortcut::Editor("i")), "picker", None),
-        MirrorX => ("Mirror X", Some(Shortcut::Editor("shift-x")), "flip-horizontal-2", None),
-        MirrorY => ("Mirror Y", Some(Shortcut::Editor("shift-y")), "flip-vertical-2", None),
-        MirrorZ => ("Mirror Z", Some(Shortcut::Editor("shift-z")), "flip-horizontal-2", None),
-        ToolPicker => ("Choose tool…", None, "wrench", None),
-        Comment => ("Add comment pin", Some(Shortcut::Editor("c")), "comment", None),
-    },
-    "Layers" {
-        AddLayer => ("Add layer", None, "layer", None),
-    },
-    "Palette" {
-        ShowPalette => ("Show Palette", None, "palette", None),
-        Palette => ("Choose palette…", None, "palette", None),
-        ManagePalettes => ("Manage palettes…", None, "sliders-horizontal", None),
-    },
-    "Agent" {
-        Agent => ("Agent connection", None, "spark", None),
-    },
-    "Extensions" {
-        Extensions => ("Extensions", None, "puzzle", None),
-    },
-    "Window" {
-        Minimize => ("Minimize", Some(Shortcut::Editor("secondary-m")), "square", None),
-        ZoomWindow => ("Zoom", None, "square", None),
-    },
-    "Help" {
-        Help => ("Keyboard & mouse guide", None, "keyboard", None),
-        About => ("About Voxelite", None, "cube", Some(ApplicationSection::About)),
-    },
-    "Voxelite" {
-        CheckUpdates => ("Check for Updates…", None, "download", Some(ApplicationSection::About)),
-        Hide => ("Hide Voxelite", Some(Shortcut::Global("secondary-h")), "eye-off", Some(ApplicationSection::Visibility)),
-        HideOthers => ("Hide Others", Some(Shortcut::Global("secondary-alt-h")), "eye-off", Some(ApplicationSection::Visibility)),
-        ShowAll => ("Show All", None, "eye", Some(ApplicationSection::Visibility)),
-    },
+operations! {
+    New => "dev.voxelite.core.new",
+    Open => "dev.voxelite.core.open",
+    Save => "dev.voxelite.core.save",
+    SaveAs => "dev.voxelite.core.save_as",
+    #[cfg(target_family = "wasm")]
+    ExportGlb => "dev.voxelite.core.export_glb",
+    #[cfg(target_family = "wasm")]
+    ExportPng => "dev.voxelite.core.export_png",
+    Quit => "dev.voxelite.core.quit",
+    Undo => "dev.voxelite.core.undo",
+    Redo => "dev.voxelite.core.redo",
+    Commands => "dev.voxelite.core.commands",
+    Settings => "dev.voxelite.core.settings",
+    Frame => "dev.voxelite.core.frame",
+    Front => "dev.voxelite.core.front",
+    Right => "dev.voxelite.core.right",
+    Top => "dev.voxelite.core.top",
+    Grid => "dev.voxelite.core.grid",
+    Theme => "dev.voxelite.core.theme",
+    Place => "dev.voxelite.tools.place",
+    Erase => "dev.voxelite.tools.erase",
+    Paint => "dev.voxelite.tools.paint",
+    Fill => "dev.voxelite.tools.fill",
+    Box => "dev.voxelite.tools.box",
+    Picker => "dev.voxelite.tools.picker",
+    MirrorX => "dev.voxelite.mirror.mirror_x",
+    MirrorY => "dev.voxelite.mirror.mirror_y",
+    MirrorZ => "dev.voxelite.mirror.mirror_z",
+    ToolPicker => "dev.voxelite.tools.tool_picker",
+    Comment => "dev.voxelite.comments.comment",
+    AddLayer => "dev.voxelite.core.add_layer",
+    ShowPalette => "dev.voxelite.palette.show_palette",
+    Palette => "dev.voxelite.palette.palette",
+    ManagePalettes => "dev.voxelite.palette.manage_palettes",
+    Agent => "dev.voxelite.agent.agent",
+    Extensions => "dev.voxelite.agent.extensions",
+    Minimize => "dev.voxelite.core.minimize",
+    ZoomWindow => "dev.voxelite.core.zoom_window",
+    Help => "dev.voxelite.core.help",
+    About => "dev.voxelite.core.about",
+    CheckUpdates => "dev.voxelite.core.check_updates",
+    Hide => "dev.voxelite.core.hide",
+    HideOthers => "dev.voxelite.core.hide_others",
+    ShowAll => "dev.voxelite.core.show_all",
 }
+
+/// Immutable presentation of the host's enabled commands. The host owns plugin
+/// lifecycle; the shell only needs data, so no Send/Sync requirement is imposed
+/// on plugin implementations. Rebuild this view when enablement is introduced.
+struct ShellCommands {
+    entries: Vec<(Op, CommandContribution)>,
+}
+
+impl ShellCommands {
+    fn from_host(host: &Host) -> Self {
+        let mut entries: Vec<_> = host
+            .registry()
+            .commands()
+            .map(|(_, command)| {
+                let op = Op::from_command_id(&command.id).expect("built-in command has an Op");
+                (op, command.clone())
+            })
+            .collect();
+        entries.sort_by_key(|(_, command)| command.order);
+        Self { entries }
+    }
+
+    fn command(&self, op: Op) -> &CommandContribution {
+        &self
+            .entries
+            .iter()
+            .find(|(_, command)| command.id == op.command_id())
+            .expect("command is enabled in the app host")
+            .1
+    }
+
+    fn available_on(&self, op: Op, platform: ShortcutPlatform) -> bool {
+        match op {
+            Op::Quit | Op::Minimize | Op::ZoomWindow => !cfg!(target_family = "wasm"),
+            _ if self.command(op).menu.as_deref() == Some("Voxelite") => {
+                !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
+            }
+            _ => true,
+        }
+    }
+
+    fn shortcut_sheet(&self, platform: ShortcutPlatform) -> impl Iterator<Item = Op> + '_ {
+        self.entries
+            .iter()
+            .map(|(op, _)| *op)
+            .filter(move |op| self.available_on(*op, platform))
+    }
+
+    fn search(&self, query: &str, tools_only: bool, platform: ShortcutPlatform) -> Vec<Op> {
+        let query = query.to_lowercase();
+        self.shortcut_sheet(platform)
+            .filter(|op| {
+                *op != Op::Commands
+                    && (!tools_only || op.is_tool())
+                    && label(self.command(*op)).to_lowercase().contains(&query)
+            })
+            .collect()
+    }
+
+    fn menu_groups(&self) -> Vec<(&str, Vec<Op>)> {
+        let mut menus: Vec<(&str, Vec<Op>)> = Vec::new();
+        for op in self.shortcut_sheet(ShortcutPlatform::WindowsLinux) {
+            let Some(name) = self.command(op).menu.as_deref() else {
+                continue;
+            };
+            if let Some((_, ops)) = menus.iter_mut().find(|(menu, _)| *menu == name) {
+                ops.push(op);
+            } else {
+                menus.push((name, vec![op]));
+            }
+        }
+        menus
+    }
+
+    fn binding(&self, op: Op, platform: ShortcutPlatform) -> Option<KeyBinding> {
+        let command = self.command(op);
+        command
+            .default_keybinding
+            .as_deref()
+            .map(|key| KeyBinding::new(&platform.binding_key(key), op, command.context.as_deref()))
+    }
+}
+
+// Label keys are English fallbacks until localization is introduced.
+fn label(command: &CommandContribution) -> &str {
+    &command.label_key
+}
+
+fn command_menu(command: &CommandContribution, apple: bool) -> &str {
+    if apple && command.application_section.is_some() {
+        "Voxelite"
+    } else {
+        command.menu.as_deref().unwrap_or_default()
+    }
+}
+
+static SHELL: LazyLock<ShellCommands> =
+    LazyLock::new(|| ShellCommands::from_host(&voxelite_app::app_host()));
 
 /// Only the state needed to decide command availability; no view or GPUI context.
 #[derive(Clone, Copy, Debug, Default)]
@@ -154,35 +195,30 @@ pub enum CommandContext {
 }
 
 impl Op {
+    fn command(self) -> &'static CommandContribution {
+        SHELL.command(self)
+    }
+
     pub fn label(self) -> &'static str {
-        self.command().label
+        label(self.command())
     }
 
     /// Bundled Lucide asset shared by menus, search and toolbar controls.
     pub fn icon(self) -> &'static str {
-        self.command().icon
+        self.command().icon.as_deref().unwrap_or_default()
     }
 
     pub fn key(self) -> Option<&'static str> {
-        self.command().shortcut.as_ref().map(Shortcut::key)
+        self.command().default_keybinding.as_deref()
     }
 
     pub fn menu(self, apple: bool) -> &'static str {
-        if apple && self.command().application_section.is_some() {
-            "Voxelite"
-        } else {
-            self.command().menu
-        }
+        command_menu(self.command(), apple)
     }
 
+    #[cfg(test)]
     fn available_on(self, platform: ShortcutPlatform) -> bool {
-        match self {
-            Self::Quit | Self::Minimize | Self::ZoomWindow => !cfg!(target_family = "wasm"),
-            _ if self.command().menu == "Voxelite" => {
-                !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
-            }
-            _ => true,
-        }
+        SHELL.available_on(self, platform)
     }
 
     pub fn shortcut(self) -> String {
@@ -191,14 +227,9 @@ impl Op {
             .unwrap_or_default()
     }
 
+    #[cfg(test)]
     fn binding(self, platform: ShortcutPlatform) -> Option<KeyBinding> {
-        self.command().shortcut.as_ref().map(|shortcut| {
-            KeyBinding::new(
-                &platform.binding_key(shortcut.key()),
-                self,
-                shortcut.context(),
-            )
-        })
+        SHELL.binding(self, platform)
     }
 
     fn is_tool(self) -> bool {
@@ -273,43 +304,19 @@ impl Op {
 }
 
 /// In-window menus use the same placement on every host, including Apple browsers.
-pub static MENUS: LazyLock<Vec<(&str, Vec<Op>)>> = LazyLock::new(|| {
-    MENU_NAMES
-        .iter()
-        .filter_map(|name| {
-            let ops: Vec<_> = Op::ALL
-                .iter()
-                .copied()
-                .filter(|op| {
-                    op.available_on(ShortcutPlatform::WindowsLinux) && op.menu(false) == *name
-                })
-                .collect();
-            (!ops.is_empty()).then_some((*name, ops))
-        })
-        .collect()
-});
+pub static MENUS: LazyLock<Vec<(&str, Vec<Op>)>> = LazyLock::new(|| SHELL.menu_groups());
 
 pub fn search(query: &str, tools_only: bool) -> Vec<Op> {
     search_on(query, tools_only, ShortcutPlatform::current())
 }
 
 fn search_on(query: &str, tools_only: bool, platform: ShortcutPlatform) -> Vec<Op> {
-    let query = query.to_lowercase();
-    shortcut_sheet(platform)
-        .filter(|op| {
-            *op != Op::Commands
-                && (!tools_only || op.is_tool())
-                && op.label().to_lowercase().contains(&query)
-        })
-        .collect()
+    SHELL.search(query, tools_only, platform)
 }
 
 /// Every available command appears, including commands without a keyboard binding.
 pub fn shortcut_sheet(platform: ShortcutPlatform) -> impl Iterator<Item = Op> {
-    Op::ALL
-        .iter()
-        .copied()
-        .filter(move |op| op.available_on(platform))
+    SHELL.shortcut_sheet(platform)
 }
 
 /// Guide content is independent of the UI's two-column layout and keycap styling.
@@ -344,9 +351,9 @@ pub fn keyboard_guide_sections(platform: ShortcutPlatform) -> [Vec<GuideSection>
             _ => op.label(),
         };
         // Use the declared group even when macOS relocates an application item.
-        let rows = match op.command().menu {
-            "Tools" => &mut tools,
-            "View" => &mut navigate,
+        let rows = match op.command().menu.as_deref() {
+            Some("Tools") => &mut tools,
+            Some("View") => &mut navigate,
             _ => &mut file_history,
         };
         rows.push((label, GuideShortcut::Action(op)));
@@ -418,69 +425,83 @@ fn menus_for_platform(
     selected: impl Fn(Op) -> bool,
     enabled: impl Fn(Op) -> bool,
 ) -> Vec<Menu> {
-    let item = |op: Op| {
-        let item = match op {
-            Op::Undo => MenuItem::os_action(op.label(), op, OsAction::Undo),
-            Op::Redo => MenuItem::os_action(op.label(), op, OsAction::Redo),
-            _ => MenuItem::action(op.label(), op),
+    SHELL.menus(apple, selected, enabled)
+}
+
+impl ShellCommands {
+    fn menus(
+        &self,
+        apple: bool,
+        selected: impl Fn(Op) -> bool,
+        enabled: impl Fn(Op) -> bool,
+    ) -> Vec<Menu> {
+        let item = |op: Op| {
+            let item = match op {
+                Op::Undo => {
+                    MenuItem::os_action(label(self.command(op)).to_owned(), op, OsAction::Undo)
+                }
+                Op::Redo => {
+                    MenuItem::os_action(label(self.command(op)).to_owned(), op, OsAction::Redo)
+                }
+                _ => MenuItem::action(label(self.command(op)).to_owned(), op),
+            };
+            item.checked(selected(op)).disabled(!enabled(op))
         };
-        item.checked(selected(op)).disabled(!enabled(op))
-    };
-    let mut menus = Vec::new();
-    if apple {
-        let mut items = Vec::new();
-        for section in [
-            ApplicationSection::About,
-            ApplicationSection::Settings,
-            ApplicationSection::Visibility,
-            ApplicationSection::Quit,
-        ] {
-            if !items.is_empty() {
-                items.push(MenuItem::separator());
+        let mut menus = Vec::new();
+        if apple {
+            let mut items = Vec::new();
+            for section in [
+                ApplicationMenuSection::About,
+                ApplicationMenuSection::Settings,
+                ApplicationMenuSection::Visibility,
+                ApplicationMenuSection::Quit,
+            ] {
+                if !items.is_empty() {
+                    items.push(MenuItem::separator());
+                }
+                items.extend(
+                    self.shortcut_sheet(ShortcutPlatform::Apple)
+                        .filter(|op| self.command(*op).application_section == Some(section))
+                        .map(item),
+                );
+                if section == ApplicationMenuSection::Settings {
+                    items.push(MenuItem::separator());
+                    items.push(MenuItem::os_submenu(
+                        "Services",
+                        gpui::SystemMenuType::Services,
+                    ));
+                }
             }
-            items.extend(
-                Op::ALL
-                    .iter()
-                    .copied()
-                    .filter(|op| {
-                        op.available_on(ShortcutPlatform::Apple)
-                            && op.command().application_section == Some(section)
-                    })
-                    .map(item),
-            );
-            if section == ApplicationSection::Settings {
-                items.push(MenuItem::separator());
-                items.push(MenuItem::os_submenu(
-                    "Services",
-                    gpui::SystemMenuType::Services,
-                ));
+            menus.push(Menu::new("Voxelite").items(items));
+        }
+        for (name, ops) in self.menu_groups() {
+            let mut items: Vec<_> = ops
+                .iter()
+                .copied()
+                .filter(|op| command_menu(self.command(*op), apple) == name)
+                .map(item)
+                .collect();
+            if name == "Edit" {
+                items.splice(
+                    2..2,
+                    [
+                        MenuItem::separator(),
+                        MenuItem::os_action("Cut", ClipboardOp::Cut, OsAction::Cut),
+                        MenuItem::os_action("Copy", ClipboardOp::Copy, OsAction::Copy),
+                        MenuItem::os_action("Paste", ClipboardOp::Paste, OsAction::Paste),
+                        MenuItem::os_action(
+                            "Select All",
+                            ClipboardOp::SelectAll,
+                            OsAction::SelectAll,
+                        ),
+                        MenuItem::separator(),
+                    ],
+                );
             }
+            menus.push(Menu::new(name.to_owned()).items(items));
         }
-        menus.push(Menu::new("Voxelite").items(items));
+        menus
     }
-    for (name, ops) in MENUS.iter() {
-        let mut items: Vec<_> = ops
-            .iter()
-            .copied()
-            .filter(|op| op.menu(apple) == *name)
-            .map(item)
-            .collect();
-        if *name == "Edit" {
-            items.splice(
-                2..2,
-                [
-                    MenuItem::separator(),
-                    MenuItem::os_action("Cut", ClipboardOp::Cut, OsAction::Cut),
-                    MenuItem::os_action("Copy", ClipboardOp::Copy, OsAction::Copy),
-                    MenuItem::os_action("Paste", ClipboardOp::Paste, OsAction::Paste),
-                    MenuItem::os_action("Select All", ClipboardOp::SelectAll, OsAction::SelectAll),
-                    MenuItem::separator(),
-                ],
-            );
-        }
-        menus.push(Menu::new(*name).items(items));
-    }
-    menus
 }
 
 pub fn install(cx: &mut App) {
@@ -492,26 +513,150 @@ pub fn install(cx: &mut App) {
 }
 
 fn key_bindings(platform: ShortcutPlatform) -> Vec<KeyBinding> {
-    shortcut_sheet(platform)
-        .filter_map(|op| op.binding(platform))
-        .chain(
-            [
-                ("secondary-x", ClipboardOp::Cut),
-                ("secondary-c", ClipboardOp::Copy),
-                ("secondary-v", ClipboardOp::Paste),
-                ("secondary-a", ClipboardOp::SelectAll),
-            ]
-            .into_iter()
-            .map(|(key, op)| KeyBinding::new(&platform.binding_key(key), op, Some("TextField"))),
-        )
-        .collect()
+    SHELL.key_bindings(platform)
 }
+
+impl ShellCommands {
+    fn key_bindings(&self, platform: ShortcutPlatform) -> Vec<KeyBinding> {
+        self.shortcut_sheet(platform)
+            .filter_map(|op| self.binding(op, platform))
+            .chain(
+                [
+                    ("secondary-x", ClipboardOp::Cut),
+                    ("secondary-c", ClipboardOp::Copy),
+                    ("secondary-v", ClipboardOp::Paste),
+                    ("secondary-a", ClipboardOp::SelectAll),
+                ]
+                .into_iter()
+                .map(|(key, op)| {
+                    KeyBinding::new(&platform.binding_key(key), op, Some("TextField"))
+                }),
+            )
+            .collect()
+    }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod snapshot;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use gpui::{AssetSource, KeyContext, Keymap, Keystroke};
     use std::collections::HashSet;
+
+    #[test]
+    fn every_op_maps_to_exactly_one_host_command_and_back() {
+        let host = voxelite_app::app_host();
+        let commands: Vec<_> = host.registry().commands().collect();
+        assert_eq!(commands.len(), Op::ALL.len());
+        let mut ids = HashSet::new();
+        for op in Op::ALL {
+            assert!(ids.insert(op.command_id()), "duplicate mapping: {op:?}");
+            assert_eq!(Op::from_command_id(op.command_id()), Some(*op));
+            assert_eq!(
+                commands
+                    .iter()
+                    .filter(|(_, command)| command.id == op.command_id())
+                    .count(),
+                1,
+                "{op:?}"
+            );
+        }
+        for (owner, command) in commands {
+            let op = Op::from_command_id(&command.id).expect("command must have a dispatch Op");
+            assert_eq!(op.command_id(), command.id);
+            assert!(command.id.starts_with(&format!("{owner}.")));
+        }
+        assert_eq!(Op::from_command_id("dev.voxelite.unknown.command"), None);
+    }
+
+    #[test]
+    fn disabling_plugins_removes_their_commands_from_every_shell_list() {
+        let mut host = voxelite_app::app_host();
+        let plugins: Vec<_> = host
+            .plugins()
+            .filter(|(manifest, _)| manifest.can_disable)
+            .map(|(manifest, _)| manifest.id.to_string())
+            .collect();
+        for plugin in plugins {
+            let owned: Vec<_> = host
+                .registry()
+                .commands()
+                .filter(|(owner, _)| owner.as_str() == plugin)
+                .map(|(_, command)| Op::from_command_id(&command.id).unwrap())
+                .collect();
+            assert!(!owned.is_empty());
+            host.disable(&plugin).unwrap();
+            let shell = ShellCommands::from_host(&host);
+            for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
+                assert_eq!(
+                    shell.shortcut_sheet(platform).collect::<Vec<_>>(),
+                    SHELL
+                        .shortcut_sheet(platform)
+                        .filter(|op| !owned.contains(op))
+                        .collect::<Vec<_>>()
+                );
+                for tools_only in [false, true] {
+                    assert_eq!(
+                        shell.search("", tools_only, platform),
+                        SHELL
+                            .search("", tools_only, platform)
+                            .into_iter()
+                            .filter(|op| !owned.contains(op))
+                            .collect::<Vec<_>>()
+                    );
+                }
+                let expected = SHELL
+                    .key_bindings(platform)
+                    .into_iter()
+                    .filter(|binding| {
+                        binding
+                            .action()
+                            .as_any()
+                            .downcast_ref::<Op>()
+                            .is_none_or(|op| !owned.contains(op))
+                    })
+                    .collect::<Vec<_>>();
+                let actual = shell.key_bindings(platform);
+                assert_eq!(actual.len(), expected.len());
+                for (actual, expected) in actual.iter().zip(&expected) {
+                    assert!(actual.action().partial_eq(expected.action()));
+                    assert_eq!(actual.keystrokes(), expected.keystrokes());
+                    assert_eq!(actual.predicate(), expected.predicate());
+                }
+                let menus = shell.menus(platform == ShortcutPlatform::Apple, |_| false, |_| true);
+                let menu_ops: Vec<_> = menus
+                    .iter()
+                    .flat_map(|menu| &menu.items)
+                    .filter_map(|item| match item {
+                        MenuItem::Action { action, .. } => {
+                            action.as_any().downcast_ref::<Op>().copied()
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert!(owned.iter().all(|op| !menu_ops.contains(op)));
+                for op in shell.shortcut_sheet(platform) {
+                    assert_eq!(
+                        menu_ops.iter().filter(|entry| **entry == op).count(),
+                        1,
+                        "{op:?}"
+                    );
+                }
+                assert!(menus.iter().all(|menu| !menu.items.is_empty()));
+            }
+            assert!(
+                shell
+                    .menu_groups()
+                    .iter()
+                    .flat_map(|(_, ops)| ops)
+                    .all(|op| !owned.contains(op))
+            );
+            host.enable(&plugin).unwrap();
+            assert_eq!(ShellCommands::from_host(&host).entries, SHELL.entries);
+        }
+    }
 
     #[test]
     fn every_command_has_unique_metadata_and_appears_in_the_sheet() {

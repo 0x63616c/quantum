@@ -20,6 +20,13 @@ required-features = ["native"]
 
 [dependencies]
 voxelite-core.workspace = true
+voxelite-plugin-api.workspace = true
+voxelite-plugin-host.workspace = true
+voxelite-plugin-tools = { path = "../plugins/voxelite-plugin-tools" }
+voxelite-plugin-mirror = { path = "../plugins/voxelite-plugin-mirror" }
+voxelite-plugin-palette = { path = "../plugins/voxelite-plugin-palette" }
+voxelite-plugin-comments = { path = "../plugins/voxelite-plugin-comments" }
+voxelite-plugin-agent = { path = "../plugins/voxelite-plugin-agent" }
 voxelite-format.workspace = true
 voxelite-render.workspace = true
 voxelite-export = { path = "../voxelite-export" }

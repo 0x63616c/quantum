@@ -1,0 +1,346 @@
+Apple
+menu Voxelite
+  About | About Voxelite | icon=cube | shortcut= | os= | checked=false | disabled=false
+  CheckUpdates | Check for Updates… | icon=download | shortcut= | os= | checked=false | disabled=false
+  ---
+  Settings | Settings… | icon=settings | shortcut=⌘, | os= | checked=false | disabled=false
+  ---
+  system Services
+  ---
+  Hide | Hide Voxelite | icon=eye-off | shortcut=⌘H | os= | checked=false | disabled=false
+  HideOthers | Hide Others | icon=eye-off | shortcut=⌥⌘H | os= | checked=false | disabled=false
+  ShowAll | Show All | icon=eye | shortcut= | os= | checked=false | disabled=false
+  ---
+  Quit | Quit Voxelite | icon=log-out | shortcut=⌘Q | os= | checked=false | disabled=false
+menu File
+  New | New project | icon=file-plus | shortcut=⌘N | os= | checked=false | disabled=false
+  Open | Open project… | icon=folder-open | shortcut=⌘O | os= | checked=false | disabled=false
+  Save | Save | icon=save | shortcut=⌘S | os= | checked=false | disabled=false
+  SaveAs | Save as… | icon=file-output | shortcut=⇧⌘S | os= | checked=false | disabled=false
+menu Edit
+  Undo | Undo | icon=undo | shortcut=⌘Z | os=Undo | checked=false | disabled=false
+  Redo | Redo | icon=redo | shortcut=⇧⌘Z | os=Redo | checked=false | disabled=false
+  ---
+  Clipboard::Cut | Cut | icon= | shortcut=⌘X | os=Cut | checked=false | disabled=false
+  Clipboard::Copy | Copy | icon= | shortcut=⌘C | os=Copy | checked=false | disabled=false
+  Clipboard::Paste | Paste | icon= | shortcut=⌘V | os=Paste | checked=false | disabled=false
+  Clipboard::SelectAll | Select All | icon= | shortcut=⌘A | os=SelectAll | checked=false | disabled=false
+  ---
+  Commands | Search commands… | icon=search | shortcut=⌘K | os= | checked=false | disabled=false
+menu View
+  Frame | Frame model | icon=cube | shortcut=F | os= | checked=false | disabled=false
+  Front | Front view | icon=panel-top | shortcut= | os= | checked=false | disabled=false
+  Right | Right view | icon=panel-left | shortcut= | os= | checked=false | disabled=false
+  Top | Top view | icon=square | shortcut= | os= | checked=false | disabled=false
+  Grid | Toggle grid | icon=grid | shortcut= | os= | checked=false | disabled=false
+  Theme | Appearance… | icon=sun | shortcut= | os= | checked=false | disabled=false
+menu Tools
+  Place | Place | icon=place | shortcut=B | os= | checked=false | disabled=false
+  Erase | Erase | icon=erase | shortcut=E | os= | checked=false | disabled=false
+  Paint | Paint | icon=paint | shortcut=P | os= | checked=false | disabled=false
+  Fill | Fill | icon=fill | shortcut=G | os= | checked=false | disabled=false
+  Box | Box | icon=box | shortcut=U | os= | checked=false | disabled=false
+  Picker | Color picker | icon=picker | shortcut=I | os= | checked=false | disabled=false
+  MirrorX | Mirror X | icon=flip-horizontal-2 | shortcut=⇧X | os= | checked=false | disabled=false
+  MirrorY | Mirror Y | icon=flip-vertical-2 | shortcut=⇧Y | os= | checked=false | disabled=false
+  MirrorZ | Mirror Z | icon=flip-horizontal-2 | shortcut=⇧Z | os= | checked=false | disabled=false
+  ToolPicker | Choose tool… | icon=wrench | shortcut= | os= | checked=false | disabled=false
+  Comment | Add comment pin | icon=comment | shortcut=C | os= | checked=false | disabled=false
+menu Layers
+  AddLayer | Add layer | icon=layer | shortcut= | os= | checked=false | disabled=false
+menu Palette
+  ShowPalette | Show Palette | icon=palette | shortcut= | os= | checked=false | disabled=false
+  Palette | Choose palette… | icon=palette | shortcut= | os= | checked=false | disabled=false
+  ManagePalettes | Manage palettes… | icon=sliders-horizontal | shortcut= | os= | checked=false | disabled=false
+menu Agent
+  Agent | Agent connection | icon=spark | shortcut= | os= | checked=false | disabled=false
+menu Extensions
+  Extensions | Extensions | icon=puzzle | shortcut= | os= | checked=false | disabled=false
+menu Window
+  Minimize | Minimize | icon=square | shortcut=⌘M | os= | checked=false | disabled=false
+  ZoomWindow | Zoom | icon=square | shortcut= | os= | checked=false | disabled=false
+menu Help
+  Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
+in-window menus
+  File: [New, Open, Save, SaveAs, Quit]
+  Edit: [Undo, Redo, Commands, Settings]
+  View: [Frame, Front, Right, Top, Grid, Theme]
+  Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
+  Layers: [AddLayer]
+  Palette: [ShowPalette, Palette, ManagePalettes]
+  Agent: [Agent]
+  Extensions: [Extensions]
+  Window: [Minimize, ZoomWindow]
+  Help: [Help, About]
+Cmd-K
+  New | New project | file-plus | ⌘N
+  Open | Open project… | folder-open | ⌘O
+  Save | Save | save | ⌘S
+  SaveAs | Save as… | file-output | ⇧⌘S
+  Quit | Quit Voxelite | log-out | ⌘Q
+  Undo | Undo | undo | ⌘Z
+  Redo | Redo | redo | ⇧⌘Z
+  Settings | Settings… | settings | ⌘,
+  Frame | Frame model | cube | F
+  Front | Front view | panel-top | 
+  Right | Right view | panel-left | 
+  Top | Top view | square | 
+  Grid | Toggle grid | grid | 
+  Theme | Appearance… | sun | 
+  Place | Place | place | B
+  Erase | Erase | erase | E
+  Paint | Paint | paint | P
+  Fill | Fill | fill | G
+  Box | Box | box | U
+  Picker | Color picker | picker | I
+  MirrorX | Mirror X | flip-horizontal-2 | ⇧X
+  MirrorY | Mirror Y | flip-vertical-2 | ⇧Y
+  MirrorZ | Mirror Z | flip-horizontal-2 | ⇧Z
+  ToolPicker | Choose tool… | wrench | 
+  Comment | Add comment pin | comment | C
+  AddLayer | Add layer | layer | 
+  ShowPalette | Show Palette | palette | 
+  Palette | Choose palette… | palette | 
+  ManagePalettes | Manage palettes… | sliders-horizontal | 
+  Agent | Agent connection | spark | 
+  Extensions | Extensions | puzzle | 
+  Minimize | Minimize | square | ⌘M
+  ZoomWindow | Zoom | square | 
+  Help | Keyboard & mouse guide | keyboard | 
+  About | About Voxelite | cube | 
+  CheckUpdates | Check for Updates… | download | 
+  Hide | Hide Voxelite | eye-off | ⌘H
+  HideOthers | Hide Others | eye-off | ⌥⌘H
+  ShowAll | Show All | eye | 
+shortcut sheet
+  New | File | ⌘N
+  Open | File | ⌘O
+  Save | File | ⌘S
+  SaveAs | File | ⇧⌘S
+  Quit | Voxelite | ⌘Q
+  Undo | Edit | ⌘Z
+  Redo | Edit | ⇧⌘Z
+  Commands | Edit | ⌘K
+  Settings | Voxelite | ⌘,
+  Frame | View | F
+  Front | View | 
+  Right | View | 
+  Top | View | 
+  Grid | View | 
+  Theme | View | 
+  Place | Tools | B
+  Erase | Tools | E
+  Paint | Tools | P
+  Fill | Tools | G
+  Box | Tools | U
+  Picker | Tools | I
+  MirrorX | Tools | ⇧X
+  MirrorY | Tools | ⇧Y
+  MirrorZ | Tools | ⇧Z
+  ToolPicker | Tools | 
+  Comment | Tools | C
+  AddLayer | Layers | 
+  ShowPalette | Palette | 
+  Palette | Palette | 
+  ManagePalettes | Palette | 
+  Agent | Agent | 
+  Extensions | Extensions | 
+  Minimize | Window | ⌘M
+  ZoomWindow | Window | 
+  Help | Help | 
+  About | Voxelite | 
+  CheckUpdates | Voxelite | 
+  Hide | Voxelite | ⌘H
+  HideOthers | Voxelite | ⌥⌘H
+  ShowAll | Voxelite | 
+bindings
+  New | super-n | Editor
+  Open | super-o | Editor
+  Save | super-s | Editor
+  SaveAs | super-shift-s | Editor
+  Quit | super-q | global
+  Undo | super-z | Editor
+  Redo | super-shift-z | Editor
+  Commands | super-k | Editor
+  Settings | super-, | global
+  Frame | f | Editor
+  Place | b | Editor
+  Erase | e | Editor
+  Paint | p | Editor
+  Fill | g | Editor
+  Box | u | Editor
+  Picker | i | Editor
+  MirrorX | shift-x | Editor
+  MirrorY | shift-y | Editor
+  MirrorZ | shift-z | Editor
+  Comment | c | Editor
+  Minimize | super-m | Editor
+  Hide | super-h | global
+  HideOthers | alt-super-h | global
+  Clipboard::Cut | super-x | TextField
+  Clipboard::Copy | super-c | TextField
+  Clipboard::Paste | super-v | TextField
+  Clipboard::SelectAll | super-a | TextField
+WindowsLinux
+menu File
+  New | New project | icon=file-plus | shortcut=Ctrl+N | os= | checked=false | disabled=false
+  Open | Open project… | icon=folder-open | shortcut=Ctrl+O | os= | checked=false | disabled=false
+  Save | Save | icon=save | shortcut=Ctrl+S | os= | checked=false | disabled=false
+  SaveAs | Save as… | icon=file-output | shortcut=Ctrl+Shift+S | os= | checked=false | disabled=false
+  Quit | Quit Voxelite | icon=log-out | shortcut=Ctrl+Q | os= | checked=false | disabled=false
+menu Edit
+  Undo | Undo | icon=undo | shortcut=Ctrl+Z | os=Undo | checked=false | disabled=false
+  Redo | Redo | icon=redo | shortcut=Ctrl+Shift+Z | os=Redo | checked=false | disabled=false
+  ---
+  Clipboard::Cut | Cut | icon= | shortcut=Ctrl+X | os=Cut | checked=false | disabled=false
+  Clipboard::Copy | Copy | icon= | shortcut=Ctrl+C | os=Copy | checked=false | disabled=false
+  Clipboard::Paste | Paste | icon= | shortcut=Ctrl+V | os=Paste | checked=false | disabled=false
+  Clipboard::SelectAll | Select All | icon= | shortcut=Ctrl+A | os=SelectAll | checked=false | disabled=false
+  ---
+  Commands | Search commands… | icon=search | shortcut=Ctrl+K | os= | checked=false | disabled=false
+  Settings | Settings… | icon=settings | shortcut=Ctrl+, | os= | checked=false | disabled=false
+menu View
+  Frame | Frame model | icon=cube | shortcut=F | os= | checked=false | disabled=false
+  Front | Front view | icon=panel-top | shortcut= | os= | checked=false | disabled=false
+  Right | Right view | icon=panel-left | shortcut= | os= | checked=false | disabled=false
+  Top | Top view | icon=square | shortcut= | os= | checked=false | disabled=false
+  Grid | Toggle grid | icon=grid | shortcut= | os= | checked=false | disabled=false
+  Theme | Appearance… | icon=sun | shortcut= | os= | checked=false | disabled=false
+menu Tools
+  Place | Place | icon=place | shortcut=B | os= | checked=false | disabled=false
+  Erase | Erase | icon=erase | shortcut=E | os= | checked=false | disabled=false
+  Paint | Paint | icon=paint | shortcut=P | os= | checked=false | disabled=false
+  Fill | Fill | icon=fill | shortcut=G | os= | checked=false | disabled=false
+  Box | Box | icon=box | shortcut=U | os= | checked=false | disabled=false
+  Picker | Color picker | icon=picker | shortcut=I | os= | checked=false | disabled=false
+  MirrorX | Mirror X | icon=flip-horizontal-2 | shortcut=Shift+X | os= | checked=false | disabled=false
+  MirrorY | Mirror Y | icon=flip-vertical-2 | shortcut=Shift+Y | os= | checked=false | disabled=false
+  MirrorZ | Mirror Z | icon=flip-horizontal-2 | shortcut=Shift+Z | os= | checked=false | disabled=false
+  ToolPicker | Choose tool… | icon=wrench | shortcut= | os= | checked=false | disabled=false
+  Comment | Add comment pin | icon=comment | shortcut=C | os= | checked=false | disabled=false
+menu Layers
+  AddLayer | Add layer | icon=layer | shortcut= | os= | checked=false | disabled=false
+menu Palette
+  ShowPalette | Show Palette | icon=palette | shortcut= | os= | checked=false | disabled=false
+  Palette | Choose palette… | icon=palette | shortcut= | os= | checked=false | disabled=false
+  ManagePalettes | Manage palettes… | icon=sliders-horizontal | shortcut= | os= | checked=false | disabled=false
+menu Agent
+  Agent | Agent connection | icon=spark | shortcut= | os= | checked=false | disabled=false
+menu Extensions
+  Extensions | Extensions | icon=puzzle | shortcut= | os= | checked=false | disabled=false
+menu Window
+  Minimize | Minimize | icon=square | shortcut=Ctrl+M | os= | checked=false | disabled=false
+  ZoomWindow | Zoom | icon=square | shortcut= | os= | checked=false | disabled=false
+menu Help
+  Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
+  About | About Voxelite | icon=cube | shortcut= | os= | checked=false | disabled=false
+in-window menus
+  File: [New, Open, Save, SaveAs, Quit]
+  Edit: [Undo, Redo, Commands, Settings]
+  View: [Frame, Front, Right, Top, Grid, Theme]
+  Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
+  Layers: [AddLayer]
+  Palette: [ShowPalette, Palette, ManagePalettes]
+  Agent: [Agent]
+  Extensions: [Extensions]
+  Window: [Minimize, ZoomWindow]
+  Help: [Help, About]
+Cmd-K
+  New | New project | file-plus | Ctrl+N
+  Open | Open project… | folder-open | Ctrl+O
+  Save | Save | save | Ctrl+S
+  SaveAs | Save as… | file-output | Ctrl+Shift+S
+  Quit | Quit Voxelite | log-out | Ctrl+Q
+  Undo | Undo | undo | Ctrl+Z
+  Redo | Redo | redo | Ctrl+Shift+Z
+  Settings | Settings… | settings | Ctrl+,
+  Frame | Frame model | cube | F
+  Front | Front view | panel-top | 
+  Right | Right view | panel-left | 
+  Top | Top view | square | 
+  Grid | Toggle grid | grid | 
+  Theme | Appearance… | sun | 
+  Place | Place | place | B
+  Erase | Erase | erase | E
+  Paint | Paint | paint | P
+  Fill | Fill | fill | G
+  Box | Box | box | U
+  Picker | Color picker | picker | I
+  MirrorX | Mirror X | flip-horizontal-2 | Shift+X
+  MirrorY | Mirror Y | flip-vertical-2 | Shift+Y
+  MirrorZ | Mirror Z | flip-horizontal-2 | Shift+Z
+  ToolPicker | Choose tool… | wrench | 
+  Comment | Add comment pin | comment | C
+  AddLayer | Add layer | layer | 
+  ShowPalette | Show Palette | palette | 
+  Palette | Choose palette… | palette | 
+  ManagePalettes | Manage palettes… | sliders-horizontal | 
+  Agent | Agent connection | spark | 
+  Extensions | Extensions | puzzle | 
+  Minimize | Minimize | square | Ctrl+M
+  ZoomWindow | Zoom | square | 
+  Help | Keyboard & mouse guide | keyboard | 
+  About | About Voxelite | cube | 
+shortcut sheet
+  New | File | Ctrl+N
+  Open | File | Ctrl+O
+  Save | File | Ctrl+S
+  SaveAs | File | Ctrl+Shift+S
+  Quit | File | Ctrl+Q
+  Undo | Edit | Ctrl+Z
+  Redo | Edit | Ctrl+Shift+Z
+  Commands | Edit | Ctrl+K
+  Settings | Edit | Ctrl+,
+  Frame | View | F
+  Front | View | 
+  Right | View | 
+  Top | View | 
+  Grid | View | 
+  Theme | View | 
+  Place | Tools | B
+  Erase | Tools | E
+  Paint | Tools | P
+  Fill | Tools | G
+  Box | Tools | U
+  Picker | Tools | I
+  MirrorX | Tools | Shift+X
+  MirrorY | Tools | Shift+Y
+  MirrorZ | Tools | Shift+Z
+  ToolPicker | Tools | 
+  Comment | Tools | C
+  AddLayer | Layers | 
+  ShowPalette | Palette | 
+  Palette | Palette | 
+  ManagePalettes | Palette | 
+  Agent | Agent | 
+  Extensions | Extensions | 
+  Minimize | Window | Ctrl+M
+  ZoomWindow | Window | 
+  Help | Help | 
+  About | Help | 
+bindings
+  New | ctrl-n | Editor
+  Open | ctrl-o | Editor
+  Save | ctrl-s | Editor
+  SaveAs | ctrl-shift-s | Editor
+  Quit | ctrl-q | global
+  Undo | ctrl-z | Editor
+  Redo | ctrl-shift-z | Editor
+  Commands | ctrl-k | Editor
+  Settings | ctrl-, | global
+  Frame | f | Editor
+  Place | b | Editor
+  Erase | e | Editor
+  Paint | p | Editor
+  Fill | g | Editor
+  Box | u | Editor
+  Picker | i | Editor
+  MirrorX | shift-x | Editor
+  MirrorY | shift-y | Editor
+  MirrorZ | shift-z | Editor
+  Comment | c | Editor
+  Minimize | ctrl-m | Editor
+  Clipboard::Cut | ctrl-x | TextField
+  Clipboard::Copy | ctrl-c | TextField
+  Clipboard::Paste | ctrl-v | TextField
+  Clipboard::SelectAll | ctrl-a | TextField

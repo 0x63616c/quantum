@@ -2,7 +2,7 @@
 
 Date: 2026-10-26
 
-Status: Accepted; the plugin API, host and registry are implemented independently of the app.
+Status: Accepted; the app shell reads built-in command metadata from the host registry.
 
 ## Context
 
@@ -31,7 +31,9 @@ panels, formats, render passes, settings and `.voxl` data section declarations
 into `Contributions`, preserving registration order across kinds.
 
 Commands declare JSON Schema arguments, optional default keybindings and contexts,
-icons, menus and agent visibility. Settings declare Bool, Choice or Number schemas
+icons, menus and agent visibility. Shell presentation order and optional Apple
+application-menu sections preserve placement across plugin boundaries without
+changing registry registration order. Settings declare Bool, Choice or Number schemas
 with typed defaults. Render passes declare insertion slots; data sections declare
 their stored names and schema revisions. Declaring a data section does not change
 the current `.voxl` format. Local validation checks identifier syntax, duplicate
@@ -48,13 +50,14 @@ enabled sets and lifecycle management. Implementation binding follows with app
 integration.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-starts at `0.1.0`, independently of plugin implementation versions and `.voxl` or
+is `0.2.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
 methods and changes to exhaustive enums or public struct construction count as
 breaking changes. Host compatibility checks respect the pre-1.0
 minor boundary and reject newer required API versions.
+The `0.2.0` bump adds command presentation fields to public struct construction.
 
 Third-party plugins and WASM are deferred to a later design; dynamic loading and
 scripting are also out of scope. This is a statically linked Rust API, not a stable
@@ -111,6 +114,19 @@ from aborts or roll back arbitrary plugin-owned external effects.
 ## Consequences
 
 The API and host have independent unit tests and a reusable conformance harness;
-they are not wired into the app and do not change its runtime behavior. Later
-steps move built-in feature registration and shell metadata behind this boundary
-while preserving existing behavior.
+the app's `app_host()` registers required `dev.voxelite.core`, then tools, mirror,
+palette, comments and agent built-ins, all enabled. These five plugin crates depend
+only on the API outside their conformance tests. Core currently owns the remaining
+shell commands, including grid and the existing browser export entries.
+
+The shell takes an immutable view of enabled command contributions, sorted by
+presentation order, for menus, Cmd-K, the shortcuts sheet and keybindings. English
+label keys are used directly for now. An exhaustive ID mapping retains `Op` as the
+GPUI dispatch type; availability and execution paths are unchanged. There is no
+plugin enablement UI yet; future enablement changes must rebuild the shell view
+and installed bindings. Agent connection and Extensions remain UI-only commands,
+with `agent_visible = false`.
+
+A golden test captured the pre-migration Apple and non-Apple menus, icons,
+shortcuts, search order and bindings. Disablement tests verify that optional
+plugins disappear from shell lists without affecting the remaining commands.

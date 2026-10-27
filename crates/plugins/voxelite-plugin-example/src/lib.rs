@@ -40,6 +40,8 @@ impl Plugin for ExamplePlugin {
             context: None,
             icon: None,
             menu: None,
+            order: 0,
+            application_section: None,
             agent_visible: false,
         });
     }
