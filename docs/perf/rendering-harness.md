@@ -198,12 +198,18 @@ Default gates are:
 | Wall p50 and edit-to-pixels p50 | increase >10% **and** >0.3 ms |
 | GPU main/resolve/total p50 | increase >10% |
 | Fit draw calls, triangles, upload bytes | any increase |
-| Each memory metric | increase >10% |
+| Vertex, occupancy, target and device allocated bytes | increase >10% |
+| Process RSS MB | increase >50% **and** >128 MB |
 
-The wall absolute threshold avoids failing on trivial scheduling noise. GPU
-and memory gates remain relative; deterministic fit geometry/uploads have no
-noise allowance. Flags `--wall-pct`, `--wall-ms`, `--gpu-pct`, `--memory-pct`
-override thresholds explicitly. Improvements are reported, never failed.
+The wall absolute threshold avoids failing on trivial scheduling noise. RSS is
+the current process resident memory sampled at each phase boundary, not a peak;
+allocator history and OS memory compression can cause large swings between
+phases and runs. Its separate gate fails only when new RSS exceeds both
+`old + rss_mb` and `old * (1 + rss_pct / 100)`. GPU timing and memory byte gates
+remain relative; deterministic fit geometry/uploads have no noise allowance.
+Flags `--wall-pct`, `--wall-ms`, `--gpu-pct`, `--memory-pct`, `--rss-pct` (default
+50) and `--rss-mb` (default 128) override thresholds explicitly. Improvements
+are reported, never failed.
 
 The M2 is a shared CI runner: load averages can be 10–40 or higher. Record and
 inspect load and the complete per-run spread. Repeated medians do not make a
