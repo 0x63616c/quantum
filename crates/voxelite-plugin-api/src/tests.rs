@@ -57,6 +57,7 @@ fn declarations(id: &str) -> Vec<Contribution> {
             icon: None,
         }),
         Contribution::Format(FormatContribution {
+            content: FormatContent::Document,
             id: id.into(),
             label_key: "formats.image.label".into(),
             extensions: vec!["png".into(), "apng".into()],
@@ -148,7 +149,7 @@ fn plugin_id_dns_length_limits_are_checked() {
 fn manifest_uses_independent_semver_versions_and_localization_keys() {
     let manifest = manifest();
     assert_eq!(manifest.version.to_string(), "2.3.4-beta.1+build.7");
-    assert_eq!(manifest.api_version, Version::new(0, 4, 1));
+    assert_eq!(manifest.api_version, Version::new(0, 5, 0));
     assert_ne!(manifest.version, manifest.api_version);
     assert_eq!(manifest.name_key, "plugins.tools.name");
     assert_eq!(manifest.description_key, "plugins.tools.description");
@@ -395,6 +396,7 @@ fn command_schema_and_optional_presentation_are_preserved() {
 fn format_capabilities_and_extension_order_are_preserved() {
     for (import, export) in [(true, false), (false, true), (true, true), (false, false)] {
         let declaration = Contribution::Format(FormatContribution {
+            content: FormatContent::Document,
             id: "dev.voxelite.formats.image".into(),
             label_key: "formats.image.label".into(),
             extensions: vec!["png".into(), "apng".into()],
@@ -475,7 +477,14 @@ impl ToolCx for TestHost {
         Region::new([0; 3], [32; 3]).unwrap()
     }
 }
-impl ExportCx for TestHost {}
+impl ExportCx for TestHost {
+    fn snapshot(&self) -> &Snapshot {
+        unreachable!("type-only capability test")
+    }
+    fn render_view(&self) -> ExportResult<ExportImage> {
+        unreachable!("type-only capability test")
+    }
+}
 
 #[test]
 fn plugins_and_host_contexts_are_dyn_compatible_with_noop_lifecycle_defaults() {

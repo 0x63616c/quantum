@@ -26,7 +26,8 @@ type Selection = Result<Option<(PathBuf, SaveFormat)>>;
 struct FormatTargetIvars {
     panel: Retained<NSSavePanel>,
     content_types: Vec<Retained<UTType>>,
-    format: Cell<SaveFormat>,
+    formats: Vec<SaveFormat>,
+    index: Cell<usize>,
 }
 
 define_class!(
@@ -54,10 +55,14 @@ define_class!(
 );
 
 impl FormatTarget {
-    fn new(mtm: MainThreadMarker, panel: Retained<NSSavePanel>) -> Result<Retained<Self>> {
+    fn new(
+        mtm: MainThreadMarker,
+        panel: Retained<NSSavePanel>,
+        formats: Vec<SaveFormat>,
+    ) -> Result<Retained<Self>> {
         // Unknown extensions such as .voxl receive a dynamic UTType from macOS.
-        let content_types = SaveFormat::ALL
-            .into_iter()
+        let content_types = formats
+            .iter()
             .map(|format| {
                 UTType::typeWithFilenameExtension(&NSString::from_str(format.extension()))
                     .with_context(|| format!("No content type for {}", format.label()))
@@ -66,14 +71,15 @@ impl FormatTarget {
         let this = Self::alloc(mtm).set_ivars(FormatTargetIvars {
             panel,
             content_types,
-            format: Cell::new(SaveFormat::default()),
+            formats,
+            index: Cell::new(0),
         });
         // SAFETY: Initialize the NSObject superclass after setting Rust ivars.
         Ok(unsafe { msg_send![super(this), init] })
     }
 
     fn select_format(&self, index: usize) {
-        let Some(&format) = SaveFormat::ALL.get(index) else {
+        let Some(format) = self.ivars().formats.get(index) else {
             return;
         };
         let ivars = self.ivars();
@@ -87,13 +93,14 @@ impl FormatTarget {
         ivars
             .panel
             .setNameFieldStringValue(&NSString::from_str(&name.to_string_lossy()));
-        ivars.format.set(format);
+        ivars.index.set(index);
     }
 }
 
 pub(super) fn choose_save_path(
     directory: &Path,
     suggested: &str,
+    formats: Vec<SaveFormat>,
     cx: &gpui::App,
 ) -> oneshot::Receiver<Selection> {
     let (sender, receiver) = oneshot::channel();
@@ -103,14 +110,14 @@ pub(super) fn choose_save_path(
     // runModal's nested event loop must not re-enter a borrowed GPUI context.
     cx.foreground_executor()
         .spawn(async move {
-            let result = show_panel(&directory, &suggested).await;
+            let result = show_panel(&directory, &suggested, formats).await;
             let _ = sender.send(result);
         })
         .detach();
     receiver
 }
 
-async fn show_panel(directory: &Path, suggested: &str) -> Selection {
+async fn show_panel(directory: &Path, suggested: &str, formats: Vec<SaveFormat>) -> Selection {
     let mtm = MainThreadMarker::new().context("Save panel requires the main thread")?;
     let panel = NSSavePanel::savePanel(mtm);
     panel.setDirectoryURL(NSURL::from_directory_path(directory).as_deref());
@@ -120,22 +127,25 @@ async fn show_panel(directory: &Path, suggested: &str) -> Selection {
     panel.setCanSelectHiddenExtension(false);
     panel.setAllowsOtherFileTypes(false);
 
-    let target = FormatTarget::new(mtm, panel.clone())?;
+    let target = FormatTarget::new(mtm, panel.clone(), formats)?;
     let label = NSTextField::labelWithString(&NSString::from_str("File Format:"), mtm);
     label.sizeToFit();
     let popup =
         NSPopUpButton::initWithFrame_pullsDown(NSPopUpButton::alloc(mtm), NSRect::ZERO, false);
     popup.setAutoenablesItems(false);
-    for format in SaveFormat::ALL {
+    for format in &target.ivars().formats {
         popup.addItemWithTitle(&NSString::from_str(format.label()));
     }
     let initial_format = SaveFormat::from_extension(
+        &target.ivars().formats,
         Path::new(suggested)
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or_default(),
     );
-    let initial_index = SaveFormat::ALL
+    let initial_index = target
+        .ivars()
+        .formats
         .iter()
         .position(|format| *format == initial_format)
         .unwrap_or(0);
@@ -204,5 +214,8 @@ async fn show_panel(directory: &Path, suggested: &str) -> Selection {
         .context("Save panel did not return a file path")?;
     // Do not rewrite the confirmed path: AppKit already checked its extension
     // and obtained any necessary overwrite confirmation for exactly this URL.
-    Ok(Some((path, target.ivars().format.get())))
+    Ok(Some((
+        path,
+        target.ivars().formats[target.ivars().index.get()].clone(),
+    )))
 }

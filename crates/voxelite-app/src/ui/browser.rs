@@ -62,32 +62,30 @@ impl EditorView {
     }
     pub(super) fn export_browser(&mut self, png: bool, cx: &mut Context<Self>) {
         let result: EditorResult<()> = (|| {
-            let bytes = if png {
-                let frame = voxelite_render::render(
-                    self.editor.snapshot(),
-                    &RenderOptions {
-                        width: 1024,
-                        height: 768,
-                        view: View::Camera(self.editor.camera.camera()),
-                        background: if self.theme == Theme::Dark {
-                            [0, 0, 0, 255]
-                        } else {
-                            [255; 4]
-                        },
-                        ..Default::default()
-                    },
-                )
-                .map_err(|e| voxelite_app::editor::EditorError::Gesture(e.to_string()))?;
-                voxelite_export::png_rgba(frame.width, frame.height, &frame.rgba)
-            } else {
-                voxelite_export::glb(self.editor.snapshot())
-            }
-            .map_err(|e| voxelite_app::editor::EditorError::Gesture(e.to_string()))?;
             let (ext, mime) = if png {
                 ("png", "image/png")
             } else {
                 ("glb", "model/gltf-binary")
             };
+            let format = self.editor.export_format(ext)?;
+            let job = self.editor.prepare_export(&format.id)?;
+            let options = RenderOptions {
+                width: 1024,
+                height: 768,
+                view: View::Camera(self.editor.camera.camera()),
+                background: if self.theme == Theme::Dark {
+                    [0, 0, 0, 255]
+                } else {
+                    [255; 4]
+                },
+                ..Default::default()
+            };
+            let bytes =
+                self.editor
+                    .finish_export(job.run(&voxelite_plugin_host::SnapshotExport {
+                        snapshot: self.editor.snapshot(),
+                        options: &options,
+                    }))?;
             crate::web::download(
                 &format!("{}.{}", self.editor.snapshot().name, ext),
                 mime,

@@ -314,6 +314,16 @@ impl Op {
 /// In-window menus use the same placement on every host, including Apple browsers.
 pub static MENUS: LazyLock<Vec<(&str, Vec<Op>)>> = LazyLock::new(|| SHELL.menu_groups());
 
+/// Live items for an in-window menu; disabled plugins contribute no entries.
+pub fn menu_items(index: usize, host: &Host) -> Vec<Op> {
+    MENUS[index]
+        .1
+        .iter()
+        .copied()
+        .filter(|op| host.registry().get(op.command_id()).is_some())
+        .collect()
+}
+
 pub fn search(query: &str, tools_only: bool) -> Vec<Op> {
     search_on(query, tools_only, ShortcutPlatform::current())
 }
@@ -426,6 +436,15 @@ pub enum ClipboardOp {
 /// Build both initial and live menus from the same action list.
 pub fn menus(selected: impl Fn(Op) -> bool, enabled: impl Fn(Op) -> bool) -> Vec<Menu> {
     menus_for_platform(cfg!(target_os = "macos"), selected, enabled)
+}
+
+/// Build the editor's native menus from its currently enabled declarations.
+pub fn menus_from_host(
+    host: &Host,
+    selected: impl Fn(Op) -> bool,
+    enabled: impl Fn(Op) -> bool,
+) -> Vec<Menu> {
+    ShellCommands::from_host(host).menus(cfg!(target_os = "macos"), selected, enabled)
 }
 
 fn menus_for_platform(
@@ -574,6 +593,11 @@ mod tests {
         for (owner, command) in commands {
             let op = Op::from_command_id(&command.id).expect("command must have a dispatch Op");
             assert_eq!(op.command_id(), command.id);
+            #[cfg(target_family = "wasm")]
+            if matches!(op, Op::ExportGlb | Op::ExportPng) {
+                assert_eq!(owner.as_str(), "dev.voxelite.exporters");
+                continue;
+            }
             if op == Op::Grid {
                 // Ownership moved; the persisted shell identity did not.
                 assert_eq!(owner.as_str(), "dev.voxelite.gizmo-grid");
@@ -599,8 +623,21 @@ mod tests {
                 .filter(|(owner, _)| owner.as_str() == plugin)
                 .map(|(_, command)| Op::from_command_id(&command.id).unwrap())
                 .collect();
-            assert!(!owned.is_empty());
+            assert!(
+                !owned.is_empty()
+                    || host
+                        .registry()
+                        .formats()
+                        .any(|(owner, _)| owner.as_str() == plugin)
+            );
             host.disable(&plugin).unwrap();
+            for index in 0..MENUS.len() {
+                assert!(
+                    menu_items(index, &host)
+                        .iter()
+                        .all(|op| !owned.contains(op))
+                );
+            }
             let shell = ShellCommands::from_host(&host);
             for platform in [ShortcutPlatform::Apple, ShortcutPlatform::WindowsLinux] {
                 assert_eq!(

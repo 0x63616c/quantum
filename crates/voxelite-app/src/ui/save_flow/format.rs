@@ -1,67 +1,100 @@
-//! Formats offered by the native save flow, without platform dependencies.
+//! Core project saving plus formats declared by enabled plugins.
+use voxelite_plugin_api::FormatContribution;
+use voxelite_plugin_host::Host;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(super) enum SaveFormat {
+/// One choice in the Save/Export dialog.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum SaveFormat {
+    /// Native persistence is always available, independent of plugins.
     #[default]
     Project,
-    Glb,
-    Png,
+    /// Metadata captured from the enabled registry when the dialog opens.
+    Export(FormatContribution),
 }
 
 impl SaveFormat {
-    pub(super) const ALL: [Self; 3] = [Self::Project, Self::Glb, Self::Png];
+    /// Current choices in registry order, with native project saving first.
+    pub fn available(host: &Host) -> Vec<Self> {
+        std::iter::once(Self::Project)
+            .chain(
+                host.registry()
+                    .formats()
+                    .filter(|(_, format)| {
+                        format.export
+                            && format.content == voxelite_plugin_api::FormatContent::Document
+                            && !format.extensions.is_empty()
+                    })
+                    .map(|(_, format)| Self::Export(format.clone())),
+            )
+            .collect()
+    }
 
-    pub(super) fn extension(self) -> &'static str {
+    /// Preferred extension without the leading dot.
+    pub fn extension(&self) -> &str {
         match self {
             Self::Project => "voxl",
-            Self::Glb => "glb",
-            Self::Png => "png",
+            Self::Export(format) => &format.extensions[0],
         }
     }
 
-    pub(super) fn label(self) -> &'static str {
+    /// Display label supplied by the format's owner.
+    pub fn label(&self) -> &str {
         match self {
             Self::Project => "Voxelite Project (.voxl)",
-            Self::Glb => "glTF Binary (.glb)",
-            Self::Png => "PNG Image (.png)",
+            Self::Export(format) => &format.label_key,
         }
     }
 
-    pub(super) fn from_extension(extension: &str) -> Self {
-        Self::ALL
-            .into_iter()
-            .find(|format| extension.eq_ignore_ascii_case(format.extension()))
+    /// Match only offered extensions, preserving native saving as the fallback.
+    pub fn from_extension(formats: &[Self], extension: &str) -> Self {
+        formats
+            .iter()
+            .find(|format| match format {
+                Self::Project => extension.eq_ignore_ascii_case("voxl"),
+                Self::Export(format) => format
+                    .extensions
+                    .iter()
+                    .any(|ext| extension.eq_ignore_ascii_case(ext)),
+            })
+            .cloned()
             .unwrap_or_default()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::SaveFormat;
+    use super::*;
 
     #[test]
-    fn supported_formats_have_labels_and_case_insensitive_extensions() {
-        for (format, extension, label) in [
-            (SaveFormat::Project, "voxl", "Voxelite Project (.voxl)"),
-            (SaveFormat::Glb, "glb", "glTF Binary (.glb)"),
-            (SaveFormat::Png, "png", "PNG Image (.png)"),
-        ] {
-            assert_eq!(format.extension(), extension);
-            assert_eq!(format.label(), label);
-            assert_eq!(SaveFormat::from_extension(extension), format);
+    fn formats_follow_enabled_registry_and_project_save_survives_disable() {
+        let mut host = crate::app_host();
+        let formats = SaveFormat::available(&host);
+        assert_eq!(
+            formats
+                .iter()
+                .map(|f| (f.extension(), f.label()))
+                .collect::<Vec<_>>(),
+            [
+                ("voxl", "Voxelite Project (.voxl)"),
+                ("glb", "glTF Binary (.glb)"),
+                ("png", "PNG Image (.png)"),
+            ]
+        );
+        for format in &formats {
             assert_eq!(
-                SaveFormat::from_extension(&extension.to_uppercase()),
-                format
+                SaveFormat::from_extension(&formats, &format.extension().to_uppercase()),
+                *format
             );
         }
-    }
-
-    #[test]
-    fn missing_or_unknown_extension_defaults_to_project() {
-        assert_eq!(SaveFormat::default(), SaveFormat::Project);
-        assert_eq!(SaveFormat::ALL[0], SaveFormat::Project);
         for extension in ["", "json", "jpeg", "gltf"] {
-            assert_eq!(SaveFormat::from_extension(extension), SaveFormat::Project);
+            assert_eq!(
+                SaveFormat::from_extension(&formats, extension),
+                SaveFormat::Project
+            );
         }
+        host.disable("dev.voxelite.exporters").unwrap();
+        assert_eq!(SaveFormat::available(&host), [SaveFormat::Project]);
+        host.enable("dev.voxelite.exporters").unwrap();
+        assert_eq!(SaveFormat::available(&host), formats);
     }
 }

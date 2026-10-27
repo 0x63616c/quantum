@@ -819,10 +819,15 @@ impl EditorView {
             return;
         }
         if let Some(menu) = self.menu {
-            let items = &MENUS[menu].1;
+            let items = crate::actions::menu_items(menu, &self.editor.plugin_host());
+            self.menu_index = self.menu_index.min(items.len().saturating_sub(1));
             match key {
-                "down" => self.menu_index = (self.menu_index + 1) % items.len(),
-                "up" => self.menu_index = (self.menu_index + items.len() - 1) % items.len(),
+                "down" if !items.is_empty() => {
+                    self.menu_index = (self.menu_index + 1) % items.len()
+                }
+                "up" if !items.is_empty() => {
+                    self.menu_index = (self.menu_index + items.len() - 1) % items.len()
+                }
                 "right" => {
                     self.menu = Some((menu + 1) % MENUS.len());
                     self.menu_index = 0;
@@ -831,7 +836,7 @@ impl EditorView {
                     self.menu = Some((menu + MENUS.len() - 1) % MENUS.len());
                     self.menu_index = 0;
                 }
-                "enter" => self.invoke(items[self.menu_index], window, cx),
+                "enter" if !items.is_empty() => self.invoke(items[self.menu_index], window, cx),
                 _ => {}
             }
             cx.stop_propagation();
@@ -2291,8 +2296,7 @@ impl EditorView {
                 .left(px(left))
                 .child(
                     self.floating().w(px(310.0)).children(
-                        MENUS[i]
-                            .1
+                        crate::actions::menu_items(i, &self.editor.plugin_host())
                             .iter()
                             .enumerate()
                             .map(|(j, op)| self.action_row(*op, j, j == self.menu_index, cx)),
@@ -2353,7 +2357,8 @@ impl Render for EditorView {
             self.last_edited = Some(edited);
         }
         if cfg!(target_os = "macos") && window.is_window_active() {
-            cx.set_menus(crate::actions::menus(
+            cx.set_menus(crate::actions::menus_from_host(
+                &self.editor.plugin_host(),
                 |op| self.selected(op),
                 |op| self.enabled(op),
             ));

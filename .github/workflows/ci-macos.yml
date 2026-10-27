@@ -42,7 +42,7 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --locked -- -D warnings
       - name: Test workspace
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --locked --no-fail-fast
       - name: Build app and unsigned DMG
         run: scripts/package-macos.sh
       - name: Upload unsigned DMG

@@ -64,28 +64,6 @@ impl Plugin for CorePlugin {
                 30,
                 None,
             ),
-            #[cfg(target_family = "wasm")]
-            (
-                "dev.voxelite.core.export_glb",
-                "Export GLB…",
-                None,
-                None,
-                "download",
-                "File",
-                40,
-                None,
-            ),
-            #[cfg(target_family = "wasm")]
-            (
-                "dev.voxelite.core.export_png",
-                "Export PNG…",
-                None,
-                None,
-                "download",
-                "File",
-                50,
-                None,
-            ),
             (
                 "dev.voxelite.core.quit",
                 "Quit Voxelite",
@@ -312,6 +290,7 @@ pub fn app_host() -> voxelite_plugin_host::Host {
         Box::new(voxelite_plugin_palette::PalettePlugin),
         Box::new(voxelite_plugin_comments::CommentsPlugin),
         Box::new(voxelite_plugin_agent::AgentPlugin),
+        Box::new(voxelite_plugin_exporters::ExportersPlugin),
     ])
 }
 
@@ -371,7 +350,8 @@ mod tests {
                 "dev.voxelite.gizmo-grid",
                 "dev.voxelite.palette",
                 "dev.voxelite.comments",
-                "dev.voxelite.agent"
+                "dev.voxelite.agent",
+                "dev.voxelite.exporters"
             ]
         );
         assert!(host.conflicts().is_empty());

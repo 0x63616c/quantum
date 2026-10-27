@@ -1,3 +1,7 @@
+#[path = "export.rs"]
+mod export;
+pub use export::{ExportCompletion, ExportJob, SnapshotExport};
+
 use std::{
     any::Any,
     collections::{BTreeMap, BTreeSet},
@@ -77,6 +81,8 @@ pub enum Phase {
     CommandTransform,
     /// Binding, drawing or interacting with a portable overlay.
     Overlay,
+    /// Binding or invoking a read-only exporter.
+    Export,
 }
 
 impl Phase {
@@ -88,6 +94,7 @@ impl Phase {
             Self::Tool => "tool",
             Self::CommandTransform => "command_transform",
             Self::Overlay => "overlay",
+            Self::Export => "export",
         }
     }
 }
@@ -163,6 +170,12 @@ pub enum RegistrationError {
 /// A runtime lifecycle, setting, tool or command transform request failed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
+    /// Export encoding failed without changing the document.
+    #[error("export failed: {message}")]
+    Export {
+        /// Encoder error or unavailable format detail.
+        message: String,
+    },
     /// A runtime setting value does not match its declared schema.
     #[error("invalid value for plugin setting {key:?}")]
     InvalidSetting {
@@ -286,6 +299,7 @@ pub(crate) struct HostedPlugin {
 /// after successful activation. Conflicts block the whole candidate plugin.
 #[derive(Default)]
 pub struct Host {
+    export_authority: std::sync::Arc<()>,
     plugins: Vec<HostedPlugin>,
     events: Vec<HostEvent>,
     timings: Timings,

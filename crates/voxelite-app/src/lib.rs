@@ -11,6 +11,8 @@ pub mod palettes;
 #[cfg(not(target_family = "wasm"))]
 mod persistence;
 pub mod preferences;
+#[path = "ui/save_flow/format.rs"]
+pub mod save_format;
 
 #[cfg(all(feature = "web", target_family = "wasm"))]
 extern crate self as voxelite_app;
