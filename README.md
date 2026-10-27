@@ -93,7 +93,8 @@ Manual checks are available from the application menu and Settings → Updates.
 Unbundled `cargo run` builds do not have the bundled updater available.
 
 Use the [browser editor](https://voxelite.worldwidewebb.co/app/) without installing
-the app. The published documentation is generated under [site/docs](site/docs/).
+the app. The [published documentation](https://voxelite.worldwidewebb.co/docs/)
+is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
 [the site generator](crates/voxelite-site/src/main.rs).
 
@@ -168,6 +169,8 @@ python3 -m http.server 8090 --directory site --bind 127.0.0.1
 The full site build includes the wasm editor. Once a verified `web/dist/` exists,
 `scripts/build-site.sh --skip-web` reuses it for documentation-only iteration.
 These scripts build locally; they do not deploy. See [site/README.md](site/README.md).
+Generated site output is ignored by Git. CI builds it on PRs and `main`, and
+publishes trusted `main` builds to `site-dist`; commit the sources, not the output.
 
 ### MCP and live synchronization
 
@@ -232,7 +235,7 @@ only a container.
 | [integrations/](integrations/) | Generated MCP configuration examples for supported agent hosts. |
 | [packaging/](packaging/) | macOS bundle metadata, icon, entitlements, public update key and release-note base. |
 | [scripts/](scripts/) | Build, packaging, release, validation and capture scripts, plus Python tests. |
-| [site/](site/) | Authored article fragments/assets and generated public website/docs. |
+| [site/](site/) | Tracked article fragments/assets and ignored website/docs build output. |
 | [skills/](skills/) | Portable agent workflows for modeling, palettes, primitives and render review. |
 | [spec/](spec/) | `.voxl` and MCP contracts and compatibility fixtures. |
 | [vendor/](vendor/) | Pinned GPUI Apple surface-lifetime patch and its upstream notices. |
@@ -363,17 +366,22 @@ rows, run spread and load in performance PRs.
 
 ### Site checks
 
-After building the site and browser bundle:
+Generator tests build into temporary directories and need no local site bundle:
 
 ```sh
 cargo test --locked -p voxelite-site
+```
+
+After building the site and browser bundle:
+
+```sh
 python3 scripts/check-site.py
 python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
 ```
 
-The site checker expects generated `site/app/` files. It validates links,
-Markdown exports, discovery metadata and source parity. With a local site server
-and Playwright installed, browser checks are available through
+The site checker expects the complete generated site, including `site/app/`.
+It validates links, Markdown exports, discovery metadata and source parity.
+With a local site server and Playwright installed, browser checks are available through
 `node scripts/check-site-install.mjs` and
 `node scripts/capture-site.mjs screenshots/site/final`; follow
 [the site guide](site/README.md) for setup. The web editor has its own

@@ -2,11 +2,11 @@
 use serde_json::{Value, json};
 use voxelite_mcp::VoxeliteServer;
 
-#[test]
-fn published_docs_match_a_fresh_build() {
+fn generated_site() -> tempfile::TempDir {
     let output = tempfile::tempdir().unwrap();
     let result = std::process::Command::new(env!("CARGO_BIN_EXE_voxelite-site"))
         .arg(output.path())
+        .current_dir(output.path())
         .output()
         .unwrap();
     assert!(
@@ -14,30 +14,42 @@ fn published_docs_match_a_fresh_build() {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    let published = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site");
-    let mut directories = vec![output.path().to_owned()];
-    while let Some(directory) = directories.pop() {
-        for entry in std::fs::read_dir(directory).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                directories.push(path);
-            } else {
-                let relative = path.strip_prefix(output.path()).unwrap();
-                assert!(
-                    std::fs::read(&path).unwrap()
-                        == std::fs::read(published.join(relative)).unwrap(),
-                    "Stale generated page: {}. Run scripts/build-site.sh --skip-web",
-                    relative.display()
-                );
-            }
-        }
+    output
+}
+
+#[test]
+fn generated_docs_have_matching_markdown_exports_and_live_catalog() {
+    let output = generated_site();
+    let read = |path: &str| std::fs::read_to_string(output.path().join(path)).unwrap();
+    let index = read("llms.txt");
+    let full = read("llms-full.txt");
+    for slug in ["", "getting-started", "mcp", "format", "skills", "plugins"] {
+        let path = if slug.is_empty() {
+            "docs".to_owned()
+        } else {
+            format!("docs/{slug}")
+        };
+        let markdown = read(&format!("{path}.md"));
+        assert!(markdown.starts_with("# "));
+        assert_eq!(markdown, read(&format!("{path}/index.md")));
+        assert!(read(&format!("{path}/index.html")).contains(&format!(
+            "rel=\"alternate\" type=\"text/markdown\" href=\"/{path}.md\""
+        )));
+        let url = format!("https://voxelite.worldwidewebb.co/{path}.md");
+        assert!(index.contains(&format!("]({url}): ")));
+        assert!(full.contains(&format!("Source: [{url}]({url})\n\n{markdown}")));
     }
+    let catalog: Value = serde_json::from_str(&read("assets/mcp-tools.json")).unwrap();
+    assert_eq!(
+        catalog,
+        serde_json::to_value(VoxeliteServer::tools()).unwrap()
+    );
 }
 
 #[test]
 fn plugins_are_discoverable_in_navigation_and_machine_readable_docs() {
-    let published = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site");
-    let read = |path: &str| std::fs::read_to_string(published.join(path)).unwrap();
+    let output = generated_site();
+    let read = |path: &str| std::fs::read_to_string(output.path().join(path)).unwrap();
     for path in ["index.html", "download/index.html", "docs/index.html"] {
         let html = read(path);
         let navigation = html
