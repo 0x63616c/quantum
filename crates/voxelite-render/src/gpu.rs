@@ -2,14 +2,23 @@
 //! four-sample MSAA and shader outlines. CPU rendering remains for exports.
 //!
 //! Presentation stays on the GPU: IOSurface planes consumed by GPUI on macOS.
+use crate::OccupancyCache;
 use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
 use crate::{Camera, ChunkMeshes, MeshVertex, Occupancy, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
+use std::time::Instant;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
 };
-use voxelite_core::Pos;
+use voxelite_core::{Pos, Snapshot};
+
+mod headless;
+mod stats;
+pub use headless::{AdapterInfo, Headless, HeadlessFrame, HeadlessOptions};
+pub use stats::{FrameStats, GpuTimes, ShadowPath};
+use stats::{GpuTimer, elapsed_ms};
+pub use wgpu::Backends;
 use wgpu::util::DeviceExt;
 
 #[cfg(target_os = "macos")]
@@ -59,6 +68,7 @@ struct Target {
     view: wgpu::TextureView,
 }
 struct Targets {
+    copy_src: bool,
     size: [u32; 2],
     color_ms: Target,
     geometry_ms: Target,
@@ -86,10 +96,21 @@ struct Viewport {
     resolve_pipeline: wgpu::RenderPipeline,
     resolve_layout: wgpu::BindGroupLayout,
     targets: Option<Targets>,
+    stats: Option<FrameStats>,
+    timer: Option<GpuTimer>,
+    capture: bool,
 }
 impl Viewport {
     /// Initialize portable GPU resources; Metal presentation lives in mac.rs.
+    #[cfg(target_os = "macos")]
     async fn new(adapter: &wgpu::Adapter) -> RenderResult<Self> {
+        Self::with_options(adapter, false, false).await
+    }
+    async fn with_options(
+        adapter: &wgpu::Adapter,
+        collect: bool,
+        profile: bool,
+    ) -> RenderResult<Self> {
         // These formats/sample counts are required for every frame; never silently
         // lower resolution, disable AO/shadows, or drop AA during interaction.
         for format in [
@@ -105,9 +126,15 @@ impl Viewport {
                 return Err(error(format!("{format:?} lacks 4x MSAA")));
             }
         }
+        let timed = profile && adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("Voxelite viewport"),
+                required_features: if timed {
+                    wgpu::Features::TIMESTAMP_QUERY
+                } else {
+                    wgpu::Features::empty()
+                },
                 required_limits: wgpu::Limits::default()
                     .using_resolution(adapter.limits())
                     .using_alignment(adapter.limits()),
@@ -219,6 +246,7 @@ impl Viewport {
         if let Some(e) = scope.pop().await {
             return Err(error(e));
         }
+        let timer = timed.then(|| GpuTimer::new(&device, &queue));
         Ok(Self {
             device,
             errors,
@@ -235,9 +263,13 @@ impl Viewport {
             resolve_pipeline,
             resolve_layout,
             targets: None,
+            stats: collect.then(FrameStats::default),
+            timer,
+            capture: false,
         })
     }
     /// Check asynchronous validation/device-loss errors even while the view is idle.
+    #[cfg(target_os = "macos")]
     fn check_health(&self) -> RenderResult<()> {
         self.device.poll(wgpu::PollType::Poll).map_err(error)?;
         self.check_error()
@@ -262,6 +294,10 @@ impl Viewport {
     ) -> RenderResult<EncodedFrame> {
         self.check_error()?;
         camera.validate()?;
+        if let Some(stats) = &mut self.stats {
+            *stats = FrameStats::default();
+        }
+        let upload_start = self.stats.as_ref().map(|_| Instant::now());
         let bounds = occupancy.bounds();
         if self.fallback.is_none()
             && let Err(reason) = self.upload_occupancy(occupancy).await
@@ -271,14 +307,22 @@ impl Viewport {
             self.occupancy = None;
             self.fallback = Some(ShadowFallback::new(&self.device, &self.global_layout));
         }
+        if let Some(stats) = &mut self.stats {
+            stats.occupancy_upload_ms = elapsed_ms(upload_start);
+            stats.occupancy_bytes = self.occupancy.as_ref().map_or(0, |b| b.size());
+        }
         // Render the scene at 2x *device* dimensions, then chroma subsample.
         // Budget the actual MSAA/resolve/pool allocations, never silently reduce
         // moving-frame quality. Oversized viewports use the software fallback.
         let size = super::surface_size(size, self.device.limits().max_texture_dimension_2d)?;
+        let mesh_start = self.stats.as_ref().map(|_| Instant::now());
         {
             for &at in updates {
                 if let Some(mesh) = mesh.meshes.get(&at) {
                     let data = bytemuck::cast_slice(&mesh.vertices);
+                    if let Some(stats) = &mut self.stats {
+                        stats.upload_bytes += data.len() as u64;
+                    }
                     if let Some(old) = self
                         .buffers
                         .get_mut(&at)
@@ -307,10 +351,24 @@ impl Viewport {
                 }
             }
         }
-        if self.targets.as_ref().is_none_or(|t| t.size != size) {
+        if let Some(stats) = &mut self.stats {
+            stats.mesh_upload_ms = elapsed_ms(mesh_start);
+            stats.chunks_updated = updates.len() as u32;
+        }
+        let encode_start = self.stats.as_ref().map(|_| Instant::now());
+        if self
+            .targets
+            .as_ref()
+            .is_none_or(|t| t.size != size || t.copy_src != self.capture)
+        {
             self.targets = None; // Retire the old allocation before creating its replacement.
             self.device.poll(wgpu::PollType::Poll).map_err(error)?;
-            self.targets = Some(Targets::new(&self.device, &self.resolve_layout, size));
+            self.targets = Some(Targets::new(
+                &self.device,
+                &self.resolve_layout,
+                size,
+                self.capture,
+            ));
         }
         let target = self.targets.as_ref().unwrap();
         let eye = Vec3::from_array(camera.eye.map(|v| v as f32));
@@ -379,6 +437,7 @@ impl Viewport {
             let fallback = self.fallback.as_ref().unwrap();
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("fallback voxel shadow"),
+                timestamp_writes: self.timer.as_ref().map(|t| t.writes(0, 1)),
                 color_attachments: &[],
                 depth_stencil_attachment: Some(depth_attachment(&fallback.shadow.view)),
                 ..Default::default()
@@ -393,6 +452,7 @@ impl Viewport {
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("voxel MSAA"),
+                timestamp_writes: self.timer.as_ref().map(|t| t.writes(2, 3)),
                 color_attachments: &[
                     Some(color_attachment(
                         &target.color_ms.view,
@@ -421,6 +481,7 @@ impl Viewport {
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("voxel sRGB resolve"),
+                timestamp_writes: self.timer.as_ref().map(|t| t.writes(4, 5)),
                 color_attachments: &[Some(color_attachment(&target.output.view, None))],
                 ..Default::default()
             });
@@ -428,6 +489,25 @@ impl Viewport {
             pass.set_bind_group(0, &self.globals, &[]);
             pass.set_bind_group(1, &target.resolve, &[]);
             pass.draw(0..3, 0..1);
+        }
+        if let Some(stats) = &mut self.stats {
+            stats.draw_calls = self.buffers.len() as u32;
+            stats.shadow_draw_calls = if redraw_shadow { stats.draw_calls } else { 0 };
+            stats.vertices = self.buffers.values().map(|c| u64::from(c.vertices)).sum();
+            stats.triangles = stats.vertices / 3;
+            stats.vertex_bytes = self.buffers.values().map(|c| c.buffer.size()).sum();
+            stats.target_size = size;
+            stats.shadow_path = if self.fallback.is_some() {
+                ShadowPath::Fallback
+            } else {
+                ShadowPath::Exact
+            };
+            stats.target_bytes = stats::target_bytes(size, self.fallback.is_some());
+            stats.upload_bytes += std::mem::size_of::<Globals>() as u64;
+            stats.encode_ms = elapsed_ms(encode_start);
+        }
+        if let Some(timer) = &mut self.timer {
+            timer.resolve(&mut encoder, redraw_shadow);
         }
         Ok(EncodedFrame {
             encoder,
@@ -479,6 +559,9 @@ impl Viewport {
             }));
         }
         for range in ranges {
+            if let Some(stats) = &mut self.stats {
+                stats.upload_bytes += (range.len() * 4) as u64;
+            }
             self.queue.write_buffer(
                 self.occupancy.as_ref().unwrap(),
                 (range.start * 4) as u64,
@@ -641,7 +724,12 @@ fn target(
     Target { view }
 }
 impl Targets {
-    fn new(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, size: [u32; 2]) -> Self {
+    fn new(
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        size: [u32; 2],
+        copy_src: bool,
+    ) -> Self {
         let color_ms = target(
             device,
             size,
@@ -687,7 +775,12 @@ impl Targets {
             size,
             wgpu::TextureFormat::Rgba8Unorm,
             1,
-            wgpu::TextureUsages::TEXTURE_BINDING,
+            wgpu::TextureUsages::TEXTURE_BINDING
+                | if copy_src {
+                    wgpu::TextureUsages::COPY_SRC
+                } else {
+                    wgpu::TextureUsages::empty()
+                },
             "sRGB viewport",
         );
         let resolve = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -705,6 +798,7 @@ impl Targets {
             ],
         });
         Self {
+            copy_src,
             size,
             color_ms,
             geometry_ms,
@@ -808,6 +902,29 @@ fn pipeline(
         multiview_mask: None,
         cache: None,
     })
+}
+
+/// The worker and headless path must invalidate precisely the same caches.
+fn sync_snapshot(
+    occupancy: &mut OccupancyCache,
+    mesh: &mut ChunkMeshes,
+    snapshot: Option<Snapshot>,
+    mut stats: Option<&mut FrameStats>,
+) -> RenderResult<Vec<Pos>> {
+    let Some(snapshot) = snapshot else {
+        return Ok(Vec::new());
+    };
+    let started = stats.as_ref().map(|_| Instant::now());
+    occupancy.sync(&snapshot)?;
+    if let Some(stats) = stats.as_mut() {
+        stats.occupancy_sync_ms = elapsed_ms(started);
+    }
+    let started = stats.as_ref().map(|_| Instant::now());
+    let updates = mesh.sync_validated(&snapshot)?;
+    if let Some(stats) = stats {
+        stats.mesh_sync_ms = elapsed_ms(started);
+    }
+    Ok(updates)
 }
 
 #[cfg(test)]

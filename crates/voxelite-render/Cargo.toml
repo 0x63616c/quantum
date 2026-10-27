@@ -24,6 +24,8 @@ workspace = true
 proptest.workspace = true
 
 [features]
+# Additive backend for the portable harness; production Metal devices are unchanged.
+headless-vulkan = ["gpu", "wgpu/vulkan"]
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:objc2-core-foundation", "dep:objc2-core-video", "dep:objc2-metal", "dep:futures-timer", "dep:objc2-io-surface", "dep:objc2", "dep:pollster", "dep:futures-channel"]
 
 [dependencies.wgpu]
