@@ -67,7 +67,7 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
             }
             "--help" | "-h" => {
                 println!(
-                    "Voxelite native voxel editor\n\nvoxelite [project.voxl] [--example] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the welcome window.\n--example opens the bundled autumn-workshop diorama for exploration and captures.\n--viewport-png without a path renders that diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
+                    "Quantum native voxel editor\n\nvoxelite [project.voxl] [--example] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the welcome window.\n--example opens the bundled autumn-workshop diorama for exploration and captures.\n--viewport-png without a path renders that diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
                 );
                 std::process::exit(0);
             }
@@ -95,6 +95,7 @@ fn main() -> anyhow::Result<()> {
         let format = editor.export_format("png")?;
         let job = editor.prepare_export(&format.id)?;
         let options = voxelite_render::RenderOptions {
+            passes: editor.render_plan(),
             width: 1024,
             height: 900,
             background: if options.theme == Some(Theme::Light) {
@@ -137,7 +138,7 @@ fn main() -> anyhow::Result<()> {
                 ui::welcome::show(cx).map(|_| ())
             };
             if let Err(error) = result {
-                eprintln!("Cannot open Voxelite: {error}");
+                eprintln!("Cannot open Quantum: {error}");
                 cx.quit();
             }
             cx.on_window_closed(|cx, _| {

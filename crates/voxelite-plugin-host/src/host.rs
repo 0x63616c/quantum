@@ -7,6 +7,8 @@ pub use export::{ExportCompletion, ExportJob, SnapshotExport};
 mod data;
 #[path = "palette.rs"]
 mod palette;
+#[path = "pass.rs"]
+mod pass;
 
 use std::{
     any::Any,
@@ -89,6 +91,8 @@ pub enum Phase {
     CommandTransform,
     /// Binding, drawing or interacting with a portable overlay.
     Overlay,
+    /// Binding or describing a renderer-owned pass through scoped capabilities.
+    RenderPass,
     /// Binding or invoking a read-only exporter.
     Export,
     /// Binding, viewing or interacting with a portable palette panel.
@@ -107,6 +111,7 @@ impl Phase {
             Self::Tool => "tool",
             Self::CommandTransform => "command_transform",
             Self::Overlay => "overlay",
+            Self::RenderPass => "render_pass",
             Self::Export => "export",
             Self::Palette => "palette",
             Self::Comments => "comments",
@@ -354,11 +359,12 @@ impl Host {
         source: &dyn OverlayCx,
         hovered: Option<(&str, u32)>,
     ) -> Vec<OverlayFrame> {
-        let passes: Vec<_> = self
+        let mut passes: Vec<_> = self
             .registry()
             .render_passes()
             .map(|(_, pass)| pass.clone())
             .collect();
+        passes.sort_by_key(|pass| pass.slot);
         let mut frames = Vec::new();
         for pass in passes {
             let Some(index) = self.overlay_owner(&pass.id) else {

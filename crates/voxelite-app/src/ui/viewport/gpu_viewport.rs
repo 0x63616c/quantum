@@ -137,6 +137,7 @@ impl EditorView {
             })
             .into();
         let style = voxelite_render::gpu::Style {
+            lighting: identity.lighting,
             background: [background, background, background, 1.],
             outline: RenderOptions::default().outline,
             ambient_occlusion_strength: self.viewport.ambient_occlusion_strength,

@@ -10,6 +10,7 @@ pub fn register_all(host: &mut Host) {
         Box::new(voxelite_plugin_tools::ToolsPlugin),
         Box::new(voxelite_plugin_mirror::MirrorPlugin),
         Box::new(voxelite_plugin_gizmo_grid::GizmoGridPlugin),
+        Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
         Box::new(voxelite_plugin_palette::PalettePlugin),
         Box::new(voxelite_plugin_comments::CommentsPlugin),
         Box::new(voxelite_plugin_agent::AgentPlugin),
@@ -24,5 +25,6 @@ pub fn mcp_host() -> Host {
         Box::new(voxelite_plugin_exporters::ExportersPlugin),
         Box::new(voxelite_plugin_palette::PalettePlugin),
         Box::new(voxelite_plugin_comments::CommentsPlugin),
+        Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
     ])
 }

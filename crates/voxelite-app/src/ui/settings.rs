@@ -139,7 +139,7 @@ impl Section {
                     "Animate camera",
                     "preset programmatic view transitions reduce motion",
                 ),
-                ("Voxelite", "about installed version workspace voxels"),
+                ("Quantum", "about installed version workspace voxels"),
             ],
             Self::Appearance => &[("Appearance", "theme system device light dark color")],
             Self::Viewport => &[
@@ -175,7 +175,7 @@ impl Section {
                 "open connection manage assistant attached project mcp session",
             )],
             Self::Updates => &[
-                ("Installed version", "Voxelite version release"),
+                ("Installed version", "Quantum version release"),
                 #[cfg(not(target_family = "wasm"))]
                 (
                     "Software updates",
@@ -554,7 +554,7 @@ impl SettingsView {
                         t,
                     ),
                     self.form_row(
-                        "Voxelite",
+                        "Quantum",
                         "A voxel workspace by Calum",
                         mono(format!("v{}", env!("CARGO_PKG_VERSION"))),
                         t,
@@ -778,7 +778,7 @@ impl SettingsView {
             Section::Updates => {
                 let mut rows = vec![self.form_row(
                     "Installed version",
-                    "Voxelite",
+                    "Quantum",
                     mono(env!("CARGO_PKG_VERSION")),
                     t,
                 )];
@@ -789,7 +789,7 @@ impl SettingsView {
                     self.form_row(
                         "Software updates",
                         if updates_available {
-                            "Check for the latest version of Voxelite."
+                            "Check for the latest version of Quantum."
                         } else {
                             "Updates are unavailable in this build."
                         },
@@ -1068,7 +1068,7 @@ impl Render for SettingsView {
                             .min_w(px(space::NONE))
                             .text_size(px(type_size::WINDOW_TITLE))
                             .font_weight(FontWeight::BOLD)
-                            .child("Voxelite Settings"),
+                            .child("Quantum Settings"),
                     )
                     .child(div().flex_1())
                     .child(
@@ -1222,7 +1222,7 @@ impl EditorView {
                             px(metrics::SETTINGS_MIN_HEIGHT),
                         )),
                         titlebar: Some(TitlebarOptions {
-                            title: Some("Voxelite Settings".into()),
+                            title: Some("Quantum Settings".into()),
                             appears_transparent: true,
                             traffic_light_position: Some(point(
                                 px(space::SECTION),

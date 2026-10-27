@@ -70,6 +70,7 @@ impl EditorView {
             let format = self.editor.export_format(ext)?;
             let job = self.editor.prepare_export(&format.id)?;
             let options = RenderOptions {
+                passes: self.editor.render_plan(),
                 width: 1024,
                 height: 768,
                 view: View::Camera(self.editor.camera.camera()),

@@ -19,6 +19,8 @@ mod comments_tests;
 mod data_tests;
 #[path = "palette_tests.rs"]
 mod palette_tests;
+#[path = "pass_tests.rs"]
+mod pass_tests;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Hook {
@@ -671,6 +673,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Tool => "tool",
                         Phase::CommandTransform => "command_transform",
                         Phase::Overlay => "overlay",
+                        Phase::RenderPass => "render_pass",
                         Phase::Export => "export",
                         Phase::Palette => "palette",
                         Phase::Comments => "comments",

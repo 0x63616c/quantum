@@ -644,6 +644,7 @@ mod tests {
                 let mut occupancy = Occupancy::new(bounds).unwrap();
                 let mesh = ChunkMeshes::default();
                 let style = Style {
+                    lighting: crate::Lighting::Exact,
                     background: [1., 0., 0., 1.],
                     outline: false,
                     ambient_occlusion_strength: Default::default(),

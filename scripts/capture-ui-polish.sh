@@ -123,7 +123,7 @@ shot acknowledgements || true
 xdotool key --clearmodifiers Escape ctrl+comma
 settings=''
 for attempt in {1..50}; do
-  settings="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Voxelite Settings' 2>/dev/null | head -1 || true)"
+  settings="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Quantum Settings' 2>/dev/null | head -1 || true)"
   [[ -n "$settings" ]] && break
   sleep 0.2
 done

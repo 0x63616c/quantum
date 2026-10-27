@@ -38,6 +38,7 @@ mod tests {
                 .content;
                 let camera = Camera::fit(&snapshot, crate::PresetView::Iso, 1.0, false).unwrap();
                 let style = Style {
+                    lighting: crate::Lighting::Exact,
                     background: [0., 0., 0., 1.],
                     outline: false,
                     ambient_occlusion_strength: Default::default(),

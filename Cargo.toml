@@ -17,6 +17,7 @@ voxelite-mesh = { path = "crates/voxelite-mesh" }
 voxelite-plugin-api = { path = "crates/voxelite-plugin-api" }
 voxelite-plugin-host = { path = "crates/voxelite-plugin-host" }
 voxelite-render = { path = "crates/voxelite-render" }
+voxelite-render-plan = { path = "crates/voxelite-render-plan" }
 voxelite-mcp = { path = "crates/voxelite-mcp", default-features = false }
 voxelite-plugins-builtin = { path = "crates/voxelite-plugins-builtin" }
 voxelite-ui = { path = "crates/voxelite-ui" }
@@ -26,6 +27,7 @@ voxelite-plugin-exporters = { path = "crates/plugins/voxelite-plugin-exporters" 
 voxelite-plugin-gizmo-grid = { path = "crates/plugins/voxelite-plugin-gizmo-grid" }
 voxelite-plugin-mirror = { path = "crates/plugins/voxelite-plugin-mirror" }
 voxelite-plugin-palette = { path = "crates/plugins/voxelite-plugin-palette" }
+voxelite-plugin-shadows-lighting = { path = "crates/plugins/voxelite-plugin-shadows-lighting" }
 voxelite-plugin-tools = { path = "crates/plugins/voxelite-plugin-tools" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["raw_value"] }

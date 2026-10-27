@@ -83,3 +83,5 @@ features = ["gpu"]
 
 [dev-dependencies]
 voxelite-plugin-tools.workspace = true
+voxelite-plugin-exporters.workspace = true
+voxelite-plugin-shadows-lighting.workspace = true
