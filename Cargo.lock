@@ -5949,7 +5949,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "voxelite-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "block2 0.6.2",
@@ -5994,7 +5994,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-bench"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "png 0.18.1",
  "serde",
@@ -6006,7 +6006,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "serde",
@@ -6018,7 +6018,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-export"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gltf",
  "png 0.18.1",
@@ -6033,7 +6033,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-format"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "serde",
@@ -6046,7 +6046,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-mcp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "jsonschema",
@@ -6069,7 +6069,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-mesh"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "glam",
  "proptest",
@@ -6079,7 +6079,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-agent"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6087,7 +6087,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-api"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "semver",
  "serde",
@@ -6099,7 +6099,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-comments"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6107,7 +6107,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-example"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6115,7 +6115,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-exporters"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde_json",
  "voxelite-plugin-api",
@@ -6125,7 +6125,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-gizmo-grid"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6133,7 +6133,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-host"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "thiserror 2.0.21",
  "voxelite-core",
@@ -6143,7 +6143,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-mirror"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6151,7 +6151,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-palette"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6159,7 +6159,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-plugin-tools"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
@@ -6167,7 +6167,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-render"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bytemuck",
  "futures-channel",
@@ -6190,7 +6190,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-site"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "htmd",
@@ -6207,7 +6207,7 @@ dependencies = [
 
 [[package]]
 name = "voxelite-ui"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gpui-unofficial",
 ]
@@ -7287,7 +7287,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "y4m"
