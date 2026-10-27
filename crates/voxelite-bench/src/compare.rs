@@ -12,6 +12,8 @@ pub struct Tolerances {
     pub wall_ms: f64,
     pub gpu_pct: f64,
     pub memory_pct: f64,
+    pub rss_pct: f64,
+    pub rss_mb: f64,
 }
 impl From<&Options> for Tolerances {
     fn from(o: &Options) -> Self {
@@ -20,6 +22,8 @@ impl From<&Options> for Tolerances {
             wall_ms: o.wall_ms,
             gpu_pct: o.gpu_pct,
             memory_pct: o.memory_pct,
+            rss_pct: o.rss_pct,
+            rss_mb: o.rss_mb,
         }
     }
 }
@@ -30,6 +34,8 @@ impl Default for Tolerances {
             wall_ms: 0.3,
             gpu_pct: 10.0,
             memory_pct: 10.0,
+            rss_pct: 50.0,
+            rss_mb: 128.0,
         }
     }
 }
@@ -129,11 +135,10 @@ pub fn compare(old: &BenchReport, new: &BenchReport, t: Tolerances) -> Result<(S
                 "draw_calls" | "triangles" | "upload_bytes" if key.ends_with("/fit") => {
                     new_value > old_value
                 }
-                "vertex_bytes"
-                | "occupancy_bytes"
-                | "target_bytes"
-                | "device_allocated_bytes"
-                | "rss_mb" => regresses(old_value, new_value, t.memory_pct, 0.0),
+                "vertex_bytes" | "occupancy_bytes" | "target_bytes" | "device_allocated_bytes" => {
+                    regresses(old_value, new_value, t.memory_pct, 0.0)
+                }
+                "rss_mb" => regresses(old_value, new_value, t.rss_pct, t.rss_mb),
                 _ => false,
             };
             if gate {
@@ -187,14 +192,16 @@ pub fn compare(old: &BenchReport, new: &BenchReport, t: Tolerances) -> Result<(S
     }
     writeln!(
         table,
-        "\nMachine: `{}`. Load (new): {:?} → {:?}. Per-run values/min/max are preserved in JSON.\n\nGates: wall/edit-to-pixels >{:.1}% AND >{:.3} ms; GPU >{:.1}%; fit draws/triangles/upload any increase; memory >{:.1}%.",
+        "\nMachine: `{}`. Load (new): {:?} → {:?}. Per-run values/min/max are preserved in JSON.\n\nGates: wall/edit-to-pixels >{:.1}% AND >{:.3} ms; GPU >{:.1}%; fit draws/triangles/upload any increase; memory bytes >{:.1}%; RSS >{:.1}% AND >{:.3} MB.",
         new.meta.machine_key,
         new.meta.load_average.start,
         new.meta.load_average.end,
         t.wall_pct,
         t.wall_ms,
         t.gpu_pct,
-        t.memory_pct
+        t.memory_pct,
+        t.rss_pct,
+        t.rss_mb
     )?;
     Ok((table, failed))
 }
@@ -238,6 +245,71 @@ mod tests {
         assert!(regresses(10.0, 11.1, 10.0, 0.3));
         assert!(!regresses(10.0, 8.0, 10.0, 0.3));
         assert!(regresses(0.0, 1.0, 10.0, 0.3));
+    }
+    #[test]
+    fn rss_requires_both_relative_and_absolute_regression() {
+        let t = Tolerances::default();
+        assert!(!regresses(40.0, 100.0, t.rss_pct, t.rss_mb));
+        assert!(!regresses(40.0, 168.0, t.rss_pct, t.rss_mb));
+        assert!(regresses(40.0, 169.0, t.rss_pct, t.rss_mb));
+        assert!(!regresses(400.0, 550.0, t.rss_pct, t.rss_mb));
+        assert!(!regresses(400.0, 600.0, t.rss_pct, t.rss_mb));
+        assert!(regresses(400.0, 601.0, t.rss_pct, t.rss_mb));
+        assert!(!regresses(400.0, 300.0, t.rss_pct, t.rss_mb));
+        assert!(!regresses(0.0, 128.0, t.rss_pct, t.rss_mb));
+        assert!(regresses(0.0, 129.0, t.rss_pct, t.rss_mb));
+    }
+    #[test]
+    fn comparison_gates_rss_separately_from_memory_bytes() {
+        for (metric, before, after, expected_failure) in [
+            ("rss_mb", 40.0, 100.0, false),
+            ("rss_mb", 400.0, 550.0, false),
+            ("rss_mb", 40.0, 300.0, true),
+            ("vertex_bytes", 100.0, 111.0, true),
+            ("occupancy_bytes", 100.0, 111.0, true),
+            ("target_bytes", 100.0, 111.0, true),
+            ("device_allocated_bytes", 100.0, 111.0, true),
+        ] {
+            let mut base = fixture();
+            base.results.get_mut("autumn/fit").unwrap().metrics.insert(
+                metric.into(),
+                Metric::from_runs(&[Distribution::new(&[before]).unwrap()]).unwrap(),
+            );
+            let mut new = base.clone();
+            new.results.get_mut("autumn/fit").unwrap().metrics.insert(
+                metric.into(),
+                Metric::from_runs(&[Distribution::new(&[after]).unwrap()]).unwrap(),
+            );
+            let (table, failed) = compare(&base, &new, Tolerances::default()).unwrap();
+            assert_eq!(failed, expected_failure, "{metric}: {before} → {after}");
+            assert_eq!(table.contains(&format!("FAIL: {metric}")), failed);
+            assert!(table.contains("memory bytes >10.0%; RSS >50.0% AND >128.000 MB"));
+        }
+    }
+    #[test]
+    fn comparison_uses_rss_overrides_from_options() {
+        let options = Options::parse(
+            ["bench", "--rss-pct", "20", "--rss-mb", "32"]
+                .into_iter()
+                .map(String::from),
+        )
+        .unwrap();
+        let mut base = fixture();
+        base.results.get_mut("autumn/fit").unwrap().metrics.insert(
+            "rss_mb".into(),
+            Metric::from_runs(&[Distribution::new(&[100.0]).unwrap()]).unwrap(),
+        );
+        for (after, expected_failure) in [(125.0, false), (140.0, true)] {
+            let mut new = base.clone();
+            new.results.get_mut("autumn/fit").unwrap().metrics.insert(
+                "rss_mb".into(),
+                Metric::from_runs(&[Distribution::new(&[after]).unwrap()]).unwrap(),
+            );
+            assert!(!compare(&base, &new, Tolerances::default()).unwrap().1);
+            let (table, failed) = compare(&base, &new, Tolerances::from(&options)).unwrap();
+            assert_eq!(failed, expected_failure);
+            assert!(table.contains("memory bytes >10.0%; RSS >20.0% AND >32.000 MB"));
+        }
     }
     #[test]
     fn compare_gates_and_compatibility() {
