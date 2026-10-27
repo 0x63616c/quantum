@@ -44,6 +44,28 @@ impl Plugin for CorePlugin {
                 10,
                 None,
             ),
+            #[cfg(not(target_family = "wasm"))]
+            (
+                "dev.voxelite.core.open_recent",
+                "Open Recent",
+                None,
+                None,
+                "folder-open",
+                "File",
+                12,
+                None,
+            ),
+            #[cfg(not(target_family = "wasm"))]
+            (
+                "dev.voxelite.core.clear_recents",
+                "Clear Recent Projects",
+                None,
+                None,
+                "trash-2",
+                "File",
+                14,
+                None,
+            ),
             (
                 "dev.voxelite.core.save",
                 "Save",
@@ -184,6 +206,17 @@ impl Plugin for CorePlugin {
                 280,
                 None,
             ),
+            #[cfg(not(target_family = "wasm"))]
+            (
+                "dev.voxelite.core.welcome",
+                "Welcome",
+                Some("secondary-shift-1"),
+                None,
+                "cube",
+                "Window",
+                335,
+                None,
+            ),
             (
                 "dev.voxelite.core.minimize",
                 "Minimize",
@@ -311,6 +344,29 @@ mod tests {
     #[test]
     fn conforms_to_plugin_contract() {
         voxelite_plugin_host::conformance::check(|| Box::new(CorePlugin));
+    }
+
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
+    fn welcome_commands_are_declared_without_gpui() {
+        let host = app_host();
+        for (id, menu, key) in [
+            ("dev.voxelite.core.open_recent", "File", None),
+            ("dev.voxelite.core.clear_recents", "File", None),
+            (
+                "dev.voxelite.core.welcome",
+                "Window",
+                Some("secondary-shift-1"),
+            ),
+        ] {
+            let (_, command) = host
+                .registry()
+                .commands()
+                .find(|(_, c)| c.id == id)
+                .unwrap();
+            assert_eq!(command.menu.as_deref(), Some(menu));
+            assert_eq!(command.default_keybinding.as_deref(), key);
+        }
     }
 
     #[test]

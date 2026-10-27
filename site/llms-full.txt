@@ -86,7 +86,9 @@ Use localhost or HTTPS for browser graphics. WebGPU is preferred and WebGL2 is t
 
 ## Make your first edit by hand
 
-1.  Open the bundled Autumn Workshop. Right-drag to orbit; wheel to zoom; press F to frame.
+The desktop welcome window shows recent projects with previews. Use Tab to focus Recent, then Up/Down and Enter to open a project. Window → Welcome reopens it; File → Open Recent offers the same history. Clear Recent Projects removes the list without deleting your files.
+
+1.  On desktop, choose New Project or Open… in the welcome window, or double-click a recent project. To explore Autumn Workshop, open `examples/autumn-workshop.voxl`; the browser editor opens it automatically. Right-drag to orbit; wheel to zoom; press F to frame.
 2.  Select a visible, unlocked layer and a palette swatch. Press B to place on a face, E to erase, or P to paint.
 3.  Use Ctrl/Cmd + Z to undo. Ctrl/Cmd + K opens command search.
 4.  Choose File → Save As for your own `.voxl`. Export GLB or PNG through the File menu or command search.
@@ -102,7 +104,7 @@ The Mac app includes the MCP server. For source builds, build `voxelite-mcp` fir
 ### Native: work in the same document
 
 ```sh
-./target/release/voxelite --session-socket /tmp/voxelite-session.sock
+./target/release/voxelite examples/autumn-workshop.voxl --session-socket /tmp/voxelite-session.sock
 ```
 
 Use the MCP executable from the install guide, replacing its arguments with `["--connect", "/tmp/voxelite-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.

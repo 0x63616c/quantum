@@ -24,6 +24,8 @@ mod save_flow;
 mod settings;
 mod shortcut_hint;
 mod tooltip;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) mod welcome;
 use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
 use crate::{
@@ -179,6 +181,11 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) -> Self {
         settings::init(override_theme, cx);
+        #[cfg(not(target_family = "wasm"))]
+        {
+            welcome::record(&editor, cx);
+            welcome::observe_editor(cx);
+        }
         let preferences = cx.global::<settings::SettingsState>().values.clone();
         let theme = settings::theme(preferences.appearance, window);
         editor
@@ -337,6 +344,11 @@ impl EditorView {
     }
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.cancel_camera_animation();
+        #[cfg(not(target_family = "wasm"))]
+        {
+            welcome::record(&editor, cx);
+            welcome::project_ready(cx);
+        }
         self.pause_history(cx);
         self.timeline.dragging = false;
         self.timeline.expanded = false;
@@ -527,6 +539,12 @@ impl EditorView {
                 }
             },
             Op::Open => self.open_dialog(cx),
+            #[cfg(not(target_family = "wasm"))]
+            Op::OpenRecent | Op::Welcome => {
+                cx.defer(|cx| { if let Err(error) = welcome::show(cx) { eprintln!("Could not open welcome window: {error}"); } });
+            }
+            #[cfg(not(target_family = "wasm"))]
+            Op::ClearRecents => welcome::clear(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
             #[cfg(target_family = "wasm")]
@@ -2277,7 +2295,7 @@ impl Render for EditorView {
             self.last_edited = Some(edited);
         }
         if cfg!(target_os = "macos") && window.is_window_active() {
-            cx.set_menus(crate::actions::menus_from_host(
+            let menus = crate::actions::menus_from_host(
                 &self.editor.plugin_host(),
                 window.is_fullscreen(),
                 |op| self.selected(op),
@@ -2285,7 +2303,10 @@ impl Render for EditorView {
                     (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
                         || self.enabled(op)
                 },
-            ));
+            );
+            #[cfg(not(target_family = "wasm"))]
+            let menus = welcome::menus(menus, self.enabled(Op::Open), cx);
+            cx.set_menus(menus);
         }
         #[cfg(target_family = "wasm")]
         let settings_open = self.settings_modal.is_some();
@@ -2366,6 +2387,15 @@ impl Render for EditorView {
                 }
                 this.invoke(*op, window, cx);
             }))
+            .map(|d| {
+                #[cfg(not(target_family = "wasm"))]
+                let d = d.on_action(cx.listener(
+                    |this, op: &crate::actions::OpenRecentProject, window, cx| {
+                        this.open_recent(op.path.clone(), window, cx);
+                    },
+                ));
+                d
+            })
             .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))
             .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
             .child(

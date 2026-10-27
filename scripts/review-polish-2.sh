@@ -25,7 +25,7 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir -p "$VOXELITE_DATA_DIR"
-target/debug/voxelite --theme dark --exit-after 150 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+target/debug/voxelite --example --theme dark --exit-after 150 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
 app_pid=$!
 window=''
 for attempt in {1..100}; do

@@ -36,7 +36,7 @@ trap cleanup EXIT
 for theme in dark light; do
   export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$theme"
   # Software rendering and loaded CI runners need headroom; cleanup owns normal exit.
-  "$VOXELITE_CAPTURE_TARGET/debug/voxelite" --theme "$theme" --exit-after 900 --session-socket "$XDG_RUNTIME_DIR/$theme.sock" >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
+  "$VOXELITE_CAPTURE_TARGET/debug/voxelite" --example --theme "$theme" --exit-after 900 --session-socket "$XDG_RUNTIME_DIR/$theme.sock" >"$XDG_RUNTIME_DIR/$theme.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..50}; do

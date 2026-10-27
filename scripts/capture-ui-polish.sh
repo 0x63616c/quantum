@@ -35,7 +35,7 @@ if command -v xfwm4 >/dev/null; then
   wm_pid=$!
   sleep 1
 fi
-"$BIN" --theme dark --exit-after 240 --session-socket "$XDG_RUNTIME_DIR/app.sock" >"$OUT/app.log" 2>&1 &
+"$BIN" --example --theme dark --exit-after 240 --session-socket "$XDG_RUNTIME_DIR/app.sock" >"$OUT/app.log" 2>&1 &
 app_pid=$!
 window=''
 for attempt in {1..150}; do
