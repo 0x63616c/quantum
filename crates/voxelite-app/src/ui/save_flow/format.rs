@@ -40,7 +40,7 @@ impl SaveFormat {
     /// Display label supplied by the format's owner.
     pub fn label(&self) -> &str {
         match self {
-            Self::Project => "Voxelite Project (.voxl)",
+            Self::Project => "Quantum Project (.voxl)",
             Self::Export(format) => &format.label_key,
         }
     }
@@ -75,7 +75,7 @@ mod tests {
                 .map(|f| (f.extension(), f.label()))
                 .collect::<Vec<_>>(),
             [
-                ("voxl", "Voxelite Project (.voxl)"),
+                ("voxl", "Quantum Project (.voxl)"),
                 ("glb", "glTF Binary (.glb)"),
                 ("png", "PNG Image (.png)"),
             ]

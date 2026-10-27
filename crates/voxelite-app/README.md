@@ -46,7 +46,7 @@ Linux column denotes a macOS-only command.
 | Open project… | ⌘O | Ctrl+O |
 | Save | ⌘S | Ctrl+S |
 | Save as… | ⇧⌘S | Ctrl+Shift+S |
-| Quit Voxelite | ⌘Q | Ctrl+Q |
+| Quit Quantum | ⌘Q | Ctrl+Q |
 | Undo | ⌘Z | Ctrl+Z |
 | Redo | ⇧⌘Z | Ctrl+Shift+Z |
 | Search commands… | ⌘K | Ctrl+K |
@@ -66,7 +66,7 @@ Linux column denotes a macOS-only command.
 | Add comment pin | C | C |
 | Welcome | ⇧⌘1 | Ctrl+Shift+1 |
 | Minimize | ⌘M | Ctrl+M |
-| Hide Voxelite | ⌘H | — |
+| Hide Quantum | ⌘H | — |
 | Hide Others | ⌥⌘H | — |
 <!-- END GENERATED COMMAND SHORTCUTS -->
 
@@ -179,11 +179,11 @@ toggles the inset sidebar and navigates section history. Search lists matching
 sections and individual settings; selecting a setting opens its parent section.
 Appearance offers System, Light and Dark window previews. Settings controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
 immediately. A failed save retains the previous preferences and reports the error.
-On macOS, the native Voxelite menu includes Settings, About, Services, application
+On macOS, the native Quantum menu includes Settings, About, Services, application
 visibility and Quit. The native menus share the editor action registry; standard
 clipboard commands act on the focused text field. There is no voxel clipboard
 or persistent voxel-selection tool yet. Packaged macOS builds with Sparkle support
-Check for Updates from the Voxelite menu and Settings → Updates. Builds without
+Check for Updates from the Quantum menu and Settings → Updates. Builds without
 the bundled updater disable the menu action and explain availability in Settings.
 The transparent native titlebar places real traffic lights in the top toolbar.
 Linux and web retain their in-window menus.

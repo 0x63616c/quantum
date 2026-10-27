@@ -70,7 +70,7 @@ impl EditorView {
     pub(super) fn about_dialog(&self, acknowledgements: bool, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
         // Preserve the original content-width compact action (29 × 24).
-        let close = Button::new("close-about", "Close About Voxelite", t)
+        let close = Button::new("close-about", "Close About Quantum", t)
             .variant(ButtonVariant::Icon)
             .icon("close")
             .size(ControlSize::Sm)
@@ -110,14 +110,14 @@ impl EditorView {
                             .variant(ButtonVariant::Ghost)
                             .build()
                             .on_click(cx.listener(|this, _, window, cx| {
-                                this.info = Some(("About Voxelite", InfoContent::About));
+                                this.info = Some(("About Quantum", InfoContent::About));
                                 window.focus(&this.modal_focus, cx);
                                 cx.notify();
                             })),
                     ),
                 )
         } else {
-            Dialog::panel("about-voxelite", "About Voxelite", t, &self.modal_focus)
+            Dialog::panel("about-voxelite", "About Quantum", t, &self.modal_focus)
                 .w(px(metrics::ABOUT_WIDTH))
                 .h(px(metrics::ABOUT_HEIGHT))
                 .child(row().justify_end().p(px(space::MD)).child(close))
@@ -139,7 +139,7 @@ impl EditorView {
                             div()
                                 .text_size(px(type_size::DISPLAY))
                                 .font_weight(type_size::BOLD)
-                                .child("Voxelite"),
+                                .child("Quantum"),
                         )
                         .child(
                             div()
