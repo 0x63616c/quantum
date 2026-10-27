@@ -277,7 +277,7 @@ impl Op {
             CommandContext::Settings { updates_available } => {
                 return match self {
                     Self::CheckUpdates if !updates_available => {
-                        Err("Automatic updates are not available in this build.")
+                        Err("Updates are unavailable in this build.")
                     }
                     Self::About
                     | Self::Settings
@@ -328,7 +328,7 @@ impl Op {
             Self::Undo if !state.history_playing && !state.can_undo => Err("Nothing to undo"),
             Self::Redo if !state.history_playing && !state.can_redo => Err("Nothing to redo"),
             Self::CheckUpdates if !state.updates_available => {
-                Err("Automatic updates are not available in this build.")
+                Err("Updates are unavailable in this build.")
             }
             _ => Ok(()),
         }
@@ -577,7 +577,10 @@ impl ShellCommands {
 pub fn install(cx: &mut App) {
     let platform = ShortcutPlatform::current();
     if cfg!(target_os = "macos") {
-        cx.set_menus(menus(|_| false, |_| true));
+        cx.set_menus(menus(
+            |_| false,
+            |op| op != Op::CheckUpdates || crate::ui::updates_available(),
+        ));
     }
     cx.bind_keys(key_bindings(platform));
 }
@@ -1051,7 +1054,7 @@ mod tests {
             };
             assert_eq!(
                 Op::CheckUpdates.availability(CommandContext::Editor(state)),
-                Err("Automatic updates are not available in this build.")
+                Err("Updates are unavailable in this build.")
             );
             for op in Op::ALL {
                 assert_eq!(
@@ -1122,6 +1125,22 @@ mod tests {
             }
         );
         assert!(search_on("updates", false, ShortcutPlatform::WindowsLinux).is_empty());
+    }
+
+    #[test]
+    fn unavailable_updates_are_disabled_in_menus_with_a_short_reason() {
+        let state = CommandContext::Editor(EditorState::default());
+        let menus = SHELL.menus(true, false, |_| false, |op| op.availability(state).is_ok());
+        let updates = menus.iter().flat_map(|menu| &menu.items).find(|item| matches!(item, MenuItem::Action { action, .. } if action.as_any().downcast_ref::<Op>() == Some(&Op::CheckUpdates)));
+        assert!(matches!(
+            updates,
+            Some(MenuItem::Action { disabled: true, .. })
+        ));
+        assert_eq!(
+            Op::CheckUpdates.availability(state),
+            Err("Updates are unavailable in this build.")
+        );
+        assert!(search_on("updates", false, ShortcutPlatform::Apple).contains(&Op::CheckUpdates));
     }
 
     #[test]

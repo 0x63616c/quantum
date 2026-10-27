@@ -297,7 +297,6 @@ pub(super) struct SettingsView {
     focus: FocusHandle,
     owner: WeakEntity<EditorView>,
     owner_window: AnyWindowHandle,
-    message: Option<String>,
 }
 #[cfg(target_family = "wasm")]
 impl EventEmitter<Dismiss> for SettingsView {}
@@ -328,7 +327,6 @@ impl SettingsView {
             focus,
             owner,
             owner_window,
-            message: None,
         }
     }
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -367,7 +365,6 @@ impl SettingsView {
     }
     fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
         self.history.visit(section);
-        self.message = None;
         self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
         cx.notify();
     }
@@ -377,7 +374,6 @@ impl SettingsView {
         } else {
             self.history.back();
         }
-        self.message = None;
         self.pane_scroll.set_offset(point(px(0.0), px(0.0)));
         cx.notify();
     }
@@ -728,24 +724,28 @@ impl SettingsView {
                 #[cfg(not(target_family = "wasm"))]
                 let updates_available = super::updates_available();
                 #[cfg(not(target_family = "wasm"))]
-                rows.push(self.form_row(
-                    "Software updates",
-                    if updates_available {
-                        "Check for the latest version of Voxelite."
-                    } else {
-                        "Automatic updates are not available in this build."
-                    },
-                    div().when(updates_available, |d| {
-                        d.child(
-                            self.button("check-updates", "Check for Updates…", t)
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.message = super::check_for_updates().map(str::to_owned);
-                                    cx.notify();
-                                })),
-                        )
-                    }),
-                    t,
-                ));
+                rows.push(
+                    self.form_row(
+                        "Software updates",
+                        if updates_available {
+                            "Check for the latest version of Voxelite."
+                        } else {
+                            "Updates are unavailable in this build."
+                        },
+                        Button::new("check-updates", "Check for Updates…", t)
+                            .disabled(!updates_available)
+                            .build()
+                            .aria_description(if updates_available {
+                                "Check for a new version"
+                            } else {
+                                "Updates are unavailable in this build."
+                            })
+                            .when(updates_available, |d| {
+                                d.on_click(cx.listener(|_, _, _, _| super::check_for_updates()))
+                            }),
+                        t,
+                    ),
+                );
                 #[cfg(target_family = "wasm")]
                 rows.push(self.form_row(
                     "Browser edition",
@@ -885,7 +885,7 @@ impl Render for SettingsView {
                     Op::Help => this.navigate(Section::Shortcuts, cx),
                     Op::CheckUpdates => {
                         this.navigate(Section::Updates, cx);
-                        this.message = super::check_for_updates().map(str::to_owned);
+                        super::check_for_updates();
                     }
                     Op::Hide => cx.hide(),
                     Op::HideOthers => cx.hide_other_apps(),
@@ -1084,7 +1084,7 @@ impl Render for SettingsView {
                                     )
                                     .child(self.content(section, t, cx)),
                             )
-                            .when_some(state.error.or(self.message.clone()), |d, message| {
+                            .when_some(state.error, |d, message| {
                                 d.child(
                                     div()
                                         .px(px(28.0))

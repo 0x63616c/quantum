@@ -45,7 +45,7 @@ const TOOLBAR_HEIGHT: f32 = metrics::TOOLBAR_HEIGHT;
 const STATUSBAR_HEIGHT: f32 = metrics::STATUS_HEIGHT;
 const PANEL_GUTTER: f32 = 24.0;
 
-fn updates_available() -> bool {
+pub(crate) fn updates_available() -> bool {
     #[cfg(target_os = "macos")]
     {
         crate::updater::is_available()
@@ -57,13 +57,11 @@ fn updates_available() -> bool {
 }
 
 // Both windows use Sparkle's own progress and result dialogs when available.
-fn check_for_updates() -> Option<&'static str> {
+fn check_for_updates() {
     #[cfg(target_os = "macos")]
     if updates_available() {
         crate::updater::check_for_updates();
-        return None;
     }
-    Some("Automatic updates are not available in this build.")
 }
 
 pub struct EditorView {
@@ -468,11 +466,7 @@ impl EditorView {
         match op {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
             Op::About => self.info = Some(("About Voxelite", InfoContent::Text(format!("Voxelite {}\nA voxel workspace by Calum.\nBuilt with Rust and GPUI.", env!("CARGO_PKG_VERSION"))))),
-            Op::CheckUpdates => {
-                let message = check_for_updates();
-                self.error = message.is_some();
-                self.status = message.unwrap_or("Checking for updates…").into();
-            }
+            Op::CheckUpdates => check_for_updates(),
             Op::Hide => cx.hide(),
             Op::HideOthers => cx.hide_other_apps(),
             Op::ShowAll => cx.unhide_other_apps(),
