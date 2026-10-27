@@ -291,8 +291,7 @@ saved in the app, with no implied durable journal. Socket permissions are 0600;
 existing paths are never replaced. The bridge is local to Unix platforms and
 supports the same two MCP protocol profiles as the standalone server.
 
-See [native editor controls](../crates/voxelite-app/README.md) and
-[the executable round 2 review](reviews/app-polish-2.md). The process test
+See [native editor controls](../crates/voxelite-app/README.md). The process test
 `cargo test -p voxelite-mcp --test attached` runs a real stdio bridge against the
 app-side attachment and checks shared history, conflicts, pause, retries and
 socket cleanup. `scripts/capture-native.sh` also exercises the live GPUI window.

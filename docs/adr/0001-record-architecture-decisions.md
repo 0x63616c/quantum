@@ -12,7 +12,7 @@ ADR directory to record shared terminology and decisions.
 
 ## Decision
 
-Keep domain language in [GLOSSARY.md](../../GLOSSARY.md) and record architecture
+Keep domain language in the [domain glossary](../glossary.md) and record architecture
 decisions as numbered Markdown files in `docs/adr/`. Distinguish existing code
 from proposed seams so naming a boundary does not imply it has been implemented.
 
