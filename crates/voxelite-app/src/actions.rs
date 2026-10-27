@@ -55,6 +55,7 @@ operations! {
     Right => "dev.voxelite.core.right",
     Top => "dev.voxelite.core.top",
     Grid => "dev.voxelite.core.grid",
+    DebugOverlay => "dev.voxelite.core.debug_overlay",
     Theme => "dev.voxelite.core.theme",
     FullScreen => "dev.voxelite.core.fullscreen",
     Place => "dev.voxelite.tools.place",
