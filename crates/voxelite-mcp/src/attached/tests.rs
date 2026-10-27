@@ -12,6 +12,7 @@ fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>)
     (
         AttachedSession {
             session,
+            configured_root: PathBuf::new(),
             palette_enabled: true,
             comments_enabled: true,
             tools: Arc::new(RwLock::new(crate::exports::tools(&mcp_host()))),
@@ -63,6 +64,60 @@ fn result(receive: &mut oneshot::Receiver<Result<CallToolResult, ErrorData>>) ->
         .unwrap()
         .structured_content
         .unwrap()
+}
+
+#[test]
+fn attachment_roots_are_absolute_directories_and_failed_changes_are_atomic() {
+    let (mut attachment, _, _) = attachment();
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("Documents/Voxelite");
+    attachment.set_root(&root).unwrap();
+    assert!(root.is_dir());
+    let canonical = root.canonicalize().unwrap();
+    assert_eq!(attachment.session.root, canonical);
+    let file = dir.path().join("file.voxl");
+    std::fs::write(&file, b"existing").unwrap();
+    for invalid in [Path::new("relative-root"), file.as_path()] {
+        assert!(attachment.set_root(invalid).is_err());
+        assert_eq!(attachment.configured_root, root);
+        assert_eq!(attachment.session.root, canonical);
+    }
+}
+
+#[test]
+fn root_and_ancestor_replacement_cannot_redirect_queued_exports() {
+    use std::{fs, os::unix::fs::symlink};
+
+    for replace_ancestor in [false, true] {
+        let (mut attachment, mut document, send) = attachment();
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let ancestor = dir.path().join("ancestor");
+        let root = ancestor.join("root");
+        let outside_root = if replace_ancestor {
+            outside.path().join("root")
+        } else {
+            outside.path().to_path_buf()
+        };
+        fs::create_dir_all(&outside_root).unwrap();
+        attachment.set_root(&root).unwrap();
+        let established = attachment.session.root.clone();
+        let mut export = queue(
+            &send,
+            "voxelite_export_glb",
+            json!({"model_id":document.engine.document().id,"path":"escape.glb"}),
+        );
+        let replaced = if replace_ancestor { &ancestor } else { &root };
+        fs::rename(replaced, dir.path().join("original")).unwrap();
+        symlink(outside.path(), replaced).unwrap();
+
+        // The editor repeats set_root on every poll, even without a lifecycle change.
+        attachment.set_root(&root).unwrap();
+        assert_eq!(attachment.session.root, established);
+        attachment.poll(&mut document);
+        assert_eq!(result(&mut export)["error"]["code"], "path_outside_root");
+        assert_eq!(fs::read_dir(outside_root).unwrap().count(), 0);
+    }
 }
 
 #[test]

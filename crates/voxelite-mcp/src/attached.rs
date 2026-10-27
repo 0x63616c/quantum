@@ -119,6 +119,7 @@ impl ServerHandler for Bridge {
 /// Owner-thread half of a running MCP attachment. Dropping stops the socket worker.
 pub struct AttachedSession {
     session: Session,
+    configured_root: PathBuf,
     tools: Arc<RwLock<Vec<Tool>>>,
     export_formats: Vec<voxelite_plugin_api::FormatContribution>,
     palette_enabled: bool,
@@ -134,18 +135,17 @@ pub struct AttachedSession {
 }
 impl AttachedSession {
     /// Bind a private socket. Existing paths are never removed or replaced.
-    /// The factory supplies initial declarations and the default polling host.
-    /// Editors use [`Self::poll_with_host`] to dispatch through their live host.
+    /// The file root must be absolute and is created if missing. The factory
+    /// supplies initial declarations and the default polling host; editors use
+    /// [`Self::poll_with_host`] to dispatch through their live host.
     pub fn bind(
         root: &Path,
         project: Project,
         path: &Path,
         host_factory: fn() -> voxelite_plugin_host::Host,
     ) -> io::Result<Self> {
-        let root = root.canonicalize()?;
-        if !root.is_dir() {
-            return Err(io::Error::other("Session root must be a directory"));
-        }
+        let configured_root = root.to_path_buf();
+        let root = prepare_root(root)?;
         let mut session = Session::new(root, host_factory);
         session
             .attach(project)
@@ -190,6 +190,7 @@ impl AttachedSession {
         })?;
         Ok(Self {
             session,
+            configured_root,
             tools,
             export_formats,
             palette_enabled,
@@ -206,6 +207,17 @@ impl AttachedSession {
     /// Socket advertised in the app's connection panel.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+    /// Follow the editor's current file folder without disconnecting clients.
+    /// Queued file requests use this root when polled; edit receipts are preserved.
+    /// The root must be absolute and is created if missing, as when binding.
+    pub fn set_root(&mut self, root: &Path) -> io::Result<()> {
+        // Polling the same configured path must not adopt a replaced symlink.
+        if self.configured_root != root {
+            self.session.root = prepare_root(root)?;
+            self.configured_root = root.to_path_buf();
+        }
+        Ok(())
     }
     /// Number of currently connected transports (including initialization).
     pub fn clients(&self) -> usize {
@@ -432,6 +444,18 @@ impl Drop for AttachedSession {
         }
     }
 }
+
+fn prepare_root(root: &Path) -> io::Result<PathBuf> {
+    if !root.is_absolute() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Session root must be an absolute path",
+        ));
+    }
+    std::fs::create_dir_all(root)?;
+    root.canonicalize()
+}
+
 /// Forward stdio MCP frames to an already running app without another authority.
 pub async fn proxy_stdio(path: &Path) -> io::Result<()> {
     use tokio::io::{AsyncWriteExt, copy};

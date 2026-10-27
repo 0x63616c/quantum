@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check site navigation, Markdown exports, SEO, crawl files and source parity."""
+"""Check a built site's navigation, Markdown, SEO, crawl files and source parity."""
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -11,6 +11,11 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'site'
 BASE_URL = 'https://voxelite.worldwidewebb.co'
+
+for name in ('index.html', 'docs/index.html', 'app/index.html',
+             'app/voxelite_app.js', 'app/voxelite_app_bg.wasm'):
+    if not (SITE / name).is_file():
+        raise SystemExit(f'Missing site/{name}; run scripts/build-site.sh first.')
 
 class Page(HTMLParser):
     def __init__(self, text):

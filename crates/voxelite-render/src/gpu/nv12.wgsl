@@ -16,8 +16,8 @@ fn ycbcr(rgb: vec3<f32>) -> vec3<f32> {
 }
 @fragment fn fs_chroma(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
     // Center chroma over the corresponding 2x2 luma block. The source scene
-    // already has twice the physical display dimensions, so chroma retains
-    // one sample per display pixel. Average nonlinear RGB before the affine
+    // normally has twice the physical display dimensions; budget-limited
+    // surfaces use fewer samples. Average nonlinear RGB before the affine
     // conversion (equivalent to averaging CbCr), matching GPUI's sampler.
     let at = vec2<i32>(p.xy) * 2;
     let rgb = (textureLoad(source, at, 0).rgb

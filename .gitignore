@@ -5,7 +5,22 @@ __pycache__/
 
 /web/dist/
 /site/app/
+/site/docs/
+/site/docs.md
+/site/index.html
+/site/404.html
+/site/download/
+/site/llms.txt
+/site/llms-full.txt
+/site/sitemap.xml
+/site/robots.txt
+/site/assets/mcp-tools.json
+/site/assets/integrations/
+/site/assets/skills/
+/site/assets/voxelite-skills.zip
 /site/assets/voxelite-source.tar.gz
 /target-webdeploy/
 
 /dist/
+
+/screenshots/

@@ -31,7 +31,7 @@ impl Agent {
             }
         };
         let session = AttachedSession::bind(
-            &std::env::current_dir()?,
+            &editor.attachment_root()?,
             editor.project(),
             &path,
             voxelite_plugins_builtin::mcp_host,
@@ -58,7 +58,15 @@ impl EditorView {
         let Some(session) = &mut self.agent.session else {
             return;
         };
-        let update = self.editor.poll_attachment(session);
+        let update = match self.editor.poll_attachment(session) {
+            Ok(update) => update,
+            Err(error) => {
+                self.status = format!("Agent file root unavailable: {error}").into();
+                self.error = true;
+                cx.notify();
+                return;
+            }
+        };
         let notify = update.clients != self.agent.clients || !update.events.is_empty();
         self.agent.clients = update.clients;
         for mut event in update.events {

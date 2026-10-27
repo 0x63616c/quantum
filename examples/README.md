@@ -48,5 +48,5 @@ step fixture and the single-voxel format fixture, without modifying the models:
 cargo run --release --locked -p voxelite-plugin-exporters --example cottage -- --ao-comparisons
 ```
 
-The six 384² PNGs go to `docs/screenshots/ao` (an optional second argument changes
+The six 384² PNGs go to `docs/images` (an optional second argument changes
 the output directory). See [the comparison notes](../docs/ambient-occlusion.md).

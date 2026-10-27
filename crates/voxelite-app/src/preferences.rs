@@ -36,6 +36,8 @@ pub struct Preferences {
     pub ambient_occlusion_strength: AmbientOcclusionStrength,
     /// Display viewport FPS, average frame time and renderer in the status bar.
     pub show_performance: bool,
+    /// Display detailed renderer diagnostics over the viewport.
+    pub show_debug_overlay: bool,
     /// Display mouse navigation hints over the viewport.
     pub navigation_hints: bool,
     /// Animate preset and programmatic camera changes; off snaps. macOS Reduce Motion always snaps.
@@ -50,6 +52,7 @@ impl Default for Preferences {
             ambient_occlusion: true,
             ambient_occlusion_strength: AmbientOcclusionStrength::default(),
             show_performance: true,
+            show_debug_overlay: false,
             navigation_hints: true,
             animate_camera: true,
         }
@@ -92,6 +95,7 @@ mod tests {
         let preferences = Preferences {
             appearance: Appearance::Light,
             grid: false,
+            show_debug_overlay: true,
             ..Default::default()
         };
         preferences.save(&path).unwrap();
@@ -102,6 +106,7 @@ mod tests {
         assert!(upgraded.grid && upgraded.antialiasing);
         assert!(upgraded.ambient_occlusion);
         assert_eq!(upgraded.viewport_ambient_occlusion().get(), 1.0);
+        assert!(!upgraded.show_debug_overlay);
     }
 
     #[test]
@@ -111,7 +116,7 @@ mod tests {
         preferences.grid = !preferences.grid;
         assert_eq!(
             serde_json::to_string(&preferences).unwrap(),
-            r#"{"appearance":"system","grid":false,"antialiasing":true,"ambient_occlusion":true,"ambient_occlusion_strength":1.0,"show_performance":true,"navigation_hints":true,"animate_camera":true}"#
+            r#"{"appearance":"system","grid":false,"antialiasing":true,"ambient_occlusion":true,"ambient_occlusion_strength":1.0,"show_performance":true,"show_debug_overlay":false,"navigation_hints":true,"animate_camera":true}"#
         );
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
@@ -129,6 +134,7 @@ mod tests {
         ).unwrap();
         let mut preferences = Preferences::load(&path).unwrap();
         assert!(preferences.animate_camera);
+        assert!(!preferences.show_debug_overlay);
         preferences.animate_camera = false;
         preferences.save(&path).unwrap();
         assert!(!Preferences::load(&path).unwrap().animate_camera);

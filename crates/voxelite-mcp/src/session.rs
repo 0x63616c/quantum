@@ -65,7 +65,7 @@ pub(crate) struct Session {
     pub host_factory: fn() -> voxelite_plugin_host::Host,
     pub id: Uuid,
     pub epoch: Uuid,
-    root: PathBuf,
+    pub(crate) root: PathBuf,
     pub(crate) documents: BTreeMap<Uuid, DocumentSession>,
     receipts: BTreeMap<Uuid, (String, CallToolResult)>,
     receipt_bytes: usize,
