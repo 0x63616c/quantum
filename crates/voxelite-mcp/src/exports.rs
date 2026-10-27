@@ -15,14 +15,6 @@ fn render_view(options: &RenderOptions) -> impl Fn(&Snapshot) -> ExportResult<Ex
     }
 }
 
-pub(crate) fn host() -> Host {
-    Host::new(vec![
-        Box::new(voxelite_plugin_exporters::ExportersPlugin),
-        Box::new(voxelite_plugin_palette::PalettePlugin),
-        Box::new(voxelite_plugin_comments::CommentsPlugin),
-    ])
-}
-
 pub(crate) fn extensions(host: &Host) -> Vec<String> {
     std::iter::once("voxl".into())
         .chain(
@@ -80,4 +72,19 @@ pub(crate) fn tools(host: &Host) -> Vec<rmcp::model::Tool> {
         })
         .map(|spec| spec.tool.clone())
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_host_preserves_the_full_catalog_and_format_order() {
+        let host = voxelite_plugins_builtin::mcp_host();
+        assert_eq!(tools(&host), crate::VoxeliteServer::tools());
+        assert_eq!(
+            extensions(&host),
+            ["voxl", "glb", "png", "hex", "gpl", "pal"]
+        );
+    }
 }

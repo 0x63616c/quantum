@@ -67,7 +67,7 @@ conflicts, keybinding conflicts, enabled sets and lifecycle management. Tool loo
 only for declared IDs belonging to an enabled plugin, as are command transforms.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.8.0`, independently of plugin implementation versions and `.voxl` or
+is `0.8.1`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -96,6 +96,8 @@ Optional overlay projection/picking/discussion queries default to no capability.
 The `0.8.0` bump removes the shared `encoding` module: GLB/PNG encoders now belong
 to `voxelite-plugin-exporters::encoding`. Export errors are defined in the API with
 the same variants and messages; export callbacks, images and capabilities are unchanged.
+The compatible `0.8.1` addition publishes the comments/palette panel IDs and palette
+preset setting key used by shell/MCP adapters. Plugins re-export the old names.
 
 Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
 This is a statically linked Rust API, not a stable
@@ -491,6 +493,16 @@ the app's `app_host()` registers required `dev.voxelite.core`, then tools, mirro
 gizmo/grid, palette, comments, agent and exporters built-ins, all enabled. These seven
 plugin crates depend only on the API outside their tests. Core currently owns the
 remaining shell commands, including camera navigation and native saving.
+
+`voxelite-plugins-builtin`, outside the plugin directory, owns the ordered built-in
+lists. The app registers its core plugin then calls `register_all`; the MCP binary
+supplies `mcp_host` as a request-thread factory. MCP's library depends on portable
+API/host contracts, with concrete plugins only in tests. The binary shares the
+package to preserve existing build and release commands, so its composition
+dependency is optional behind the default `standalone` feature. Library consumers
+disable default features; `cargo check -p voxelite-mcp --locked --lib --no-default-features`
+verifies that no built-in imports leak into the adapter. Standalone format order,
+the full schema catalog and attached live-host dispatch remain unchanged.
 
 The shell takes an immutable view of enabled command contributions, sorted by
 presentation order, for menus, Cmd-K, the shortcuts sheet and keybindings. English

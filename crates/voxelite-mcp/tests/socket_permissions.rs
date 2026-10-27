@@ -18,6 +18,7 @@ fn bind(root: &Path, path: &Path) -> io::Result<AttachedSession> {
         root,
         Project::new(Document::new(Uuid::new_v4(), Uuid::new_v4())).unwrap(),
         path,
+        voxelite_plugins_builtin::mcp_host,
     )
 }
 

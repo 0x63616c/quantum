@@ -2,6 +2,7 @@
 use serde_json::{Value, json};
 use voxelite_core::Uuid;
 use voxelite_mcp::VoxeliteServer;
+use voxelite_plugins_builtin::mcp_host;
 
 fn call(server: &VoxeliteServer, tool: &str, arguments: Value) -> Value {
     let response = server.call(tool, arguments).expect("known tool");
@@ -14,7 +15,7 @@ fn call(server: &VoxeliteServer, tool: &str, arguments: Value) -> Value {
 #[test]
 fn published_tutorial_renders_and_saves_a_reopenable_tower() {
     let root = tempfile::tempdir().unwrap();
-    let server = VoxeliteServer::new(root.path()).unwrap();
+    let server = VoxeliteServer::new(root.path(), mcp_host).unwrap();
     let epoch = call(&server, "voxelite_capabilities_get", json!({}))["epoch"].clone();
     let source = include_str!("../../../site/content/getting-started.html");
     let tutorial = source.split("id=\"first-model\"").nth(1).unwrap();

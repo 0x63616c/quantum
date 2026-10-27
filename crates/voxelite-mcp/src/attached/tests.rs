@@ -1,6 +1,7 @@
 use super::*;
 use serde_json::json;
 use voxelite_core::{Document, Limits};
+use voxelite_plugins_builtin::mcp_host;
 
 #[test]
 fn socket_is_private_at_publication_boundaries() {
@@ -104,7 +105,7 @@ fn shared_socket_parents_require_sticky_protection_and_a_trusted_owner() {
 fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>) {
     let project = Project::new(Document::new(Uuid::new_v4(), Uuid::new_v4())).unwrap();
     let document = DocumentSession::new(project.clone(), None, Limits::default()).unwrap();
-    let mut session = Session::new(PathBuf::new());
+    let mut session = Session::new(PathBuf::new(), mcp_host);
     session.attach(project).unwrap();
     let (send, requests) = mpsc::sync_channel(16);
     (
@@ -113,8 +114,8 @@ fn attachment() -> (AttachedSession, DocumentSession, mpsc::SyncSender<Request>)
             configured_root: PathBuf::new(),
             palette_enabled: true,
             comments_enabled: true,
-            tools: Arc::new(RwLock::new(crate::exports::tools(&crate::exports::host()))),
-            export_formats: crate::exports::host()
+            tools: Arc::new(RwLock::new(crate::exports::tools(&mcp_host()))),
+            export_formats: mcp_host()
                 .registry()
                 .formats()
                 .map(|(_, f)| f.clone())
@@ -221,7 +222,7 @@ fn root_and_ancestor_replacement_cannot_redirect_queued_exports() {
 #[test]
 fn palette_requests_and_tool_catalog_follow_the_live_editor_host() {
     let (mut attachment, mut document, send) = attachment();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let before = document.project().to_bytes().unwrap();
     host.disable("dev.voxelite.palette").unwrap();
@@ -419,9 +420,9 @@ fn attached_reads_share_the_owners_save_state_without_adopting_the_placeholder()
 fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_document() {
     let (mut attachment, mut document, send) = attachment();
     let root = tempfile::tempdir().unwrap();
-    attachment.session = Session::new(root.path().canonicalize().unwrap());
+    attachment.session = Session::new(root.path().canonicalize().unwrap(), mcp_host);
     attachment.session.attach(document.project()).unwrap();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let before = document.project().to_bytes().unwrap();
     let revision = document.engine.revision();
@@ -487,7 +488,7 @@ fn exports_use_live_registry_and_disablement_removes_tools_without_mutating_docu
 #[test]
 fn comment_requests_and_catalog_follow_live_host_without_losing_core_data() {
     let (mut attachment, mut document, send) = attachment();
-    let mut host = crate::exports::host();
+    let mut host = mcp_host();
     let model = document.engine.document().id;
     let thread = Uuid::new_v4();
     let message = Uuid::new_v4();

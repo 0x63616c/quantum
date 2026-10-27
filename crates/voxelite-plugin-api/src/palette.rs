@@ -2,6 +2,11 @@
 use crate::{Command, CoreError, Palette, PaletteEdit, SettingValue, Swatch, Uuid};
 use serde::{Deserialize, Serialize};
 
+/// Registered palette panel shared by shell and MCP adapters.
+pub const PALETTE_PANEL_ID: &str = "dev.voxelite.palette.panel";
+/// Transient project/preset choice, retained across disable/enable in one editor.
+pub const PALETTE_PRESET_SETTING: &str = "dev.voxelite.palette.preset";
+
 /// A user-owned palette, independent of a document's stable slots.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LibraryPalette {
