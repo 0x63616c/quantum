@@ -180,6 +180,27 @@ pub mod radius {
     pub const LG: f32 = 8.;
     /// Grouped cards and dialogs.
     pub const XL: f32 = 12.;
+
+    /// Radius sharing a center with an outer corner. `inset` includes the
+    /// container's border and padding; deep insets become square corners.
+    pub fn concentric(outer: f32, inset: f32) -> f32 {
+        (outer - inset).max(0.)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use crate::tokens::{metrics, space};
+
+        #[test]
+        fn inset_corners_share_centers_and_never_go_negative() {
+            assert_eq!(concentric(XL, metrics::EDGE + space::SM), 5.);
+            assert_eq!(concentric(LG, metrics::EDGE + space::XS), 3.);
+            assert_eq!(concentric(XL, metrics::EDGE), 11.);
+            assert_eq!(concentric(XL, XL), 0.);
+            assert_eq!(concentric(XL, XL + space::SM), 0.);
+        }
+    }
 }
 /// Font families, type scale and weights.
 pub mod type_size {
