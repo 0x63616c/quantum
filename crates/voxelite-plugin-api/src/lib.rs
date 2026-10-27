@@ -48,7 +48,7 @@ pub use voxelite_core::{
 /// Before 1.0, breaking changes bump the minor version; compatible changes bump
 /// the patch version. From 1.0, breaking changes bump major, additions bump minor
 /// and fixes bump patch. Compatibility checks belong to the host.
-pub const API_VERSION: Version = Version::new(0, 6, 0);
+pub const API_VERSION: Version = Version::new(0, 7, 0);
 
 /// A statically linked plugin that declares metadata and host contributions.
 pub trait Plugin {

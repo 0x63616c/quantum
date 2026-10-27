@@ -81,7 +81,7 @@ fn selection_only_changes_new_voxels_and_undo_redo_preserve_exact_document_bytes
         .unwrap();
     assert_eq!(editor.color, color);
     editor
-        .palette_action(PaletteAction::SelectSwatch(12))
+        .palette_action_with(PaletteAction::SelectSwatch(12), |_| Ok(()))
         .unwrap();
     assert_eq!(editor.color.rgba, [41, 173, 255, 255]);
     assert_eq!(editor.project().to_bytes().unwrap(), before);
@@ -103,7 +103,7 @@ fn disablement_and_absence_remove_panel_commands_and_use_the_core_tool_color() {
         .palette_action(PaletteAction::ChoosePreset(2))
         .unwrap();
     editor
-        .palette_action(PaletteAction::SelectSwatch(5))
+        .palette_action_with(PaletteAction::SelectSwatch(5), |_| Ok(()))
         .unwrap();
     let selected = editor.color.clone();
     let before = editor.project().to_bytes().unwrap();
@@ -176,4 +176,58 @@ fn typed_document_edits_remain_core_validated_and_atomic() {
     assert_eq!(editor.project().to_bytes().unwrap(), before);
     editor.redo().unwrap();
     assert_eq!(editor.project().to_bytes().unwrap(), after);
+}
+
+#[test]
+fn picker_preview_and_recent_colors_are_adopted_only_after_successful_persistence() {
+    let mut editor = Editor::blank().unwrap();
+    let original = editor.palette_view().unwrap();
+    let brush = editor.color.clone();
+    for value in 0..60 {
+        editor
+            .palette_action_with(
+                PaletteAction::SetColor {
+                    rgb: [value; 3],
+                    commit: false,
+                },
+                |_| panic!("preview cannot write"),
+            )
+            .unwrap();
+    }
+    let preview = editor.palette_view().unwrap();
+    assert_eq!(preview.state.library.entries.len(), 1);
+    assert!(preview.state.recent_colors.is_empty());
+    assert_eq!(editor.color, brush);
+    let failed = |_: &[u8]| Err(EditorError::Gesture("write failed".into()));
+    assert!(
+        editor
+            .palette_action_with(PaletteAction::CommitColor, failed)
+            .is_err()
+    );
+    assert_eq!(editor.palette_view().unwrap(), preview);
+    let mut writes = 0;
+    let committed = editor
+        .palette_action_with(PaletteAction::CommitColor, |_| {
+            writes += 1;
+            Ok(())
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(writes, 1);
+    assert_eq!(committed.state.recent_colors, [[59; 3]]);
+    assert!(committed.state.preview.is_none());
+    assert_eq!(editor.color, brush);
+    editor
+        .palette_action(PaletteAction::ChoosePreset(0))
+        .unwrap();
+    let before_brush = editor.palette_view().unwrap();
+    assert!(
+        editor
+            .palette_action_with(PaletteAction::SelectSwatch(0), failed)
+            .is_err()
+    );
+    assert_eq!(editor.palette_view().unwrap(), before_brush);
+    assert_eq!(editor.color, brush);
+    assert_eq!(editor.snapshot().palette, original.palette);
+    assert_eq!(editor.engine.history().count(), 0);
 }

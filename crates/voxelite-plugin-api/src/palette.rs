@@ -20,34 +20,104 @@ pub struct PaletteLibrary {
     pub entries: Vec<LibraryPalette>,
 }
 
-/// Transient panel selection and the last successfully persisted library.
+/// Rollback point for an uncommitted picker gesture. Never serialized.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PalettePreview {
+    /// Library before the first preview, including before an automatic copy.
+    pub library: PaletteLibrary,
+    /// Custom selection before the gesture.
+    pub custom: Option<Uuid>,
+    /// Manager display position before the gesture.
+    pub slot: usize,
+}
+
+/// Panel selection and working library. The host admits returned state atomically.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PaletteState {
-    /// Custom library loaded by the host.
+    /// Custom library, including transient edits while a preview is active.
     pub library: PaletteLibrary,
     /// Selected custom palette, if any.
     pub custom: Option<Uuid>,
     /// Selected display position in the manager.
     pub slot: usize,
+    /// Original library and selection while a picker gesture is active.
+    pub preview: Option<PalettePreview>,
+    /// Up to sixteen distinct committed sRGB colors, most recent first.
+    /// Persisted beside entries in the existing local library bytes.
+    pub recent_colors: Vec<[u8; 3]>,
 }
 
-/// One project or preset choice supplied by the panel implementation.
+/// Origin and editing policy of a palette in the manager.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaletteKind {
+    /// Current document colors; edits in the manager create a custom copy.
+    Project,
+    /// Immutable bundled colors; edits in the manager create a custom copy.
+    BuiltIn,
+    /// Editable local library entry.
+    Custom,
+}
+
+/// Stable identity independent of a custom entry's position in the library.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaletteId {
+    /// Project (zero) or built-in index in the source choices.
+    Source(usize),
+    /// Local library identity.
+    Custom(Uuid),
+}
+
+/// One source or custom choice supplied by the panel implementation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaletteChoice {
+    /// Stable selection address.
+    pub id: PaletteId,
+    /// Palette origin.
+    pub kind: PaletteKind,
+    /// Whether editing requires an automatic custom copy.
+    pub read_only: bool,
     /// Display label.
     pub name: String,
     /// Exact swatches in source order.
     pub palette: Palette,
 }
 
+/// A text interchange format supported by the palette manager.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PaletteFormat {
+    /// Identifier accepted by import/export actions, without a dot.
+    pub id: &'static str,
+    /// Human-readable format label.
+    pub label: &'static str,
+    /// File extension, without a dot.
+    pub extension: &'static str,
+}
+
+/// Exported manager palette text; the host chooses the destination and writes it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PaletteExport {
+    /// Format metadata for save dialogs or downloads.
+    pub format: PaletteFormat,
+    /// Encoded text in display order.
+    pub text: String,
+}
+
 /// Read-only presentation data, with no GUI objects or callbacks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PaletteView {
+    /// Supported import/export formats in menu order.
+    pub formats: Vec<PaletteFormat>,
+    /// Selected palette's stable identity.
+    pub selected: PaletteId,
+    /// Selected palette's origin.
+    pub kind: PaletteKind,
+    /// Whether editing the selection requires an automatic custom copy.
+    pub read_only: bool,
     /// Selected palette's display name.
     pub name: String,
-    /// Selected palette's original colors.
+    /// Selected palette's working colors, including the active preview.
     pub palette: Palette,
-    /// Project palette followed by immutable built-in presets.
+    /// Project, built-ins, then custom entries in persisted display order.
     pub choices: Vec<PaletteChoice>,
     /// Selected project/preset index, retained while a custom entry is selected.
     pub preset: usize,
@@ -76,7 +146,7 @@ pub enum PaletteOperation {
     Duplicate,
     /// Delete a custom entry.
     Delete,
-    /// Rename a custom entry.
+    /// Rename the selection, automatically copying a source palette first.
     Rename,
     /// Replace the selected swatch.
     ApplyColor,
@@ -90,6 +160,18 @@ pub enum PaletteOperation {
     MoveRight,
 }
 
+/// Destination for a committed color from the recent-color list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecentColorTarget {
+    /// Replace the selected manager swatch, preserving its name.
+    SelectedSwatch,
+    /// Insert and select a swatch; None appends and overflow clamps.
+    NewSwatch {
+        /// Requested display position.
+        at: Option<usize>,
+    },
+}
+
 /// Typed input from the shell or agent adapter.
 #[derive(Clone, Debug)]
 pub enum PaletteAction {
@@ -99,8 +181,48 @@ pub enum PaletteAction {
     ChoosePreset(usize),
     /// Choose a custom entry without changing the brush or document.
     ChooseCustom(Uuid),
+    /// Choose any palette by its stable address, without changing the brush.
+    ChoosePalette(PaletteId),
     /// Select a manager swatch, without changing the brush.
     SelectSlot(usize),
+    /// Set the selected swatch's exact opaque RGB, preserving its name.
+    /// A preview creates at most one custom copy and produces no library bytes.
+    /// Other actions cancel the preview first, except CommitColor and CancelColor.
+    SetColor {
+        /// Exact sRGB bytes, including values sampled by an eyedropper.
+        rgb: [u8; 3],
+        /// Persist this value and end any active preview.
+        commit: bool,
+    },
+    /// Persist the current preview once; no-op when no preview exists.
+    CommitColor,
+    /// Restore the library and selection from before the current preview.
+    CancelColor,
+    /// Insert a swatch and select it, using the lowest free stable slot.
+    AddSwatch {
+        /// Exact opaque sRGB bytes.
+        rgb: [u8; 3],
+        /// Display position before which to insert; None appends, overflow clamps.
+        at: Option<usize>,
+    },
+    /// Remove a swatch by display position; the final swatch cannot be removed.
+    RemoveSwatch(usize),
+    /// Move a swatch to a final display position, preserving all stable slots.
+    MoveSwatch {
+        /// Existing display position; out-of-range sources are rejected.
+        from: usize,
+        /// Final display position, clamped to the last position.
+        to: usize,
+    },
+    /// Copy a swatch and its name immediately after its display position; select it.
+    DuplicateSwatch(usize),
+    /// Commit a recent color to the manager without changing the brush.
+    UseRecentColor {
+        /// Current zero-based MRU position; invalid positions are rejected.
+        index: usize,
+        /// Replace the selected swatch or insert a new one.
+        target: RecentColorTarget,
+    },
     /// Select a brush swatch by display position.
     SelectSwatch(usize),
     /// Move the brush selection, wrapping in display order.
@@ -114,14 +236,19 @@ pub enum PaletteAction {
         /// Current hex field.
         color: String,
     },
-    /// Import a custom library entry from bounded HEX/GPL text.
+    /// Import a custom library entry from bounded HEX/GPL/JASC-PAL text.
     ImportLibrary {
-        /// Filename stem, truncated by the implementation as before.
+        /// Filename stem, truncated to at most 100 characters and 128 UTF-8 bytes.
         name: String,
         /// Lowercase file extension.
         format: String,
         /// File contents; reading is the host's responsibility.
         text: String,
+    },
+    /// Export the selected manager palette without filesystem access.
+    ExportLibrary {
+        /// Format identifier from PaletteView::formats.
+        format: String,
     },
     /// Execute one of the owner's declared shell commands.
     Command(String),
@@ -138,7 +265,7 @@ pub enum PaletteAction {
     AppendPreset(String),
     /// Append imported colors without recoloring existing geometry.
     AppendImport {
-        /// Lowercase HEX/GPL format.
+        /// Lowercase HEX/GPL/PAL format identifier.
         format: String,
         /// Bounded source text.
         text: String,
@@ -159,6 +286,10 @@ pub enum PalettePresentation {
 /// Proposed state and typed edits; only the host can admit these effects.
 #[derive(Clone, Debug, Default)]
 pub struct PaletteOutcome {
+    /// Encoded manager palette, if an export was requested.
+    pub export: Option<PaletteExport>,
+    /// Source name when this interaction automatically copied a read-only palette.
+    pub copied_from: Option<String>,
     /// Next panel state, installed after successful persistence/edit admission.
     pub state: PaletteState,
     /// Replacement library bytes in the existing settings format, if changed.

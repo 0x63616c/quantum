@@ -1,15 +1,20 @@
 //! Built-in palettes, library management and portable panel behavior.
 mod import;
+mod interchange;
 mod library;
+mod manager;
 mod panel;
 mod presets;
 
-pub use import::{from_gpl, from_hex};
+pub use import::{from_gpl, from_hex, from_pal};
+pub use interchange::{FORMATS, export, format, import, to_pal};
 pub use library::{parse_color, step_swatch};
 pub use presets::Preset;
 
 /// Registered palette panel identity.
 pub const PANEL_ID: &str = "dev.voxelite.palette.panel";
+/// JASC-PAL export identity in the host format registry.
+pub const PAL: &str = "dev.voxelite.palette.pal";
 /// Transient project/preset choice, retained across disable/enable in one editor.
 pub const PRESET_SETTING: &str = "dev.voxelite.palette.preset";
 
@@ -36,6 +41,14 @@ impl Plugin for PalettePlugin {
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
+        registrar.format(voxelite_plugin_api::FormatContribution {
+            id: PAL.into(),
+            label_key: "JASC-PAL Palette (.pal)".into(),
+            extensions: vec!["pal".into()],
+            content: voxelite_plugin_api::FormatContent::Palette,
+            import: false,
+            export: true,
+        });
         registrar.panel(PanelContribution {
             id: PANEL_ID.into(),
             label_key: "Palette".into(),
@@ -96,6 +109,14 @@ impl Plugin for PalettePlugin {
         }
     }
 
+    fn exporter(&self, id: &str) -> Option<voxelite_plugin_api::ExportCallback> {
+        (id == PAL).then_some(|cx| {
+            to_pal(cx.palette())
+                .map(String::into_bytes)
+                .map_err(|error| voxelite_plugin_api::ExportError::Invalid(error.to_string()))
+        })
+    }
+
     fn palette_panel(&self, id: &str) -> Option<&dyn PalettePanel> {
         (id == PANEL_ID).then_some(self)
     }
@@ -116,5 +137,7 @@ mod tests {
 
 #[cfg(test)]
 mod characterization;
+#[cfg(test)]
+mod manager_tests;
 #[cfg(test)]
 mod panel_tests;

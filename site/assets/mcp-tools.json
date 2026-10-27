@@ -274,7 +274,7 @@
                 "maxLength": 16
               },
               "minItems": 1,
-              "maxItems": 5
+              "maxItems": 6
             },
             "presets": {
               "type": "array",
@@ -7179,7 +7179,7 @@
   },
   {
     "name": "voxelite_palette_export",
-    "description": "Return palette as .hex or .gpl text in display order; GPL preserves representable names. Read-only, no filesystem side effects.",
+    "description": "Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7196,7 +7196,8 @@
           "type": "string",
           "enum": [
             "hex",
-            "gpl"
+            "gpl",
+            "pal"
           ]
         }
       },
@@ -7245,7 +7246,8 @@
               "type": "string",
               "enum": [
                 "hex",
-                "gpl"
+                "gpl",
+                "pal"
               ]
             }
           },
@@ -7350,7 +7352,7 @@
   },
   {
     "name": "voxelite_palette_import",
-    "description": "Append colors from bounded .hex or .gpl text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.",
+    "description": "Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -7382,7 +7384,8 @@
           "type": "string",
           "enum": [
             "hex",
-            "gpl"
+            "gpl",
+            "pal"
           ]
         },
         "text": {

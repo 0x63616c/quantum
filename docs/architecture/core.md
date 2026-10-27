@@ -15,4 +15,4 @@ Palette sources, retrieved 2026-10-25:
 - [Sweetie 16](https://lospec.com/palette-list/sweetie-16), by GrafxKid.
 - Grayscale is exactly RGB `17*n` for n = 0…15. Neutral, Warm and Vivid are original Voxelite palettes under the repository MIT license.
 
-HEX preserves RGB and display order; GPL additionally preserves representable names. Neither format encodes document slot identity. Duplicate swatches are preserved. Selecting a custom/library preset is separate from editing a document; applying colors requires explicit slot commands.
+HEX and JASC-PAL preserve RGB and display order; GPL additionally preserves representable names. These formats do not encode document slot identity. Duplicate swatches are preserved. Selecting a custom/library preset is separate from editing a document; applying colors requires explicit slot commands.
