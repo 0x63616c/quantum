@@ -23,7 +23,7 @@ their existing differences.
 | Model | Strength 0 (off) | Strength 1 (default) |
 | --- | --- | --- |
 | [Autumn Workshop](../bench/scenes/autumn-workshop.voxl) | ![Workshop with AO off](images/autumn-workshop-off.png) | ![Workshop with default AO](images/autumn-workshop-default.png) |
-| [Three-voxel step](../crates/voxelite-export/tests/golden/scene.json) | ![Step with AO off](images/step-off.png) | ![Step with default AO](images/step-default.png) |
+| [Three-voxel step](../crates/plugins/voxelite-plugin-exporters/tests/golden/scene.json) | ![Step with AO off](images/step-off.png) | ![Step with default AO](images/step-default.png) |
 | [Single-voxel control](../spec/voxl/1.0/fixtures/populated.canonical.voxl) | ![Single voxel with AO off](images/single-voxel-off.png) | ![Single voxel with default AO](images/single-voxel-default.png) |
 
 The step makes the contact shading easy to inspect. The single-voxel control is
@@ -31,7 +31,7 @@ identical in both images: AO does not darken unoccluded surfaces. Every PNG is
 under 400 KB. Regenerate using the existing CPU export example:
 
 ```sh
-cargo run --release --locked -p voxelite-export --example cottage -- --ao-comparisons
+cargo run --release --locked -p voxelite-plugin-exporters --example cottage -- --ao-comparisons
 ```
 
 ## Default preservation

@@ -1,6 +1,6 @@
 # Stage 1 core
 
-The four library crates run without a GPU, window system, network service, or GUI dependency. The GPUI application belongs to a later stage; no placeholder GUI is included or claimed as tested.
+`voxelite-core`, `voxelite-format` and `voxelite-mesh` run without a GPU, window system, network service or GUI dependency. Bounded GLB/PNG encoding lives in `voxelite-plugin-exporters`, using portable geometry and export errors from `voxelite-plugin-api`. The API has no renderer or built-in exporter dependency; MCP encodes render-feedback PNGs directly with `png`.
 
 `voxelite-core` owns finite half-open bounds, stable slots 1–256 (0 is air), bottom-to-top layers, sparse/dense 16³ chunks and copy-on-write snapshots. All commands prepare against private evolving state, validate the complete result and reserve history before installation. No-ops do not advance revision. Human and agent attribution share one timeline. Hosts must add authority epochs, operation deduplication and durable journal receipts around `Engine`; the pure engine does not perform I/O.
 

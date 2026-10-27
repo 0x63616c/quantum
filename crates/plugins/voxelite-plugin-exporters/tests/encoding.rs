@@ -1,7 +1,7 @@
 //! Parse generated GLB with an independent glTF implementation and decode PNG.
 use proptest::prelude::*;
 use voxelite_core::*;
-use voxelite_export::*;
+use voxelite_plugin_exporters::encoding::*;
 fn model(points: Vec<Pos>) -> Snapshot {
     let mut e = Engine::new(Document::new(Uuid::from_u128(1), Uuid::from_u128(2))).unwrap();
     e.execute(Transaction {

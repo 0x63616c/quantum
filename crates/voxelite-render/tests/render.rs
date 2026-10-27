@@ -235,7 +235,7 @@ fn cached_raster_matches_stateless_through_camera_and_visibility_changes() {
 fn ao_strength_preserves_default_pixels_and_only_darkens_contacts() {
     // Three touching voxels form a concave step; a convex cube alone has no AO.
     let snapshot: Snapshot = serde_json::from_slice(include_bytes!(
-        "../../voxelite-export/tests/golden/scene.json"
+        "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
     ))
     .unwrap();
     let cache = RasterCache::default();
