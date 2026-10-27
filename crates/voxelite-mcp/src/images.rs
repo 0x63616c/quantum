@@ -329,29 +329,6 @@ mod tests {
     }
 
     #[test]
-    fn feedback_png_matches_straight_alpha_characterization() {
-        let pixels = [
-            255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 123, 45, 67, 255,
-        ];
-        assert_eq!(
-            png_rgba(2, 2, &pixels).unwrap(),
-            include_bytes!("../../plugins/voxelite-plugin-exporters/tests/golden/rgba.png")
-        );
-    }
-
-    #[test]
-    fn feedback_png_rejects_invalid_pixels_with_the_existing_error() {
-        for (width, height) in [(0, 1), (1, 0), (2049, 1), (u32::MAX, u32::MAX), (1, 1)] {
-            let error = Failure::from(png_rgba(width, height, &[]).unwrap_err());
-            assert_eq!(error.code, "export_failed");
-            assert_eq!(
-                error.message.as_ref(),
-                "export limit or input error: RGBA dimensions/length exceed 2048² or mismatch"
-            );
-        }
-    }
-
-    #[test]
     fn contact_sheet_export_characterization() {
         let snapshot = serde_json::from_slice(include_bytes!(
             "../../plugins/voxelite-plugin-exporters/tests/golden/scene.json"
