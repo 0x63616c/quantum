@@ -193,7 +193,7 @@ impl EditorView {
             )
             .w_full()
             .border_0()
-            .mb(px(3.0))
+            .mb(px(space::COMPACT))
             .when(
                 p.is_some_and(|p| p.source == PreviewSource::History(*id)),
                 |d| d.bg(t.selected()).text_color(t.accent()),
@@ -221,20 +221,20 @@ impl EditorView {
                 cx,
             );
         };
-        div()
+        Panel::section(t)
             .flex_1()
-            .min_h(px(0.0))
+            .min_h(px(space::NONE))
             .flex()
             .flex_col()
-            .p(px(20.0))
-            .gap(px(12.0))
+            .p(px(space::PANEL))
+            .gap(px(space::LG))
             .child(
                 row()
                     .justify_between()
                     .child(section_title("History & versions"))
                     .child(
                         row()
-                            .gap(px(8.0))
+                            .gap(px(space::MD))
                             .child(mono(format!("{} steps", steps.len())).text_color(t.muted()))
                             .when(count > 1, |d| {
                                 d.child(
@@ -245,9 +245,9 @@ impl EditorView {
                                         cx,
                                         |this, _, cx| this.toggle_history(cx),
                                     )
-                                    .w(px(34.0))
-                                    .px(px(0.0))
-                                    .gap(px(0.0))
+                                    .w(px(metrics::PLAYBACK_WIDTH))
+                                    .px(px(space::NONE))
+                                    .gap(px(space::NONE))
                                     .justify_center()
                                     .aria_label(playback_label)
                                     .aria_keyshortcuts("Space")
@@ -261,15 +261,18 @@ impl EditorView {
                     ),
             )
             .child(
-                div().text_color(t.muted()).text_size(px(12.0)).child(
-                    p.map_or("Live document", |p| display_label(&p.label))
-                        .to_string(),
-                ),
+                div()
+                    .text_color(t.muted())
+                    .text_size(px(type_size::BODY))
+                    .child(
+                        p.map_or("Live document", |p| display_label(&p.label))
+                            .to_string(),
+                    ),
             )
             .child(
                 div()
                     .id("timeline-slider")
-                    .h(px(26.0))
+                    .h(px(metrics::TIMELINE_HEIGHT))
                     .relative()
                     .cursor_pointer()
                     .tooltip(hint(
@@ -282,8 +285,8 @@ impl EditorView {
                             move |b, _, window, _| {
                                 window.paint_quad(fill(
                                     Bounds::new(
-                                        point(b.left(), b.top() + px(12.0)),
-                                        size(b.size.width, px(2.0)),
+                                        point(b.left(), b.top() + px(space::LG)),
+                                        size(b.size.width, px(space::XXS)),
                                     ),
                                     t.line(),
                                 ));
@@ -305,9 +308,9 @@ impl EditorView {
                                     .left(relative(
                                         i as f32 / count.saturating_sub(1).max(1) as f32,
                                     ))
-                                    .top(px(5.0))
-                                    .ml(px(-8.0))
-                                    .size(px(16.0))
+                                    .top(px(space::GLYPH))
+                                    .ml(px(-space::MD))
+                                    .size(px(space::XL))
                                     .rounded_full()
                                     .justify_center()
                                     .bg(t.background())
@@ -324,7 +327,7 @@ impl EditorView {
                                         } else {
                                             "circle"
                                         })
-                                        .size(px(8.0))
+                                        .size(px(space::MD))
                                         .text_color(
                                             if i == selected { t.accent() } else { t.muted() },
                                         ),
@@ -357,7 +360,7 @@ impl EditorView {
             .when(p.is_some(), |d| {
                 d.child(
                     row()
-                        .gap(px(8.0))
+                        .gap(px(space::MD))
                         .child(self.control(
                             "history-live",
                             "log-out",
@@ -391,7 +394,7 @@ impl EditorView {
                     .id("timeline-events")
                     .track_scroll(&self.timeline.scroll)
                     .flex_1()
-                    .min_h(px(70.0))
+                    .min_h(px(metrics::HISTORY_LIST_MIN_HEIGHT))
                     .overflow_y_scroll()
                     .children(recent.rev().map(event_row))
                     .when(count > RECENT_STEPS, |d| {
@@ -416,7 +419,7 @@ impl EditorView {
                             .aria_expanded(expanded)
                             .w_full()
                             .border_0()
-                            .mb(px(3.0)),
+                            .mb(px(space::COMPACT)),
                         )
                     })
                     .children(earlier.rev().map(event_row)),
@@ -427,19 +430,23 @@ impl EditorView {
                     .child(section_title("Named versions"))
                     .child(
                         row()
-                            .gap(px(5.0))
-                            .text_size(px(12.0))
+                            .gap(px(space::GLYPH))
+                            .text_size(px(type_size::BODY))
                             .text_color(t.muted())
-                            .child(icon("circle").size(px(10.0)).text_color(t.muted()))
+                            .child(icon("circle").size(px(space::INSET)).text_color(t.muted()))
                             .child("Human")
-                            .child(icon("diamond").size(px(10.0)).text_color(t.accent()))
+                            .child(
+                                icon("diamond")
+                                    .size(px(space::INSET))
+                                    .text_color(t.accent()),
+                            )
                             .child("Agent"),
                     ),
             )
             .child(
                 div()
                     .id("versions-scroll")
-                    .max_h(px(110.0))
+                    .max_h(px(metrics::VERSIONS_MAX_HEIGHT))
                     .overflow_y_scroll()
                     .children(versions.into_iter().enumerate().map(|(i, v)| {
                         let id = v.id;
@@ -462,7 +469,7 @@ impl EditorView {
                         )
                         .w_full()
                         .border_0()
-                        .mb(px(3.0))
+                        .mb(px(space::COMPACT))
                         .when(
                             p.is_some_and(|p| p.source == PreviewSource::Version(id)),
                             |d| d.bg(t.selected()).text_color(t.accent()),
@@ -472,11 +479,11 @@ impl EditorView {
             .when(p.is_none(), |d| {
                 d.child(
                     row()
-                        .gap(px(8.0))
+                        .gap(px(space::MD))
                         .child(
                             div()
                                 .flex_1()
-                                .min_w(px(0.0))
+                                .min_w(px(space::NONE))
                                 .child(self.timeline.name.clone()),
                         )
                         .child(self.control(

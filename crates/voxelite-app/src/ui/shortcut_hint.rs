@@ -4,6 +4,7 @@ use crate::{
     shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
 };
 use gpui::{prelude::*, *};
+use voxelite_ui::tokens::{metrics, space, type_size};
 
 #[derive(Clone, IntoElement)]
 struct Keycap {
@@ -30,8 +31,8 @@ impl Keycap {
 impl RenderOnce for Keycap {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let style = window.text_style();
-        let font_size = px(12.0);
-        let line_height = px(16.0);
+        let font_size = px(space::LG);
+        let line_height = px(space::XL);
         let font = gpui::font("Geist");
         let font_id = cx.text_system().resolve_font(&font);
         let cap_height = cx.text_system().cap_height(font_id, font_size);
@@ -75,7 +76,7 @@ impl RenderOnce for Keycap {
                         div()
                             .relative()
                             .flex_shrink_0()
-                            .w(symbol_height * aspect + px(1.0))
+                            .w(symbol_height * aspect + px(metrics::EDGE))
                             .h(line_height)
                             .child(
                                 svg()
@@ -93,23 +94,14 @@ impl RenderOnce for Keycap {
         if !text.is_empty() {
             result = result.child(text);
         }
-        div()
-            .flex()
-            .items_center()
-            .justify_center()
-            .flex_shrink_0()
-            .min_w(px(22.0))
-            .h(px(22.0))
-            .px(px(5.0))
-            .rounded(px(4.0))
-            .border_1()
-            .border_color(style.color.opacity(0.28))
-            .child(result)
+        voxelite_ui::Kbd::frame(style.color).child(result)
     }
 }
 
 pub(super) fn shortcut(binding: &str) -> Div {
-    div().text_size(px(12.0)).child(Keycap::new(binding))
+    div()
+        .text_size(px(type_size::BODY))
+        .child(Keycap::new(binding))
 }
 
 pub(super) fn action_shortcut(op: Op) -> Div {
@@ -179,7 +171,7 @@ impl RenderOnce for HintText {
                 .whitespace_nowrap()
                 .flex_none()
                 .items_center()
-                .gap_x(px(7.0))
+                .gap_x(px(space::OPTICAL))
         };
         let mut result = div().flex().flex_col().flex_none().items_start();
         let mut line = new_line();

@@ -1,7 +1,7 @@
 //! Menu presentation. Open state, focus, dismissal and actions belong to the caller.
 use crate::{
     Button, Theme, icon, row,
-    tokens::{self, metrics, radius, space},
+    tokens::{metrics, radius, space},
 };
 use gpui::{prelude::*, *};
 
@@ -19,22 +19,28 @@ impl Menu {
             .selected(open)
             .build()
             .aria_expanded(open)
-            .child(icon("chevron").size(px(12.)).text_color(theme.text()))
+            .child(
+                icon("chevron")
+                    .size(px(metrics::ICON_SM))
+                    .text_color(theme.text()),
+            )
+    }
+    /// Canvas menu with the editor's existing floating-panel dimensions and focus hooks.
+    pub fn canvas(id: impl Into<ElementId>, theme: Theme, focus: &FocusHandle) -> Stateful<Div> {
+        crate::Dialog::panel(id, "Menu", theme, focus)
+            .role(Role::Menu)
+            .bg(theme.background())
+            .p(px(metrics::POPOVER_PADDING))
     }
     /// A menu surface; position it within a relative container or GPUI anchor.
     pub fn panel(id: impl Into<ElementId>, theme: Theme) -> Stateful<Div> {
-        div()
+        crate::Popover::menu(theme)
+            .build()
             .id(id)
             .role(Role::Menu)
             .occlude()
-            .p(px(space::XS))
-            .w(px(224.))
-            .rounded(px(radius::LG))
-            .border_1()
-            .border_color(theme.separator())
-            .bg(theme.card())
-            .shadow(tokens::panel_shadow())
-            .overflow_hidden()
+            .p(px(metrics::MENU_PADDING))
+            .w(px(metrics::MENU_WIDTH))
     }
     /// A full-width menu entry with a visible keyboard selection.
     pub fn item(
@@ -49,7 +55,7 @@ impl Menu {
             .role(Role::MenuItem)
             .aria_label(label.clone())
             .tab_index(0)
-            .h(px(32.))
+            .h(px(crate::tokens::ControlSize::Md.height()))
             .px(px(space::LG))
             .rounded(px(radius::concentric(
                 radius::LG,
