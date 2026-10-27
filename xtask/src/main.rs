@@ -5,7 +5,7 @@ fn main() -> ExitCode {
     let subcommand = args.first().map_or("help", String::as_str);
     if ["help", "--help", "-h"].contains(&subcommand) {
         println!(
-            "cargo xtask bench [--scene S ...] [--runs N] [--out FILE] [--compare [FILE]] [--update-baseline] [--markdown FILE]\ncargo xtask visual [--scene S ...] [--rebaseline] [--determinism] [--local-baseline]\n\nPass --help after bench or visual for all options. See docs/perf/rendering-harness.md."
+            "cargo xtask bench [--scene S ...] [--runs N] [--out FILE] [--compare [FILE]] [--update-baseline] [--markdown FILE]\n  [--memory-pct 10] [--rss-pct 50 --rss-mb 128]\ncargo xtask visual [--scene S ...] [--rebaseline] [--determinism] [--local-baseline]\n\nPass --help after bench or visual for all options. See docs/perf/rendering-harness.md."
         );
         return ExitCode::SUCCESS;
     }

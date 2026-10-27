@@ -18,6 +18,8 @@ pub struct Options {
     pub wall_ms: f64,
     pub gpu_pct: f64,
     pub memory_pct: f64,
+    pub rss_pct: f64,
+    pub rss_mb: f64,
     pub delta: u8,
     pub max_pct: f64,
     pub max_delta: u8,
@@ -54,6 +56,8 @@ impl Options {
             wall_ms: 0.3,
             gpu_pct: 10.0,
             memory_pct: 10.0,
+            rss_pct: 50.0,
+            rss_mb: 128.0,
             delta: 2,
             max_pct: 0.01,
             max_delta: 24,
@@ -86,6 +90,8 @@ impl Options {
                 "--wall-ms" if bench => o.wall_ms = value()?.parse()?,
                 "--gpu-pct" if bench => o.gpu_pct = value()?.parse()?,
                 "--memory-pct" if bench => o.memory_pct = value()?.parse()?,
+                "--rss-pct" if bench => o.rss_pct = value()?.parse()?,
+                "--rss-mb" if bench => o.rss_mb = value()?.parse()?,
                 "--compare" if bench => {
                     o.compare = Some(if args.peek().is_some_and(|s| !s.starts_with('-')) {
                         args.next().map(PathBuf::from)
@@ -124,7 +130,15 @@ impl Options {
                     .into(),
             );
         }
-        for v in [o.wall_pct, o.wall_ms, o.gpu_pct, o.memory_pct, o.max_pct] {
+        for v in [
+            o.wall_pct,
+            o.wall_ms,
+            o.gpu_pct,
+            o.memory_pct,
+            o.rss_pct,
+            o.rss_mb,
+            o.max_pct,
+        ] {
             if !v.is_finite() || v < 0.0 {
                 return Err("tolerances must be finite and nonnegative".into());
             }
@@ -158,6 +172,7 @@ pub const HELP: &str = "Rendering harness (production 4x MSAA, 2x supersampling,
   cargo xtask bench [--scene S ...] [--frames 90] [--warmup 8] [--runs N]\n\
     [--out FILE] [--compare [FILE]] [--update-baseline] [--markdown FILE]\n\
     [--width 2064 --height 1616] [--wall-pct 10 --wall-ms 0.3 --gpu-pct 10 --memory-pct 10]\n\
+    [--rss-pct 50 --rss-mb 128]\n\
     [--input FILE] (compare/report existing results without rerunning)\n\
   cargo xtask visual [--scene S ...] [--out DIR] [--determinism]\n\
     [--rebaseline [--force]] [--local-baseline | --golden-set KEY]\n\
@@ -173,6 +188,25 @@ mod tests {
     use super::*;
     fn parse(args: &[&str]) -> Result<Options> {
         Options::parse(args.iter().map(|s| s.to_string()))
+    }
+    #[test]
+    fn rss_tolerances_default_override_and_validation() {
+        let options = parse(&["bench"]).unwrap();
+        assert_eq!(options.rss_pct, 50.0);
+        assert_eq!(options.rss_mb, 128.0);
+        assert_eq!(options.memory_pct, 10.0);
+        let options = parse(&["bench", "--rss-pct", "25.5", "--rss-mb", "64.5"]).unwrap();
+        assert_eq!(options.rss_pct, 25.5);
+        assert_eq!(options.rss_mb, 64.5);
+        assert_eq!(options.memory_pct, 10.0);
+        for flag in ["--rss-pct", "--rss-mb"] {
+            assert!(parse(&["bench", flag, "0"]).is_ok());
+            assert!(parse(&["bench", flag]).is_err());
+            assert!(parse(&["visual", flag, "1"]).is_err());
+            for value in ["-1", "NaN", "inf", "-inf", "invalid"] {
+                assert!(parse(&["bench", flag, value]).is_err(), "{flag} {value}");
+            }
+        }
     }
     #[test]
     fn commands_have_independent_flags_and_reject_invalid_limits() {
