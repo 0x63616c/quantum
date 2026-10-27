@@ -2,7 +2,8 @@
 
 Date: 2026-10-26
 
-Status: Accepted; the app shell reads built-in command metadata from the host registry.
+Status: Accepted; the shell reads command metadata and the editor dispatches tool
+behavior through the host registry.
 
 ## Context
 
@@ -42,15 +43,22 @@ keys are namespaced; data section names may also name existing `.voxl` fields.
 
 Plugins receive capability-scoped, host-implemented `CommandCx`, `ToolCx` and
 `ExportCx` traits, never the app, a GPUI context or an unrestricted service locator.
-`ActivateCx` scopes activation capabilities separately. These are trait stubs in
-this step; concrete operations arrive with host integration. `Plugin` exposes
-`manifest`, `contribute`, and default no-op `activate`/`deactivate` hooks. The host
+`ActivateCx` scopes activation capabilities separately. `CommandCx`, `ExportCx`
+and `ActivateCx` remain stubs. `ToolCx` supplies read-only queries for the hovered
+voxel and face normal, bounded work-plane intersection, visible composite sample,
+layer voxel lookup, palette, selected color, active layer, visibility/lock state
+and document bounds. It exposes no engine, mutations, mirror settings or GUI.
+The API depends on `voxelite-core` and re-exports the core command and value types;
+plugin crates still depend only on the API.
+
+`Plugin` exposes `manifest`, `contribute`, a default-unbound `tool(id)` implementation
+lookup, and default no-op `activate`/`deactivate` hooks. The host
 owns API compatibility checks, cross-plugin conflicts, keybinding conflicts,
-enabled sets and lifecycle management. Implementation binding follows with app
-integration.
+enabled sets and lifecycle management. Tool lookup and invocation are admitted
+only for declared tool IDs belonging to an enabled plugin.
 
 Manifest `version` and `api_version` are `semver::Version` values. `API_VERSION`
-is `0.2.0`, independently of plugin implementation versions and `.voxl` or
+is `0.3.0`, independently of plugin implementation versions and `.voxl` or
 data section schema versions. Before 1.0, breaking API changes bump the minor
 version and compatible additions or fixes bump patch. From 1.0, breaking changes
 bump major, compatible additions bump minor and fixes bump patch. Required trait
@@ -58,10 +66,43 @@ methods and changes to exhaustive enums or public struct construction count as
 breaking changes. Host compatibility checks respect the pre-1.0
 minor boundary and reject newer required API versions.
 The `0.2.0` bump adds command presentation fields to public struct construction.
+The `0.3.0` bump adds required `ToolCx` queries and the tool behavior contract.
 
-Third-party plugins and WASM are deferred to a later design; dynamic loading and
-scripting are also out of scope. This is a statically linked Rust API, not a stable
+Third-party plugins, WASM plugins, dynamic loading and scripting are out of scope.
+This is a statically linked Rust API, not a stable
 binary ABI or an external code loader.
+
+## Tool behavior and transaction boundary
+
+`voxelite-plugin-tools` implements Place, Erase, Paint, Fill, Box and Picker through
+the API's `Tool` trait. `ToolInput` describes hover, preview, pointer click or an
+explicit keyboard coordinate, plus the pending box anchor. Stateless tools return
+`ToolOutcome`: ordered typed core `Command`s, transaction label, optional preview
+region, optional original sampled color, resolved target and next anchor.
+The plugin owns face-versus-ground targeting, layer admission, lazy palette slot
+selection, no-op detection, box corners, preview regions and picker sampling.
+
+The editor retains its `Tool` enum as stable IDs and UI selection, implements
+`ToolCx` with a private read-only adapter, and retains a host for dispatch and
+lifecycle state. Ray construction, DDA picking and work-plane intersection remain
+host responsibilities. The viewport draws the returned region; pointer and
+keyboard handlers continue through the editor. Alt-click dispatches the registered
+Picker implementation without changing the active tool or pending box.
+Background file opening returns a portable `DocumentSession`; the UI thread then
+attaches the editor's plugins, preserving the API's lack of a `Send` requirement.
+
+Tools propose unmirrored commands. For this step the editor still applies its
+centered mirror settings, wraps the commands in the same ordered `Command::Batch`,
+and calls the existing `Engine` transaction path with the same label and human
+attribution. Core validation, atomicity, history, undo and redo remain invariants
+of the engine. Feedback state is adopted only after a successful transaction;
+failure preserves the box anchor and rolls back any proposed palette insertion.
+
+Missing, disabled or faulted tools produce no edits or preview. Disabling the
+active tools plugin cancels the pending box; re-enabling starts a fresh gesture.
+Core navigation, layers, persistence and undo remain usable without tools. This
+step adds no enablement UI: the shell's immutable metadata view and installed
+bindings still need rebuilding when runtime enablement is exposed to users.
 
 ## Crate layout and dependency rule
 
@@ -100,13 +141,18 @@ Repeated enable/disable requests are no-ops; transitions call their hook once.
 API compatibility ignores build metadata and requires exact version precedence
 for prereleases, which have no compatibility guarantee.
 
-Plugin entry points are guarded with `catch_unwind`. A hook panic marks the plugin
+Plugin entry points, including tool binding and interaction, are guarded with
+`catch_unwind`. A hook panic marks the plugin
 `Faulted`, discards its declarations and prevents retries for that host's lifetime;
 a manifest panic is a registration rejection because no identity is established.
 Shell notices are drainable `HostEvent` values. `Timings` records count/total/max by
 plugin and label, including failed hooks, and reports advisory budget overruns.
+Tool errors return to the editor without faulting the plugin; binding or interaction
+panics quarantine it and remove its declarations. Tool calls use the same timings
+and fault notices as lifecycle calls.
 The public `conformance::check` harness validates a plugin and exercises a full
-enable/disable/enable cycle, recollecting metadata to detect residue. Required
+enable/disable/enable cycle, recollecting metadata to detect residue and checking
+that every declared tool binds only while enabled. Required
 plugins also have their cleanup hooks exercised without exposing a public bypass
 of their disablement policy. Panic isolation requires unwinding and cannot recover
 from aborts or roll back arbitrary plugin-owned external effects.
@@ -130,3 +176,11 @@ with `agent_visible = false`.
 A golden test captured the pre-migration Apple and non-Apple menus, icons,
 shortcuts, search order and bindings. Disablement tests verify that optional
 plugins disappear from shell lists without affecting the remaining commands.
+
+App characterization tests passed against the original tool path before dispatch
+was switched. They assert exact command batches, labels and actor attribution,
+preview regions, palette/no-op behavior, centered mirrors, rejected transactions,
+and byte-identical `.voxl` content through undo/redo for every tool. Plugin unit
+tests use a fake `ToolCx`; host tests cover enabled-only dispatch, missing bindings,
+gesture errors and panic isolation. App tests also exercise disabled and absent
+tools, reactivation and replacement registered behavior.

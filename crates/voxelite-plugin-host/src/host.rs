@@ -5,8 +5,8 @@ use std::{
 };
 
 use voxelite_plugin_api::{
-    API_VERSION, ActivateCx, Contributions, Manifest, Plugin, PluginId, Registrar, ValidationError,
-    Version,
+    API_VERSION, ActivateCx, Contribution, Contributions, Manifest, Plugin, PluginId, Registrar,
+    ToolCx, ToolError, ToolInput, ToolOutcome, ValidationError, Version,
 };
 
 use crate::{BudgetExceeded, Conflict, Registry, Timings, registry::find_conflicts};
@@ -69,6 +69,8 @@ pub enum Phase {
     Activate,
     /// Releasing an enabled plugin's state.
     Deactivate,
+    /// Binding or invoking a tool through read-only capabilities.
+    Tool,
 }
 
 impl Phase {
@@ -77,6 +79,7 @@ impl Phase {
             Self::Contribute => "contribute",
             Self::Activate => "activate",
             Self::Deactivate => "deactivate",
+            Self::Tool => "tool",
         }
     }
 }
@@ -149,9 +152,12 @@ pub enum RegistrationError {
     },
 }
 
-/// A runtime lifecycle request could not be completed.
+/// A runtime lifecycle or tool request could not be completed.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
+    /// A tool rejected a gesture without changing the document.
+    #[error(transparent)]
+    Tool(#[from] ToolError),
     /// No admitted plugin has this identity.
     #[error("unknown plugin {id:?}")]
     UnknownPlugin {
@@ -271,6 +277,42 @@ pub struct Host {
 }
 
 impl Host {
+    /// Resolve and invoke a declared, enabled tool. Missing or disabled tools are inert.
+    /// Both binding and execution are timed and panic-isolated like lifecycle hooks.
+    pub fn dispatch_tool(
+        &mut self,
+        id: &str,
+        cx: &dyn ToolCx,
+        input: ToolInput,
+    ) -> Result<Option<ToolOutcome>, HostError> {
+        let Some(index) = self.tool_owner(id) else {
+            return Ok(None);
+        };
+        self.invoke(index, Phase::Tool, |plugin| {
+            plugin.tool(id).map(|tool| tool.interact(cx, input))
+        })?
+        .transpose()
+        .map_err(HostError::from)
+    }
+
+    /// Whether an enabled tool declaration has an implementation binding.
+    pub fn has_tool(&mut self, id: &str) -> Result<bool, HostError> {
+        let Some(index) = self.tool_owner(id) else {
+            return Ok(false);
+        };
+        self.invoke(index, Phase::Tool, |plugin| plugin.tool(id).is_some())
+    }
+
+    fn tool_owner(&self, id: &str) -> Option<usize> {
+        self.plugins.iter().position(|plugin| {
+            plugin.state == PluginState::Enabled
+                && plugin
+                    .contributions
+                    .iter()
+                    .any(|c| matches!(c, Contribution::Tool(tool) if tool.id == id))
+        })
+    }
+
     /// Register plugins and activate those enabled by their manifests.
     pub fn new(plugins: Vec<Box<dyn Plugin>>) -> Self {
         let mut host = Self::default();

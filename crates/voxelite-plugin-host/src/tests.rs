@@ -630,6 +630,7 @@ fn all_hook_panics_are_isolated_and_faulted_plugins_are_never_called_again() {
                         Phase::Contribute => "contribute",
                         Phase::Activate => "activate",
                         Phase::Deactivate => "deactivate",
+                        Phase::Tool => "tool",
                     }
                 )
                 .unwrap()
@@ -731,6 +732,216 @@ fn conformance_rejects_panics_invalid_metadata_conflicts_and_residue() {
     for plugin in bad_plugins {
         assert!(
             std::panic::catch_unwind(AssertUnwindSafe(|| conformance::check(|| Box::new(plugin))))
+                .is_err()
+        );
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ToolFailure {
+    None,
+    Unbound,
+    BindPanic,
+    InteractPanic,
+    Gesture,
+}
+
+struct ToolPlugin {
+    metadata: TestPlugin,
+    failure: ToolFailure,
+    calls: Rc<std::cell::Cell<usize>>,
+}
+impl ToolPlugin {
+    fn new(failure: ToolFailure) -> Self {
+        let mut metadata = TestPlugin::new("dev.tool");
+        metadata.declarations = vec![
+            tool("dev.tool.brush"),
+            command("dev.tool.command", None, None),
+        ];
+        Self {
+            metadata,
+            failure,
+            calls: Rc::default(),
+        }
+    }
+}
+impl Plugin for ToolPlugin {
+    fn manifest(&self) -> Manifest {
+        self.metadata.manifest()
+    }
+    fn contribute(&self, registrar: &mut Registrar) {
+        self.metadata.contribute(registrar);
+    }
+    fn tool(&self, _: &str) -> Option<&dyn Tool> {
+        self.calls.set(self.calls.get() + 1);
+        assert!(self.failure != ToolFailure::BindPanic, "binding panic");
+        // Deliberately bind any ID: the host must only invoke declared tool IDs.
+        (self.failure != ToolFailure::Unbound).then_some(self)
+    }
+}
+impl Tool for ToolPlugin {
+    fn interact(&self, _: &dyn ToolCx, input: ToolInput) -> Result<ToolOutcome, ToolError> {
+        self.calls.set(self.calls.get() + 1);
+        assert!(
+            self.failure != ToolFailure::InteractPanic,
+            "interaction panic"
+        );
+        if self.failure == ToolFailure::Gesture {
+            return Err(ToolError::Gesture("invalid gesture".into()));
+        }
+        Ok(ToolOutcome {
+            label: "Test".into(),
+            anchor: input.anchor,
+            ..Default::default()
+        })
+    }
+}
+
+// Dispatch/lifecycle tests have no document queries; any accidental query is a failure.
+struct NoQueries;
+impl ToolCx for NoQueries {
+    fn hovered_hit(&self) -> Option<ToolHit> {
+        panic!("unexpected query")
+    }
+    fn ground_target(&self) -> Option<Pos> {
+        panic!("unexpected query")
+    }
+    fn sample(&self, _: Pos) -> Option<(u16, Uuid)> {
+        panic!("unexpected query")
+    }
+    fn voxel(&self, _: Uuid, _: Pos) -> Result<u16, CoreError> {
+        panic!("unexpected query")
+    }
+    fn palette(&self) -> &Palette {
+        panic!("unexpected query")
+    }
+    fn active_color(&self) -> &Swatch {
+        panic!("unexpected query")
+    }
+    fn active_layer(&self) -> Uuid {
+        panic!("unexpected query")
+    }
+    fn layer(&self, _: Uuid) -> Result<ToolLayer, CoreError> {
+        panic!("unexpected query")
+    }
+    fn bounds(&self) -> Region {
+        panic!("unexpected query")
+    }
+}
+fn tool_input() -> ToolInput {
+    ToolInput {
+        gesture: ToolGesture::Click,
+        anchor: Some([1; 3]),
+    }
+}
+
+#[test]
+fn tool_dispatch_requires_an_enabled_declared_binding() {
+    let plugin = ToolPlugin::new(ToolFailure::None);
+    let calls = plugin.calls.clone();
+    let mut host = Host::new(vec![Box::new(plugin)]);
+    for id in ["dev.missing", "dev.tool.command"] {
+        assert!(!host.has_tool(id).unwrap());
+        assert_eq!(
+            host.dispatch_tool(id, &NoQueries, tool_input()).unwrap(),
+            None
+        );
+    }
+    assert_eq!(calls.get(), 0);
+    let expected = Some(ToolOutcome {
+        label: "Test".into(),
+        anchor: Some([1; 3]),
+        ..Default::default()
+    });
+    assert_eq!(
+        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+            .unwrap(),
+        expected
+    );
+    assert_eq!(calls.get(), 2);
+    host.disable("dev.tool").unwrap();
+    assert!(!host.has_tool("dev.tool.brush").unwrap());
+    assert_eq!(
+        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+            .unwrap(),
+        None
+    );
+    assert_eq!(calls.get(), 2);
+    host.enable("dev.tool").unwrap();
+    assert_eq!(
+        host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+            .unwrap(),
+        expected
+    );
+    assert_eq!(calls.get(), 4);
+    assert_eq!(host.timings().get("dev.tool", "tool").unwrap().count, 2);
+    let mut unbound = Host::new(vec![Box::new(ToolPlugin::new(ToolFailure::Unbound))]);
+    assert!(!unbound.has_tool("dev.tool.brush").unwrap());
+    assert_eq!(
+        unbound
+            .dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+            .unwrap(),
+        None
+    );
+}
+
+#[test]
+fn tool_panics_quarantine_bindings_but_gesture_errors_do_not() {
+    for failure in [
+        ToolFailure::BindPanic,
+        ToolFailure::InteractPanic,
+        ToolFailure::Gesture,
+    ] {
+        let plugin = ToolPlugin::new(failure);
+        let calls = plugin.calls.clone();
+        let mut host = Host::new(vec![
+            Box::new(plugin),
+            Box::new(TestPlugin::new("dev.good")),
+        ]);
+        host.drain_events();
+        let result = host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input());
+        if failure == ToolFailure::Gesture {
+            assert!(
+                matches!(result, Err(HostError::Tool(ToolError::Gesture(message))) if message == "invalid gesture")
+            );
+            assert_eq!(host.state("dev.tool"), Some(&PluginState::Enabled));
+            assert!(host.drain_events().is_empty());
+        } else {
+            assert!(matches!(
+                result,
+                Err(HostError::Faulted {
+                    phase: Phase::Tool,
+                    ..
+                })
+            ));
+            assert!(host.registry().for_plugin("dev.tool").is_none());
+            assert!(matches!(
+                host.drain_events().as_slice(),
+                [HostEvent::Faulted {
+                    phase: Phase::Tool,
+                    ..
+                }]
+            ));
+            let count = calls.get();
+            assert_eq!(
+                host.dispatch_tool("dev.tool.brush", &NoQueries, tool_input())
+                    .unwrap(),
+                None
+            );
+            assert!(!host.has_tool("dev.tool.brush").unwrap());
+            assert_eq!(calls.get(), count);
+        }
+        assert_eq!(host.state("dev.good"), Some(&PluginState::Enabled));
+        assert_eq!(host.timings().get("dev.tool", "tool").unwrap().count, 1);
+    }
+}
+
+#[test]
+fn tool_conformance_requires_bindings_across_enablement_cycles() {
+    conformance::check(|| Box::new(ToolPlugin::new(ToolFailure::None)));
+    for failure in [ToolFailure::Unbound, ToolFailure::BindPanic] {
+        assert!(
+            std::panic::catch_unwind(|| conformance::check(|| Box::new(ToolPlugin::new(failure))))
                 .is_err()
         );
     }

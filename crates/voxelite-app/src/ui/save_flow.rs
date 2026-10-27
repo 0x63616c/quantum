@@ -164,12 +164,16 @@ impl EditorView {
                     Ok(Ok(Some(paths))) if !paths.is_empty() => {
                         let path = paths[0].clone();
                         this.status = "Opening project…".into();
-                        let task = cx.background_executor().spawn(async move { Editor::open(&path) });
+                        // Load portable state off-thread; plugin instances stay on the UI thread.
+                        let task = cx.background_executor().spawn(async move {
+                            voxelite_format::session::DocumentSession::open(&path, voxelite_core::Limits::default())
+                                .map_err(voxelite_app::editor::EditorError::from)
+                        });
                         cx.spawn(async move |this, cx| {
                             let result = task.await;
                             let _ = this.update(cx, |this, cx| {
                                 this.save_flow.finish_dialog();
-                                match result {
+                                match result.and_then(Editor::from_session) {
                                     Ok(editor) => { this.replace_editor(editor, cx); this.status = "Project opened".into(); }
                                     Err(error) => { this.status = error.to_string().into(); this.error = true; }
                                 }
