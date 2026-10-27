@@ -1,3 +1,5 @@
+#[path = "comments.rs"]
+mod comments;
 #[path = "export.rs"]
 mod export;
 pub use export::{ExportCompletion, ExportJob, SnapshotExport};
@@ -91,6 +93,8 @@ pub enum Phase {
     Export,
     /// Binding, viewing or interacting with a portable palette panel.
     Palette,
+    /// Binding, viewing or interacting with a portable discussion panel.
+    Comments,
 }
 
 impl Phase {
@@ -105,6 +109,7 @@ impl Phase {
             Self::Overlay => "overlay",
             Self::Export => "export",
             Self::Palette => "palette",
+            Self::Comments => "comments",
         }
     }
 }
@@ -330,6 +335,25 @@ impl Host {
         camera_basis: [[f64; 3]; 3],
         hovered: Option<(&str, u32)>,
     ) -> Vec<OverlayFrame> {
+        self.draw_overlays_with(
+            &OverlayContext {
+                bounds,
+                camera_basis,
+                settings: BTreeMap::new(),
+                primitives: Vec::new(),
+                source: None,
+            },
+            hovered,
+        )
+    }
+
+    /// Draw using optional host projection, picking and discussion capabilities.
+    /// Settings remain scoped to the declaration owner and emissions are staged.
+    pub fn draw_overlays_with(
+        &mut self,
+        source: &dyn OverlayCx,
+        hovered: Option<(&str, u32)>,
+    ) -> Vec<OverlayFrame> {
         let passes: Vec<_> = self
             .registry()
             .render_passes()
@@ -341,8 +365,9 @@ impl Host {
                 continue;
             };
             let mut cx = OverlayContext {
-                bounds,
-                camera_basis,
+                bounds: source.bounds(),
+                camera_basis: source.camera_basis(),
+                source: Some(source),
                 settings: self.plugins[index].settings.clone(),
                 primitives: Vec::new(),
             };
@@ -380,6 +405,7 @@ impl Host {
             return Ok(None);
         };
         let cx = OverlayContext {
+            source: None,
             bounds,
             camera_basis,
             settings: self.plugins[index].settings.clone(),
@@ -884,13 +910,14 @@ fn panic_message(payload: Box<dyn Any + Send>) -> String {
     }
 }
 
-struct OverlayContext {
+struct OverlayContext<'a> {
+    source: Option<&'a dyn OverlayCx>,
     bounds: Region,
     camera_basis: [[f64; 3]; 3],
     settings: BTreeMap<String, SettingValue>,
     primitives: Vec<OverlayPrimitive>,
 }
-impl OverlayCx for OverlayContext {
+impl OverlayCx for OverlayContext<'_> {
     fn bounds(&self) -> Region {
         self.bounds
     }
@@ -899,6 +926,15 @@ impl OverlayCx for OverlayContext {
     }
     fn setting(&self, key: &str) -> Option<&SettingValue> {
         self.settings.get(key)
+    }
+    fn comments(&self) -> Option<&dyn voxelite_plugin_api::CommentsCx> {
+        self.source?.comments()
+    }
+    fn project(&self, point: [f64; 3]) -> Option<[f64; 2]> {
+        self.source?.project(point)
+    }
+    fn pick(&self, uv: [f64; 2]) -> Option<voxelite_plugin_api::Pos> {
+        self.source?.pick(uv)
     }
     fn emit(&mut self, primitive: OverlayPrimitive) {
         self.primitives.push(primitive);

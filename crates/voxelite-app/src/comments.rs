@@ -1,127 +1,165 @@
-//! Anchored human discussion commands and camera-space pin placement.
-use crate::editor::{Editor, EditorResult, OrbitCamera, raycast};
-use glam::DVec3;
-use voxelite_core::*;
-/// Project an anchor's center; indicate when another visible voxel occludes it.
-/// Hidden and orphan anchors are retained, with their state supplied by the core.
-pub fn project_pin(
-    snapshot: &Snapshot,
-    comment: &Comment,
-    camera: OrbitCamera,
-    aspect: f64,
-) -> Option<([f64; 2], bool)> {
-    if !aspect.is_finite() || aspect <= 0.0 {
-        return None;
-    }
-    let region = comment.anchor.region().ok()?;
-    let center = DVec3::from(std::array::from_fn::<_, 3, _>(|a| {
-        f64::from(region.min[a] + region.max[a]) * 0.5
-    }));
-    let uv = camera.project(center, aspect);
-    if uv
-        .iter()
-        .any(|v| !v.is_finite() || !(0.0..=1.0).contains(v))
-    {
-        return None;
-    }
-    let occluded = camera
-        .ray(uv, aspect)
-        .and_then(|r| raycast(snapshot, r))
-        .is_some_and(|hit| !region.contains(hit.at));
-    Some((uv, occluded))
-}
+//! Host adapters for registered discussion, placement and overlay behavior.
+use crate::editor::{Editor, EditorError, EditorResult, OrbitCamera, Ray, raycast};
+
+use voxelite_plugin_api::*;
+use voxelite_plugin_comments::{PANEL_ID, TOOL_ID};
+
 impl Editor {
-    /// Add a plain-text thread anchored to a voxel or a half-open region.
+    /// Whether the discussion panel is declared by an enabled plugin.
+    pub fn comments_enabled(&self) -> bool {
+        self.plugins
+            .borrow()
+            .registry()
+            .panels()
+            .any(|(_, p)| p.id == PANEL_ID)
+    }
+    /// Read presentation data from the enabled discussion panel.
+    pub fn comments_view(&self) -> Option<CommentsView> {
+        self.plugins
+            .borrow_mut()
+            .comments_view(PANEL_ID, &EditorCommentsCx(self))
+            .ok()
+            .flatten()
+    }
+    /// Admit a discussion proposal before adopting transient state.
+    pub fn comments_action(
+        &mut self,
+        action: CommentsAction,
+    ) -> EditorResult<Option<CommentsOutcome>> {
+        Ok(self.admit_comments(action)?.map(|(out, _)| out))
+    }
+    fn admit_comments(
+        &mut self,
+        action: CommentsAction,
+    ) -> EditorResult<Option<(CommentsOutcome, bool)>> {
+        let outcome = self.plugins.borrow_mut().dispatch_comments(
+            PANEL_ID,
+            &EditorCommentsCx(self),
+            action,
+        )?;
+        let Some(outcome) = outcome else {
+            return Ok(None);
+        };
+        let changed = match outcome.commands.as_slice() {
+            [] => false,
+            [command] => self.execute(&outcome.label, command.clone())?,
+            commands => self.execute(&outcome.label, Command::Batch(commands.to_vec()))?,
+        };
+        self.comments_state = outcome.state.clone();
+        Ok(Some((outcome, changed)))
+    }
+    /// Place a draft through the enabled tool, then the enabled panel.
+    pub fn comment_gesture(
+        &mut self,
+        ray: Option<Ray>,
+        gesture: ToolGesture,
+    ) -> EditorResult<Option<CommentsOutcome>> {
+        let outcome =
+            self.registered_tool_outcome(TOOL_ID, ray, gesture, self.comments_state.first)?;
+        match outcome.and_then(|o| o.target) {
+            Some(at) => self.comments_action(CommentsAction::Anchor(at)),
+            None => Ok(None),
+        }
+    }
+    /// Add a plain-text thread using the enabled discussion implementation.
     pub fn comment(&mut self, anchor: Anchor, text: String) -> EditorResult<Uuid> {
         let id = Uuid::new_v4();
-        let layer = match &anchor {
-            Anchor::Voxel { at } => self.snapshot().sample(*at).map(|(_, id)| id),
-            Anchor::Region { .. } => None,
-        };
-        self.execute(
-            "Add comment",
-            Command::CreateComment {
-                id,
-                anchor,
-                layer,
-                message: Uuid::new_v4(),
-                text,
-            },
-        )?;
+        self.comments_action(CommentsAction::Create {
+            id,
+            anchor,
+            layer: CommentLayer::Automatic,
+            message: Uuid::new_v4(),
+            text,
+        })?
+        .ok_or_else(|| EditorError::Gesture("Comments plugin is unavailable".into()))?;
         Ok(id)
     }
     /// Append an attributed message through shared history.
     pub fn reply(&mut self, id: Uuid, text: String) -> EditorResult<bool> {
-        self.execute(
-            "Reply to comment",
-            Command::Reply {
+        Ok(self
+            .admit_comments(CommentsAction::Reply {
                 id,
                 message: Uuid::new_v4(),
                 text,
-            },
-        )
+            })?
+            .is_some_and(|(_, changed)| changed))
     }
     /// Resolve or reopen without deleting the discussion.
     pub fn resolve_comment(&mut self, id: Uuid, resolved: bool) -> EditorResult<bool> {
-        self.execute(
-            if resolved {
-                "Resolve comment"
-            } else {
-                "Reopen comment"
-            },
-            Command::Resolve { id, resolved },
-        )
+        Ok(self
+            .admit_comments(CommentsAction::Resolve { id, resolved })?
+            .is_some_and(|(_, changed)| changed))
     }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn discussion_survives_undo_and_file_roundtrip() {
-        let mut e = Editor::blank().unwrap();
-        e.apply_at([0, 0, 0]).unwrap();
-        let id = e
-            .comment(
-                Anchor::Voxel { at: [0, 0, 0] },
-                "Check the silhouette".into(),
+    /// Project enabled pin primitives with the host renderer's camera and picking.
+    pub fn comment_pins(&self, camera: OrbitCamera, aspect: f64) -> Vec<OverlayPin> {
+        self.plugins
+            .borrow_mut()
+            .draw_overlays_with(
+                &CommentsOverlayCx {
+                    comments: EditorCommentsCx(self),
+                    camera,
+                    aspect,
+                },
+                None,
             )
-            .unwrap();
-        e.reply(id, "Looks good".into()).unwrap();
-        e.resolve_comment(id, true).unwrap();
-        assert!(e.snapshot().comments[0].resolved);
-        e.undo().unwrap();
-        assert!(!e.snapshot().comments[0].resolved);
-        assert!(e.reply(id, String::new()).is_err());
-        assert_eq!(e.snapshot().comments[0].messages.len(), 2);
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("comments.voxl");
-        e.save(&path).unwrap();
-        let r = Editor::open(&path).unwrap();
-        assert_eq!(r.snapshot().comments, e.snapshot().comments);
-        assert_eq!(r.snapshot().comments[0].messages[1].origin, Origin::Human);
-    }
-    #[test]
-    fn pin_tracks_camera_and_retains_orphans() {
-        let mut e = Editor::blank().unwrap();
-        e.apply_at([0, 0, 0]).unwrap();
-        e.comment(
-            Anchor::Region {
-                min: [0, 0, 0],
-                max: [1, 1, 1],
-            },
-            "Region".into(),
-        )
-        .unwrap();
-        let c = &e.snapshot().comments[0];
-        let camera = OrbitCamera::fit(e.snapshot(), 1.0);
-        let (uv, hidden) = project_pin(e.snapshot(), c, camera, 1.0).unwrap();
-        assert!(!hidden);
-        assert!(uv.iter().all(|v| (0.0..=1.0).contains(v)));
-        e.tool = crate::editor::Tool::Erase;
-        e.apply_at([0, 0, 0]).unwrap();
-        assert_eq!(
-            e.snapshot().anchor_state(&e.snapshot().comments[0]),
-            AnchorState::Orphaned
-        );
+            .into_iter()
+            .filter(|frame| frame.slot == RenderPassSlot::Overlay)
+            .flat_map(|frame| frame.primitives)
+            .filter_map(|p| match p {
+                OverlayPrimitive::Pin(pin) => Some(pin),
+                _ => None,
+            })
+            .collect()
     }
 }
+
+struct EditorCommentsCx<'a>(&'a Editor);
+impl CommentsCx for EditorCommentsCx<'_> {
+    fn snapshot(&self) -> &Snapshot {
+        self.0.display_snapshot()
+    }
+    fn live_snapshot(&self) -> &Snapshot {
+        self.0.snapshot()
+    }
+    fn state(&self) -> &CommentsState {
+        &self.0.comments_state
+    }
+    fn preview(&self) -> bool {
+        self.0.preview.is_some()
+    }
+}
+
+struct CommentsOverlayCx<'a> {
+    comments: EditorCommentsCx<'a>,
+    camera: OrbitCamera,
+    aspect: f64,
+}
+impl OverlayCx for CommentsOverlayCx<'_> {
+    fn bounds(&self) -> Region {
+        self.comments.snapshot().bounds
+    }
+    fn camera_basis(&self) -> [[f64; 3]; 3] {
+        self.camera.overlay_basis()
+    }
+    fn setting(&self, _: &str) -> Option<&SettingValue> {
+        None
+    }
+    fn comments(&self) -> Option<&dyn CommentsCx> {
+        Some(&self.comments)
+    }
+    fn project(&self, point: [f64; 3]) -> Option<[f64; 2]> {
+        (self.aspect.is_finite() && self.aspect > 0.0)
+            .then(|| self.camera.project(point.into(), self.aspect))
+    }
+    fn pick(&self, uv: [f64; 2]) -> Option<Pos> {
+        self.camera
+            .ray(uv, self.aspect)
+            .and_then(|ray| raycast(self.comments.snapshot(), ray))
+            .map(|hit| hit.at)
+    }
+    fn emit(&mut self, _: OverlayPrimitive) {}
+}
+
+#[cfg(test)]
+#[path = "comment_tests.rs"]
+mod tests;

@@ -90,6 +90,29 @@ pub enum OverlayPrimitive {
     Grid(OverlayGrid),
     /// Screen-space interactive widget above the document.
     Widget(OverlayWidget),
+    /// A projected discussion pin, drawn above the document.
+    Pin(OverlayPin),
+}
+
+/// A projected annotation with a shell-rendered hit target.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OverlayPin {
+    /// Thread selected when the target is clicked.
+    pub id: crate::Uuid,
+    /// Original document index, preserving overlap and element order.
+    pub index: usize,
+    /// Normalized viewport position of the anchor center.
+    pub uv: [f64; 2],
+    /// Stable display number.
+    pub number: usize,
+    /// Whether the thread is resolved.
+    pub resolved: bool,
+    /// Whether the pin is selected.
+    pub selected: bool,
+    /// Whether the anchor is occluded, hidden or orphaned.
+    pub dim: bool,
+    /// Plain-text hover description.
+    pub tooltip: String,
 }
 
 /// One enabled contribution's output; IDs route later interaction through the host.
@@ -111,6 +134,18 @@ pub trait OverlayCx {
     fn camera_basis(&self) -> [[f64; 3]; 3];
     /// Only this overlay owner's declared settings are readable.
     fn setting(&self, key: &str) -> Option<&SettingValue>;
+    /// Optional displayed discussion context for annotation overlays.
+    fn comments(&self) -> Option<&dyn crate::CommentsCx> {
+        None
+    }
+    /// Project a world point through the host camera; invalid viewports return none.
+    fn project(&self, _point: [f64; 3]) -> Option<[f64; 2]> {
+        None
+    }
+    /// Nearest visible voxel at a normalized viewport position.
+    fn pick(&self, _uv: [f64; 2]) -> Option<crate::Pos> {
+        None
+    }
     /// Append a portable primitive; partial output is discarded if drawing panics.
     fn emit(&mut self, primitive: OverlayPrimitive);
 }

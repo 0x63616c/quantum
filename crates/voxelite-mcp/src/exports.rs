@@ -7,6 +7,7 @@ pub(crate) fn host() -> Host {
     Host::new(vec![
         Box::new(voxelite_plugin_exporters::ExportersPlugin),
         Box::new(voxelite_plugin_palette::PalettePlugin),
+        Box::new(voxelite_plugin_comments::CommentsPlugin),
     ])
 }
 
@@ -59,6 +60,8 @@ pub(crate) fn tools(host: &Host) -> Vec<rmcp::model::Tool> {
                     .any(|(_, f)| f.export && f.content == FormatContent::Palette)
             } else if spec.tool.name.starts_with("voxelite_palette_") {
                 crate::palettes::enabled(host)
+            } else if spec.tool.name.starts_with("voxelite_comments_") {
+                crate::comments::enabled(host)
             } else {
                 true
             }
