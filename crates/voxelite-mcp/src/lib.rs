@@ -36,12 +36,17 @@ pub const API_VERSION: &str = "voxelite.v1";
 #[derive(Clone)]
 pub struct VoxeliteServer {
     state: Arc<Mutex<session::Session>>,
+    host_factory: fn() -> voxelite_plugin_host::Host,
     admission: Arc<Semaphore>,
     identity: (voxelite_core::Uuid, voxelite_core::Uuid),
 }
 impl VoxeliteServer {
     /// Create an empty session scoped to an existing project directory.
-    pub fn new(root: impl AsRef<Path>) -> std::io::Result<Self> {
+    /// The composition root supplies plugins on each request's worker thread.
+    pub fn new(
+        root: impl AsRef<Path>,
+        host_factory: fn() -> voxelite_plugin_host::Host,
+    ) -> std::io::Result<Self> {
         let root = root.as_ref().canonicalize()?;
         if !root.is_dir() {
             return Err(std::io::Error::new(
@@ -51,10 +56,11 @@ impl VoxeliteServer {
         }
         // Validate/compile the complete catalog before accepting protocol input.
         let _ = catalog::CATALOG.len();
-        let state = session::Session::new(root);
+        let state = session::Session::new(root, host_factory);
         let identity = (state.id, state.epoch);
         Ok(Self {
             state: Arc::new(Mutex::new(state)),
+            host_factory,
             identity,
             admission: Arc::new(Semaphore::new(16)),
         })
@@ -88,7 +94,10 @@ impl VoxeliteServer {
     }
     /// Return the complete, stable, name-sorted catalog with JSON Schema inputs.
     pub fn tools() -> Vec<Tool> {
-        exports::tools(&exports::host())
+        catalog::CATALOG
+            .iter()
+            .map(|spec| spec.tool.clone())
+            .collect()
     }
 }
 impl ServerHandler for VoxeliteServer {
@@ -115,7 +124,7 @@ impl ServerHandler for VoxeliteServer {
             ));
         }
         Ok(ListToolsResult {
-            tools: Self::tools(),
+            tools: exports::tools(&(self.host_factory)()),
             ..Default::default()
         })
     }

@@ -34,6 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => return Err(format!("unknown argument: {arg}; see --help").into()),
         }
     }
-    VoxeliteServer::new(root)?.serve_stdio().await?;
+    VoxeliteServer::new(root, voxelite_plugins_builtin::mcp_host)?
+        .serve_stdio()
+        .await?;
     Ok(())
 }

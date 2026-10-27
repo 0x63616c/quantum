@@ -5976,15 +5976,14 @@ dependencies = [
  "voxelite-core",
  "voxelite-format",
  "voxelite-mcp",
- "voxelite-plugin-agent",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
- "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",
  "voxelite-plugin-host",
  "voxelite-plugin-mirror",
  "voxelite-plugin-palette",
  "voxelite-plugin-tools",
+ "voxelite-plugins-builtin",
  "voxelite-render",
  "voxelite-ui",
  "wasm-bindgen",
@@ -6047,9 +6046,8 @@ dependencies = [
  "voxelite-format",
  "voxelite-plugin-api",
  "voxelite-plugin-comments",
- "voxelite-plugin-exporters",
  "voxelite-plugin-host",
- "voxelite-plugin-palette",
+ "voxelite-plugins-builtin",
  "voxelite-render",
 ]
 
@@ -6155,6 +6153,20 @@ version = "0.3.1"
 dependencies = [
  "voxelite-plugin-api",
  "voxelite-plugin-host",
+]
+
+[[package]]
+name = "voxelite-plugins-builtin"
+version = "0.3.1"
+dependencies = [
+ "voxelite-plugin-agent",
+ "voxelite-plugin-comments",
+ "voxelite-plugin-exporters",
+ "voxelite-plugin-gizmo-grid",
+ "voxelite-plugin-host",
+ "voxelite-plugin-mirror",
+ "voxelite-plugin-palette",
+ "voxelite-plugin-tools",
 ]
 
 [[package]]

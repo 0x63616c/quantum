@@ -1,5 +1,5 @@
 //! A real stdio bridge process edits the same engine used by the native app.
-#![cfg(unix)]
+#![cfg(all(unix, feature = "standalone"))]
 use serde_json::{Value, json};
 use std::{
     io::{BufRead, BufReader, Write},
@@ -10,6 +10,7 @@ use std::{
 use voxelite_core::*;
 use voxelite_format::{Project, session::DocumentSession};
 use voxelite_mcp::attached::AttachedSession;
+use voxelite_plugins_builtin::mcp_host;
 #[test]
 fn live_socket_shares_history_conflicts_pause_and_receipts() {
     let dir = tempfile::tempdir().unwrap();
@@ -19,12 +20,14 @@ fn live_socket_shares_history_conflicts_pause_and_receipts() {
     let layer = doc.content.layers[0].id;
     let mut owner =
         DocumentSession::new(Project::new(doc.clone()).unwrap(), None, Limits::default()).unwrap();
-    let mut session = AttachedSession::bind(dir.path(), Project::new(doc).unwrap(), &path).unwrap();
+    let mut session =
+        AttachedSession::bind(dir.path(), Project::new(doc).unwrap(), &path, mcp_host).unwrap();
     assert!(
         AttachedSession::bind(
             dir.path(),
             Project::new(owner.engine.document().clone()).unwrap(),
-            &path
+            &path,
+            mcp_host,
         )
         .is_err()
     );

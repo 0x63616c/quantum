@@ -32,7 +32,8 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 | `voxelite-plugin-host` → `voxelite-core`, `voxelite-plugin-api` | Own registration, compatibility, enabled declarations, dispatch, fault quarantine, timings and conformance. No shell, GPUI or renderer. |
 | `crates/plugins/*` → `voxelite-plugin-api` | Implement optional features through portable capabilities; return proposals without accessing app internals. |
 | `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
-| `voxelite-mcp` | Adapt core/format/render and built-in host capabilities to stdio and Unix-socket sessions. No app or GPUI dependency. |
+| `voxelite-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
+| `voxelite-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
 | `voxelite-app` | Compose editor state, plugins, native/web UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
 | `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
 | `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
@@ -50,6 +51,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
   revision, actor, history, lock/visibility and palette-slot semantics. Playback
   inspects immutable previews; never replay commands into the live engine.
 - Register features in [core_plugin.rs](crates/voxelite-app/src/core_plugin.rs).
+  Append optional built-ins through `voxelite-plugins-builtin::register_all`.
   Keep labels, icons, menu placement, bindings and order in contributions.
   [actions.rs](crates/voxelite-app/src/actions.rs) maps IDs to `Op` and builds shell
   metadata from enabled registry entries. Derive menus, command search, shortcut
@@ -84,6 +86,10 @@ cargo test -p voxelite-render --locked --test boundary normal_workspace_dependen
   than directly depending on core, mesh, UI or app crates.
 - Use dev-dependencies for `voxelite_plugin_host::conformance::check`. Exercise
   enable/disable/enable, validation, errors and panic isolation as appropriate.
+- MCP accepts a host factory from its composition root. Its default `standalone`
+  feature links `voxelite-plugins-builtin` for the binary; library consumers disable
+  default features. Concrete plugins are allowed only as MCP dev-dependencies.
+  Verify library isolation with `cargo check -p voxelite-mcp --locked --lib --no-default-features`.
 - Follow [the plugin guide](crates/plugins/README.md) and run:
 
 ```sh

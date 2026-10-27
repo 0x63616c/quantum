@@ -120,8 +120,13 @@ fn queued_exports_follow_save_as_failed_save_open_and_new() {
     let second = tempfile::tempdir().unwrap();
     let mut editor = Editor::blank().unwrap();
     let untitled = editor.attachment_root().unwrap();
-    let mut attachment =
-        AttachedSession::bind(&untitled, editor.project(), &first.path().join("app.sock")).unwrap();
+    let mut attachment = AttachedSession::bind(
+        &untitled,
+        editor.project(),
+        &first.path().join("app.sock"),
+        voxelite_plugins_builtin::mcp_host,
+    )
+    .unwrap();
     assert!(untitled.is_dir());
     let mut client = Client::connect(&mut attachment, &mut editor);
     client.queue("voxelite_capabilities_get", json!({}));

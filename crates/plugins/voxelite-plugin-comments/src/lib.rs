@@ -6,8 +6,7 @@ mod pins;
 
 /// Built-in discussion owner.
 pub const PLUGIN_ID: &str = "dev.voxelite.comments";
-/// Registered discussion panel.
-pub const PANEL_ID: &str = "dev.voxelite.comments.panel";
+pub use voxelite_plugin_api::COMMENTS_PANEL_ID as PANEL_ID;
 /// Registered placement tool.
 pub const TOOL_ID: &str = "dev.voxelite.comments.tool";
 /// Registered pins overlay.
