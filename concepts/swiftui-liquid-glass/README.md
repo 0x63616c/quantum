@@ -64,12 +64,10 @@ oxipng -o 4 --strip safe screenshots/*.png
 sets its colour scheme. The CLI does not open windows, and draws traffic lights
 into the image; the live app leaves room for the native window controls.
 
-In the task's Linux workspace, the external job helper transfers this package,
-builds on the Mac, and returns the screenshots:
+To regenerate the screenshots on a Mac:
 
 ```sh
-/workspace/jobs-owned/glass-concept/mac-build.sh build
-/workspace/jobs-owned/glass-concept/mac-build.sh render
+swift run -c release QuantumGlassRender screenshots
 ```
 
 ## Real glass and rendered glass
