@@ -202,3 +202,57 @@ fn hex(value: &str, length: usize) -> bool {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod protection_tests {
+    use super::*;
+
+    #[test]
+    fn main_ruleset_requires_existing_unfiltered_check_contexts() {
+        let payload: Value =
+            serde_json::from_str(include_str!("../../../.github/rulesets/protect-main.json"))
+                .unwrap();
+        assert_eq!(payload["bypass_actors"], serde_json::json!([]));
+        let rules = payload["rules"].as_array().unwrap();
+        for kind in ["deletion", "non_fast_forward", "pull_request"] {
+            assert!(rules.iter().any(|rule| rule["type"] == kind));
+        }
+        let checks = rules
+            .iter()
+            .find(|rule| rule["type"] == "required_status_checks")
+            .unwrap();
+        assert_eq!(
+            checks["parameters"]["strict_required_status_checks_policy"],
+            true
+        );
+        let mut actual = Vec::new();
+        for source in [
+            include_str!("../../../.github/workflows/ci-linux.yml"),
+            include_str!("../../../.github/workflows/ci-macos.yml"),
+            include_str!("../../../.github/workflows/pr-conventions.yml"),
+        ] {
+            let workflow: Value = serde_saphyr::from_str(source).unwrap();
+            let trigger = &workflow["on"]["pull_request"];
+            assert!(!workflow["on"]["pull_request"].is_boolean());
+            assert!(workflow["on"].get("pull_request").is_some());
+            assert!(trigger.get("paths").is_none());
+            assert!(trigger.get("paths-ignore").is_none());
+            for (id, job) in workflow["jobs"].as_object().unwrap() {
+                actual.push(job["name"].as_str().unwrap_or(id).to_owned());
+            }
+        }
+        for check in checks["parameters"]["required_status_checks"]
+            .as_array()
+            .unwrap()
+        {
+            assert_eq!(check["integration_id"], 15368);
+            assert!(actual.iter().any(|name| check["context"] == *name));
+        }
+        let pr = rules
+            .iter()
+            .find(|rule| rule["type"] == "pull_request")
+            .unwrap();
+        assert_eq!(pr["parameters"]["required_approving_review_count"], 0);
+    }
+
+}

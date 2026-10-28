@@ -121,6 +121,56 @@ A ticket is done only when all of these hold:
 Never call work done from memory. Re-read the ticket's checklist against the merged
 diff first.
 
+## Main branch protection
+
+The reviewed ruleset payload is [protect-main.json](.github/rulesets/protect-main.json).
+It requires a pull request and an up-to-date branch, blocks force-push and deletion,
+and grants no bypasses. Required approvals are zero, so automation can merge a
+PR once the required checks pass. GitHub Actions (integration ID `15368`) must
+report these exact check contexts; workflow names are not part of the context:
+
+| Workflow | Required check context |
+| --- | --- |
+| CI Linux | `linux` |
+| CI macOS | `macos` |
+| PR conventions | `Conventional Commit title` |
+| PR conventions | `Linked issue` |
+
+Linux and PR-conventions workflows run on every PR without path filters. macOS
+uses a change-detection job and skips its build job for docs-only changes, so the
+`macos` check is reported rather than absent. Owner-only, same-repository guards
+remain mandatory: a skipped untrusted macOS job is not native verification.
+Arrange trusted macOS verification before merging code changes from other actors.
+Rendering checks remain a separate applicable merge requirement; do not add
+`render` to the ruleset until its path-filtered workflow reliably reports a
+check on every PR (see #85).
+
+### Apply and verify the ruleset
+
+Issue #122 tracks rollout. Do not apply the payload until the required workflows
+have been green and stable on `main` for several days. Inspect recent runs and
+actual PR check contexts with `gh run list --branch main` and `gh pr checks <PR>`.
+The existing Protect main ruleset already blocks deletion and force-pushes; the
+payload preserves those protections while adding PR and CI requirements.
+
+A repository administrator can inspect and update the existing ruleset:
+
+```sh
+gh api repos/0x63616c/voxelite/rulesets/25883879
+gh api --method PUT repos/0x63616c/voxelite/rulesets/25883879 \
+  --input .github/rulesets/protect-main.json
+```
+
+Read back the ruleset and verify required contexts, strict up-to-date checking,
+zero approvals, no bypass actors, and both deletion/force-push rules. On disposable
+same-repository test PRs, verify that a missing issue link fails `Linked issue`
+and blocks merging; verify that a deliberately failing CI check also blocks
+merging. Record the PR URLs and GitHub merge-state evidence in #122. Finally fix
+the failures, update the branch, and verify an authorized bot can merge the green
+PR without human approval. Do not weaken the self-hosted runner guards or merge
+failing test changes to perform this verification. Until these live checks are
+recorded, the rollout is incomplete; a committed payload alone is not protection.
+
 ## Running Rust tests
 
 CI runs `cargo nextest run --workspace --locked --profile ci`, followed by
