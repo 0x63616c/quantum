@@ -81,8 +81,9 @@ is a capture fixture, not the current release version.
   word/line navigation, selection, clipboard, local undo and IME handling.
   Packaged macOS builds integrate Sparkle update checks.
 
-The app opens the bundled Autumn Workshop directly when no file is supplied.
-For controls and their generated shortcut table, see the
+With no file argument, the app shows Welcome by default, or a blank editor when
+**Show at launch** is off. Use `--example` to open the bundled Autumn Workshop
+directly. For controls and their generated shortcut table, see the
 [native editor guide](crates/quantum-app/README.md). Roadmap entries and older
 reviews can describe earlier stages; they are not a list of shipped features.
 
