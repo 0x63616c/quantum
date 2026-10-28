@@ -68,8 +68,8 @@ impl Default for Context {
                 max: [1; 3],
             },
             palette: Palette::default(),
-            layers: vec![],
-            comments: vec![],
+            layers: Default::default(),
+            comments: Default::default(),
             extra: Default::default(),
         })
     }

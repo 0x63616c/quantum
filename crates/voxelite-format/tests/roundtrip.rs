@@ -172,3 +172,44 @@ proptest! {
     }
     #[test]fn arbitrary_bytes_never_panic(bytes in prop::collection::vec(any::<u8>(),0..1024)){let _=from_bytes(&bytes);}
 }
+
+#[test]
+fn legacy_file_roundtrips_after_runtime_history_undo_redo() {
+    let project = from_bytes(INPUT).unwrap();
+    let original = project.document.clone();
+    let mut engine = Engine::new(original.clone()).unwrap();
+    let id = Uuid::from_u128(900);
+    engine
+        .execute(Transaction {
+            expected_revision: 0,
+            id,
+            actor: Actor::new(Origin::Human),
+            label: "Rename".into(),
+            command: Command::EditDocument {
+                name: Some("Temporary".into()),
+                bounds: None,
+            },
+        })
+        .unwrap();
+    engine.undo(engine.revision(), id).unwrap();
+    assert_eq!(
+        Project::new(engine.document().clone())
+            .unwrap()
+            .to_bytes()
+            .unwrap(),
+        GOLDEN
+    );
+    engine.redo(engine.revision(), id).unwrap();
+    engine.undo(engine.revision(), id).unwrap();
+    assert_eq!(
+        from_bytes(
+            &Project::new(engine.document().clone())
+                .unwrap()
+                .to_bytes()
+                .unwrap()
+        )
+        .unwrap()
+        .document,
+        original
+    );
+}

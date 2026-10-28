@@ -55,11 +55,9 @@ impl CommentsPanel for CommentsPlugin {
         let thread = state
             .selected
             .and_then(|id| {
-                cx.snapshot()
-                    .comments
-                    .iter()
-                    .enumerate()
-                    .find(|(_, c)| c.id == id)
+                let comments = &cx.snapshot().comments;
+                let key = comments.key(id)?;
+                Some((comments.position(key)?, comments.get(key)?))
             })
             .map(|(i, c)| (i, c.clone()));
         let region = state

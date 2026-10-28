@@ -186,7 +186,7 @@ pub(crate) fn apply(
             message,
             text,
         } => {
-            if doc.content.comments.iter().any(|c| c.id == *id) {
+            if doc.content.comments.key(*id).is_some() {
                 return Err(Error::Conflict("thread ID exists".into()));
             }
             validate_anchor(&doc.content, anchor, *layer)?;
@@ -265,8 +265,7 @@ fn validate_anchor(s: &Snapshot, anchor: &Anchor, layer: Option<Uuid>) -> Result
 }
 fn comment_mut(s: &mut Snapshot, id: Uuid) -> Result<&mut Comment> {
     s.comments
-        .iter_mut()
-        .find(|c| c.id == id)
+        .by_uuid_mut(id)
         .ok_or_else(|| Error::NotFound(id.to_string()))
 }
 pub(crate) fn validate_restore(current: &Snapshot, target: &Snapshot) -> Result<()> {
@@ -274,8 +273,7 @@ pub(crate) fn validate_restore(current: &Snapshot, target: &Snapshot) -> Result<
         if l.locked
             && target
                 .layers
-                .iter()
-                .find(|t| t.id == l.id)
+                .by_uuid(l.id)
                 .is_none_or(|t| t.voxels != l.voxels)
         {
             return Err(Error::LayerBlocked(l.id));

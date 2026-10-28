@@ -264,7 +264,7 @@ impl OccupancyCache {
         } else if let Some(old) = &self.source {
             let mut changed = BTreeSet::new();
             for layer in snapshot.layers.iter().filter(|l| l.visible) {
-                if let Some(previous) = old.layers.iter().find(|l| l.id == layer.id && l.visible) {
+                if let Some(previous) = old.layers.by_uuid(layer.id).filter(|l| l.visible) {
                     changed.extend(
                         layer
                             .voxels
@@ -279,8 +279,8 @@ impl OccupancyCache {
             for previous in old.layers.iter().filter(|l| l.visible) {
                 if !snapshot
                     .layers
-                    .iter()
-                    .any(|l| l.id == previous.id && l.visible)
+                    .by_uuid(previous.id)
+                    .is_some_and(|l| l.visible)
                 {
                     changed.extend(previous.voxels.iter().map(|(p, _)| p));
                 }
