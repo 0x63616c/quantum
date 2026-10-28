@@ -22,6 +22,14 @@ cargo xtask icons --check
 cargo xtask bench --help
 ```
 
+CI runs `cargo nextest run --workspace --locked --profile ci`, followed by
+`cargo test --doc --workspace --locked` because nextest excludes doctests.
+Install the CI version locally with `cargo install cargo-nextest --version 0.9.150 --locked`.
+`cargo xtask validate` uses nextest when installed and always runs doctests;
+otherwise it falls back to `cargo test --workspace --locked` (including doctests).
+The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
+CI snapshot verification; insta inherits that variable under nextest too.
+
 ## PR screenshots
 
 `cargo xtask screenshots` captures only the key set: `welcome`, `editor-dark` and

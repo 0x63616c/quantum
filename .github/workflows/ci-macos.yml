@@ -81,8 +81,15 @@ jobs:
       - name: Check plugin dependency rule
         run: |
           cargo xtask check plugin-deps
+      - name: Install nextest
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.150
       - name: Test packaging tasks
-        run: cargo test -p xtask --locked
+        run: cargo nextest run -p xtask --locked --profile ci
+      - name: Test doctests (-p xtask)
+        if: ${{ !cancelled() }}
+        run: cargo test --doc -p xtask --locked
 
   macos:
     needs: changes
@@ -146,8 +153,17 @@ jobs:
       # Formatting runs in CI Linux; the scripts job runs the portable task checks.
       - name: Clippy
         run: cargo clippy --workspace --locked -- -D warnings
+      - name: Install nextest
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.150
+
       - name: Test workspace
-        run: cargo test --workspace --locked --no-fail-fast
+        run: cargo nextest run --workspace --locked --profile ci
+
+      - name: Test doctests (--workspace)
+        if: ${{ !cancelled() }}
+        run: cargo test --doc --workspace --locked
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         run: cargo xtask macos package

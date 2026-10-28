@@ -1,0 +1,4 @@
+# CI sets CI=true, so insta verifies snapshots without updating them.
+[profile.ci]
+fail-fast = false
+retries = 0
