@@ -54,10 +54,14 @@ fn fixture() -> tempfile::TempDir {
     let temp = tempfile::tempdir().unwrap();
     fs::create_dir(temp.path().join("tools")).unwrap();
     for name in ["gh", "cargo", "secret-echo", "pipe-parent", "pipe-leaf"] {
-        // Link the completed immutable binary. Copying executables while other
-        // test threads fork can leave a writable fd inherited by an unrelated
-        // child until exec, causing Linux ETXTBSY in this fixture's spawn.
-        fs::hard_link(tool().join("tool"), temp.path().join("tools").join(name)).unwrap();
+        // Symlinks preserve argv[0] without making new executable hard links
+        // (which can trigger macOS execution-policy cache failures). They also
+        // avoid writable executable fds inherited by concurrent Linux forks.
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(tool().join("tool"), temp.path().join("tools").join(name))
+            .unwrap();
+        #[cfg(not(unix))]
+        fs::copy(tool().join("tool"), temp.path().join("tools").join(name)).unwrap();
     }
     temp
 }
@@ -346,42 +350,22 @@ fn secret_stdin_uses_a_pipe_and_diagnostics_are_redacted() {
     assert!(error.to_string().contains("17") && error.to_string().contains("[REDACTED]"));
     assert!(!format!("{command:?} {error:?}").contains("fixture secret stdin"));
 }
+#[cfg(unix)]
 #[test]
 fn interrupted_runner_kills_and_reaps_child_but_allows_cleanup() {
-    let root = fixture();
-    let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    // Isolated signal registration isn't required here: use a thread to request
-    // cancellation, avoiding any signal handler changes in this parallel test host.
-    let runner = SystemRunner::default().with_interruption(flag.clone());
-    let start = std::time::Instant::now();
-    let thread = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        flag.store(143, std::sync::atomic::Ordering::SeqCst);
-    });
-    let output = xtask::cmd::Command::new("sleep")
-        .arg("30")
-        .output(&runner)
-        .unwrap_err();
-    thread.join().unwrap();
-    assert!(output.to_string().contains("143"));
-    assert!(start.elapsed().as_secs() < 5);
-    assert_eq!(runner.interruption_code(), 143);
-    let cleanup = xtask::cmd::Command::new(root.path().join("tools/gh"))
-        .args(["release", "edit"])
-        .during_cleanup();
-    cleanup.run(&runner).unwrap();
+    check_descendant_interruption("pipe-leaf", false);
 }
 
 #[cfg(unix)]
 #[test]
 fn interruption_stops_descendants_holding_output_pipes() {
     for parent_exits in [false, true] {
-        check_descendant_interruption(parent_exits);
+        check_descendant_interruption("pipe-parent", parent_exits);
     }
 }
 
 #[cfg(unix)]
-fn check_descendant_interruption(parent_exits: bool) {
+fn check_descendant_interruption(tool_name: &str, parent_exits: bool) {
     let root = fixture();
     let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let runner = SystemRunner::default().with_interruption(flag.clone());
@@ -390,8 +374,8 @@ fn check_descendant_interruption(parent_exits: bool) {
     let socket = root.path().join("ready.sock");
     let listener = UnixListener::bind(&socket).unwrap();
     listener.set_nonblocking(true).unwrap();
-    let mut command =
-        xtask::cmd::Command::new(root.path().join("tools/pipe-parent")).env("PIPE_READY", socket);
+    let mut command = xtask::cmd::Command::new(root.path().join("tools").join(tool_name))
+        .env("PIPE_READY", socket);
     if parent_exits {
         command = command.env("PIPE_PARENT_EXITS", "1");
     } else {
@@ -399,7 +383,8 @@ fn check_descendant_interruption(parent_exits: bool) {
     }
     let (send, receive) = mpsc::channel();
     let worker = std::thread::spawn(move || {
-        send.send(command.output(&runner)).unwrap();
+        let result = command.output(&runner);
+        send.send((result, runner)).unwrap();
     });
     // Readiness comes from the leaf, after it has inherited both output pipes.
     // Check early runner failures too, rather than hiding them behind a timeout.
@@ -410,7 +395,7 @@ fn check_descendant_interruption(parent_exits: bool) {
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
             Err(error) => panic!("fixture readiness socket: {error}"),
         }
-        if let Ok(result) = receive.try_recv() {
+        if let Ok((result, _)) = receive.try_recv() {
             worker.join().unwrap();
             panic!("fixture exited before readiness: {result:?}");
         }
@@ -426,16 +411,77 @@ fn check_descendant_interruption(parent_exits: bool) {
     let mut signal = [0];
     ready.read_exact(&mut signal).unwrap();
     assert_eq!(signal, [1]);
+    let mut pid = [0; 4];
+    ready.read_exact(&mut pid).unwrap();
+    let pid = rustix::process::Pid::from_raw(u32::from_ne_bytes(pid) as i32).unwrap();
     flag.store(143, std::sync::atomic::Ordering::SeqCst);
     // The leaf waits for this socket to close, not a sleep. Keep it open until
     // cancellation returns: killing only the parent cannot release its pipes.
     let result = receive.recv_timeout(Duration::from_secs(10));
     drop(ready); // Also releases the leaf if a broken runner fails the assertion.
-    let error = result
-        .expect("process-group cancellation blocked on a descendant")
-        .unwrap_err();
+    let (result, runner) = result.expect("process-group cancellation blocked on a descendant");
+    let error = result.unwrap_err();
     worker.join().unwrap();
     assert!(error.to_string().contains("143"));
+    assert_eq!(runner.interruption_code(), 143);
+    if tool_name == "pipe-leaf" {
+        // The runner must reap its direct child before returning.
+        assert!(matches!(
+            rustix::process::waitpid(Some(pid), rustix::process::WaitOptions::NOHANG),
+            Err(rustix::io::Errno::CHILD)
+        ));
+    }
+    // Run both inherited and captured cleanup with the cancellation flag still
+    // set. A second ordinary command must be rejected without being spawned.
+    let cleanup = xtask::cmd::Command::new(root.path().join("tools/gh"))
+        .args(["release", "edit"])
+        .during_cleanup();
+    cleanup.run(&runner).unwrap();
+    cleanup.output(&runner).unwrap();
+    assert!(
+        xtask::cmd::Command::new("does-not-exist")
+            .output(&runner)
+            .unwrap_err()
+            .to_string()
+            .contains("143")
+    );
+}
+
+// Linux-runnable contract: cleanup remains isolated even with cancellation
+// already requested, and finishes only after the test releases its socket.
+#[cfg(unix)]
+#[test]
+fn interruption_cleanup_has_its_own_process_group_and_finishes() {
+    use std::{io::Read, os::unix::net::UnixListener, sync::mpsc, time::Duration};
+    let root = fixture();
+    let socket = root.path().join("cleanup.sock");
+    let listener = UnixListener::bind(&socket).unwrap();
+    let (send, receive) = mpsc::channel();
+    let accept = std::thread::spawn(move || send.send(listener.accept()).unwrap());
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(143));
+    let runner = SystemRunner::default().with_interruption(flag);
+    let command = xtask::cmd::Command::new(root.path().join("tools/pipe-leaf"))
+        .env("PIPE_READY", socket)
+        .during_cleanup();
+    let worker = std::thread::spawn(move || command.output(&runner));
+    let (mut ready, _) = receive
+        .recv_timeout(Duration::from_secs(10))
+        .unwrap()
+        .unwrap();
+    accept.join().unwrap();
+    ready
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    let mut message = [0; 5];
+    ready.read_exact(&mut message).unwrap();
+    assert_eq!(message[0], 1);
+    let pid =
+        rustix::process::Pid::from_raw(u32::from_ne_bytes(message[1..].try_into().unwrap()) as i32)
+            .unwrap();
+    let group = rustix::process::getpgid(Some(pid)).unwrap();
+    drop(ready);
+    assert!(worker.join().unwrap().unwrap().status.success());
+    assert_eq!(group, pid, "cleanup inherited another process group");
 }
 
 #[test]
