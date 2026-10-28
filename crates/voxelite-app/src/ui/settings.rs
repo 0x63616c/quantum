@@ -23,6 +23,7 @@ pub(super) struct SettingsState {
 }
 impl Global for SettingsState {}
 
+mod menu_actions;
 mod persistence;
 #[cfg(all(test, feature = "test-support"))]
 pub(super) use persistence::init_at;
@@ -873,42 +874,7 @@ impl Render for SettingsView {
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
-                if crate::text_field::route_history(*op, window, cx) {
-                    return;
-                }
-                if op
-                    .availability(actions::CommandContext::Settings {
-                        updates_available: super::updates_available(),
-                    })
-                    .is_err()
-                {
-                    return;
-                }
-                match op {
-                    Op::Settings => window.activate_window(),
-                    Op::About => this.editor_action(Op::About, cx),
-                    Op::Welcome => {
-                        cx.defer(|cx| {
-                            let _ = super::welcome::show(cx);
-                        });
-                    }
-                    Op::Help => this.navigate(Section::Shortcuts, cx),
-                    Op::CheckUpdates => {
-                        this.navigate(Section::Updates, cx);
-                        super::check_for_updates();
-                    }
-                    Op::Hide => cx.hide(),
-                    Op::HideOthers => cx.hide_other_apps(),
-                    Op::ShowAll => cx.unhide_other_apps(),
-                    Op::Minimize => window.minimize_window(),
-                    Op::ZoomWindow => window.zoom_window(),
-                    Op::FullScreen => {
-                        window.toggle_fullscreen();
-                    }
-                    Op::Quit => this.editor_action(Op::Quit, cx),
-                    _ => {}
-                }
-                cx.notify();
+                this.action(op, window, cx);
             }))
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 let key = event.keystroke.key.as_str();

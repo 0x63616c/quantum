@@ -38,7 +38,8 @@ impl RelayPayload {
                 },
             )
             .append_pair("title", &self.title)
-            .append_pair("body", &self.body)
+            .append_pair("why", &self.title)
+            .append_pair("details", &self.body)
             .append_pair("labels", &self.labels.join(","));
         let url: String = url.into();
         if url.len() > max_bytes {

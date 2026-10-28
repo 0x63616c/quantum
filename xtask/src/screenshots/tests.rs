@@ -171,7 +171,10 @@ fn unchanged_screens_have_no_published_images_or_image_links() {
     assert!(asset_files(&results, &base, &head).is_empty());
     let md = render(&results, &base, &head, "main", &Urls::Local);
     assert!(md.contains("No visible change on the selected screens."));
-    assert!(md.contains("<details><summary>Unchanged screens (86)</summary>"));
+    assert!(md.contains(&format!(
+        "<details><summary>Unchanged screens ({})</summary>",
+        SCREENS.len()
+    )));
     assert!(!md.contains(".png"));
     assert!(!md.contains("| Before | After |"));
 }
@@ -267,6 +270,8 @@ fn screen_names_are_unique_and_state_screens_have_matching_themes() {
             screen.size,
             if state.starts_with("settings-") {
                 (880, 640)
+            } else if state == "dialogs-feedback" || state == "dialogs-crash-report" {
+                (880, 760)
             } else {
                 (1440, 900)
             }

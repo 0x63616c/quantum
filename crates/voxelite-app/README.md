@@ -443,3 +443,21 @@ GPUI key dispatch and settings/history shutdown using its deterministic test
 executor. CI enables this feature for workspace tests and Clippy. It is separate
 from `native` so production builds and `--no-default-features` model tests do not
 pull in GPUI's testing dependencies.
+
+### Crash reports and feedback
+
+Rust panics create redacted local reports in the app data directory's `crashes/`
+folder. Next launch offers the complete preview from Welcome or the editor.
+Help → Send feedback… composes bug or feature reports with version/OS metadata.
+Nothing is sent automatically: Continue to GitHub opens a prefilled public issue
+form and requires a GitHub account and submission there. No production relay is
+configured; email and scene attachments are unavailable. Copy/Save handle reports
+that exceed the browser URL limit. Browser opening never deletes the local crash;
+Keep for later retains it and Delete report explicitly removes it.
+See the [privacy note](../../site/content/getting-started.html) for collected fields,
+redaction limits, storage/retention and unsupported crash types.
+
+Capture states `dialogs-feedback` and `dialogs-crash-report` open the independent
+report window (880×760); both support `--theme dark|light`. The crash fixture writes
+only to the selected local app data directory. Use an isolated `VOXELITE_DATA_DIR`
+for manual capture runs. These fixtures are for UI review and never send data.
