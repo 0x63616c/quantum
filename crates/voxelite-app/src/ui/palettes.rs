@@ -121,6 +121,15 @@ fn selected_rgb(view: &PaletteView) -> [u8; 3] {
         })
 }
 impl EditorView {
+    pub(super) fn capture_palette_delete(&mut self) {
+        self.palettes.delete_confirmation = true;
+    }
+
+    pub(super) fn capture_palette_menu(&mut self) {
+        self.palettes.menu = true;
+        self.palettes.menu_index = 0;
+    }
+
     pub(super) fn reconcile_palette_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.editor.palette_enabled() {
             let focused = self.palette_focus.is_focused(window)
