@@ -239,7 +239,7 @@ impl WelcomeView {
                     .text_color(t.muted())
                     .text_size(px(type_size::CAPTION))
                     .line_height(px(type_size::LINE_SM))
-                    .child(format!("Version {}", env!("CARGO_PKG_VERSION"))),
+                    .child(format!("Version {}", crate::ui::APP_VERSION)),
             );
         sidebar
             .child(self.sidebar_actions(t, cx))

@@ -49,7 +49,9 @@ and grayscale text rendering are used. Each capture has a fresh app data folder,
 UTC timezone, fixed fixture clock, stable displayed home labels, deterministic
 GPUI dispatcher seed, reduced motion, and a fixed completed elapsed time for
 image/text reveals (reduced motion alone still fades). Real CPU rendering and asset loads
-must settle before capture; recents never come from the user's settings.
+must settle before capture; recents never come from the user's settings. The
+`ui-snapshots` build displays version `0.0.0` with no build id, so release
+version bumps do not invalidate goldens.
 
 The editor uses its existing production Linux CPU viewport renderer and paints
 that image through GPUI with the normal editor chrome and overlays. This covers

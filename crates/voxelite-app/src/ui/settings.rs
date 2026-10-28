@@ -502,7 +502,7 @@ impl SettingsView {
                     self.form_row(
                         "Quantum",
                         "A voxel workspace by Calum",
-                        mono(format!("v{}", env!("CARGO_PKG_VERSION"))),
+                        mono(format!("v{}", crate::ui::APP_VERSION)),
                         t,
                     ),
                 ],
@@ -725,7 +725,7 @@ impl SettingsView {
                 let mut rows = vec![self.form_row(
                     "Installed version",
                     "Quantum",
-                    mono(env!("CARGO_PKG_VERSION")),
+                    mono(crate::ui::APP_VERSION),
                     t,
                 )];
                 let updates_available = super::updates_available();

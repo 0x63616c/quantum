@@ -36,7 +36,7 @@ jobs:
           [[ -z "$files" ]] && ui=true
           while IFS= read -r file; do
             case "$file" in
-              crates/voxelite-app/*|crates/voxelite-ui/*|crates/voxelite-render/*|crates/voxelite-render-plan/*|crates/plugins/*|vendor/gpui-apple/*|examples/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|xtask/Cargo.toml|xtask/src/main.rs|xtask/src/screenshots.rs|xtask/src/screenshot_fixtures.rs|xtask/src/ui_snapshots*|.github/workflows/ui-snapshots.yml) ui=true ;;
+              crates/voxelite-app/*|crates/voxelite-ui/*|crates/voxelite-core/*|crates/voxelite-mesh/*|crates/voxelite-format/*|crates/voxelite-plugin-api/*|crates/voxelite-plugin-host/*|crates/voxelite-plugins-builtin/*|crates/voxelite-mcp/*|crates/voxelite-render/*|crates/voxelite-render-plan/*|crates/plugins/*|vendor/gpui-apple/*|examples/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|xtask/Cargo.toml|xtask/src/main.rs|xtask/src/screenshots.rs|xtask/src/screenshot_fixtures.rs|xtask/src/ui_snapshots*|.github/workflows/ui-snapshots.yml) ui=true ;;
             esac
           done <<< "$files"
           echo "ui=$ui" >> "$GITHUB_OUTPUT"
