@@ -30,6 +30,10 @@ fn require(condition: bool, message: &str) -> Result<()> {
 
 /// Group NUL-separated subject/body records from `git log --format=%s%x00%b%x00`.
 /// Merge commits are excluded by the caller. Other subjects are retained in Other.
+#[expect(
+    clippy::expect_used,
+    reason = "constant Conventional Commit regex is validated by changelog tests"
+)]
 pub fn changelog(log: &str, version: &str) -> String {
     let conventional = regex::Regex::new(r"^([a-z]+)(?:\([^()]+\))?(!)?: (.+)$")
         .expect("constant Conventional Commit pattern");
@@ -43,10 +47,14 @@ pub fn changelog(log: &str, version: &str) -> String {
         }
         let body = record.get(1).copied().unwrap_or_default();
         let parsed = conventional.captures(subject);
-        let kind = parsed.as_ref().map_or("", |m| m.get(1).unwrap().as_str());
+        let kind = parsed
+            .as_ref()
+            .and_then(|m| m.get(1))
+            .map_or("", |m| m.as_str());
         let description = parsed
             .as_ref()
-            .map_or(subject, |m| m.get(3).unwrap().as_str());
+            .and_then(|m| m.get(3))
+            .map_or(subject, |m| m.as_str());
         let bang = parsed.as_ref().is_some_and(|m| m.get(2).is_some());
         let group = match kind {
             "feat" => 0,

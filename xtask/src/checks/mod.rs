@@ -4,8 +4,8 @@ pub(crate) mod boundaries;
 pub(crate) mod brand;
 pub(crate) mod docs;
 pub(crate) mod plugin_deps;
-pub(crate) mod workflows;
 pub(crate) mod source_lints;
+pub(crate) mod workflows;
 
 use std::path::PathBuf;
 
