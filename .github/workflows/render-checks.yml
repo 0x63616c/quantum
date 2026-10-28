@@ -22,9 +22,10 @@ on:
         default: visual
         required: true
       runner_label:
-        description: 'Visual runner label (use a unique label to verify a runner)'
-        type: string
-        default: golden
+        description: Runner for visual runs (any, or a runner label to re-verify one runner); bench always uses golden
+        type: choice
+        options: [any, golden, runner-2]
+        default: any
       runs:
         description: Benchmark repetitions in one process
         type: string
@@ -45,12 +46,12 @@ jobs:
   render:
     # Only owner-triggered, same-repository code may use self-hosted runners.
     if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    # Benchmarks always require golden, even with a visual runner override.
-    # Keep visual jobs pinned until runner 2 passes visual --determinism against
-    # the same committed goldens as runner 1, with the run linked on #165.
-    # Then remove the visual golden fallback and make runner_label default empty.
-    # Re-verify each new runner before it takes normal visual jobs.
-    runs-on: [self-hosted, macOS, ARM64, xcode, "${{ (inputs.command == 'bench' || inputs.command == 'bench-baseline') && 'golden' || inputs.runner_label || 'golden' }}"]
+    # Both runners are on the same Mac mini. homelab-voxelite-2 passed visual --determinism
+    # bit-exact against the committed goldens (run 40628010315, see #165), so visual jobs use
+    # either runner. Timing baselines need one fixed machine, so benchmarks require golden.
+    # Re-verify a new runner (give it a neutral label, add it to runner_label) before it
+    # takes visual jobs.
+    runs-on: ${{ fromJSON((inputs.command == 'bench' || inputs.command == 'bench-baseline') && '["self-hosted","macOS","ARM64","xcode","golden"]' || (inputs.runner_label == 'golden' && '["self-hosted","macOS","ARM64","xcode","golden"]') || (inputs.runner_label == 'runner-2' && '["self-hosted","macOS","ARM64","xcode","runner-2"]') || '["self-hosted","macOS","ARM64","xcode"]') }}
     timeout-minutes: 60
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
