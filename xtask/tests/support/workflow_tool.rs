@@ -63,6 +63,7 @@ fn main() {
                 use std::{io::Read, os::unix::net::UnixStream};
                 let mut ready = UnixStream::connect(env::var_os("PIPE_READY").unwrap()).unwrap();
                 ready.write_all(&[1]).unwrap();
+                ready.write_all(&std::process::id().to_ne_bytes()).unwrap();
                 // Only cancellation or test cleanup releases the inherited pipes.
                 let mut byte = [0];
                 assert_eq!(ready.read(&mut byte).unwrap(), 0);

@@ -495,8 +495,10 @@ impl Runner for SystemRunner {
         // A tool can spawn helpers which inherit its output pipes. Cancellation
         // must stop the entire group before joining the pipe readers; killing
         // only the immediate child can otherwise block release cleanup forever.
+        // Isolate cleanup too: it ignores cancellation, but must never inherit
+        // a group targeted by cancellation elsewhere.
         #[cfg(unix)]
-        if self.interruption.is_some() && !command.during_cleanup {
+        if self.interruption.is_some() {
             use std::os::unix::process::CommandExt;
             child.process_group(0);
         }
@@ -521,7 +523,6 @@ impl Runner for SystemRunner {
                 .take()
                 .zip(command.input())
                 .map(|(mut pipe, bytes)| scope.spawn(move || pipe.write_all(bytes)));
-            let mut exited = None;
             let status = loop {
                 if interrupted() != 0 {
                     #[cfg(unix)]
@@ -533,15 +534,14 @@ impl Runner for SystemRunner {
                     child.wait()?;
                     break Status::from_code(interrupted() as i32);
                 }
-                if exited.is_none() {
-                    exited = child.try_wait()?;
-                }
-                // Continue observing cancellation even after the direct child
-                // exits if descendants still hold a captured pipe open.
-                if let Some(status) = exited
-                    && stdout.as_ref().is_none_or(|h| h.is_finished())
+                // Do not reap the leader while a descendant holds a pipe. Its
+                // unreaped PID reserves the process-group ID until our last
+                // possible group signal. Reaping earlier leaves a stale kill
+                // target if the group disappears and the ID is reused.
+                if stdout.as_ref().is_none_or(|h| h.is_finished())
                     && stderr.as_ref().is_none_or(|h| h.is_finished())
                     && stdin.as_ref().is_none_or(|h| h.is_finished())
+                    && let Some(status) = child.try_wait()?
                 {
                     break status.into();
                 }
