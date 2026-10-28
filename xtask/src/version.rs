@@ -335,12 +335,16 @@ impl Plan {
             }
         }
         out.push_str("--- a/Cargo.lock\n+++ b/Cargo.lock\n");
+        let mut package = "";
         for (before, after) in String::from_utf8_lossy(&self.lockfile)
             .lines()
             .zip(self.lock_preview.lines())
         {
+            if before.starts_with("name = ") {
+                package = after;
+            }
             if before != after {
-                out.push_str(&format!("-{before}\n+{after}\n"));
+                out.push_str(&format!(" {package}\n-{before}\n+{after}\n"));
             }
         }
         out
