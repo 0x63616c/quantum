@@ -11,16 +11,11 @@ pub struct ShadowsLightingPlugin;
 
 impl Plugin for ShadowsLightingPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.shadows-lighting.name".into(),
-            description_key: "plugins.shadows-lighting.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PLUGIN_ID,
+            "plugins.shadows-lighting",
+            env!("CARGO_PKG_VERSION"),
+        )
     }
     fn contribute(&self, registrar: &mut Registrar) {
         registrar.render_pass(RenderPassContribution {

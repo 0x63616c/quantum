@@ -6188,6 +6188,7 @@ name = "voxelite-plugins-builtin"
 version = "0.3.1"
 dependencies = [
  "voxelite-plugin-agent",
+ "voxelite-plugin-api",
  "voxelite-plugin-comments",
  "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",
