@@ -70,19 +70,26 @@ fn profiling_gpu_zones_preserve_pixels_and_exit_on_errors() {
     };
     let zones = Arc::new(Mutex::new(Zones::default()));
     let mut gpu = block_on(Headless::new(HeadlessOptions::default()), &zones).unwrap();
-    let reference = block_on(
-        gpu.render(
-            Some(snapshot.clone()),
-            snapshot.bounds,
-            camera,
-            [32; 2],
-            style,
-            true,
-        ),
-        &zones,
-    )
-    .unwrap();
+    let mut edited = snapshot.clone();
+    edited.layers[0].voxels =
+        serde_json::from_value(serde_json::json!([[0, 0, 0, 1], [1, 0, 0, 1]])).unwrap();
+    let [reference, edited_reference] = [&snapshot, &edited].map(|source| {
+        gpu.reset_scene().unwrap();
+        block_on(
+            gpu.render(
+                Some(source.clone()),
+                source.bounds,
+                camera,
+                [32; 2],
+                style,
+                true,
+            ),
+            &zones,
+        )
+        .unwrap()
+    });
     assert_eq!(reference.rgba.as_ref().unwrap().len(), 64 * 64 * 4);
+    assert_ne!(edited_reference.rgba, reference.rgba);
     gpu.reset_scene().unwrap();
 
     let subscriber = tracing_subscriber::registry().with(
@@ -100,15 +107,19 @@ fn profiling_gpu_zones_preserve_pixels_and_exit_on_errors() {
             )
             .is_err()
         );
-        // Cold and camera-only frames must render identical pixels with tracing.
-        for source in [Some(snapshot.clone()), None] {
+        // Cold, camera-only and incremental edit frames must match untraced rebuilds.
+        for (source, expected) in [
+            (Some(snapshot.clone()), &reference),
+            (None, &reference),
+            (Some(edited), &edited_reference),
+        ] {
             let actual = block_on(
                 gpu.render(source, snapshot.bounds, camera, [32; 2], style, true),
                 &zones,
             )
             .unwrap();
-            assert_eq!(actual.size, reference.size);
-            assert_eq!(actual.rgba, reference.rgba);
+            assert_eq!(actual.size, expected.size);
+            assert_eq!(actual.rgba, expected.rgba);
         }
         // A nested encoding error must unwind both async spans in order.
         let invalid = Camera {

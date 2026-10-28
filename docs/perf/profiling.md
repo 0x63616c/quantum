@@ -29,11 +29,15 @@ entry to this callback, so intervals include idle time in the event-driven edito
 they are not display refresh or presentation latency measurements.
 `mesh.greedy` covers the portable mesher; `mesh.sync` and `mesh.chunk` cover the
 incremental GPU mesh cache. `render.cpu` and `render.cpu.cached` cover software
-rendering. `render.gpu.frame` (native Mac worker), `render.gpu.headless`,
-`render.gpu.encode`, `render.gpu.occupancy` and `render.gpu.present` cover CPU
-work involved in GPU rendering and native presentation. Async instrumentation enters spans only during future polling,
-never holding an entered span across an await. These are CPU zones, not GPU timer
-queries. Use the [rendering harness](rendering-harness.md) and its timestamp
+rendering. On macOS, `render.gpu.frame` covers polling the caller's request
+future: sending a request to the Metal worker and receiving its completed frame.
+It does not include time waiting for the worker or measure the worker's full frame.
+`mesh.sync`, `mesh.chunk`, `render.gpu.encode`, `render.gpu.occupancy` and
+`render.gpu.present` run on the Metal worker; the portable harness wraps its
+rendering in `render.gpu.headless` instead. Async instrumentation enters spans
+only during future polling, never holding an entered span across an await.
+These are host-side zones, not GPU timer queries; synchronous waits inside a poll
+are included. Use the [rendering harness](rendering-harness.md) and its timestamp
 metrics for GPU timings and authoritative before/after comparisons.
 
 The app subscriber filters to Quantum app, render and mesh targets, excluding
@@ -59,7 +63,7 @@ on Linux), also run the GPU tracing regression:
 cargo test --locked -p quantum-render --features profiling,gpu profiling_gpu_zones -- --ignored
 ```
 
-It checks cold and cached frame pixels, incremental mesh and GPU zones, balanced
+It checks cold, cached and edited frame pixels, incremental mesh and GPU zones, balanced
 span exits after each future poll, and early/nested errors. CI runs it on Linux
 lavapipe and native macOS Metal. The default-dependency test also rejects
 accidentally enabled `profiling` features in the app, renderer and mesher.
