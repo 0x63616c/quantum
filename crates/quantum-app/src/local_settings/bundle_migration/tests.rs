@@ -8,10 +8,14 @@ struct Preferences {
     domains: BTreeMap<String, BTreeMap<String, Value>>,
     writes: usize,
     fail: bool,
+    fail_read: Option<String>,
 }
 impl Defaults for Preferences {
     type Value = Value;
     fn read(&mut self, domain: &str) -> io::Result<BTreeMap<String, Value>> {
+        if self.fail_read.as_deref() == Some(domain) {
+            return Err(io::Error::other("injected preferences read failure"));
+        }
         Ok(self.domains.get(domain).cloned().unwrap_or_default())
     }
     fn write(&mut self, domain: &str, values: BTreeMap<String, Value>) -> io::Result<()> {
@@ -79,9 +83,73 @@ fn merges_all_defaults_preserves_new_values_and_source_and_runs_once() {
 }
 
 #[test]
+fn existing_false_zero_and_empty_defaults_are_not_treated_as_missing() {
+    let home = tempfile::tempdir().unwrap();
+    let mut defaults = preferences();
+    defaults
+        .domains
+        .get_mut(LEGACY_ID)
+        .unwrap()
+        .insert(AUTOMATIC_CHECKS.into(), json!(true));
+    let current = BTreeMap::from([
+        ("SUEnableAutomaticChecks".into(), json!(false)),
+        ("SULastCheckTime".into(), json!(0)),
+        ("SUSkippedVersion".into(), json!("")),
+        ("window".into(), json!({})),
+    ]);
+    defaults
+        .domains
+        .insert(crate::APP_ID.into(), current.clone());
+    initialize(home.path(), &mut defaults).unwrap();
+    for (key, value) in current {
+        assert_eq!(defaults.domains[crate::APP_ID][&key], value);
+    }
+    assert_eq!(
+        defaults.domains[crate::APP_ID]["SUFeedURL"],
+        defaults.domains[LEGACY_ID]["SUFeedURL"]
+    );
+}
+
+#[test]
+fn defaults_read_failure_never_writes_or_moves_state_and_can_be_retried() {
+    for domain in [LEGACY_ID, crate::APP_ID] {
+        let home = tempfile::tempdir().unwrap();
+        let parent = home.path().join("Library/Saved Application State");
+        let old = parent.join(format!("{LEGACY_ID}.savedState"));
+        let new = parent.join(format!("{}.savedState", crate::APP_ID));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("state"), "original").unwrap();
+        let mut defaults = preferences();
+        defaults.fail_read = Some(domain.into());
+        let original = defaults.domains.clone();
+        assert!(initialize(home.path(), &mut defaults).is_err());
+        assert_eq!(defaults.writes, 0);
+        assert_eq!(defaults.domains, original);
+        assert!(old.join("state").exists());
+        assert!(!new.exists());
+        assert!(!Files(home.path()).complete().unwrap());
+        defaults.fail_read = None;
+        initialize(home.path(), &mut defaults).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(new.join("state")).unwrap(),
+            "original"
+        );
+        assert!(Files(home.path()).complete().unwrap());
+    }
+}
+
+#[test]
 fn every_existing_directory_moves_without_overwriting_and_missing_paths_stay_absent() {
     let home = tempfile::tempdir().unwrap();
-    for (index, (directory, suffix)) in DIRECTORIES.iter().enumerate() {
+    // Independent inventory: dropping a production target must fail this test.
+    let stores = [
+        ("Saved Application State", ".savedState"),
+        ("Caches", ""),
+        ("HTTPStorages", ""),
+        ("WebKit", ""),
+        ("Application Support", ""),
+    ];
+    for (index, (directory, suffix)) in stores.iter().enumerate() {
         let parent = home.path().join("Library").join(directory);
         let old = parent.join(format!("{LEGACY_ID}{suffix}"));
         std::fs::create_dir_all(&old).unwrap();
@@ -91,7 +159,7 @@ fn every_existing_directory_moves_without_overwriting_and_missing_paths_stay_abs
         }
     }
     initialize(home.path(), &mut Preferences::default()).unwrap();
-    for (index, (directory, suffix)) in DIRECTORIES.iter().enumerate() {
+    for (index, (directory, suffix)) in stores.iter().enumerate() {
         let parent = home.path().join("Library").join(directory);
         let old = parent.join(format!("{LEGACY_ID}{suffix}"));
         let new = parent.join(format!("{}{suffix}", crate::APP_ID));
