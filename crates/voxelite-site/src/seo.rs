@@ -52,7 +52,7 @@ pub fn software_application() -> String {
         "url": format!("{SITE_BASE_URL}/"),
         "image": format!("{SITE_BASE_URL}{IMAGE_PATH}"),
         "applicationCategory": "DesignApplication",
-        "operatingSystem": "Web, macOS",
+        "operatingSystem": "macOS",
         "isAccessibleForFree": true,
         "license": format!("{SITE_BASE_URL}/assets/LICENSE"),
         "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD"},

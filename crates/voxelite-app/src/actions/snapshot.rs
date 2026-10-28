@@ -128,7 +128,6 @@ fn shell_snapshot() -> String {
 }
 
 #[test]
-#[cfg(not(target_family = "wasm"))]
 fn shell_matches_pre_plugin_snapshot() {
     let actual = shell_snapshot();
     if std::env::var("UPDATE_SHELL_SNAPSHOT").as_deref() == Ok("1") {

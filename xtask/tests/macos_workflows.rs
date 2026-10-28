@@ -118,7 +118,7 @@ fn release_tags() {
 }
 #[test]
 fn self_hosted_guards_and_pins() {
-    let guard = "    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)";
+    let guard = "github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)";
     for path in
         fs::read_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows")).unwrap()
     {
@@ -129,7 +129,7 @@ fn self_hosted_guards_and_pins() {
         let text = fs::read_to_string(path).unwrap();
         assert!(!text.contains("pull_request_target:"));
         if text.contains("self-hosted") {
-            assert!(text.lines().any(|line| line == guard));
+            assert!(text.lines().any(|line| has_owner_guard(line, guard)));
         }
         for line in text.lines().filter(|line| line.contains("uses: actions/")) {
             let pin = line
@@ -470,4 +470,23 @@ fn real_child_removes_all_inherited_credentials() {
         child.env(name, "fixture inherited secret");
     }
     success(&child.output().unwrap(), true);
+}
+
+fn has_owner_guard(line: &str, guard: &str) -> bool {
+    line == format!("    if: {guard}")
+        || (line.starts_with("    if: ") && line.ends_with(&format!(" && {guard}")))
+}
+
+#[test]
+fn owner_guard_accepts_top_level_conjunct() {
+    let guard = "github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)";
+    assert!(has_owner_guard(&format!("    if: {guard}"), guard));
+    assert!(has_owner_guard(
+        &format!("    if: needs.changes.outputs.code == 'true' && {guard}"),
+        guard
+    ));
+    assert!(!has_owner_guard(
+        &format!("    if: allowed || {guard}"),
+        guard
+    ));
 }

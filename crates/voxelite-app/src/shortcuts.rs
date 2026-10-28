@@ -9,25 +9,15 @@ pub enum ShortcutPlatform {
 
 impl ShortcutPlatform {
     pub fn current() -> Self {
-        #[cfg(target_family = "wasm")]
-        {
-            thread_local! {
-                static PLATFORM: ShortcutPlatform = browser_platform();
-            }
-            PLATFORM.with(|platform| *platform)
-        }
-        #[cfg(not(target_family = "wasm"))]
-        {
-            if cfg!(target_os = "macos") {
-                Self::Apple
-            } else {
-                Self::WindowsLinux
-            }
+        if cfg!(target_os = "macos") {
+            Self::Apple
+        } else {
+            Self::WindowsLinux
         }
     }
 
-    // GPUI's `secondary` alias uses target_os, which cannot identify the host
-    // of a wasm build. Resolve it explicitly before parsing or binding keys.
+    // Resolve the contribution's `secondary` alias for the selected platform
+    // before parsing or binding keys.
     pub fn binding_key(self, key: &str) -> String {
         // The native full-screen convention is Control-Command-F on Apple,
         // and F11 on Windows/Linux. Contributions retain the canonical binding.
@@ -58,42 +48,6 @@ impl ShortcutPlatform {
                 Self::WindowsLinux => Modifiers::control(),
             }
     }
-
-    #[cfg(any(test, target_family = "wasm"))]
-    fn from_browser(platform_data: &str, platform: &str, user_agent: &str) -> Self {
-        // Prefer explicit platform information over the legacy UA, which may
-        // contain compatibility tokens or a spoofed OS. Fall back when absent
-        // or unrecognized (Safari/Firefox do not provide userAgentData).
-        for value in [platform_data, platform] {
-            let value = value.trim().to_ascii_lowercase();
-            if value.starts_with("mac")
-                || matches!(
-                    value.as_str(),
-                    "iphone" | "ipad" | "ipod" | "ios" | "ipados"
-                )
-            {
-                return Self::Apple;
-            }
-            if value.starts_with("win")
-                || value.starts_with("linux")
-                || matches!(value.as_str(), "android" | "chrome os" | "cros")
-            {
-                return Self::WindowsLinux;
-            }
-        }
-        if user_agent
-            .split(|c: char| !c.is_ascii_alphabetic())
-            .any(|token| {
-                ["mac", "macintosh", "iphone", "ipad", "ipod"]
-                    .iter()
-                    .any(|apple| token.eq_ignore_ascii_case(apple))
-            })
-        {
-            Self::Apple
-        } else {
-            Self::WindowsLinux
-        }
-    }
 }
 
 /// Bare navigation keys, plus Shift+Tab for reverse focus traversal. Modified
@@ -102,28 +56,6 @@ pub fn navigation_key(stroke: &Keystroke) -> Option<&str> {
     (stroke.modifiers == Modifiers::none()
         || (stroke.key == "tab" && stroke.modifiers == Modifiers::shift()))
     .then_some(stroke.key.as_str())
-}
-
-#[cfg(target_family = "wasm")]
-fn browser_platform() -> ShortcutPlatform {
-    use wasm_bindgen::JsValue;
-
-    // userAgentData is not available in all browsers. Reflect also handles
-    // missing navigator properties without requiring unstable web-sys APIs.
-    let property = |object: &JsValue, name: &str| {
-        js_sys::Reflect::get(object, &JsValue::from_str(name)).unwrap_or(JsValue::UNDEFINED)
-    };
-    let navigator = property(&js_sys::global(), "navigator");
-    let data = property(&navigator, "userAgentData");
-    ShortcutPlatform::from_browser(
-        &property(&data, "platform").as_string().unwrap_or_default(),
-        &property(&navigator, "platform")
-            .as_string()
-            .unwrap_or_default(),
-        &property(&navigator, "userAgent")
-            .as_string()
-            .unwrap_or_default(),
-    )
 }
 
 /// A semantic shortcut token. Symbols have both a vector asset and a text
@@ -390,66 +322,6 @@ mod tests {
                     [ShortcutToken::Symbol(_)]
                 ),
                 "{key}"
-            );
-        }
-    }
-
-    #[test]
-    fn detects_apple_browser_platforms_and_fallbacks() {
-        for (data, platform, agent) in [
-            ("macOS", "", ""),
-            ("", "MacIntel", ""),
-            ("", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"),
-            ("", "iPhone", ""),
-            ("", "iPad", ""),
-            (
-                "",
-                "",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
-            ),
-            ("", "", "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)"),
-            ("MACOS", "", ""),
-            ("iOS", "", ""),
-            ("iPadOS", "", ""),
-            ("", "iPod", ""),
-            (
-                "",
-                "",
-                "Mozilla/5.0 (iPod touch; CPU iPhone OS 18_0 like Mac OS X)",
-            ),
-            ("macOS", "Win32", "Mozilla/5.0 (Windows NT 10.0)"),
-            ("Unknown", "MacIntel", ""),
-        ] {
-            assert_eq!(
-                ShortcutPlatform::from_browser(data, platform, agent),
-                ShortcutPlatform::Apple
-            );
-        }
-        for (data, platform, agent) in [
-            (
-                "Windows",
-                "Win32",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            ),
-            ("Linux", "Linux x86_64", "Mozilla/5.0 (X11; Linux x86_64)"),
-            ("Android", "Linux armv8l", "Mozilla/5.0 (Linux; Android 15)"),
-            ("", "", ""),
-            (
-                "Windows",
-                "MacIntel",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X)",
-            ),
-            (
-                "",
-                "Linux x86_64",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X)",
-            ),
-            ("", "", "Emacs/30.1"),
-            ("Chrome OS", "", ""),
-        ] {
-            assert_eq!(
-                ShortcutPlatform::from_browser(data, platform, agent),
-                ShortcutPlatform::WindowsLinux
             );
         }
     }

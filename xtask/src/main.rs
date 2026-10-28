@@ -1,5 +1,7 @@
 //! Repository maintenance CLI and release-mode launcher for the GPU harness.
 
+mod screenshots;
+
 use std::{ffi::OsString, process::ExitCode};
 
 use clap::{Args, CommandFactory, Parser, Subcommand};
@@ -23,6 +25,7 @@ Maintenance:
   bump-version  Update the stable workspace version and current references
   version       Print the app version or check a release tag
   macos         Package, sign, and prepare release feeds and notes
+  screenshots   Capture before/after screens for UI PRs
 
 Rendering:
   bench         Run performance harness (all arguments forwarded)
@@ -51,6 +54,9 @@ enum Task {
     Check(Check),
     /// Check tracked root entries, file sizes and junk files
     Tidy,
+    /// Capture before/after screens for UI PRs
+    #[command(disable_help_flag = true)]
+    Screenshots(Harness),
     /// Print the app version, optionally requiring a matching release tag
     Version {
         /// Require this stable tag to match the app version
@@ -108,7 +114,7 @@ struct Validate {
 
 #[derive(Args)]
 struct Harness {
-    /// Arguments passed verbatim to voxelite-bench
+    /// Arguments passed verbatim to the selected task
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<OsString>,
 }
@@ -140,6 +146,18 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
         None | Some(Task::Help) => {
             Cli::command().print_help()?;
             println!();
+        }
+        Some(Task::Screenshots(harness)) => {
+            let args: Vec<String> = harness
+                .args
+                .iter()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            if args.iter().any(|a| a == "--help" || a == "-h") {
+                println!("{}", screenshots::USAGE);
+            } else {
+                screenshots::run(&args).map_err(xtask::Error::Invalid)?;
+            }
         }
         Some(Task::Tidy) => xtask::tidy().map_err(xtask::Error::Invalid)?,
         Some(Task::Version { check_tag }) => println!(

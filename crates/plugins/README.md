@@ -44,7 +44,7 @@ implements no feature or command execution. The tools, mirror, palette, comments
 and agent built-ins live alongside it and contribute registry metadata. Portable
 API callbacks provide feature behavior where implemented. They ship enabled and can be disabled by the
 host, though the shell does not expose enablement preferences yet. This layout
-does not add third-party loading, WASM or scripting.
+does not add third-party loading or scripting.
 
 The palette plugin owns the headless palette manager: typed choices with stable
 identities and read-only origins, automatic custom copies on source edits, stable

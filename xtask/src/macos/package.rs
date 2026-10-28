@@ -124,9 +124,11 @@ fn build<'a, 'b>(
             }
         }
     }
+    let target = context.path(context.environment.or("CARGO_TARGET_DIR", "target"));
     if !options.skip_build {
         context
             .command("cargo")
+            .env("CARGO_TARGET_DIR", &target)
             .args([
                 "build",
                 "--release",
@@ -139,19 +141,20 @@ fn build<'a, 'b>(
             .run(context.runner)?;
         context
             .command("cargo")
+            .env("CARGO_TARGET_DIR", &target)
             .args(["build", "--release", "--locked", "-p", "voxelite-mcp"])
             .run(context.runner)?;
     }
-    context.plan(format_args!("assemble dist/Voxelite.app from target/release/voxelite and voxelite-mcp; write Info.plist version {version} with the committed Sparkle public key"));
+    context.plan(format_args!("assemble dist/Voxelite.app from {}/release/voxelite and voxelite-mcp; write Info.plist version {version} with the committed Sparkle public key", target.display()));
     if !dry {
         mkdir(&app.join("Contents/MacOS"))?;
         mkdir(&app.join("Contents/Resources"))?;
         copy(
-            &context.path("target/release/voxelite"),
+            &target.join("release/voxelite"),
             &app.join("Contents/MacOS/Voxelite"),
         )?;
         copy(
-            &context.path("target/release/voxelite-mcp"),
+            &target.join("release/voxelite-mcp"),
             &app.join("Contents/MacOS/voxelite-mcp"),
         )?;
         bundle_plist(

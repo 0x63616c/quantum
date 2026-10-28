@@ -3,8 +3,121 @@
 `voxelite-ui` is the shell's shared GPUI presentation library. It depends only on
 GPUI for UI/runtime services (default features disabled) and the already locked
 `unicode-segmentation` crate for the pure editor. It has no app or domain
-dependencies. The application selects native or web platform support. Plugins
+dependencies. The application selects native platform support. Plugins
 must not depend on this crate.
+
+## ASCII loading and reveals
+
+`AsciiSkeleton`, `AsciiReveal` and `AsciiImageReveal` port **ascii-reveal 0.3.0**
+by Quan Hoang (MIT), commit `f602e204232d2d31de2b67c66a166bcdbde51602`.
+The original is at <https://github.com/quanhoangindex/ascii-reveal>; the complete
+copyright and license are in [NOTICE](NOTICE), also included in the app's
+acknowledgements.
+
+```rust
+use voxelite_ui::{AsciiReveal, AsciiSkeleton, Theme};
+use voxelite_ui::ascii_reveal::{core::Timing, presets::Preset, skeleton::SkeletonVariant};
+
+let placeholder = AsciiSkeleton::new("preview-loading", Theme::Dark)
+    .lines(3)
+    .variant(SkeletonVariant::Dither)
+    .seed(7)
+    .reduced_motion(false); // The app supplies its actual preference.
+let title = AsciiReveal::new("project-name", "Quantum 42", Theme::Dark)
+    .preset(Preset::Decode)
+    .timing(Timing::Fast)
+    .loading(false)
+    .reduced_motion(false);
+```
+
+Give each instance a stable ID. Skeletons accept `lines`, repeating GPUI `widths`
+(e.g. `gpui::relative(0.8)`), tightly stacked block `rows`, `variant`, `seed`,
+and `animate`. Dither uses shaded blocks; scan uses dot-to-dense marks; braille
+uses fine dots; terminal uses binary digits with an accent sweep. The base
+pattern paints immediately. The two cached wave patterns alternate every 120 ms
+inside the original 16-strip eased band, staggered 90 ms between paragraph lines.
+
+Text builders accept `preset`, `timing`, `speed`, `seed`, `digits`, `flash`,
+`direction`, `loading`, and `skeleton_variant`. Decode condenses light-to-dense
+marks before scrambling; dither uses shaded blocks; terminal starts with a block
+cursor; blueprint uses accent-colored construction marks. Fast and cinematic
+use the original timing tables. Numeric strings automatically scramble through
+0–9. The final shaped text reserves width and height through loading/decoding,
+including emoji and combining characters. Its accessible label is always the
+real text; decorative glyphs are painted outside the accessibility tree.
+
+All builders accept `started_at(Instant)` for caller synchronization or replay,
+and `elapsed(Duration)` for a deterministic snapshot with no timer. Without an
+explicit clock, keyed state starts on mount and restarts text playback when
+loading ends or text/options/direction change. Keep a supplied start instant
+stable across renders and reset it when starting another reveal.
+
+`reduced_motion(true)` freezes skeletons and replaces decoding with the original
+220 ms CSS ease-out fade of real content; reduced-motion hides are immediate.
+The app passes `voxelite_app::reduce_motion::prefers_reduced_motion()`; this crate
+does not inspect platform preferences.
+
+For thumbnails, construct and reuse `Rc<ascii_reveal::media::Media>` with an
+already fitted RGBA grid, dimensions, and `MediaOptions` (preset, timing, speed,
+background RGB and optional origin). `AsciiImageReveal::new(id, media, image,
+label, theme)` accepts the corresponding GPUI image element. Set the backdrop
+to the actual color behind transparent pixels. Dimensions must be 1–1024 on
+each edge and the pixel count must match; invalid input returns `MediaError`.
+Sampling, luminance/ink, per-cell gates, source colors, coarse-to-fine resolution
+and the source-image crossfade match upstream. Image loading stays with the app.
+
+The public `ascii_reveal::{core,presets,skeleton,media}` modules contain no GPUI
+imports. `Decode::new(text, DecodeOptions)` caches grapheme ranges and Float32
+timings; `frame(elapsed_ms, Direction)` yields borrowed `Cell`s with glyph,
+Pending/Cursor/Scramble/Landed state, opacity and flash weight. `duration_ms` and
+`is_finished` expose completion. `Media::frame` yields borrowed image cells and
+image/glyph opacity. Frame evaluation does not allocate or accumulate state.
+
+CPU behavior: keyed GPUI caches retain text timing, three shaped runs per
+skeleton row, real text and the small glyph alphabet. A skeleton row is one
+shaped run per layer, never a tree of glyph elements. Its wave uses the same
+16 clipped strips as upstream. Text and image glyphs reuse cached shaping and
+stack-local decoration runs. One pending 33 ms timer per component requests
+the next redraw; there is no vsync loop or catch-up work. Finished, static,
+reduced skeletons and elapsed snapshots do not schedule. Clipped or inactive
+windows do not rearm timers; a previously queued timer may wake once. For long
+lists use `animate(false)`. Existing shared controls and app screens are unchanged
+apart from the added acknowledgement.
+
+### Deviations from the original
+
+- Explicit text/image builders replace DOM traversal, CSS selectors, SSR,
+  hydration, surface effects, lazy sections, pointer-origin discovery and mascots.
+  `Timing::wave_delay` supplies target staggering for callers coordinating views.
+  Local clocks omit the browser's 16 ms mount delay and random run/controller seeds.
+- Library theme tokens and bundled Geist Mono replace CSS/custom fonts and colors.
+  Text supports explicit newlines without soft wrapping; Unicode segmentation
+  uses the crate's pinned Unicode version rather than the browser's ICU version.
+  GPUI's native line metrics replace Canvas's text-baseline adjustments.
+- GPUI's glyph atlas and cached shaped runs replace offscreen canvases. Skeleton
+  block corners use the shared radius; their glyph clipping is rectangular,
+  consistent with GPUI's content mask. Seed zero remains zero for the wave;
+  upstream substitutes one for the wave alone. Widths are GPUI lengths, without
+  CSS parsing, circle or arbitrary block-height props; callers compose layout.
+- One-shot 33 ms timers replace the shared browser rAF and frame watchdog.
+  Delayed frames immediately evaluate current time. No per-frame CPU percentage
+  or browser benchmark result is claimed for GPUI.
+- Media accepts bounded, already fitted RGBA thumbnails at DPR 1. Image I/O,
+  decoding, object-fit, CORS fallback and device-pixel resampling belong to the
+  caller. All five grids are computed up front instead of lazily during playback.
+- Loading text switches directly to the skeleton; explicit `Direction::Hide`
+  supplies scramble-out. Text/options changes restart automatic playback.
+  Non-finite speed falls back to one. Built-in presets are exposed as a typed
+  enum; arbitrary runtime CSS/preset objects are not part of this API.
+- The app supplies reduced motion. GPUI supplies real accessible labels but has
+  no `aria-busy` builder. These passive components add no focus stops.
+
+Inline Node-derived goldens cover the upstream hash, easing LUT, skeleton text,
+text frames (including numeric strings, terminal cursors and graphemes), and
+image sampling/gates/colors. Rust tests also cover reverse time, completion,
+determinism, reduced motion, invalid image grids and transparency. Run
+`cargo test -p voxelite-ui --locked`; native AppKit/Metal and VoiceOver still need
+macOS verification.
 
 Use `tokens` for Theme colors, spacing, corner radii, Geist/Geist Mono typography,
 control heights, focus rings and panel shadows. `Theme::surface`, `card`,
@@ -72,10 +185,8 @@ read-only. OS file dialogs retain their platform-owned filename controls.
 bindings in the `TextField` context. Tests list every chord and its action, check
 GPUI parsing/context resolution, and exercise the pure commands. Here `⌫` means
 Backspace, `⌦` means forward Delete, and Option is Alt on other keyboards.
-The browser shell installs the table for its detected host OS before creating
-fields; macOS browsers use the macOS column.
 
-| Operation | macOS | Linux / Windows / web |
+| Operation | macOS | Linux / Windows |
 | --- | --- | --- |
 | Previous / next grapheme | ← / →; ⌃B / ⌃F | ← / → |
 | Extend by grapheme | ⇧← / ⇧→; ⇧⌃B / ⇧⌃F | ⇧← / ⇧→ |

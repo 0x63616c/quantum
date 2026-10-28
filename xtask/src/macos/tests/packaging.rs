@@ -513,3 +513,26 @@ fn stable_versions_preserve_the_scripts_decimal_format_and_numeric_order() {
             > macos::stable_version("999.0.0").unwrap()
     );
 }
+
+#[test]
+fn cargo_target_dir_is_honoured() {
+    for absolute in [false, true] {
+        let mut f = Fixture::new();
+        let target = if absolute {
+            f.path("custom-target")
+        } else {
+            "custom-target".into()
+        };
+        f.env.set("CARGO_TARGET_DIR", target.to_str().unwrap());
+        f.package(false).unwrap();
+        assert!(!f.path("target/release/voxelite").exists());
+        // Reuse the custom target when the release workflow prebuilds binaries.
+        f.package(true).unwrap();
+        for (source, bundled) in [("voxelite", "Voxelite"), ("voxelite-mcp", "voxelite-mcp")] {
+            assert_eq!(
+                fs::read(f.root().join(&target).join("release").join(source)).unwrap(),
+                fs::read(f.path(&format!("dist/Voxelite.app/Contents/MacOS/{bundled}"))).unwrap()
+            );
+        }
+    }
+}

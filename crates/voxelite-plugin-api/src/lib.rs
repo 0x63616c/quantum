@@ -5,7 +5,7 @@
 //! schemas, icons, menus and keybindings. Tools and command transforms return
 //! typed commands through read-only capabilities; only the host may apply edits.
 //! There is no GUI dependency, registry, enablement or lifecycle management here,
-//! and no third-party code loading, WASM or scripting.
+//! and no third-party code loading or scripting.
 mod comments;
 mod context;
 mod data;

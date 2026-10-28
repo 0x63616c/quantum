@@ -6,7 +6,7 @@
   binaries, bundle IDs and the repo slug still use `voxelite`. Do not rename them
   piecemeal. Use real names in commands, paths and identifiers.
 - Build an Aseprite-style 3D voxel editor with a Rust/GPUI native macOS shell,
-  shared wasm editor, `.voxl` projects, GLB/PNG exports and MCP agent workflows.
+  `.voxl` projects, GLB/PNG exports and MCP agent workflows.
 - Verify behavior in code and manifests. [Product direction](docs/adr/0003-product-direction.md)
   and the [domain glossary](docs/glossary.md) distinguish current implementation
   from deferred work and proposed seams. Do not present those as implemented
@@ -34,7 +34,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 | `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
 | `voxelite-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
 | `voxelite-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
-| `voxelite-app` | Compose editor state, plugins, native/web UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
+| `voxelite-app` | Compose editor state, plugins, native UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
 | `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
 | `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
 
@@ -161,14 +161,15 @@ cargo test -p xtask --locked
 | Task / render harness help | `cargo xtask --help` / `cargo xtask bench --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
-| Web build | `scripts/build-web.sh` |
 | Full site build | `scripts/build-site.sh` |
 | Site generator tests | `cargo test --locked -p voxelite-site` |
 | Built-site validation | `python3 scripts/check-site.py` |
 | Offline feed validation | `cargo xtask macos check-appcast site/appcast.xml --allow-empty` |
 
-- Core/MCP, Python tests and site/web builds can run on Linux. Full workspace and
+- Core/MCP, Python tests and site builds can run on Linux. Full workspace and
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
+- Keep the Linux GUI build for CI and UI capture work; see
+  [ADR 0004](docs/adr/0004-keep-linux-gui-build.md).
 - Run Metal/AppKit/Sparkle checks and `cargo xtask macos package` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
   from Linux checks or mocked packaging tools.
@@ -176,12 +177,9 @@ cargo test -p xtask --locked
   `CARGO_TARGET_DIR=/home/box/.cache/cargo-shared`. For lavapipe the guide specifies
   `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json` and
   `XDG_RUNTIME_DIR=/tmp`; verify local installations before using these paths.
-- Build `site/app/` before site validation. Use `scripts/build-site.sh --skip-web`
-  only with an existing verified `web/dist/`. Browser checks need a server and
-  Playwright: follow [site/README.md](site/README.md) for
-  `node scripts/check-site-install.mjs` and
-  `node scripts/capture-site.mjs screenshots/site/final`; follow
-  [docs/web.md](docs/web.md) for `node scripts/capture-web.mjs`.
+- Website checks need a server and Playwright: follow [site/README.md](site/README.md)
+  for `node scripts/check-site-install.mjs` and
+  `node scripts/capture-site.mjs screenshots/site/final`.
 
 ## Rendering and performance
 
@@ -209,7 +207,7 @@ cargo test -p xtask --locked
 - Keep performance references in [bench/baseline/](bench/baseline/). Generate them
   explicitly with `cargo xtask bench --runs 3 --update-baseline` or `bench-baseline`
   dispatch. Do not combine that flag with `--compare` or `--input`. The current M2
-  baseline is provisional; remeasure on an idle mini before using it as a hard gate.
+  baseline (run 40613358223) was recorded with the runner otherwise idle; see bench/README.md.
 - Match scene hashes, dimensions, machine/driver, shadow path and camera sampling.
   Attach JSON, markdown metric deltas, run spread and machine load. Performance
   dispatch is diagnostic on shared CI; required visual comparison must pass.
@@ -272,7 +270,7 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
   [text_field.rs](crates/voxelite-ui/src/text_field.rs). Use `Editor` mutations,
   `set()` for model replacement and `TextFieldEvent` for domain effects.
 - Preserve [bindings.rs](crates/voxelite-ui/src/editing/bindings.rs)'s natural
-  macOS editing behavior, also selected for browsers on macOS:
+  macOS editing behavior:
 
 | Key | Behavior |
 | --- | --- |
@@ -305,7 +303,7 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 
 - Edit site templates in `crates/voxelite-site/templates/`, article bodies in
   `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
-  in `skills/`. Run `scripts/build-site.sh`, or `--skip-web` with a verified bundle.
+  in `skills/`. Run `scripts/build-site.sh`.
 - The site reads the committed `spec/mcp/v1/tools.json` catalog without linking
   `voxelite-mcp`. After changing MCP tool metadata or schemas, refresh and commit
   it with `UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
@@ -323,13 +321,24 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   `cargo xtask macos appcast`; fetch release feeds with
   `cargo xtask macos fetch-appcast <out>`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
-- Review built output and relative links. Keep generated site output,
-  `web/dist/` and local benchmark outputs out of source commits.
+- Review built output and relative links. Keep generated site output and
+  local benchmark outputs out of source commits.
 
 ## Commits and PRs
 
-- Branch from `main`; never push directly to `main`. Keep PRs small, focused and
-  limited to one concern. Review harshly before merge: inspect correctness,
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the issue-first workflow, labels,
+  board statuses, branch names, Conventional Commit PR titles, PR bodies and the
+  Definition of Done. Agents also follow the
+  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read the
+  board first, file an issue per ask, link every PR, and audit **Done when** items
+  before claiming anything is done.
+- PRs that change anything visible follow the
+  [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md):
+  `cargo xtask screenshots --publish <PR#>` (or the **PR screenshots** CI job) fills
+  the description's Before | After Screenshots section. Never paste UI screenshots
+  by hand, and check the rendered PR page before asking for review.
+- Branch from `main` as `<type>/<issue#>-<slug>`; never push directly to `main`.
+  Keep PRs small, focused and limited to one concern. Review harshly before merge: inspect correctness,
   scope, failure paths and actual UI evidence.
 - Author all commits you create as `Calum <6991398+0x63616c@users.noreply.github.com>`:
 
@@ -338,9 +347,11 @@ git config user.name Calum
 git config user.email 6991398+0x63616c@users.noreply.github.com
 ```
 
-- Use meaningful imperative subjects. Do not add `Co-authored-by` trailers or
-  tool/agent attribution. Squash merge as `Title (#N)`, following recent history,
-  then delete the feature branch.
+- Title PRs as Conventional Commits (`feat`, `fix`, `refactor`, `chore`, `docs`,
+  `test`, `ci`, `perf`, optional scope) with an imperative summary;
+  [PR conventions](.github/workflows/pr-conventions.yml) checks the title and a
+  `Closes`/`Fixes`/`Refs #N` link. Do not add `Co-authored-by` trailers or
+  tool/agent attribution. Squash merge as `Title (#N)`, then delete the branch.
 - Explain the problem, resulting behavior and validation. Include before/after
   screenshots for UI changes, both themes where relevant, and before/after
   numbers for performance changes. Report untested platforms.
@@ -348,7 +359,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Formatting, plugin rule/tests, packaging task tests, Clippy, workspace tests and ad-hoc DMG build. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
@@ -366,7 +377,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 ## Releases
 
-- Do not tag casually. Use a focused `Prepare vX.Y.Z release` PR for version,
+- Do not tag casually. Use a focused `chore(release): prepare vX.Y.Z` PR for version,
   lockfile and affected metadata, then a separately authorized stable
   `vMAJOR.MINOR.PATCH` tag matching the app version.
 - Follow [docs/releasing-macos.md](docs/releasing-macos.md) and
@@ -385,6 +396,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue-first workflow, PR rules and Definition of Done. |
 | [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
 | [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |

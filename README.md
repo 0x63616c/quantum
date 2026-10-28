@@ -6,8 +6,7 @@ Quantum was renamed from Voxelite. Crates, binaries, bundle IDs and the GitHub
 repo slug still use `voxelite` until the separate code-wide rename lands; commands
 and paths below use their current names.
 
-Quantum is an all-Rust editor built with GPUI, with a native macOS application
-and a WebAssembly browser build sharing the editor and document engine. Its
+Quantum is an all-Rust macOS desktop editor built with GPUI. Its
 agent-first workflow combines a Model Context Protocol (MCP) server, reusable
 skills, render-to-image feedback and live synchronization with a native editor
 window. Projects use the versioned `.voxl` format; geometry exports as glTF binary
@@ -17,7 +16,6 @@ The current workspace version is **0.3.1**, from [Cargo.toml](Cargo.toml).
 
 [Website](https://voxelite.worldwidewebb.co/) ·
 [User documentation](https://voxelite.worldwidewebb.co/docs/) ·
-[Browser editor](https://voxelite.worldwidewebb.co/app/) ·
 [Downloads](https://github.com/0x63616c/voxelite/releases)
 
 ## Screenshots
@@ -67,10 +65,6 @@ the File menu, and hosted sharing is not implemented.
   appearance, a fixed-width telemetry bar and shared text fields with natural
   word/line navigation, selection, clipboard, local undo and IME handling.
   Packaged macOS builds integrate Sparkle update checks.
-- **Web editor:** the same Rust/GPUI editor compiled to wasm, with project
-  upload/download, GLB/PNG export and browser-local preferences. Native MCP
-  attachment is unavailable in the browser; download projects to preserve edits
-  across reloads.
 
 The app opens the bundled Autumn Workshop directly when no file is supplied.
 For controls and their generated shortcut table, see the
@@ -92,8 +86,7 @@ Automatic checks are enabled; automatic download/installation is off by default.
 Manual checks are available from the application menu and Settings → Updates.
 Unbundled `cargo run` builds do not have the bundled updater available.
 
-Use the [browser editor](https://voxelite.worldwidewebb.co/app/) without installing
-the app. The [published documentation](https://voxelite.worldwidewebb.co/docs/)
+The [published documentation](https://voxelite.worldwidewebb.co/docs/)
 is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
 [the site generator](crates/voxelite-site/src/main.rs).
@@ -149,26 +142,15 @@ harness through Vulkan/lavapipe, but those results do not validate Metal pixels
 or performance. Linux development support is separate from the distributed
 Apple-silicon macOS package.
 
-### Web and website
-
-```sh
-scripts/build-web.sh
-python3 -m http.server 8080 --directory web/dist --bind 127.0.0.1
-```
-
-Open `http://127.0.0.1:8080`. The script installs `wasm32-unknown-unknown` and the
-`wasm-bindgen-cli` version matching `Cargo.lock`, then builds `voxelite-app` with
-`--no-default-features --features web --profile web`. Generated files go into
-ignored `web/dist/`. See [docs/web.md](docs/web.md) for browser checks and limits.
+### Website
 
 ```sh
 scripts/build-site.sh
 python3 -m http.server 8090 --directory site --bind 127.0.0.1
 ```
 
-The full site build includes the wasm editor. Once a verified `web/dist/` exists,
-`scripts/build-site.sh --skip-web` reuses it for documentation-only iteration.
-These scripts build locally; they do not deploy. See [site/README.md](site/README.md).
+The script builds the static website locally; it does not deploy.
+See [site/README.md](site/README.md).
 Generated site output is ignored by Git. CI builds it on PRs and `main`, and
 publishes trusted `main` builds to `site-dist`; commit the sources, not the output.
 
@@ -212,7 +194,7 @@ only a container.
 | [voxelite-plugin-api](crates/voxelite-plugin-api/) | Portable plugin manifests, contributions and capability-scoped behavior contracts. |
 | [voxelite-plugin-host](crates/voxelite-plugin-host/) | Registry, enablement, lifecycle, dispatch, fault isolation and conformance checks. |
 | [voxelite-ui](crates/voxelite-ui/) | Shared GPUI controls, design tokens, text editing and fixed-width status components. |
-| [voxelite-app](crates/voxelite-app/) | Editor state and native/web GPUI shell; native binary `voxelite`. |
+| [voxelite-app](crates/voxelite-app/) | Editor state and native GPUI shell; native binary `voxelite`. |
 | [voxelite-mcp](crates/voxelite-mcp/) | Standalone MCP authority, stdio transport and live native-session bridge. |
 | [voxelite-bench](crates/voxelite-bench/) | Production-GPU performance measurements and golden-image comparisons. |
 | [voxelite-site](crates/voxelite-site/) | Static site, MCP reference, Markdown/LLM indexes and integration generation. |
@@ -238,7 +220,6 @@ only a container.
 | [skills/](skills/) | Portable agent workflows for modeling, palettes, primitives and render review. |
 | [spec/](spec/) | `.voxl` and MCP contracts and compatibility fixtures. |
 | [vendor/](vendor/) | Pinned GPUI Apple surface-lifetime patch and its upstream notices. |
-| [web/](web/) | Browser bootstrap HTML and ignored generated wasm bundle. |
 | [xtask/](xtask/) | Cargo launcher for the independent `bench` and `visual` tools. |
 
 ## Architecture
@@ -292,7 +273,8 @@ not tag or publish a release. See [xtask/README.md](xtask/README.md) for the
 maintenance modules and how to add commands.
 
 The standard workspace test command is `cargo test --workspace`. The exact
-format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) are:
+format, lint and test invocations in [CI Linux](.github/workflows/ci-linux.yml) and
+[CI macOS](.github/workflows/ci-macos.yml) are:
 
 ```sh
 cargo fmt --all -- --check
@@ -386,25 +368,24 @@ Generator tests build into temporary directories and need no local site bundle:
 cargo test --locked -p voxelite-site
 ```
 
-After building the site and browser bundle:
+After building the site:
 
 ```sh
 python3 scripts/check-site.py
 cargo xtask macos check-appcast site/appcast.xml --allow-empty
 ```
 
-The site checker expects the complete generated site, including `site/app/`.
+The site checker expects the complete generated site.
 It validates links, Markdown exports, discovery metadata and source parity.
 With a local site server and Playwright installed, browser checks are available through
 `node scripts/check-site-install.mjs` and
 `node scripts/capture-site.mjs screenshots/site/final`; follow
-[the site guide](site/README.md) for setup. The web editor has its own
-`node scripts/capture-web.mjs` checks described in [docs/web.md](docs/web.md).
+[the site guide](site/README.md) for setup.
 
 ## Releases and deployment
 
 Follow [docs/releasing-macos.md](docs/releasing-macos.md). Use a focused version
-bump PR, following the existing `Prepare v0.3.0 release (#42)` pattern: update
+bump PR titled `chore(release): prepare vX.Y.Z` (see [CONTRIBUTING.md](CONTRIBUTING.md)): update
 workspace versions and `Cargo.lock`, and synchronize affected download and
 compatibility metadata before merging. Tag the approved commit separately.
 
@@ -430,7 +411,7 @@ prior feed entries and signs the update feed and notes. Published assets include
 `Voxelite.dmg`, `Voxelite.dmg.sha256`, `Voxelite.html` and `appcast.xml`.
 
 [Deploy site](.github/workflows/deploy-site.yml) builds and verifies the complete
-site/wasm bundle on Ubuntu for PRs and `main`. Successful owner-triggered releases
+static site on Ubuntu for PRs and `main`. Successful owner-triggered releases
 also trigger it. Trusted `main` runs publish `site-dist` and deploy the built
 directory directly with the Vercel CLI using `VERCEL_TOKEN`; pushing the branch
 alone does not deploy. The workflow fetches the highest stable signed release
@@ -444,7 +425,7 @@ failed site deployment rather than replacing published release assets.
 | [docs/](docs/) | Engineering guides and implementation evidence. |
 | [Native editor guide](crates/voxelite-app/README.md) | Running the app, controls and platform notes. |
 | [MCP guide](docs/mcp.md), [integrations](integrations/README.md), [skills](skills/README.md) | Agent setup and workflows. |
-| [Web guide](docs/web.md), [site guide](site/README.md) | Browser builds and generated documentation. |
+| [Site guide](site/README.md) | Website builds and generated documentation. |
 | [Domain glossary](docs/glossary.md) | Shared terminology and proposed architecture seams. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Decisions and the architecture review's recommended order. |
 | [Core architecture](docs/architecture/core.md), [built-in plugins](crates/plugins/README.md) | Model invariants and extension boundaries. |

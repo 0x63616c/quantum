@@ -51,4 +51,4 @@ Host application launches and macOS signing require verification on those hosts.
 
 These examples are generated from `crates/voxelite-site/src/install.rs` and this
 README's template in `crates/voxelite-site/templates/integrations.md`.
-Run `scripts/build-site.sh --skip-web` to refresh them.
+Run `scripts/build-site.sh` to refresh them.

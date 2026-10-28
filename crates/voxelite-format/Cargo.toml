@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+tempfile.workspace = true
 voxelite-core.workspace = true
 
 [lints]
@@ -26,6 +27,3 @@ proptest.workspace = true
 [[example]]
 name = "demo-history"
 path = "../../examples/demo_history.rs"
-
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-tempfile.workspace = true

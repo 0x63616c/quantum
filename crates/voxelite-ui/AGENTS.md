@@ -34,6 +34,9 @@ Use the public re-exports in `src/lib.rs`; icon assets remain in the app.
 - `src/color.rs`, `color_picker.rs`, `slider.rs`: color math, color square,
   hue slider and controlled numeric slider. Pointer geometry stays with the control.
 - `src/status.rs`: fixed-cell status/coordinate telemetry.
+- `src/ascii_reveal/`: MIT port of ascii-reveal v0.3.0 at `f602e20`. Preserve
+  upstream constants, Float32 timing rounding and Node-derived inline goldens.
+  Keep `core`, `presets`, `skeleton`, and `media` free of GPUI imports.
 
 ## Components
 
@@ -78,6 +81,35 @@ Use the public re-exports in `src/lib.rs`; icon assets remain in the app.
 - `Kbd`: keycap, shaped-glyph `frame`, and settings shortcut `well`.
 - `tooltip`: compact `Popover` chrome. Native timing/placement belongs to GPUI/app.
 - `row`, `mono`, `icon`: alignment, fixed-advance text, and asset glyph helpers.
+- `AsciiSkeleton`: stable keyed ID, paragraph `lines`/GPUI `widths`, block `rows`,
+  `variant` (dither/scan/braille/terminal), `seed`, `animate`, `reduced_motion`.
+- `AsciiReveal`: real text and accessible label, decode/dither/terminal/blueprint
+  preset, fast/cinematic timing, seed/speed, digits/flash, direction and loading.
+  Reserve final shaped layout. `AsciiImageReveal` accepts a shared, precomputed
+  `Media` RGBA grid and the caller's already fitted GPUI image element.
+  All three accept `started_at(Instant)` or timer-free `elapsed(Duration)`.
+  Pass the app's reduced-motion preference: skeletons freeze; reveal uses the
+  original 220 ms fade; hide is instant. Cache patterns/timings/shaping; never
+  allocate an element per glyph or accumulate animation state per frame.
+  Rearm at most one 33 ms timer per component only while visible and animating;
+  stop on completion, removal, static snapshots, or inactive/hidden windows.
+  Keep [NOTICE](NOTICE) and the app acknowledgement with the port.
+
+### Deviations from the original
+
+The complete list is in [README.md](README.md#deviations-from-the-original) and
+the module docs; update both when changing these contracts. Typed GPUI builders
+replace DOM/SSR/CSS traversal, surface effects, lazy sections and mascots. Theme
+tokens/Geist Mono and native line metrics replace browser fonts and CSS;
+explicit newlines work without soft wrapping. Native glyph caches replace
+canvases, rectangular masks clip blocks with library radii, and one-shot timers
+replace rAF/watchdog scheduling. Media is bounded caller-fitted RGBA at DPR 1,
+precomputed at all five sizes. The caller owns image I/O and reduced motion.
+Loading switches directly to the skeleton, with explicit hide for scramble-out;
+stable explicit clocks replace random browser seeds and the mount delay.
+Seed zero works consistently, non-finite speed falls back to one, and presets
+are a typed built-in enum. Accessible real labels replace DOM text; GPUI has
+no `aria-busy` builder. Do not claim full browser controller or macOS coverage.
 
 ## Rules and compatibility
 

@@ -1,9 +1,8 @@
 # Domain glossary
 
-Shared context for architecture discussions and code changes. The current terms
-below describe the implementation; the planned seams name proposed boundaries,
-not existing types. [ADR 0001](adr/0001-record-architecture-decisions.md)
-records the architecture review's recommended order.
+Shared context for architecture discussions and code changes. The terms below
+describe the implementation. [ADR 0001](adr/0001-record-architecture-decisions.md)
+records the architecture review's original recommended order.
 
 ## Current terms
 
@@ -53,7 +52,7 @@ A voxel is an occupied integer cell in a layer, carrying a palette-slot referenc
 [crates/voxelite-core/src/model.rs](../crates/voxelite-core/src/model.rs), and `Volume`
 stores cells in [crates/voxelite-core/src/chunk.rs](../crates/voxelite-core/src/chunk.rs).
 The `Voxel` struct in
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs) is an
+[crates/voxelite-core/src/command/mod.rs](../crates/voxelite-core/src/command/mod.rs) is an
 explicit `at`/`slot` write, including slot zero to erase through `SetVoxels`.
 “Cell” is the grid term and may also mean air; avoid “pixel” or treating a voxel as
 an RGB color independent of its palette.
@@ -65,7 +64,7 @@ history-entry UUID, actor and label in
 [crates/voxelite-core/src/engine.rs](../crates/voxelite-core/src/engine.rs).
 Execution prepares and validates privately, then commits atomically with one
 history entry unless it is a no-op, including when the command is a `Batch` from
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs).
+[crates/voxelite-core/src/command/mod.rs](../crates/voxelite-core/src/command/mod.rs).
 Use “edit transaction”; avoid equating it with a UI action, a disk save or an MCP
 request, which can also perform reads and lifecycle operations.
 
@@ -118,8 +117,8 @@ of the host's undo/redo session or a list of named versions.
 ### Attached session
 
 `AttachedSession` serves MCP over a private Unix socket, with owner-thread `poll`
-temporarily lending the editor's live `Engine` to the MCP session so human and
-agent edits share revision and history in
+temporarily lending the editor's live `DocumentSession` to the MCP dispatcher so
+human and agent edits share revision, history and saved-file state in
 [crates/voxelite-mcp/src/attached.rs](../crates/voxelite-mcp/src/attached.rs).
 Document creation, opening and saving remain app responsibilities, and
 [crates/voxelite-app/src/ui/agent.rs](../crates/voxelite-app/src/ui/agent.rs) polls
@@ -127,7 +126,7 @@ events and reconciles editor state after agent changes.
 “Live attachment” or “agent attachment” are aliases; avoid conflating this with the
 standalone MCP `Session` in
 [crates/voxelite-mcp/src/session.rs](../crates/voxelite-mcp/src/session.rs) or the
-planned `DocumentSession`.
+single-document `DocumentSession`.
 
 ### Engine
 
@@ -141,8 +140,8 @@ synonyms.
 
 ### Editor
 
-`Editor` holds one open project and its `Engine` alongside app state such as the
-active layer, tool, brush color, camera, path and saved-file fingerprint in
+`Editor` owns a `DocumentSession` alongside app state such as the active layer,
+tool, brush color and camera in
 [crates/voxelite-app/src/editor.rs](../crates/voxelite-app/src/editor.rs), with timeline
 preview and playback methods in
 [crates/voxelite-app/src/history.rs](../crates/voxelite-app/src/history.rs).
@@ -154,15 +153,15 @@ either as an alias for the portable document or core engine.
 
 ### Op / Action
 
-`Op` is the app enum deriving GPUI's `Action`, with labels, icons, shortcuts and
-menu membership in
+`Op` is the app enum deriving GPUI's `Action`, mapped to contributed command IDs in
 [crates/voxelite-app/src/actions.rs](../crates/voxelite-app/src/actions.rs).
+Labels, icons, shortcuts and menu membership come from the enabled command registry.
 `EditorView` supplies context-dependent enablement, selected state and dispatch in
 [crates/voxelite-app/src/ui.rs](../crates/voxelite-app/src/ui.rs), and many operations
 only change UI state.
 “UI action” and “app command” are aliases; distinguish these from the typed
 document-edit `Command` in
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs) and MCP's
+[crates/voxelite-core/src/command/mod.rs](../crates/voxelite-core/src/command/mod.rs) and MCP's
 `operation_id` retry identity.
 
 ### UI component library
@@ -173,62 +172,58 @@ tokens, controls, grouped forms, dialog shells and fixed-width status slots.
 The app owns editor entities, domain state, command dispatch and modal lifecycle.
 Plugins depend on `voxelite-plugin-api`, never on the UI component library.
 
-## Planned seams
-
-These names come from the architecture review; the linked files identify current
-responsibilities to extract, not implementations of the proposed types.
-
 ### DocumentSession
 
-Planned shared owner of the engine and document lifecycle: path, saved-file
-fingerprint, dirty state, open/save, atomic writes and external-change detection,
-with app `Editor` and MCP `Session` acting as adapters.
-These responsibilities currently span
-[crates/voxelite-app/src/editor.rs](../crates/voxelite-app/src/editor.rs),
-[crates/voxelite-app/src/persistence.rs](../crates/voxelite-app/src/persistence.rs),
-[crates/voxelite-mcp/src/session.rs](../crates/voxelite-mcp/src/session.rs) and
-[crates/voxelite-mcp/src/files.rs](../crates/voxelite-mcp/src/files.rs).
-“Document session” is the prose alias; avoid treating it as an existing type or
-renaming the current multi-document MCP `Session` by implication.
+`DocumentSession` owns one engine, portable project metadata, path and disk
+fingerprints in
+[crates/voxelite-format/src/session.rs](../crates/voxelite-format/src/session.rs).
+It provides bounded opening, dirty-state queries and atomic saves with
+external-change detection. App `Editor` and MCP's multi-document `Session` adapt
+this shared authority and choose their save policies. `SaveTask` captures an
+immutable write job; `SavedProject` confirms a durable save without clearing
+intervening edits.
+“Document session” is the prose alias; distinguish it from the multi-document MCP
+`Session` and its transport/operation receipts.
 
 ### Viewport
 
-Planned owner of viewport render scheduling, pending work, dimensions, frame
-identity and GPU/CPU fallback currently held by `EditorView` in
-[crates/voxelite-app/src/ui.rs](../crates/voxelite-app/src/ui.rs) and its GPU helper in
+The app's `Viewport` owns render scheduling, pending work, dimensions, displayed
+frame identity and GPU/CPU presentation in
+[crates/voxelite-app/src/ui/viewport.rs](../crates/voxelite-app/src/ui/viewport.rs),
+with its GPU helper in
 [crates/voxelite-app/src/ui/viewport/gpu_viewport.rs](../crates/voxelite-app/src/ui/viewport/gpu_viewport.rs).
-“Viewport module” names the proposed boundary; avoid equating it with the renderer
-it invokes or the existing lowercase `viewport` field that stores screen bounds.
+`EditorView` supplies the document and GPUI callbacks. Distinguish this app owner
+from the private GPU-resource `Viewport` in the renderer.
 
 ### CommandPalette
 
-Planned owner of command search state and filtering, currently `command_open`,
-`tools_only`, `query`, `command_index`, `command_scroll` and `filtered_actions` in
-[crates/voxelite-app/src/ui.rs](../crates/voxelite-app/src/ui.rs), using `Op` metadata
+`CommandPalette` owns command search visibility, query, selection, scrolling and
+input policy in
+[crates/voxelite-app/src/ui/command_palette.rs](../crates/voxelite-app/src/ui/command_palette.rs),
+using `Op` metadata
 from [crates/voxelite-app/src/actions.rs](../crates/voxelite-app/src/actions.rs).
-“Command search” is the current UI wording; avoid confusing this seam with the
+“Command search” is the current UI wording; avoid confusing this component with the
 document palette, swatch picker or `palette_*` color-picker state.
 
 ### SaveFlow
 
-Planned state machine for pending operations, unsaved-change choices, dialogs and
-continuing after a successful save, currently represented by `pending`,
-`pending_choice`, `after_save`, `dialog_open` and related methods in
-[crates/voxelite-app/src/ui.rs](../crates/voxelite-app/src/ui.rs).
-It would coordinate the UI flow around persistence, whose current `SaveTask` and
-`SavedProject` types live in
-[crates/voxelite-app/src/persistence.rs](../crates/voxelite-app/src/persistence.rs).
+`SaveFlow` tracks pending operations, unsaved-change choices, dialog gating and
+continuation after a successful save in
+[crates/voxelite-app/src/ui/save_flow.rs](../crates/voxelite-app/src/ui/save_flow.rs).
+It coordinates UI flow around the format crate's `SaveTask` and `SavedProject`.
 “Save flow” is the prose alias; avoid using it for atomic file writing itself or
-for the broader proposed `DocumentSession`.
+for the broader `DocumentSession`.
 
 ### Command registry
 
-Planned consolidation of app command metadata, enablement and execution behind
-one interface, extending the existing metadata registry in
-[crates/voxelite-app/src/actions.rs](../crates/voxelite-app/src/actions.rs) and dispatch
-in [crates/voxelite-app/src/ui.rs](../crates/voxelite-app/src/ui.rs).
-The review proposes deriving menus, command search, the shortcut sheet and README
-shortcut documentation from it; current shortcut formatting lives in
+The enabled plugin registry supplies command labels, icons, menu placement,
+bindings and order. Core contributions are registered in
+[crates/voxelite-app/src/core_plugin.rs](../crates/voxelite-app/src/core_plugin.rs);
+optional built-ins contribute through their plugins.
+[crates/voxelite-app/src/actions.rs](../crates/voxelite-app/src/actions.rs) maps IDs
+to `Op`, derives shell metadata and checks availability against the live host.
+Menus, command search, the shortcut sheet and README shortcut documentation use
+that metadata; shortcut formatting lives in
 [crates/voxelite-app/src/shortcuts.rs](../crates/voxelite-app/src/shortcuts.rs) and
 [crates/voxelite-app/src/ui/shortcut_hint.rs](../crates/voxelite-app/src/ui/shortcut_hint.rs).
 “Action registry” is an alias already used by `actions.rs`; qualify it as the app
