@@ -44,7 +44,6 @@ impl Plugin for CorePlugin {
                 10,
                 None,
             ),
-            #[cfg(not(target_family = "wasm"))]
             (
                 "dev.voxelite.core.open_recent",
                 "Open Recent",
@@ -55,7 +54,6 @@ impl Plugin for CorePlugin {
                 12,
                 None,
             ),
-            #[cfg(not(target_family = "wasm"))]
             (
                 "dev.voxelite.core.clear_recents",
                 "Clear Recent Projects",
@@ -216,7 +214,6 @@ impl Plugin for CorePlugin {
                 280,
                 None,
             ),
-            #[cfg(not(target_family = "wasm"))]
             (
                 "dev.voxelite.core.welcome",
                 "Welcome",
@@ -350,7 +347,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn welcome_commands_are_declared_without_gpui() {
         let host = app_host();
         for (id, menu, key) in [

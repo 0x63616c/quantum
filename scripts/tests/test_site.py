@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SiteTests(unittest.TestCase):
-    def test_checker_requires_built_pages_and_editor(self):
-        for pages in ((), ('index.html', 'docs/index.html')):
+    def test_checker_requires_built_pages(self):
+        for pages in ((), ('index.html',), ('index.html', 'docs/index.html')):
             with self.subTest(pages=pages), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 (root / 'scripts').mkdir()
@@ -25,7 +25,7 @@ class SiteTests(unittest.TestCase):
                 result = subprocess.run([sys.executable, '-B', str(checker)],
                                         capture_output=True, text=True, check=False)
                 self.assertNotEqual(result.returncode, 0)
-                missing = 'app/index.html' if pages else 'index.html'
+                missing = ('index.html', 'docs/index.html', 'download/index.html')[len(pages)]
                 self.assertIn(f'Missing site/{missing}', result.stderr)
                 self.assertIn('run scripts/build-site.sh first', result.stderr)
                 self.assertNotIn('Traceback', result.stderr)
