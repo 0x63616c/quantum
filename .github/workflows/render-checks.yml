@@ -2,17 +2,20 @@ name: Rendering checks
 
 on:
   pull_request:
+    # Dependency bumps (Cargo.toml/Cargo.lock) don't trigger this; the nightly run on main
+    # catches render changes from them. Dispatch visual by hand when a render dep changes.
     paths:
       - 'crates/voxelite-render/**'
       - 'crates/voxelite-core/**'
       - 'crates/voxelite-bench/**'
-      - 'xtask/**'
+      - 'xtask/src/main.rs'
       - 'bench/**'
       - 'examples/*.voxl'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
       - '.cargo/config.toml'
       - '.github/workflows/render-checks.yml'
+  schedule:
+    # Nightly visual gate on main (03:30 PT), so dependency bumps still get golden coverage.
+    - cron: '30 10 * * *'
   workflow_dispatch:
     inputs:
       command:

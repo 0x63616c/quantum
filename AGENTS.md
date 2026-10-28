@@ -349,6 +349,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
+- Root `Cargo.toml` and `Cargo.lock` changes do not trigger **Rendering checks**.
+  A nightly **Rendering checks** run on `main` covers dependency bumps; dispatch
+  `visual` on the PR when a render dependency changes. Only `xtask/src/main.rs`, the
+  visual/bench launcher, is included from `xtask/` in the rendering path filter.
+
 - Respect owner-only, same-repository guards on self-hosted macOS jobs. Fork PRs
   do not run them; a skipped job is not verification. Arrange trusted verification
   before merge. Never remove guards or execute untrusted changes on the runner
