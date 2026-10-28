@@ -50,6 +50,66 @@ fn missing_tools_skip_or_fail_without_running_the_check() {
 }
 
 #[test]
+fn missing_rustup_components_skip_or_fail_despite_listed_proxies() {
+    let workspace = Workspace::discover().unwrap();
+    for (tool, component) in [("fmt", "rustfmt"), ("clippy", "clippy-driver")] {
+        for executable in [format!("cargo-{tool}"), component.into()] {
+            for strict in [false, true] {
+                let runner = RecordingRunner::stdout(b"    fmt\n    clippy\n");
+                runner.results.borrow_mut().push_back(Ok(Output {
+                    status: Status::from_code(1),
+                    stderr: format!(
+                        "error: '{executable}' is not installed for the toolchain 'stable'.\n"
+                    )
+                    .into_bytes(),
+                    ..Output::default()
+                }));
+                let context = Context {
+                    workspace: &workspace,
+                    runner: &runner,
+                    strict,
+                };
+                let component = if tool == "fmt" { "rustfmt" } else { "clippy" };
+                let reason = format!(
+                    "cargo {tool} is not installed; install it with `rustup component add {component}`"
+                );
+                assert_eq!(
+                    by_name(tool).run(&context),
+                    if strict {
+                        Outcome::Fail(vec![reason])
+                    } else {
+                        Outcome::Skip(reason)
+                    }
+                );
+                runner.assert_args(1, &[tool, "--version"]);
+                assert_eq!(runner.commands.borrow().len(), 2);
+            }
+        }
+    }
+}
+
+#[test]
+fn broken_component_probes_fail_without_running_the_gate() {
+    let workspace = Workspace::discover().unwrap();
+    let runner = RecordingRunner::stdout(b"    clippy\n");
+    runner.results.borrow_mut().push_back(Ok(Output {
+        status: Status::from_code(17),
+        stderr: b"toolchain installation is corrupt\n".to_vec(),
+        ..Output::default()
+    }));
+    let context = Context {
+        workspace: &workspace,
+        runner: &runner,
+        strict: false,
+    };
+    assert!(
+        matches!(by_name("clippy").run(&context), Outcome::Fail(messages)
+        if messages[0].contains("17") && messages[0].contains("corrupt"))
+    );
+    assert_eq!(runner.commands.borrow().len(), 2);
+}
+
+#[test]
 fn wrappers_keep_exact_gates_and_inherit_stdio() {
     let workspace = Workspace::discover().unwrap();
     let expected: &[&[&str]] = &[
@@ -70,6 +130,10 @@ fn wrappers_keep_exact_gates_and_inherit_stdio() {
     for (check, args) in CHECKS[1..].iter().zip(expected) {
         let runner =
             RecordingRunner::stdout(b"    fmt\n    clippy\n    test\n    deny\n    machete\n");
+        let probes_component = matches!(args[0], "fmt" | "clippy");
+        if probes_component {
+            runner.results.borrow_mut().push_back(Ok(Output::default()));
+        }
         runner.results.borrow_mut().push_back(Ok(Output::default()));
         let context = Context {
             workspace: &workspace,
@@ -78,8 +142,15 @@ fn wrappers_keep_exact_gates_and_inherit_stdio() {
         };
         assert_eq!(check.run(&context), Outcome::Pass);
         runner.assert_args(0, &["--list"]);
-        runner.assert_args(1, args);
-        assert!(!runner.commands.borrow()[1].1);
+        let gate = if probes_component {
+            runner.assert_args(1, &[args[0], "--version"]);
+            assert!(runner.commands.borrow()[1].1);
+            2
+        } else {
+            1
+        };
+        runner.assert_args(gate, args);
+        assert!(!runner.commands.borrow()[gate].1);
     }
 }
 
@@ -145,4 +216,8 @@ fn report_continues_after_failure_and_counts_skips_separately() {
     assert!(report.contains("one problem; two"));
     assert!(report.contains("SKIP absent (") && report.contains("PASS good ("));
     assert!(report.contains("1 passed, 1 failed, 1 skipped ("));
+}
+
+fn by_name(name: &str) -> &'static Check {
+    CHECKS.iter().find(|check| check.name == name).unwrap()
 }

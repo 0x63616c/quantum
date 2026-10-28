@@ -14,6 +14,8 @@ cargo xtask bench --help
 
 `validate` runs every registered check in order and continues after failures.
 Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
+Rustfmt and Clippy are probed because Cargo also lists rustup proxies for
+components missing from the selected toolchain.
 Filters accept multiple names or repeated flags. `tidy` remains a standalone
 command. Script checks, GPU checks and macOS qualification remain separate.
 
