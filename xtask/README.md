@@ -11,6 +11,8 @@ cargo xtask check tidy fmt
 cargo xtask check plugin-deps brand docs-links docs-assets
 cargo xtask validate --skip test
 cargo xtask validate --only tidy fmt
+cargo xtask release patch # offline dry run is the default
+cargo xtask release tag   # preview separately authorized tagging
 cargo xtask bump-version patch --dry-run
 cargo xtask version --check-tag v0.3.1
 cargo xtask macos package --dry-run
@@ -104,6 +106,16 @@ runs `cargo update --workspace --offline`. If that command or a write fails,
 it restores the original files and lockfile. It rejects downgrades, prereleases
 and build metadata; an equal version does nothing. It never tags or publishes.
 
+`release <X.Y.Z|patch|minor|major>` defaults to an offline plan with version diffs,
+Conventional Commit changelog and release-notes previews. `--dry-run` explicitly
+selects the same mode. `--execute` checks clean/up-to-date main, tag absence and
+successful HEAD CI, then creates a local release branch and commit; PR creation
+is printed only. After squash merge, `release tag --execute` verifies the release
+commit on main and creates/pushes the annotated tag to trigger the existing macOS
+workflow. No signing credentials are used by this command. See the
+[release flow](../docs/releasing-macos.md#prepare-a-release) for safety boundaries,
+changelog rules, failure recovery and macOS prerequisites.
+
 The library provides these public modules:
 
 - `cmd`: xshell-backed argument-vector commands, redacted diagnostics and an injectable
@@ -113,6 +125,7 @@ The library provides these public modules:
   from Cargo metadata. `target()` is the repository output path, independent of
   Cargo's build-cache override.
 - `check`: named checks, selection, pass/fail/skip outcomes and timed reporting.
+- `release`: offline release previews, local release commits and explicitly authorized tagging.
 - `version`: stable version planning, current references and lockfile refresh.
 - `macos`: credential-free child commands, private temporary files/keychain guards,
   codesign/notarization/stapling, DMGs, SHA-256, signed feeds and release notes.
