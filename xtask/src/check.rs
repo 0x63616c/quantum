@@ -101,7 +101,7 @@ pub static CHECKS: &[Check] = &[
     ),
     Check::new(
         "docs-links",
-        "Local glossary and product direction links",
+        "Local links in tracked docs Markdown",
         checks::docs::links,
     ),
     Check::new(
