@@ -39,7 +39,7 @@
 //!   decorative canvas glyphs never enter the accessibility tree. GPUI has no
 //!   `aria-busy` builder. There are no interactive controls or focus stops here.
 
-mod clock;
+pub(crate) mod clock;
 pub mod core;
 pub mod media;
 mod paint;

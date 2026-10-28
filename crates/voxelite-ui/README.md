@@ -290,3 +290,9 @@ for this script. They affect only the readout, never voxel tool input or documen
 state. `statusbar-stability.png` compares positive, negative, three-digit, i32
 extreme and placeholder values; `statusbar-separators.json` records the painted
 separator columns so identical positions can be checked independently of text.
+
+## Typed design system (#133)
+
+See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
+overlay lifecycle, headless tests and interactive dark/light gallery. Existing
+constructors retain their screen appearance until the #134 migration.
