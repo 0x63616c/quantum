@@ -172,7 +172,7 @@ fn modified_label_with_offset(
             .date();
         let now_date = now.naive_utc().checked_add_offset(offset(now))?.date();
         let seconds = now.signed_duration_since(modified).num_seconds().max(0);
-        if seconds < 60 {
+        if now < modified {
             return Some("Just now".into());
         }
         let days = now_date.signed_duration_since(modified_date).num_days();
@@ -180,6 +180,9 @@ fn modified_label_with_offset(
             return Some("Yesterday".into());
         }
         if days == 0 {
+            if seconds < 60 {
+                return Some("Just now".into());
+            }
             let (count, unit) = if seconds < 3600 {
                 (seconds / 60, "minute")
             } else {
@@ -364,6 +367,11 @@ mod tests {
             modified_label(midnight - Duration::from_secs(600), midnight),
             "Yesterday"
         );
+        let midnight = midnight - Duration::from_secs(5 * 60 - 15);
+        assert_eq!(
+            modified_label(midnight - Duration::from_secs(30), midnight),
+            "Yesterday"
+        );
         for boundary in [DateTime::<Utc>::MIN_UTC, DateTime::<Utc>::MAX_UTC] {
             let label = modified_label(boundary.into(), midnight);
             let reverse = modified_label(midnight, boundary.into());
@@ -375,6 +383,46 @@ mod tests {
                 assert_eq!(reverse, "Unknown date");
             }
         }
+    }
+
+    #[test]
+    fn system_timezone_buckets_calendar_days_across_both_dst_transitions() {
+        use chrono::{Local, TimeZone};
+        use std::time::Duration;
+
+        // These are the 2026 transition days in Los Angeles and Auckland.
+        // Run the public Local-based formatter under each TZ without changing
+        // environment variables inside the multithreaded test process.
+        for (month, day) in [(3, 8), (11, 1), (4, 5), (9, 27)] {
+            let date = chrono::NaiveDate::from_ymd_opt(2026, month, day).unwrap();
+            let local = |days, hour, minute| -> SystemTime {
+                let date = date + chrono::Duration::days(days);
+                Local
+                    .from_local_datetime(&date.and_hms_opt(hour, minute, 0).unwrap())
+                    .single()
+                    .unwrap()
+                    .into()
+            };
+            let now = local(0, 4, 0);
+            assert_eq!(modified_label(local(-1, 23, 30), now), "Yesterday");
+            assert_eq!(
+                modified_label(now - Duration::from_secs(7200), now),
+                "2 hours ago"
+            );
+            // The previous calendar day can be more than 24 elapsed hours away.
+            assert_eq!(modified_label(local(0, 0, 30), local(1, 0, 5)), "Yesterday");
+        }
+        let now: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 27, 12, 0, 0)
+            .single()
+            .unwrap()
+            .into();
+        let modified: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 25, 23, 59, 0)
+            .single()
+            .unwrap()
+            .into();
+        assert_eq!(modified_label(modified, now), "Oct 25");
     }
 
     fn label(modified: SystemTime, now: SystemTime, east: i32) -> String {
