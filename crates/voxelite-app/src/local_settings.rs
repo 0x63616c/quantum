@@ -68,10 +68,8 @@ fn migrate_file(old: &Path, new: &Path) -> EditorResult<()> {
         std::fs::create_dir_all(parent)?;
     }
     match voxelite_format::session::write_new(new, &bytes) {
-        Ok(()) => {
-            write_local(&marker, b"migrated\n")?;
-            std::fs::remove_file(old)?;
-        }
+        // Keep the legacy file so an older build still finds its settings.
+        Ok(()) => write_local(&marker, b"migrated\n")?,
         Err(voxelite_format::session::SessionError::FileExists) => {}
         Err(error) => return Err(EditorError::Gesture(error.to_string())),
     }
@@ -96,8 +94,7 @@ pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
     if bytes.len() > 4 * 1024 * 1024 {
         return Err(EditorError::Gesture("Settings file too large".into()));
     }
-    let bytes = Some(bytes);
-    Ok(bytes)
+    Ok(Some(bytes))
 }
 
 #[cfg(test)]
@@ -131,7 +128,7 @@ mod tests {
                 assert_eq!(std::fs::read(&new).unwrap(), b"new");
             } else if old_exists {
                 assert_eq!(std::fs::read(&new).unwrap(), b"old");
-                assert!(!old.exists());
+                assert_eq!(std::fs::read(&old).unwrap(), b"old", "legacy file is kept");
             } else {
                 assert!(!new.exists());
             }

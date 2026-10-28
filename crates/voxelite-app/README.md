@@ -336,7 +336,7 @@ On macOS the default is `~/Library/Application Support/voxelite`; other platform
 use `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`. Each JSON file migrates
 once from the legacy data directory when its new destination is absent. Migration
 never replaces an existing destination and records a `.migrated` marker to prevent
-legacy data from returning after recovery. Successfully copied legacy files are removed.
+legacy data from returning after recovery. Legacy files are left in place so an older build still finds them.
 Preferences, recent projects and the palette library use bounded `JsonStore` storage.
 Malformed JSON moves to a unique `*.corrupt` sibling before reporting an error
 (recent projects fall back to an empty list). All replacements stage beside the
