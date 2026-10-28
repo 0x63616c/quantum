@@ -146,6 +146,7 @@ cargo test -p xtask --locked
 | --- | --- |
 | All registered Rust validation gates | `cargo xtask validate --strict` |
 | List / run named checks | `cargo xtask check --list` / `cargo xtask check tidy fmt` |
+| Preview release preparation / tagging (offline default) | `cargo xtask release patch` / `cargo xtask release tag` |
 | Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
 | Start native editor | `cargo run -p voxelite-app --bin voxelite` |
 | Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
@@ -389,9 +390,10 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 ## Releases
 
-- Do not tag casually. Use a focused `chore(release): prepare vX.Y.Z` PR for version,
+- Do not tag casually. Preview with `cargo xtask release patch`; explicit `--execute`
+  prepares a local `chore(release): vX.Y.Z` PR commit for version,
   lockfile and affected metadata, then a separately authorized stable
-  `vMAJOR.MINOR.PATCH` tag matching the app version.
+  `vMAJOR.MINOR.PATCH` tag matching the app version (`cargo xtask release tag --execute`).
 - Follow [docs/releasing-macos.md](docs/releasing-macos.md) and
   [Release macOS](.github/workflows/release-macos.yml). Validate real signing,
   notarization, installation and updating on macOS; mocked tests are insufficient.
