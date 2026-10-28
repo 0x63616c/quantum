@@ -1063,7 +1063,10 @@ impl Render for WelcomeView {
                 .items_center()
                 .gap(px(space::MD))
                 .text_color(t.muted())
-                .focus_visible(move |d| d.shadow(voxelite_ui::tokens::focus_ring(t)))
+                .focus_visible(move |d| {
+                    d.bg(t.background())
+                        .shadow(voxelite_ui::tokens::focus_ring(t))
+                })
                 .child(
                     div()
                         .size(px(metrics::ICON_DISCLOSURE))
