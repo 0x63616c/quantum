@@ -45,8 +45,7 @@ impl Global for Installed {}
 pub fn install_text_field_bindings(cx: &mut App) {
     install_text_field_bindings_for_platform(cfg!(target_os = "macos"), cx);
 }
-/// Install bindings for the host OS. Browser shells should call this before
-/// creating fields, since a wasm target cannot identify the browser's host OS.
+/// Install bindings for an explicitly selected host OS.
 pub fn install_text_field_bindings_for_platform(mac: bool, cx: &mut App) {
     if cx.has_global::<Installed>() {
         return;
@@ -114,7 +113,7 @@ impl TextField {
     pub fn new(placeholder: impl Into<SharedString>, cx: &mut App) -> Entity<Self> {
         install_text_field_bindings(cx);
         let placeholder = placeholder.into();
-        // Use GPUI's monotonic clock on native and web without a second runtime
+        // Use GPUI's monotonic clock without a second runtime
         // dependency. Capturing it also lets the adapter use GPUI's test clock.
         let executor = cx.background_executor().clone();
         let start = executor.now();

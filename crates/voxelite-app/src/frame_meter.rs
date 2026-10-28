@@ -1,6 +1,8 @@
 //! Rolling timing of newly painted viewport content, independent of render cost.
-use std::{collections::VecDeque, time::Duration};
-use web_time::Instant;
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 
 const WINDOW: Duration = Duration::from_secs(1);
 

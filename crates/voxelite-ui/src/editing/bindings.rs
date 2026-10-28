@@ -262,7 +262,7 @@ pub const MAC_BINDINGS: &[Binding] = &[
         command: Command::Delete(Unit::Grapheme, false),
     },
 ];
-/// Linux, Windows and browser Control bindings.
+/// Linux and Windows Control bindings.
 pub const OTHER_BINDINGS: &[Binding] = &[
     Binding {
         key: "ctrl-left",

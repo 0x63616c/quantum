@@ -1,4 +1,4 @@
-//! A shared settings view: a native utility window or an in-page web modal.
+//! Settings presented in a native utility window.
 use super::{EditorView, icon, mono, row};
 use crate::{
     actions::{self, Op},
@@ -176,13 +176,10 @@ impl Section {
             )],
             Self::Updates => &[
                 ("Installed version", "Quantum version release"),
-                #[cfg(not(target_family = "wasm"))]
                 (
                     "Software updates",
                     "check for updates latest version automatic updates",
                 ),
-                #[cfg(target_family = "wasm")]
-                ("Browser edition", "reload page latest published version"),
             ],
             Self::Advanced => &[
                 ("Preferences", "saved locally device storage"),
@@ -289,8 +286,6 @@ impl SectionHistory {
     }
 }
 
-#[cfg(target_family = "wasm")]
-pub(super) struct Dismiss;
 pub(super) struct SettingsView {
     history: SectionHistory,
     sidebar_visible: bool,
@@ -300,8 +295,6 @@ pub(super) struct SettingsView {
     owner: WeakEntity<EditorView>,
     owner_window: AnyWindowHandle,
 }
-#[cfg(target_family = "wasm")]
-impl EventEmitter<Dismiss> for SettingsView {}
 impl SettingsView {
     fn new(
         section: Section,
@@ -332,29 +325,18 @@ impl SettingsView {
         }
     }
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        #[cfg(not(target_family = "wasm"))]
         window.remove_window();
-        #[cfg(target_family = "wasm")]
-        {
-            let _ = window;
-            cx.emit(Dismiss);
-        }
         cx.notify();
     }
     fn editor_action(&self, op: Op, cx: &mut Context<Self>) {
         let owner = self.owner.clone();
         let owner_window = self.owner_window;
-        // On the web, Settings and the editor occupy the window currently
-        // handling this click. Wait until it is available for update again.
+        // Dispatch after the current window update finishes.
         cx.defer(move |cx| {
             if owner_window
                 .update(cx, move |_, window, cx| {
                     window.activate_window();
                     let _ = owner.update(cx, |this, cx| {
-                        #[cfg(target_family = "wasm")]
-                        {
-                            this.settings_modal = None;
-                        }
                         this.invoke(op, window, cx);
                     });
                 })
@@ -782,9 +764,7 @@ impl SettingsView {
                     mono(env!("CARGO_PKG_VERSION")),
                     t,
                 )];
-                #[cfg(not(target_family = "wasm"))]
                 let updates_available = super::updates_available();
-                #[cfg(not(target_family = "wasm"))]
                 rows.push(
                     self.form_row(
                         "Software updates",
@@ -807,13 +787,6 @@ impl SettingsView {
                         t,
                     ),
                 );
-                #[cfg(target_family = "wasm")]
-                rows.push(self.form_row(
-                    "Browser edition",
-                    "Reload the page to use the latest published version.",
-                    div(),
-                    t,
-                ));
                 self.group(rows, t)
             }
             Section::Advanced => self.group(
@@ -950,7 +923,6 @@ impl Render for SettingsView {
                 match op {
                     Op::Settings => window.activate_window(),
                     Op::About => this.editor_action(Op::About, cx),
-                    #[cfg(not(target_family = "wasm"))]
                     Op::Welcome => {
                         cx.defer(|cx| {
                             let _ = super::welcome::show(cx);
@@ -967,7 +939,6 @@ impl Render for SettingsView {
                     Op::Minimize => window.minimize_window(),
                     Op::ZoomWindow => window.zoom_window(),
                     Op::FullScreen => {
-                        #[cfg(not(target_family = "wasm"))]
                         window.toggle_fullscreen();
                     }
                     Op::Quit => this.editor_action(Op::Quit, cx),
@@ -1190,7 +1161,6 @@ impl EditorView {
     ) {
         let owner = cx.weak_entity();
         let owner_window = window.window_handle();
-        #[cfg(not(target_family = "wasm"))]
         {
             let existing = self.settings_window;
             // open_window paints its first frame immediately. Defer until this
@@ -1254,17 +1224,6 @@ impl EditorView {
                     cx.notify();
                 });
             });
-        }
-        #[cfg(target_family = "wasm")]
-        {
-            let view = cx.new(|cx| SettingsView::new(section, owner, owner_window, window, cx));
-            cx.subscribe_in(&view, window, |this, _, _: &Dismiss, window, cx| {
-                this.settings_modal = None;
-                window.focus(&this.focus, cx);
-                cx.notify();
-            })
-            .detach();
-            self.settings_modal = Some(view);
         }
         cx.notify();
     }

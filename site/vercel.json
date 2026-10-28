@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/app", "destination": "/download", "permanent": true },
+    { "source": "/app/:path*", "destination": "/download", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/appcast.xml",

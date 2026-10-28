@@ -14,33 +14,13 @@ pub mod frame_meter;
 pub mod history;
 pub mod local_settings;
 pub mod palettes;
-#[cfg(not(target_family = "wasm"))]
 mod persistence;
 pub mod preferences;
-#[cfg(not(target_family = "wasm"))]
 pub mod recents;
 pub mod reduce_motion;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;
-#[cfg(not(target_family = "wasm"))]
 pub mod thumbnails;
-
-#[cfg(all(feature = "web", target_family = "wasm"))]
-extern crate self as voxelite_app;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod actions;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod assets;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod shortcuts;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod text_field;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod theme;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod ui;
-#[cfg(all(feature = "web", target_family = "wasm"))]
-mod web;
 
 #[cfg(test)]
 mod tests {
