@@ -57,7 +57,12 @@ fn inspect(value: &Value, errors: &mut Vec<String>) {
         Value::Object(map) => {
             for (key, value) in map {
                 if key == "uses" && !value.as_str().is_some_and(pinned) {
-                    errors.push("uses must reference a full 40-hex commit SHA (or a local action / digest-pinned Docker image)".into());
+                    let reference = value
+                        .as_str()
+                        .map_or_else(|| value.to_string(), str::to_owned);
+                    errors.push(format!(
+                        "uses: {reference} must reference a full 40-hex commit SHA (or a local action / digest-pinned Docker image)"
+                    ));
                 }
                 inspect(value, errors);
             }

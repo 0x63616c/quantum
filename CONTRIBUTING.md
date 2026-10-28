@@ -105,7 +105,6 @@ fail tests. Locally, run the relevant tests with `INSTA_UPDATE=new`, then use
 `.snap` files alongside the tests; never commit `.snap.new` or `.pending-snap`
 files. Use `INSTA_UPDATE=no` to verify the accepted snapshots without updating them.
 
-
 ## Workflow security and secret scanning
 
 Every PR and push to main runs gitleaks 8.30.1 on complete reachable Git history
