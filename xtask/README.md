@@ -81,17 +81,16 @@ registered in `validate`, which runs Clippy only once.
 
 The repository checks run in-process from `src/checks/`:
 
-- `workflows`: parse every workflow YAML file, require explicit top-level
-  permissions and full commit SHAs for action/reusable workflow references. Local
-  actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
-  and in `validate`.
 - `boundaries`: locked `cargo metadata --all-features` graph traversal from
   `voxelite-core`, `voxelite-format` and `voxelite-mesh`. Rejects direct/transitive
   dependencies on `gpui`, its published package `gpui-unofficial`, or
   `voxelite-app`, including dev/build/optional and target-specific edges.
   Errors show the dependency path; cycles terminate.
 - `source-lints`: syntax-aware rules described below.
-
+- `workflows`: parse every workflow YAML file, require explicit top-level
+  permissions and full commit SHAs for action/reusable workflow references. Local
+  actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
+  and in `validate`.
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
   metadata offline first and retries online if that command fails. Preserves the
