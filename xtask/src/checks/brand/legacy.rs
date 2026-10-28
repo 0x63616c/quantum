@@ -17,10 +17,29 @@ struct Exception {
     current: Vec<String>,
     paths: Vec<String>,
     reason: String,
+    #[serde(default)]
+    generated_paths: Vec<String>,
 }
 
 pub(super) fn check(context: &Context<'_>) -> Result<Vec<String>> {
     let inventory: Inventory = super::read_toml(context.workspace, "brand.toml")?;
+    let generated = std::env::var_os("QUANTUM_BRAND_SITE");
+    let generated_rules = inventory
+        .compatibility
+        .iter()
+        .filter(|(_, entry)| !entry.generated_paths.is_empty())
+        .map(|(name, entry)| {
+            (
+                name.clone(),
+                Exception {
+                    current: entry.current.clone(),
+                    paths: entry.generated_paths.clone(),
+                    reason: entry.reason.clone(),
+                    generated_paths: Vec::new(),
+                },
+            )
+        })
+        .collect();
     let mut scanner = Scanner::new(inventory.compatibility)?;
     for path in context.workspace.tracked_files(context.runner)? {
         scanner.inspect(&path, &path);
@@ -35,7 +54,65 @@ pub(super) fn check(context: &Context<'_>) -> Result<Vec<String>> {
             scanner.inspect(&path, text);
         }
     }
-    Ok(scanner.finish())
+    let mut errors = scanner.finish();
+    if let Some(root) = generated {
+        let mut generated = Scanner::new(generated_rules)?;
+        generated.audit_literals = false;
+        inspect_directory(
+            std::path::Path::new(&root),
+            std::path::Path::new(&root),
+            &mut generated,
+        )?;
+        errors.extend(generated.finish());
+    }
+    Ok(errors)
+}
+
+fn inspect_directory(
+    root: &std::path::Path,
+    directory: &std::path::Path,
+    scanner: &mut Scanner,
+) -> Result<()> {
+    for entry in std::fs::read_dir(directory).map_err(|source| Error::Io {
+        path: directory.into(),
+        source,
+    })? {
+        let entry = entry.map_err(|source| Error::Io {
+            path: directory.into(),
+            source,
+        })?;
+        let path = entry.path();
+        let relative = path
+            .strip_prefix(root)
+            .map_err(|error| Error::Invalid(error.to_string()))?
+            .to_string_lossy();
+        // Authored inputs are checked as tracked source; only scan published files.
+        if matches!(relative.as_ref(), "content" | "README.md") {
+            continue;
+        }
+        if entry
+            .file_type()
+            .map_err(|source| Error::Io {
+                path: path.clone(),
+                source,
+            })?
+            .is_dir()
+        {
+            inspect_directory(root, &path, scanner)?;
+        } else {
+            scanner.inspect(&relative, &relative);
+            let bytes = std::fs::read(&path).map_err(|source| Error::Io {
+                path: path.clone(),
+                source,
+            })?;
+            if !bytes.contains(&0)
+                && let Ok(text) = std::str::from_utf8(&bytes)
+            {
+                scanner.inspect(&relative, text);
+            }
+        }
+    }
+    Ok(())
 }
 
 struct Rule {
@@ -48,6 +125,7 @@ struct Rule {
 
 struct Scanner {
     legacy: Regex,
+    audit_literals: bool,
     rules: Vec<Rule>,
     errors: Vec<String>,
 }
@@ -77,6 +155,7 @@ impl Scanner {
             });
         }
         Ok(Self {
+            audit_literals: true,
             legacy: Regex::new(concat!("(?i)", "voxe", "lite"))
                 .map_err(|error| Error::Invalid(error.to_string()))?,
             rules,
@@ -135,7 +214,7 @@ impl Scanner {
                 }
             }
             for (literal, used) in rule.literals.iter().zip(&rule.used_literals) {
-                if !used {
+                if self.audit_literals && !used {
                     self.errors.push(format!(
                         "brand.toml: stale compatibility.{} literal {:?} (no legacy occurrence matched)",
                         rule.name, literal
@@ -153,6 +232,31 @@ mod tests {
 
     fn scanner() -> Scanner {
         Scanner::new(BTreeMap::new()).unwrap()
+    }
+
+    #[test]
+    fn built_output_is_scanned_with_the_same_rules() {
+        let output = tempfile::tempdir().unwrap();
+        let nested = output.path().join("blog");
+        std::fs::create_dir_all(&nested).unwrap();
+        let path = nested.join("index.html");
+        let legacy = concat!("Voxe", "lite");
+        std::fs::write(&path, legacy).unwrap();
+        let mut rejected = scanner();
+        inspect_directory(output.path(), output.path(), &mut rejected).unwrap();
+        assert!(rejected.finish()[0].contains("blog/index.html:1:1"));
+        let mut allowed = Scanner::new(BTreeMap::from([(
+            "history".into(),
+            Exception {
+                current: vec![legacy.into()],
+                paths: vec!["blog/index.html".into()],
+                generated_paths: Vec::new(),
+                reason: "Historical announcement".into(),
+            },
+        )]))
+        .unwrap();
+        inspect_directory(output.path(), output.path(), &mut allowed).unwrap();
+        assert!(allowed.finish().is_empty());
     }
 
     #[test]
@@ -186,6 +290,7 @@ mod tests {
                     current: vec![literal.into()],
                     paths: vec!["schema.json".into()],
                     reason: "Frozen format discriminator".into(),
+                    generated_paths: Vec::new(),
                 },
             )]))
             .unwrap()
@@ -212,6 +317,7 @@ mod tests {
                 current: vec![literal.into(), mime.into()],
                 paths: vec!["schema.json".into(), "retired.json".into()],
                 reason: "Frozen format discriminator".into(),
+                generated_paths: Vec::new(),
             },
         )]))
         .unwrap();

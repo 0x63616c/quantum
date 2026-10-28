@@ -20,15 +20,24 @@ redirects from retired editor URLs to the download page.
 
 Edit page markup in `crates/quantum-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
-skills in the repository's `skills/` directory. Edit metadata in
-`crates/quantum-site/src/`.
+skills in the repository's `skills/` directory. Edit product metadata in [`brand.toml`](../brand.toml); the version comes from
+workspace `Cargo.toml`. The small `quantum-brand` loader is shared with xtask.
+Templates and authored docs use `@@product@@`, `@@tagline@@`, `@@repo_url@@`,
+`@@site_url@@`, `@@download_url@@`, `@@app_bundle@@`, `@@release_asset@@` and
+`@@version@@` tokens; unknown tokens fail the build. Installation JSON and
+deeplinks use typed values before encoding.
+
+The changelog page reads the release task’s `CHANGELOG.md`. Blog posts live in
+`content/blog/` as Markdown, starting with one `# Title` line. Lowercase dated
+filenames become stable URL slugs; the index lists them newest first. Both
+sections include Markdown copies and appear in the sitemap.
 The Quantize header mark and SVG/PNG favicons come from `cargo xtask icons`;
 edit the [SVG masters](../packaging/macos/ARTWORK.md) and regenerate rather than
 changing those derivatives.
 
 The generator uses `https://quantum.worldwidewebb.co` for canonical URLs, social
 previews, structured data and crawl files. `sitemap.xml` lists the homepage,
-download page and docs; the 404 page is marked `noindex` and has no
+download page, docs, changelog and blog; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
 `quantum-site` Rust crate wraps documentation and generates all 38 MCP references
 from the committed [tool catalog](../spec/mcp/v1/tools.json), without linking the
@@ -43,7 +52,7 @@ Commit the refreshed catalog; do not edit generated `docs/` or schema copies.
 
 Commit the sources, not the built site. CI builds the site on every PR and push
 to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
-`index.html`, `404.html`, `download/`, `docs/`, `docs.md`, `llms*.txt`,
+`index.html`, `404.html`, `download/`, `changelog/`, `blog/`, `docs/`, `docs.md`, `llms*.txt`,
 `sitemap.xml`, `robots.txt`, `assets/mcp-tools.json`, `assets/integrations/`,
 `assets/skills/` and `assets/quantum-skills.zip`. Keep `content/`, this
 README, `vercel.json`, `appcast.xml` and the remaining assets
@@ -156,3 +165,8 @@ output. The workflow then deploys the same built artifact to Vercel with the
 configured `VERCEL_TOKEN` secret. The Vercel project has no Git integration;
 pushing `site-dist` alone does not deploy it. Without the token, the workflow
 publishes the branch and reports that Vercel deployment was skipped.
+
+After building, run `QUANTUM_BRAND_SITE=site cargo xtask check brand` to scan
+published output with the same stale-name checker as tracked source. Exact
+`generated_paths` in the existing compatibility groups allow frozen wire names
+and historical release/rename copy; those paths must match when output is checked.

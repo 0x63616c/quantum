@@ -52,6 +52,7 @@ jobs:
 
       - name: Verify site
         run: |
+          QUANTUM_BRAND_SITE=site cargo xtask check brand
           python3 scripts/check-site.py
           cargo xtask macos check-appcast site/appcast.xml --allow-empty
           test -s site/index.html

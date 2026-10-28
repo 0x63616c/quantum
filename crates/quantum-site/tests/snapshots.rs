@@ -24,6 +24,27 @@ fn generated_public_documents() {
         let text = std::fs::read_to_string(output.path().join(path)).unwrap();
         insta::assert_snapshot!(name, text);
     }
+    for route in ["changelog", "blog", "blog/2026-10-28-rename"] {
+        let html = std::fs::read_to_string(output.path().join(route).join("index.html")).unwrap();
+        assert_eq!(html.matches("<h1>").count(), 1);
+        assert!(!html.contains("@@"));
+        assert!(html.contains("/changelog/"));
+        assert!(html.contains("/blog/"));
+    }
+    let release_source = include_str!("../../../CHANGELOG.md");
+    let exported = std::fs::read_to_string(output.path().join("changelog/index.md")).unwrap();
+    assert!(exported.contains("## [Unreleased]"));
+    assert!(
+        exported.contains(
+            release_source
+                .lines()
+                .find(|line| line.starts_with("- "))
+                .unwrap()
+        )
+    );
+    let post =
+        std::fs::read_to_string(output.path().join("blog/2026-10-28-rename/index.html")).unwrap();
+    assert!(post.contains("automatically migrates"));
     // The published catalog is the spec file re-emitted; MCP's own snapshots
     // (quantum-mcp/tests/wire_snapshots.rs) cover each tool's schema, so only
     // check the site copy matches the spec and snapshot the tool order.

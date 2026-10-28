@@ -122,10 +122,6 @@ fn fixture() -> (tempfile::TempDir, Workspace, RecordingRunner) {
         ("external/src/lib.rs", "//! Non-workspace dependency.\n"),
         ("README.md", "The current workspace version is **1.2.3**.\n"),
         (
-            "crates/quantum-site/templates/download.html",
-            "Version 1.2.3 for macOS 13+\n",
-        ),
-        (
             "spec/mcp/v1/compatibility.json",
             "{\"application_version\":\"1.2.3\"}\n",
         ),
@@ -164,7 +160,7 @@ fn assert_originals(plan: &Plan) {
 fn dry_run_and_equal_versions_never_write() {
     let (_directory, workspace, runner) = fixture();
     let plan = Plan::prepare(&workspace, &runner, "minor").unwrap();
-    assert_eq!(plan.changed_paths().len(), 5);
+    assert_eq!(plan.changed_paths().len(), 4);
     plan.apply(&SystemRunner::dry_run()).unwrap();
     assert_originals(&plan);
     let (_directory, workspace, runner) = fixture();

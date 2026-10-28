@@ -7,6 +7,7 @@ if (( $# != 0 )); then
   printf 'Usage: scripts/build-site.sh\n' >&2
   exit 2
 fi
+# The generator reads brand.toml and the workspace version; keep metadata out of this script.
 # Also exports Markdown/LLM indexes and preserves site/appcast.xml if supplied.
 cargo run --locked -p quantum-site -- site --write-integrations
 mkdir -p site/assets/skills
