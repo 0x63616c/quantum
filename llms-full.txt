@@ -192,6 +192,14 @@ Save before disconnecting: edits and undo history live in memory. Existing expor
 
 Check `isError` and the structured envelope's `ok` flag. On a revision conflict, read current state and rebase. On a lost response, retry only the identical request with the same operation ID in the same session. Never guess whether an edit committed. [Read the error guide](https://voxelite.worldwidewebb.co/docs/mcp/#errors) before retrying.
 
+## Crash reports and feedback privacy
+
+Quantum has no analytics, telemetry or third-party crash service. A Rust panic writes a local report under `~/Library/Application Support/voxelite/crashes/` on macOS (on Linux, the app data directory under `$XDG_DATA_HOME/voxelite` or `~/.local/share/voxelite`). Reports contain the app version, operating-system name/version, architecture, panic message, source location, backtrace, UTC timestamp and up to 20 recent warning/error log lines. Home-directory prefixes become `~` and email-like text is redacted before storage and again before preview. Other paths, filenames or details in diagnostics may remain: review the complete preview. Scene contents and document metadata are never collected by this flow. Fatal signals, aborts, stack overflow and allocation failures may not produce a report.
+
+On the next launch, including Welcome, you can review the full report, add context, keep it for later, copy or save the redacted preview, or delete the local report. Nothing is sent automatically. **Help → Send feedback…** uses the same preview and confirmation flow for bug reports or feature requests, with version and OS information. Editing your description or report kind invalidates the preview until you update it.
+
+**Continue to GitHub…** opens a prefilled issue form in your browser at `github.com/0x63616c/voxelite`, using the Bug or Feature template and matching label. This sends the preview to GitHub as part of the URL (and may leave it in browser history). A GitHub account and a separate Submit action there are required to publish the issue. Issues are public. No relay endpoint is configured, so private email contact and scene attachments are unavailable; there is no app token. For a report too large for a browser link, copy or save the full preview and paste it into a new issue yourself. Opening the browser does not prove submission, so crash reports remain local until you explicitly delete them. Pending reports have no automatic expiry; delete them in the prompt or remove their local files.
+
 ---
 
 Source: [https://voxelite.worldwidewebb.co/docs/mcp.md](https://voxelite.worldwidewebb.co/docs/mcp.md)
