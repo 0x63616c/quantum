@@ -190,6 +190,7 @@ pub struct Plan {
     to: Version,
     edits: Vec<Edit>,
     lockfile: Vec<u8>,
+    lock_preview: String,
 }
 
 impl Plan {
@@ -256,12 +257,53 @@ impl Plan {
         });
         let path = workspace.path("Cargo.lock");
         let lockfile = fs::read(&path).map_err(|source| Error::Io { path, source })?;
+        let mut names = std::collections::BTreeSet::new();
+        for path in tracked.iter().filter(|path| path.ends_with("Cargo.toml")) {
+            let source = workspace.read(path)?;
+            let manifest: toml::Value = toml::from_str(&source)
+                .map_err(|error| Error::Invalid(format!("{path}: {error}")))?;
+            if manifest
+                .get("package")
+                .and_then(|p| p.get("version"))
+                .and_then(|v| v.get("workspace"))
+                .and_then(toml::Value::as_bool)
+                == Some(true)
+                && let Some(name) = manifest
+                    .get("package")
+                    .and_then(|p| p.get("name"))
+                    .and_then(toml::Value::as_str)
+            {
+                names.insert(name.to_owned());
+            }
+        }
+        let lock_text =
+            std::str::from_utf8(&lockfile).map_err(|error| Error::Invalid(error.to_string()))?;
+        let lock_preview = lock_text
+            .split("[[package]]")
+            .map(|block| {
+                if !block.lines().any(|line| line.starts_with("source = "))
+                    && names
+                        .iter()
+                        .any(|name| block.lines().any(|line| line == format!("name = {name:?}")))
+                {
+                    block.replacen(
+                        &format!("version = \"{from}\""),
+                        &format!("version = \"{to}\""),
+                        1,
+                    )
+                } else {
+                    block.to_owned()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("[[package]]");
         Ok(Self {
             workspace: workspace.clone(),
             from,
             to,
             edits,
             lockfile,
+            lock_preview,
         })
     }
 
@@ -276,6 +318,32 @@ impl Plan {
                 .chain(["Cargo.lock"])
                 .collect()
         }
+    }
+
+    /// Render the exact textual reference edits; Cargo refreshes lockfile members on apply.
+    pub fn diff(&self) -> String {
+        let mut out = String::new();
+        for edit in &self.edits {
+            if edit.before == edit.after {
+                continue;
+            }
+            out.push_str(&format!("--- a/{}\n+++ b/{}\n", edit.path, edit.path));
+            for (before, after) in edit.before.lines().zip(edit.after.lines()) {
+                if before != after {
+                    out.push_str(&format!("-{before}\n+{after}\n"));
+                }
+            }
+        }
+        out.push_str("--- a/Cargo.lock\n+++ b/Cargo.lock\n");
+        for (before, after) in String::from_utf8_lossy(&self.lockfile)
+            .lines()
+            .zip(self.lock_preview.lines())
+        {
+            if before != after {
+                out.push_str(&format!("-{before}\n+{after}\n"));
+            }
+        }
+        out
     }
 
     /// Apply the plan and refresh workspace members offline. On a write/command
