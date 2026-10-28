@@ -348,6 +348,35 @@ mod tests {
         chrono::DateTime::parse_from_rfc3339(value).unwrap().into()
     }
 
+    #[test]
+    fn system_timezone_handles_local_midnight_and_calendar_overflow() {
+        use chrono::{DateTime, Local, TimeZone, Utc};
+        use std::time::Duration;
+
+        // Exercise the public formatter in each TZ test run, without mutating
+        // the process environment while other tests are running.
+        let midnight: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 27, 0, 5, 0)
+            .single()
+            .unwrap()
+            .into();
+        assert_eq!(
+            modified_label(midnight - Duration::from_secs(600), midnight),
+            "Yesterday"
+        );
+        for boundary in [DateTime::<Utc>::MIN_UTC, DateTime::<Utc>::MAX_UTC] {
+            let label = modified_label(boundary.into(), midnight);
+            let reverse = modified_label(midnight, boundary.into());
+            let offset = Local.offset_from_utc_datetime(&boundary.naive_utc());
+            if (boundary == DateTime::<Utc>::MAX_UTC && offset.local_minus_utc() > 0)
+                || (boundary == DateTime::<Utc>::MIN_UTC && offset.local_minus_utc() < 0)
+            {
+                assert_eq!(label, "Unknown date");
+                assert_eq!(reverse, "Unknown date");
+            }
+        }
+    }
+
     fn label(modified: SystemTime, now: SystemTime, east: i32) -> String {
         modified_label_with_offset(modified, now, |_| {
             chrono::FixedOffset::east_opt(east).unwrap()
