@@ -10,6 +10,7 @@ impl EditorView {
             .child(
                 div()
                     .id("sidebar-scroll")
+                    .when(self.panel != SidebarTab::Session, |d| d.flex().flex_col())
                     .flex_1()
                     .min_h(px(quantum_ui::Space::S0.px()))
                     .overflow_y_scroll()
