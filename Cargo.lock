@@ -6119,6 +6119,7 @@ dependencies = [
 name = "voxelite-format"
 version = "0.3.1"
 dependencies = [
+ "insta",
  "proptest",
  "serde",
  "serde_json",
@@ -6207,6 +6208,7 @@ name = "voxelite-plugin-exporters"
 version = "0.3.1"
 dependencies = [
  "gltf",
+ "insta",
  "png 0.18.1",
  "proptest",
  "serde_json",
@@ -6321,6 +6323,7 @@ version = "0.3.1"
 dependencies = [
  "base64",
  "htmd",
+ "insta",
  "percent-encoding",
  "same-file",
  "serde",
