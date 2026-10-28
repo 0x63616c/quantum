@@ -311,8 +311,19 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 
 ## Commits and PRs
 
-- Branch from `main`; never push directly to `main`. Keep PRs small, focused and
-  limited to one concern. Review harshly before merge: inspect correctness,
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the issue-first workflow, labels,
+  board statuses, branch names, Conventional Commit PR titles, PR bodies and the
+  Definition of Done. Agents also follow the
+  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read the
+  board first, file an issue per ask, link every PR, and audit **Done when** items
+  before claiming anything is done.
+- PRs that change anything visible follow the
+  [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md):
+  `cargo xtask screenshots --publish <PR#>` (or the **PR screenshots** CI job) fills
+  the description's Before | After Screenshots section. Never paste UI screenshots
+  by hand, and check the rendered PR page before asking for review.
+- Branch from `main` as `<type>/<issue#>-<slug>`; never push directly to `main`.
+  Keep PRs small, focused and limited to one concern. Review harshly before merge: inspect correctness,
   scope, failure paths and actual UI evidence.
 - Author all commits you create as `Calum <6991398+0x63616c@users.noreply.github.com>`:
 
@@ -321,9 +332,11 @@ git config user.name Calum
 git config user.email 6991398+0x63616c@users.noreply.github.com
 ```
 
-- Use meaningful imperative subjects. Do not add `Co-authored-by` trailers or
-  tool/agent attribution. Squash merge as `Title (#N)`, following recent history,
-  then delete the feature branch.
+- Title PRs as Conventional Commits (`feat`, `fix`, `refactor`, `chore`, `docs`,
+  `test`, `ci`, `perf`, optional scope) with an imperative summary;
+  [PR conventions](.github/workflows/pr-conventions.yml) checks the title and a
+  `Closes`/`Fixes`/`Refs #N` link. Do not add `Co-authored-by` trailers or
+  tool/agent attribution. Squash merge as `Title (#N)`, then delete the branch.
 - Explain the problem, resulting behavior and validation. Include before/after
   screenshots for UI changes, both themes where relevant, and before/after
   numbers for performance changes. Report untested platforms.
@@ -331,7 +344,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Formatting, plugin rule/tests, packaging script tests, Clippy, workspace tests and ad-hoc DMG build. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging script tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
@@ -349,7 +362,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 ## Releases
 
-- Do not tag casually. Use a focused `Prepare vX.Y.Z release` PR for version,
+- Do not tag casually. Use a focused `chore(release): prepare vX.Y.Z` PR for version,
   lockfile and affected metadata, then a separately authorized stable
   `vMAJOR.MINOR.PATCH` tag matching the app version.
 - Follow [docs/releasing-macos.md](docs/releasing-macos.md) and
@@ -368,6 +381,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue-first workflow, PR rules and Definition of Done. |
 | [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
 | [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |

@@ -229,7 +229,14 @@ impl Project {
 /// Read bounded UTF-8 JSON directly into staged chunks and a small metadata tree.
 /// Duplicate object keys are rejected at every level, before installation.
 pub fn read(reader: impl Read) -> FormatResult<Project> {
-    let (metadata, mut volumes, extensions) = stream::read(reader)?;
+    let (metadata, volumes, extensions) = stream::read(reader)?;
+    finish_read(metadata, volumes, extensions)
+}
+fn finish_read(
+    metadata: Value,
+    mut volumes: BTreeMap<String, Volume>,
+    extensions: Extensions,
+) -> FormatResult<Project> {
     validate_metadata(&metadata, &extensions)?;
     let mut wire: Wire = serde_json::from_value(metadata.clone())?;
     if wire.format != "voxelite" || wire.version.major != 1 {
@@ -304,7 +311,8 @@ pub fn from_bytes(bytes: &[u8]) -> FormatResult<Project> {
     if bytes.len() > MAX_FILE_BYTES {
         return Err(FormatError::Invalid("128 MiB input limit".into()));
     }
-    read(bytes)
+    let (metadata, volumes, extensions) = stream::from_slice(bytes)?;
+    finish_read(metadata, volumes, extensions)
 }
 
 fn known(path: &str) -> Option<&'static [&'static str]> {

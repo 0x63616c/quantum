@@ -259,7 +259,8 @@ their stage-specific introduction predates the current shell and plugin work.
 ## Tests and checks
 
 The standard workspace test command is `cargo test --workspace`. The exact
-format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) are:
+format, lint and test invocations in [CI Linux](.github/workflows/ci-linux.yml) and
+[CI macOS](.github/workflows/ci-macos.yml) are:
 
 ```sh
 cargo fmt --all -- --check
@@ -368,7 +369,7 @@ With a local site server and Playwright installed, browser checks are available 
 ## Releases and deployment
 
 Follow [docs/releasing-macos.md](docs/releasing-macos.md). Use a focused version
-bump PR, following the existing `Prepare v0.3.0 release (#42)` pattern: update
+bump PR titled `chore(release): prepare vX.Y.Z` (see [CONTRIBUTING.md](CONTRIBUTING.md)): update
 workspace versions and `Cargo.lock`, and synchronize affected download and
 compatibility metadata before merging. Tag the approved commit separately.
 
