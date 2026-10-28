@@ -170,3 +170,7 @@ After building, run `QUANTUM_BRAND_SITE=site cargo xtask check brand` to scan
 published output with the same stale-name checker as tracked source. Exact
 `generated_paths` in the existing compatibility groups allow frozen wire names
 and historical release/rename copy; those paths must match when output is checked.
+
+Deploy site checks generated naming before fetching the published signed appcast.
+The feed then passes the dedicated appcast validator; historical product names,
+signatures and immutable release URLs are preserved byte for byte.
