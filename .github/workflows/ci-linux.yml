@@ -41,8 +41,17 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
+      - name: Install nextest
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.150
+
       - name: Test workspace
-        run: cargo test --workspace --locked
+        run: cargo nextest run --workspace --locked --profile ci
+
+      - name: Test doctests (--workspace)
+        if: ${{ !cancelled() }}
+        run: cargo test --doc --workspace --locked
 
       - name: Check repository hygiene
         run: cargo xtask check tidy
@@ -51,7 +60,7 @@ jobs:
         run: cargo xtask check workflows plugin-deps brand docs-links docs-assets
 
       - name: Install dependency checks
-        uses: taiki-e/install-action@2cdf2d81f4edfc3b41d5ddf56083c70b48ac2475 # v2.62.35
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2
 

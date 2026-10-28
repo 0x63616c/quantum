@@ -154,7 +154,6 @@ fn wrappers_keep_exact_gates_and_inherit_stdio() {
             "-D",
             "warnings",
         ],
-        &["test", "--workspace", "--locked"],
         &["deny", "check"],
         &["machete"],
     ];
@@ -259,4 +258,77 @@ fn report_continues_after_failure_and_counts_skips_separately() {
 
 fn by_name(name: &str) -> &'static Check {
     CHECKS.iter().find(|check| check.name == name).unwrap()
+}
+
+#[test]
+fn workspace_tests_fall_back_when_nextest_is_absent() {
+    let workspace = Workspace::discover().unwrap();
+    let runner = RecordingRunner::stdout(b"    test\n");
+    runner.results.borrow_mut().extend([
+        Ok(Output {
+            stdout: b"    test\n".to_vec(),
+            ..Output::default()
+        }),
+        Ok(Output::default()),
+    ]);
+    let context = Context {
+        workspace: &workspace,
+        runner: &runner,
+        strict: true,
+    };
+    assert_eq!(by_name("test").run(&context), Outcome::Pass);
+    runner.assert_args(2, &["test", "--workspace", "--locked"]);
+    assert_eq!(runner.commands.borrow().len(), 3);
+}
+
+#[test]
+fn nextest_failures_do_not_skip_doctests_or_fall_back() {
+    let workspace = Workspace::discover().unwrap();
+    for (test_code, doc_code) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+        let runner = RecordingRunner::stdout(b"    nextest\n    test\n");
+        runner.results.borrow_mut().extend([
+            Ok(Output {
+                stdout: b"    nextest\n".to_vec(),
+                ..Output::default()
+            }),
+            Ok(Output {
+                status: Status::from_code(test_code),
+                ..Output::default()
+            }),
+            Ok(Output {
+                stdout: b"    test\n".to_vec(),
+                ..Output::default()
+            }),
+            Ok(Output {
+                status: Status::from_code(doc_code),
+                ..Output::default()
+            }),
+        ]);
+        let context = Context {
+            workspace: &workspace,
+            runner: &runner,
+            strict: false,
+        };
+        let outcome = by_name("test").run(&context);
+        if test_code == 0 && doc_code == 0 {
+            assert_eq!(outcome, Outcome::Pass);
+        } else {
+            assert!(
+                matches!(outcome, Outcome::Fail(errors) if errors.len() == test_code as usize + doc_code as usize)
+            );
+        }
+        runner.assert_args(
+            2,
+            &[
+                "nextest",
+                "run",
+                "--workspace",
+                "--locked",
+                "--profile",
+                "ci",
+            ],
+        );
+        runner.assert_args(4, &["test", "--doc", "--workspace", "--locked"]);
+        assert_eq!(runner.commands.borrow().len(), 5);
+    }
 }
