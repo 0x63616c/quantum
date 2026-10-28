@@ -194,7 +194,7 @@ Ubuntu and does not use this Mac limit.
 Nightly and manual Mac runs use `--workspace` for Clippy and tests instead of the
 change-run package list. Clippy uses `--all-targets --locked -- -D warnings`;
 CI tests use nextest with `--locked --profile ci`, followed by `cargo test --doc`;
-release tests use `cargo test --workspace --locked --no-fail-fast`. The release workflow also runs both full
+release tests use `cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast`. The release workflow also runs both full
 workspace checks on the Mac before building or packaging. Either failure blocks
 the release. CI Linux checks formatting, and the Linux scripts job runs the
 mocked packaging/release regression tests. When selected above, Mac CI builds

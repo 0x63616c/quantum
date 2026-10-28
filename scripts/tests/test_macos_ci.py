@@ -60,8 +60,8 @@ class MacosCiTests(unittest.TestCase):
         workflow = (WORKFLOW.parent / 'release-macos.yml').read_text()
         build = workflow.index('      - name: Build app without signing credentials')
         for command in (
-            'cargo clippy --workspace --all-targets --locked -- -D warnings',
-            'cargo test --workspace --locked --no-fail-fast',
+            'cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings',
+            'cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast',
         ):
             self.assertLess(workflow.index(command), build)
         self.assertNotIn('continue-on-error:', workflow)
