@@ -527,6 +527,9 @@ impl Render for WelcomeView {
         if projects.is_empty() {
             list = list.child(
                 div()
+                    // The list sits in an XL gutter; MD more lines the text up with the
+                    // XXL-padded "Recent" heading above it.
+                    .px(px(space::MD))
                     .py(px(space::XXL))
                     .text_color(t.muted())
                     .child("Your recent projects will appear here."),
