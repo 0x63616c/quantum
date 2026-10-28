@@ -1,7 +1,9 @@
 //! Shared GPUI controls and presentation primitives for the Voxelite shell.
 //! Components own field editing and appearance; the app owns domain state.
 //! See `crates/voxelite-ui/AGENTS.md` for tokens, components and migration/verification rules.
+pub mod ascii_reveal;
 mod color;
+pub use ascii_reveal::{AsciiImageReveal, AsciiReveal, AsciiSkeleton};
 mod color_picker;
 mod components;
 mod navigation;
