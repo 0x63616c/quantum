@@ -197,6 +197,8 @@ cargo test --doc -p xtask --locked
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
 - Keep the Linux GUI build for CI and UI capture work; see
   [ADR 0004](docs/adr/0004-keep-linux-gui-build.md).
+- Only PR smoke DMGs use `PACKAGE_CARGO_PROFILE=ci-dist`. Keep main, nightly, dispatch
+  and release packaging on `release` (the packager default).
 - Run Metal/AppKit/Sparkle checks and `cargo xtask macos package` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
   from Linux checks or mocked packaging tools.

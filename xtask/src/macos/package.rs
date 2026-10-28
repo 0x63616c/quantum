@@ -17,7 +17,7 @@ pub const SPARKLE_SHA256: &str = "1a856d2a9edb8e628de88121d7be04cf0e2167f8641650
 
 /// Packaging inputs which are independent of signing credentials.
 pub struct Options<'a> {
-    /// Use existing target/release executables.
+    /// Use existing executables from the configured packaging profile.
     pub skip_build: bool,
     /// Platform precondition, injectable for offline tests with a fake runner.
     pub is_macos: bool,
@@ -126,36 +126,34 @@ fn build<'a, 'b>(
         }
     }
     let target = context.path(context.environment.or("CARGO_TARGET_DIR", "target"));
+    let profile = context.environment.or("PACKAGE_CARGO_PROFILE", "release");
     if !options.skip_build {
+        let shell = xshell::Shell::new().map_err(|error| invalid(&error.to_string()))?;
         context
-            .command("cargo")
+            .script(xshell::cmd!(
+                shell,
+                "cargo build --profile {profile} --locked -p voxelite-app --bin voxelite"
+            ))
             .env("CARGO_TARGET_DIR", &target)
-            .args([
-                "build",
-                "--release",
-                "--locked",
-                "-p",
-                "voxelite-app",
-                "--bin",
-                "voxelite",
-            ])
             .run(context.runner)?;
         context
-            .command("cargo")
+            .script(xshell::cmd!(
+                shell,
+                "cargo build --profile {profile} --locked -p voxelite-mcp"
+            ))
             .env("CARGO_TARGET_DIR", &target)
-            .args(["build", "--release", "--locked", "-p", "voxelite-mcp"])
             .run(context.runner)?;
     }
-    context.plan(format_args!("assemble dist/Voxelite.app from {}/release/voxelite and voxelite-mcp; write Info.plist version {version} with the committed Sparkle public key", target.display()));
+    context.plan(format_args!("assemble dist/Voxelite.app from {}/{profile}/voxelite and voxelite-mcp; write Info.plist version {version} with the committed Sparkle public key", target.display()));
     if !dry {
         mkdir(&app.join("Contents/MacOS"))?;
         mkdir(&app.join("Contents/Resources"))?;
         copy(
-            &target.join("release/voxelite"),
+            &target.join(profile).join("voxelite"),
             &app.join("Contents/MacOS/Voxelite"),
         )?;
         copy(
-            &target.join("release/voxelite-mcp"),
+            &target.join(profile).join("voxelite-mcp"),
             &app.join("Contents/MacOS/voxelite-mcp"),
         )?;
         bundle_plist(

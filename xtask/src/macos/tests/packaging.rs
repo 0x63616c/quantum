@@ -141,9 +141,16 @@ fn bundled_executables_and_sparkle_signed_inside_out() {
     f.package(false).unwrap();
     assert!(
         f.runner.calls("cargo").contains(
-            &["build", "--release", "--locked", "-p", "voxelite-mcp"]
-                .map(str::to_owned)
-                .to_vec()
+            &[
+                "build",
+                "--profile",
+                "release",
+                "--locked",
+                "-p",
+                "voxelite-mcp"
+            ]
+            .map(str::to_owned)
+            .to_vec()
         )
     );
     let signatures: Vec<_> = f
@@ -539,4 +546,29 @@ fn cargo_target_dir_is_honoured() {
             );
         }
     }
+}
+
+#[test]
+fn custom_profile_build_and_skip_build_use_matching_target_directory() {
+    let mut f = Fixture::new();
+    f.cert();
+    f.env.set("PACKAGE_CARGO_PROFILE", "ci-dist");
+    f.env.set("CARGO_TARGET_DIR", "custom-target");
+    f.package(false).unwrap();
+    let calls = f.runner.calls("cargo");
+    assert_eq!(calls.len(), 2);
+    assert!(
+        calls
+            .iter()
+            .all(|args| args.windows(2).any(|a| a == ["--profile", "ci-dist"]))
+    );
+    for binary in ["voxelite", "voxelite-mcp"] {
+        assert!(f.path(&format!("custom-target/ci-dist/{binary}")).exists());
+    }
+    f.package(true).unwrap();
+    assert_eq!(f.runner.calls("cargo").len(), 2);
+    assert_eq!(
+        fs::read(f.path("dist/Voxelite.app/Contents/MacOS/Voxelite")).unwrap(),
+        fs::read(f.path("custom-target/ci-dist/voxelite")).unwrap()
+    );
 }

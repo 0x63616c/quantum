@@ -198,7 +198,11 @@ release tests use `cargo test --workspace --locked --no-fail-fast`. The release 
 workspace checks on the Mac before building or packaging. Either failure blocks
 the release. CI Linux checks formatting, and the Linux scripts job runs the
 mocked packaging/release regression tests. When selected above, Mac CI builds
-the release app and packages a DMG. `MACOS_SIGNING_MODE=adhoc`
+the app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
+`release` with LTO disabled and 16 codegen units. Main, nightly, dispatch and
+release packaging keep `release`. `cargo xtask macos package` reads
+`PACKAGE_CARGO_PROFILE` (default `release`) when building and locating binaries,
+including with `--skip-build`, and respects `CARGO_TARGET_DIR`. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
 No signing/notarization secrets are passed to CI. Its DMG and checksum artifacts
 expire after **3 days**. New push/PR runs cancel older change runs for the same
