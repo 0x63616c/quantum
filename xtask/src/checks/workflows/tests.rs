@@ -140,7 +140,8 @@ fn hosted_macos_keeps_the_required_context_toolchain_and_checks_without_secrets(
     assert!(workflow["on"]["pull_request"].is_null());
     let job = &workflow["jobs"]["macos"];
     assert_eq!(job["runs-on"], "xcode-27");
-    assert!(job["name"].is_null(), "preserve the macos check context");
+    assert_eq!(job["name"], "native-macos");
+    assert_eq!(workflow["jobs"]["macos-required"]["name"], "macos");
     assert_eq!(
         job["if"],
         "needs.changes.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')"

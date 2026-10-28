@@ -450,7 +450,10 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 - Respect owner-only, same-repository guards on self-hosted macOS jobs. Fork PRs
   do not run them; a skipped job is not verification. Arrange trusted verification
-  before merge. Never remove guards or execute untrusted changes on the runner
+  before merge. Keep the required `macos` result job on a hosted runner with
+  `always()` and dependencies on change detection, script tests and the native
+  build; only successful docs-only detection permits skipped native work.
+  Never remove guards or execute untrusted changes on the runner
   through `pull_request_target`.
 - Never commit secrets, private keys or machine-specific credentials.
   `python3 scripts/scan-pii.py` scans source/assets and reachable Git history and

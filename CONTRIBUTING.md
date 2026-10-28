@@ -137,21 +137,24 @@ report these exact check contexts; workflow names are not part of the context:
 | CI Linux | `linux` |
 | CI macOS | `macos` |
 | PR conventions | `Conventional Commit title` |
-| PR conventions | `Linked issue` |
+| PR conventions | `Ticket key` |
 
-Linux and PR-conventions workflows run on every PR without path filters. macOS
-uses a change-detection job and skips its build job for docs-only changes, so the
-`macos` check is reported rather than absent. Owner-only, same-repository guards
-remain mandatory: a skipped untrusted macOS job is not native verification.
-Arrange trusted macOS verification before merging code changes from other actors.
+Linux and PR-conventions workflows run on every PR without path filters.
+`Ticket key` preserves the bot exemption described above. The
+`macos` check always evaluates change detection, packaging-task tests and the
+`native-macos` build. It accepts skipped native work only after successful
+docs-only detection; failed detection, cancelled jobs and unexpected skips fail
+the required check. The PR native build runs on a hosted macOS runner. Owner-only,
+same-repository guards remain mandatory for the separate self-hosted hardware checks; arrange
+trusted verification before merging when those checks apply.
 Rendering checks remain a separate applicable merge requirement; do not add
 `render` to the ruleset until its path-filtered workflow reliably reports a
 check on every PR (see #85).
 
 ### Apply and verify the ruleset
 
-Issue #122 tracks rollout. Do not apply the payload until the required workflows
-have been green and stable on `main` for several days. Inspect recent runs and
+Ticket QUA-40 (originally issue #122) tracks rollout. Do not apply the payload
+until the required workflows have been green and stable on `main` for several days. Inspect recent runs and
 actual PR check contexts with `gh run list --branch main` and `gh pr checks <PR>`.
 The existing Protect main ruleset already blocks deletion and force-pushes; the
 payload preserves those protections while adding PR and CI requirements.
@@ -166,9 +169,11 @@ gh api --method PUT repos/0x63616c/quantum/rulesets/25883879 \
 
 Read back the ruleset and verify required contexts, strict up-to-date checking,
 zero approvals, no bypass actors, and both deletion/force-push rules. On disposable
-same-repository test PRs, verify that a missing issue link fails `Linked issue`
-and blocks merging; verify that a deliberately failing CI check also blocks
-merging. Record the PR URLs and GitHub merge-state evidence in #122. Finally fix
+same-repository test PRs, verify that a missing or mismatched ticket link fails
+`Ticket key` and blocks merging; verify that a deliberately failing CI check also blocks
+merging. Include failed change detection and a docs-only PR to verify that the
+`macos` result rejects the former and accepts the latter. Record the PR URLs and
+GitHub merge-state evidence in QUA-40. Finally fix
 the failures, update the branch, and verify an authorized bot can merge the green
 PR without human approval. Do not weaken the self-hosted runner guards or merge
 failing test changes to perform this verification. Until these live checks are
