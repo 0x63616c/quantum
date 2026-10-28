@@ -46,6 +46,8 @@ pub(super) struct SaveFlow {
     working: bool,
     completion: Option<(String, std::time::Instant)>,
     open_path: Option<PathBuf>,
+    // Deferred open target, not the currently active pathless sample session.
+    sample: Option<voxelite_app::samples::Sample>,
     pub(super) picker: voxelite_app::save_picker::SavePicker,
     before_picker: Option<(HintText, bool)>,
 }
@@ -60,6 +62,7 @@ impl Default for SaveFlow {
             working: false,
             completion: None,
             open_path: None,
+            sample: None,
             picker: Default::default(),
             before_picker: None,
         }
@@ -101,6 +104,7 @@ impl SaveFlow {
         self.pending = None;
         {
             self.open_path = None;
+            self.sample = None;
         }
     }
     pub(super) fn begin_dialog(&mut self) {
@@ -139,6 +143,7 @@ impl SaveFlow {
         self.finish_dialog();
         self.after_save = None;
         self.open_path = None;
+        self.sample = None;
     }
 
     fn restore_picker_status(&mut self, status: &mut HintText, error: &mut bool) {
@@ -156,12 +161,44 @@ impl SaveFlow {
         true
     }
 
+    fn complete_picker(
+        &mut self,
+        request: u64,
+        result: anyhow::Result<Option<(PathBuf, SaveFormat)>>,
+        status: &mut HintText,
+        error: &mut bool,
+    ) -> Option<(PathBuf, SaveFormat)> {
+        if !self.picker.complete(request) {
+            return None;
+        }
+        self.restore_picker_status(status, error);
+        match result {
+            Ok(Some((path, format))) if !path.as_os_str().is_empty() => Some((path, format)),
+            Ok(_) => {
+                self.cancel_save();
+                None
+            }
+            Err(_) => {
+                self.cancel_save();
+                *status = if cfg!(target_os = "macos") {
+                    "Save dialog unavailable; edits are still open."
+                } else {
+                    "Save dialog unavailable. Enable a desktop file portal; edits are still open."
+                }
+                .into();
+                *error = true;
+                None
+            }
+        }
+    }
+
     // Saving ends the dialog gate separately and consumes the continuation
     // on failure.
     pub(super) fn complete_save(&mut self, success: bool) -> Option<Op> {
         let next = self.after_save.take();
         if !success {
             self.open_path = None;
+            self.sample = None;
         }
         next.filter(|_| success)
     }
@@ -177,6 +214,7 @@ impl SaveFlow {
             SaveChoice::Cancel => {
                 {
                     self.open_path = None;
+                    self.sample = None;
                 }
                 PendingAction::Cancelled
             }
@@ -240,10 +278,36 @@ impl EditorView {
         self.menu = None;
         self.commands.close();
         self.palette_open = false;
+        self.save_flow.sample = None;
         self.save_flow.open_path = Some(path);
         if !self
             .save_flow
-            .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
+            .confirm_if_dirty(Op::Open, || self.editor.needs_save())
+        {
+            self.open_dialog(cx);
+        }
+        window.focus(&self.focus, cx);
+        cx.notify();
+    }
+
+    pub(super) fn open_sample(
+        &mut self,
+        sample: voxelite_app::samples::Sample,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.enabled(Op::Open) {
+            return;
+        }
+        self.pause_history(cx);
+        self.menu = None;
+        self.commands.close();
+        self.palette_open = false;
+        self.save_flow.open_path = None;
+        self.save_flow.sample = Some(sample);
+        if !self
+            .save_flow
+            .confirm_if_dirty(Op::Open, || self.editor.needs_save())
         {
             self.open_dialog(cx);
         }
@@ -280,6 +344,28 @@ impl EditorView {
     }
 
     pub(super) fn open_dialog(&mut self, cx: &mut Context<Self>) {
+        if let Some(sample) = self.save_flow.sample.take() {
+            self.save_flow.begin_dialog();
+            let task = cx
+                .background_executor()
+                .spawn(async move { sample.session() });
+            cx.spawn(async move |this, cx| {
+                let result = task.await;
+                let _ = this.update(cx, |this, cx| {
+                    this.save_flow.finish_dialog();
+                    match result.and_then(Editor::from_session) {
+                        Ok(editor) => this.replace_editor(editor, cx),
+                        Err(error) => {
+                            this.status = error.to_string().into();
+                            this.error = true;
+                        }
+                    }
+                    cx.notify();
+                });
+            })
+            .detach();
+            return;
+        }
         if let Some(path) = self.save_flow.open_path.take() {
             self.load_project(path, cx);
             return;
@@ -446,48 +532,45 @@ impl EditorView {
             let result = receiver.await;
             #[cfg(not(target_os = "macos"))]
             let result = result.map(|result| {
-                result.map(|path| path.map(|path| {
-                    let format = SaveFormat::from_extension(
-                        &formats,
-                        path.extension().and_then(|ext| ext.to_str()).unwrap_or_default(),
-                    );
-                    (path, format)
-                }))
+                result.map(|path| {
+                    path.map(|path| {
+                        let format = SaveFormat::from_extension(
+                            &formats,
+                            path.extension()
+                                .and_then(|ext| ext.to_str())
+                                .unwrap_or_default(),
+                        );
+                        (path, format)
+                    })
+                })
             });
             let _ = this.update(cx, |this, cx| {
-                if !this.save_flow.picker.complete(request) {
-                    return;
-                }
-                this.save_flow.restore_picker_status(&mut this.status, &mut this.error);
-                match result {
-                    Ok(Ok(Some((path, format)))) if !path.as_os_str().is_empty() => {
-                        #[cfg(not(target_os = "macos"))]
-                        let path = {
-                            let mut path = path;
-                            if path.extension().is_none() {
-                                path.set_extension(format.extension());
-                            }
-                            path
-                        };
-                        match format {
-                            SaveFormat::Project => this.write_project(path, cx),
-                            SaveFormat::Export(format) => this.write_export(path, format, cx),
+                let result = result
+                    .map_err(anyhow::Error::from)
+                    .and_then(|result| result);
+                if let Some((path, format)) = this.save_flow.complete_picker(
+                    request,
+                    result,
+                    &mut this.status,
+                    &mut this.error,
+                ) {
+                    #[cfg(not(target_os = "macos"))]
+                    let path = {
+                        let mut path = path;
+                        if path.extension().is_none() {
+                            path.set_extension(format.extension());
                         }
-                    }
-                    Ok(Ok(_)) => { this.save_flow.cancel_save(); }
-                    _ => {
-                        this.save_flow.cancel_save();
-                        this.status = if cfg!(target_os = "macos") {
-                            "Save dialog unavailable; edits are still open."
-                        } else {
-                            "Save dialog unavailable. Enable a desktop file portal; edits are still open."
-                        }.into();
-                        this.error = true;
+                        path
+                    };
+                    match format {
+                        SaveFormat::Project => this.write_project(path, cx),
+                        SaveFormat::Export(format) => this.write_export(path, format, cx),
                     }
                 }
                 cx.notify();
             });
-        }).detach();
+        })
+        .detach();
     }
     pub(super) fn cancel_save_picker(&mut self, cx: &mut Context<Self>) {
         if self
@@ -520,219 +603,61 @@ impl EditorView {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{CloseRequest, Op, PendingAction, SaveChoice, SaveFlow, ShortcutPlatform};
-    use gpui::Keystroke;
+mod tests;
 
-    fn key(flow: &mut SaveFlow, stroke: &str) -> Option<SaveChoice> {
-        flow.key(
-            &Keystroke::parse(stroke).unwrap(),
-            ShortcutPlatform::current(),
-        )
-    }
-
-    #[test]
-    fn only_dirty_destructive_commands_require_confirmation_and_default_to_save() {
-        let mut flow = SaveFlow::default();
-        for op in [Op::New, Op::Open, Op::Quit] {
-            assert!(!flow.confirm_if_dirty(op, || false));
-            assert!(!flow.needs_confirmation());
-            assert!(flow.confirm_if_dirty(op, || true));
-            assert_eq!(flow.choice_index(), 2);
-            key(&mut flow, "left");
-            assert_eq!(flow.choice_index(), 1);
-            assert!(flow.confirm_if_dirty(op, || true));
-            assert_eq!(flow.choice_index(), 2);
-            flow.cancel_confirmation();
-        }
-        for op in [Op::Save, Op::SaveAs, Op::Undo, Op::Commands] {
-            assert!(!flow.confirm_if_dirty(op, || true));
-            assert!(!flow.needs_confirmation());
-        }
-    }
-
-    #[test]
-    fn recent_path_survives_save_but_is_discarded_on_cancel_and_failure() {
-        let mut flow = SaveFlow::default();
-        let path = std::path::PathBuf::from("project.voxl");
-        flow.open_path = Some(path.clone());
-        flow.confirm_if_dirty(Op::Open, || true);
-        assert_eq!(flow.resolve(SaveChoice::Save), Some(PendingAction::Save));
-        assert_eq!(flow.complete_save(true), Some(Op::Open));
-        assert_eq!(flow.open_path.take(), Some(path.clone()));
-        for cancel in 0..4 {
-            flow.open_path = Some(path.clone());
-            flow.confirm_if_dirty(Op::Open, || true);
-            match cancel {
-                0 => flow.cancel_confirmation(),
-                1 => {
-                    flow.resolve(SaveChoice::Cancel);
-                }
-                2 => {
-                    flow.resolve(SaveChoice::Save);
-                    flow.complete_save(false);
-                }
-                _ => {
-                    flow.resolve(SaveChoice::Save);
-                    flow.cancel_save();
-                }
-            }
-            assert!(flow.open_path.is_none());
-        }
-    }
-
-    #[test]
-    fn dont_save_runs_once_cancel_does_nothing_and_save_defers_each_operation() {
-        for op in [Op::New, Op::Open, Op::Quit] {
-            for choice in [SaveChoice::DontSave, SaveChoice::Cancel, SaveChoice::Save] {
-                let mut flow = SaveFlow::default();
-                flow.confirm_if_dirty(op, || true);
-                let expected = match choice {
-                    SaveChoice::DontSave => PendingAction::Run(op),
-                    SaveChoice::Cancel => PendingAction::Cancelled,
-                    SaveChoice::Save => PendingAction::Save,
-                };
-                assert_eq!(flow.resolve(choice), Some(expected));
-                assert!(!flow.needs_confirmation());
-                assert_eq!(flow.resolve(choice), None);
-                assert_eq!(
-                    flow.complete_save(true),
-                    (choice == SaveChoice::Save).then_some(op)
-                );
-                assert_eq!(flow.complete_save(true), None);
-            }
-        }
-    }
-
-    #[test]
-    fn failed_save_consumes_continuation_and_keeps_later_save_from_running_it() {
-        let mut flow = SaveFlow::default();
-        flow.confirm_if_dirty(Op::Quit, || true);
-        assert_eq!(flow.resolve(SaveChoice::Save), Some(PendingAction::Save));
-        flow.begin_dialog();
-        assert!(flow.dialog_open());
-        flow.finish_dialog();
-        assert_eq!(flow.complete_save(false), None);
-        assert!(!flow.dialog_open());
-        assert!(!flow.needs_confirmation());
-        flow.begin_dialog();
-        flow.finish_dialog();
-        assert_eq!(flow.complete_save(true), None);
-    }
-
-    #[test]
-    fn cancelling_or_failing_path_chooser_aborts_the_entire_deferred_operation() {
-        for op in [Op::New, Op::Open, Op::Quit] {
-            let mut flow = SaveFlow::default();
-            flow.confirm_if_dirty(op, || true);
-            flow.resolve(SaveChoice::Save);
-            flow.begin_dialog();
-            let request = flow.picker.begin();
-            let mut status = "Waiting for file dialog…".into();
-            let mut error = false;
-            flow.before_picker = Some(("Previous status".into(), true));
-            assert!(flow.cancel_picker(&mut status, &mut error));
-            assert_eq!(status.plain_text(), Some("Previous status"));
-            assert!(error);
-            assert!(flow.before_picker.is_none());
-            assert!(!flow.cancel_picker(&mut status, &mut error));
-            assert!(!flow.picker.complete(request));
-            assert!(!flow.dialog_open());
-            assert!(!flow.needs_confirmation());
-            assert_eq!(flow.complete_save(true), None);
-        }
-    }
-
-    #[test]
-    fn path_selection_to_write_keeps_dialog_gate_and_continuation_until_completion() {
-        let mut flow = SaveFlow::default();
-        flow.confirm_if_dirty(Op::Open, || true);
-        flow.resolve(SaveChoice::Save);
-        flow.begin_dialog(); // Path chooser.
-        flow.begin_dialog(); // Selected path starts the write without unblocking.
-        assert!(flow.dialog_open());
-        assert!(matches!(flow.request_close(|| true), CloseRequest::Blocked));
-        flow.finish_dialog();
-        assert_eq!(flow.complete_save(true), Some(Op::Open));
-        // The continued Open operation starts its own dialog.
-        flow.begin_dialog();
-        assert!(matches!(
-            flow.request_close(|| false),
-            CloseRequest::Blocked
-        ));
-        flow.finish_dialog();
-        assert_eq!(flow.complete_save(true), None);
-    }
-
-    #[test]
-    fn close_obeys_dialog_gate_then_dirty_state_and_preserves_existing_pending_state() {
-        let mut flow = SaveFlow::default();
-        assert!(matches!(flow.request_close(|| false), CloseRequest::Allow));
-        assert!(matches!(flow.request_close(|| true), CloseRequest::Confirm));
-        assert_eq!(flow.choice_index(), 2);
-        flow.begin_dialog();
-        assert!(matches!(
-            flow.request_close(|| false),
-            CloseRequest::Blocked
-        ));
-        assert!(matches!(flow.request_close(|| true), CloseRequest::Blocked));
-        assert_eq!(flow.pending, Some(Op::Quit));
-        flow.finish_dialog();
-        // As before, a clean close allows closing without rewriting a pending op.
-        assert!(matches!(flow.request_close(|| false), CloseRequest::Allow));
-        assert_eq!(flow.pending, Some(Op::Quit));
-        flow.cancel_confirmation();
-        assert_eq!(flow.resolve(SaveChoice::Save), None);
-    }
-
-    #[test]
-    fn confirmation_navigation_wraps_and_enter_escape_have_the_original_outcomes() {
-        let mut flow = SaveFlow::default();
-        flow.confirm_if_dirty(Op::New, || true);
-        assert_eq!(key(&mut flow, "enter"), Some(SaveChoice::Save));
-        key(&mut flow, "right");
-        assert_eq!(key(&mut flow, "enter"), Some(SaveChoice::DontSave));
-        key(&mut flow, "tab");
-        assert_eq!(key(&mut flow, "enter"), Some(SaveChoice::Cancel));
-        key(&mut flow, "shift-tab");
-        key(&mut flow, "left");
-        assert_eq!(key(&mut flow, "enter"), Some(SaveChoice::Save));
-        assert_eq!(key(&mut flow, "escape"), Some(SaveChoice::Cancel));
-        assert_eq!(key(&mut flow, "shift-right"), None);
-        assert_eq!(flow.choice_index(), 2);
-        assert_eq!(key(&mut flow, "shift-enter"), None);
-    }
-
-    #[test]
-    fn dont_save_shortcut_requires_exact_host_primary_modifier() {
-        for (platform, primary, wrong) in [
-            (ShortcutPlatform::Apple, "cmd-d", "ctrl-d"),
-            (ShortcutPlatform::WindowsLinux, "ctrl-d", "cmd-d"),
-        ] {
-            let mut flow = SaveFlow::default();
-            flow.confirm_if_dirty(Op::Quit, || true);
-            assert_eq!(
-                flow.key(&Keystroke::parse(primary).unwrap(), platform),
-                Some(SaveChoice::DontSave)
-            );
-            for stroke in [wrong, "d", "ctrl-alt-d", "cmd-shift-d"] {
-                assert_eq!(flow.key(&Keystroke::parse(stroke).unwrap(), platform), None);
-            }
-        }
-    }
-
-    #[test]
-    fn unrelated_dialog_completion_and_confirmation_dismissal_do_not_consume_save() {
-        let mut flow = SaveFlow::default();
-        flow.confirm_if_dirty(Op::New, || true);
-        flow.resolve(SaveChoice::Save);
-        flow.begin_dialog();
-        flow.finish_dialog();
-        flow.cancel_confirmation();
-        assert_eq!(flow.complete_save(true), Some(Op::New));
-        // Save completion does not mutate an independently held gate.
-        flow.begin_dialog();
-        assert_eq!(flow.complete_save(false), None);
-        assert!(flow.dialog_open());
+impl EditorView {
+    pub(super) fn working_dialog(&self, cx: &Context<Self>) -> AnyElement {
+        let t = self.theme;
+        div()
+            .absolute()
+            .size_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .bg(t.app_scrim())
+            .child(
+                self.floating()
+                    .p(px(space::XXL))
+                    .child(
+                        row()
+                            .gap(px(space::SM))
+                            .when(self.save_flow.picker.waiting(), |d| {
+                                let reduced = voxelite_app::reduce_motion::prefers_reduced_motion();
+                                d.child(
+                                    voxelite_ui::Spinner::new("save-picker-spinner", t)
+                                        .reduced_motion(reduced || self.capture_state.is_some()),
+                                )
+                            })
+                            .child(
+                                if self.save_flow.working()
+                                    && let Some(text) = self.status.plain_text()
+                                {
+                                    voxelite_ui::AsciiReveal::new(
+                                        "io-dialog-progress",
+                                        text.to_owned(),
+                                        t,
+                                    )
+                                    .loading(true)
+                                    .reduced_motion(self.reduced_motion)
+                                    .into_any_element()
+                                } else {
+                                    self.status.clone().into_any_element()
+                                },
+                            ),
+                    )
+                    .when(self.save_flow.picker.waiting(), |d| {
+                        d.child(
+                            row().mt(px(space::XL)).child(
+                                Button::new("cancel-save-picker", "Cancel", t)
+                                    .build()
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.cancel_save_picker(cx);
+                                        window.focus(&this.focus, cx);
+                                    })),
+                            ),
+                        )
+                    }),
+            )
+            .into_any_element()
     }
 }

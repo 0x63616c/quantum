@@ -15,6 +15,7 @@ menu Quantum
 menu File
   New | New project | icon=file-plus | shortcut=⌘N | os= | checked=false | disabled=false
   Open | Open project… | icon=folder-open | shortcut=⌘O | os= | checked=false | disabled=false
+  OpenSample | Open Sample… | icon=layer | shortcut=⇧⌘O | os= | checked=false | disabled=false
   menu Open Recent
     ClearRecents | Clear Recent Projects | icon=trash-2 | shortcut= | os= | checked=false | disabled=false
   Save | Save | icon=save | shortcut=⌘S | os= | checked=false | disabled=false
@@ -67,7 +68,7 @@ menu Window
 menu Help
   Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
 in-window menus
-  File: [New, Open, OpenRecent, ClearRecents, Save, SaveAs, Quit]
+  File: [New, Open, OpenSample, OpenRecent, ClearRecents, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
   View: [Frame, Front, Right, Top, Grid, Theme, DebugOverlay, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
@@ -80,6 +81,7 @@ in-window menus
 Cmd-K
   New | New project | file-plus | ⌘N
   Open | Open project… | folder-open | ⌘O
+  OpenSample | Open Sample… | layer | ⇧⌘O
   OpenRecent | Open Recent | folder-open | 
   ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | ⌘S
@@ -125,6 +127,7 @@ Cmd-K
 shortcut sheet
   New | File | ⌘N
   Open | File | ⌘O
+  OpenSample | File | ⇧⌘O
   OpenRecent | File | 
   ClearRecents | File | 
   Save | File | ⌘S
@@ -171,6 +174,7 @@ shortcut sheet
 bindings
   New | super-n | Editor && !SharedTextInput
   Open | super-o | Editor && !SharedTextInput
+  OpenSample | super-shift-o | Editor && !SharedTextInput
   Save | super-s | Editor && !SharedTextInput
   SaveAs | super-shift-s | Editor && !SharedTextInput
   Quit | super-q | global
@@ -203,6 +207,7 @@ WindowsLinux
 menu File
   New | New project | icon=file-plus | shortcut=Ctrl+N | os= | checked=false | disabled=false
   Open | Open project… | icon=folder-open | shortcut=Ctrl+O | os= | checked=false | disabled=false
+  OpenSample | Open Sample… | icon=layer | shortcut=Ctrl+Shift+O | os= | checked=false | disabled=false
   menu Open Recent
     ClearRecents | Clear Recent Projects | icon=trash-2 | shortcut= | os= | checked=false | disabled=false
   Save | Save | icon=save | shortcut=Ctrl+S | os= | checked=false | disabled=false
@@ -258,7 +263,7 @@ menu Help
   Help | Keyboard & mouse guide | icon=keyboard | shortcut= | os= | checked=false | disabled=false
   About | About Quantum | icon=cube | shortcut= | os= | checked=false | disabled=false
 in-window menus
-  File: [New, Open, OpenRecent, ClearRecents, Save, SaveAs, Quit]
+  File: [New, Open, OpenSample, OpenRecent, ClearRecents, Save, SaveAs, Quit]
   Edit: [Undo, Redo, Commands, Settings]
   View: [Frame, Front, Right, Top, Grid, Theme, DebugOverlay, FullScreen]
   Tools: [Place, Erase, Paint, Fill, Box, Picker, MirrorX, MirrorY, MirrorZ, ToolPicker, Comment]
@@ -271,6 +276,7 @@ in-window menus
 Cmd-K
   New | New project | file-plus | Ctrl+N
   Open | Open project… | folder-open | Ctrl+O
+  OpenSample | Open Sample… | layer | Ctrl+Shift+O
   OpenRecent | Open Recent | folder-open | 
   ClearRecents | Clear Recent Projects | trash-2 | 
   Save | Save | save | Ctrl+S
@@ -312,6 +318,7 @@ Cmd-K
 shortcut sheet
   New | File | Ctrl+N
   Open | File | Ctrl+O
+  OpenSample | File | Ctrl+Shift+O
   OpenRecent | File | 
   ClearRecents | File | 
   Save | File | Ctrl+S
@@ -354,6 +361,7 @@ shortcut sheet
 bindings
   New | ctrl-n | Editor && !SharedTextInput
   Open | ctrl-o | Editor && !SharedTextInput
+  OpenSample | ctrl-shift-o | Editor && !SharedTextInput
   Save | ctrl-s | Editor && !SharedTextInput
   SaveAs | ctrl-shift-s | Editor && !SharedTextInput
   Quit | ctrl-q | global

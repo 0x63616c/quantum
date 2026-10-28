@@ -1,3 +1,4 @@
+mod thumbnail;
 use crate::occupancy::{Occupancy, OccupancyCache, SHADOW_EPSILON, trace_shadow};
 use crate::{
     AMBIENT_ILLUMINATION, AmbientOcclusionStrength, Camera, Lighting, PresetView, Projection,
@@ -45,6 +46,9 @@ pub struct RenderOptions {
     pub shadows: bool,
     /// Darken silhouettes and visible creases.
     pub outline: bool,
+    /// Launcher artwork: fixed face lighting, per-voxel AO, soft ground contact
+    /// shadow and tight silhouette framing. Opt-in; viewport/export defaults are unchanged.
+    pub thumbnail: bool,
     /// Host-admitted pass graph. Standalone defaults retain the legacy appearance;
     /// an empty plan uses cheap ambient shading on both CPU and GPU.
     pub passes: RenderPlan,
@@ -64,6 +68,7 @@ impl Default for RenderOptions {
             ambient_occlusion_strength: AmbientOcclusionStrength::default(),
             shadows: true,
             outline: false,
+            thumbnail: false,
             passes: RenderPlan::standard(),
         }
     }
@@ -187,35 +192,7 @@ fn render_with_occupancy(
     options: &RenderOptions,
     occupancy: Option<&Occupancy>,
 ) -> RenderResult<RenderedImage> {
-    let samples = u64::from(options.width)
-        * u64::from(options.height)
-        * u64::from(options.supersampling).pow(2);
-    if options.width == 0
-        || options.height == 0
-        || options.width > 1024
-        || options.height > 1024
-        || !(1..=4).contains(&options.supersampling)
-        || samples > 4_194_304
-    {
-        return Err(RenderError::Limit(
-            "render requires 1..=1024 pixels/axis, 1..=4 AA, at most 4,194,304 samples".into(),
-        ));
-    }
-    let camera = match options.view {
-        View::Camera(c) => {
-            c.validate()?;
-            c
-        }
-        View::Preset {
-            direction,
-            perspective,
-        } => Camera::fit(
-            snapshot,
-            direction,
-            f64::from(options.width) / f64::from(options.height),
-            perspective,
-        )?,
-    };
+    let camera = render_camera(snapshot, options)?;
     let mesh = greedy_mesh(snapshot)?;
     let ss = usize::from(options.supersampling);
     let width = options.width as usize * ss;
@@ -272,7 +249,10 @@ fn render_with_occupancy(
             );
         }
     }
-    let exact = options.passes.lighting() == Lighting::Exact;
+    let artwork = options
+        .thumbnail
+        .then(|| thumbnail::Artwork::new(snapshot, &basis, options));
+    let exact = !options.thumbnail && options.passes.lighting() == Lighting::Exact;
     let cells: HashMap<_, _> = if exact && options.ambient_occlusion {
         snapshot.composite().into_iter().collect()
     } else {
@@ -299,11 +279,7 @@ fn render_with_occupancy(
         })
         .collect();
     let background = options.background;
-    let bg = [
-        linear(background[0]),
-        linear(background[1]),
-        linear(background[2]),
-    ];
+    let bg = [background[0], background[1], background[2]].map(linear);
     let bg_alpha = f64::from(background[3]) / 255.0;
     let mut rgba = vec![0; options.width as usize * options.height as usize * 4];
     for y in 0..options.height as usize {
@@ -315,9 +291,26 @@ fn render_with_occupancy(
                     let sy = y * ss + dy;
                     let f = fragments[sy * width + sx];
                     let (rgb, alpha) = if f.slot == 0 {
-                        (bg, bg_alpha)
+                        if let Some(artwork) = &artwork {
+                            let shadow = artwork.shadow[sy * width + sx];
+                            let alpha = shadow + bg_alpha * (1.0 - shadow);
+                            (
+                                bg.map(|c| {
+                                    if alpha > 0.0 {
+                                        c * bg_alpha * (1.0 - shadow) / alpha
+                                    } else {
+                                        0.0
+                                    }
+                                }),
+                                alpha,
+                            )
+                        } else {
+                            (bg, bg_alpha)
+                        }
                     } else {
-                        let mut illumination = if exact {
+                        let mut illumination = if let Some(artwork) = &artwork {
+                            artwork.illumination(f)
+                        } else if exact {
                             let mut n = [0.0; 3];
                             n[(f.face / 2) as usize] = if f.face % 2 == 1 { 1.0 } else { -1.0 };
                             let normal = DVec3::from(n);
@@ -351,6 +344,15 @@ fn render_with_occupancy(
                             illumination *= 0.55;
                         }
                         let color = palette[&f.slot];
+                        let color = if options.thumbnail {
+                            let shaded = color.map(|c| {
+                                linear((f64::from(srgb(c)) * illumination).clamp(0.0, 255.0) as u8)
+                            });
+                            illumination = 1.0;
+                            shaded
+                        } else {
+                            color
+                        };
                         (
                             [
                                 color[0] * illumination,
@@ -554,4 +556,40 @@ fn srgb(c: f64) -> u8 {
         1.055 * c.powf(1.0 / 2.4) - 0.055
     };
     (v * 255.0).round().clamp(0.0, 255.0) as u8
+}
+
+fn render_camera(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Camera> {
+    let samples = u64::from(options.width)
+        * u64::from(options.height)
+        * u64::from(options.supersampling).pow(2);
+    if options.width == 0
+        || options.height == 0
+        || options.width > 1024
+        || options.height > 1024
+        || !(1..=4).contains(&options.supersampling)
+        || samples > 4_194_304
+    {
+        return Err(RenderError::Limit(
+            "render requires 1..=1024 pixels/axis, 1..=4 AA, at most 4,194,304 samples".into(),
+        ));
+    }
+    let mut camera = match options.view {
+        View::Camera(c) => {
+            c.validate()?;
+            c
+        }
+        View::Preset {
+            direction,
+            perspective,
+        } => Camera::fit(
+            snapshot,
+            direction,
+            f64::from(options.width) / f64::from(options.height),
+            perspective,
+        )?,
+    };
+    if options.thumbnail {
+        camera = thumbnail::frame(snapshot, camera, options);
+    }
+    Ok(camera)
 }
