@@ -146,7 +146,6 @@ pub fn run(args: &[String]) -> Result<()> {
         );
     }
     fs::write(&spec, spec_text).map_err(|e| e.to_string())?;
-
     let base_ref = match options.base.clone() {
         Some(base) => base,
         None => git(&root, &["merge-base", "HEAD", &format!("{remote}/main")])?,
@@ -190,10 +189,25 @@ pub fn run(args: &[String]) -> Result<()> {
             )
         }
     };
+    if screens
+        .iter()
+        .any(|screen| screen.name.starts_with("welcome-recents-"))
+    {
+        xtask::screenshot_fixtures::prepare_welcome(
+            &root,
+            &out.join("home"),
+            &out.join("welcome-data"),
+        )
+        .map_err(|error| error.to_string())?;
+    }
     let script = root.join("scripts/capture-pr-screens.sh");
     for (side, bin) in [(&base, &base_bin), (&head, &head_bin)] {
         eprintln!("capturing {} ({})", side.label, side.id);
-        status(Command::new(&script).arg(bin).arg(&side.dir).arg(&spec))?;
+        let sh = xshell::Shell::new().map_err(|error| error.to_string())?;
+        let dir = &side.dir;
+        xtask::cmd::Command::from(xshell::cmd!(sh, "{script} {bin} {dir} {spec}"))
+            .run(&xtask::cmd::SystemRunner::default())
+            .map_err(|error| error.to_string())?;
     }
     let results: Vec<Comparison> = screens
         .iter()

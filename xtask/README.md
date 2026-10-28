@@ -79,6 +79,12 @@ also applies release credential removal and the repository working directory.
 Use `Command::new` for dynamic programs and append credentials with `secret_arg`
 or `secret_env`. Keep execution through `Runner`, including in simple scripts.
 
+`screenshots` prepares its Welcome recents fixtures in-process via
+`screenshot_fixtures::prepare_welcome` before invoking the capture script. Five
+real example copies live beneath the output's disposable `home/`; the script
+copies the shared `welcome-data/recents.json` into each screen's isolated data
+directory. Both revisions use identical project paths, bytes and timestamps.
+
 The xshell adapter imports argv, cwd and environment overrides only. Apply stdin,
 secrecy, dry-run and execution policy on `Command` after conversion; do not pass
 xshell execution flags or `env_clear` to the adapter. `SystemRunner` uses xshell's

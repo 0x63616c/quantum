@@ -12,8 +12,7 @@ set -euo pipefail
 for tool in xvfb-run xdotool import dbus-run-session; do
   command -v "$tool" >/dev/null || { echo "missing $tool (apt install xvfb xdotool imagemagick dbus mesa-vulkan-drivers)" >&2; exit 2; }
 done
-export PR_SHOTS_BIN PR_SHOTS_OUT PR_SHOTS_SPEC PR_SHOTS_ROOT
-PR_SHOTS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export PR_SHOTS_BIN PR_SHOTS_OUT PR_SHOTS_SPEC
 PR_SHOTS_BIN="$(realpath "$1")"
 mkdir -p "$2"
 PR_SHOTS_OUT="$(realpath "$2")"
@@ -42,8 +41,8 @@ while IFS=$'\t' read -r name title width height args; do
   export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
   mkdir -p "$VOXELITE_DATA_DIR"
   if [[ "$name" == welcome-recents-* ]]; then
-    python3 "$PR_SHOTS_ROOT/scripts/prepare-welcome-capture.py" \
-      "$PR_SHOTS_ROOT" "$PR_SHOTS_HOME" "$VOXELITE_DATA_DIR"
+    # xtask seeds one history with real projects for both revisions.
+    cp "$PR_SHOTS_HOME/../welcome-data/recents.json" "$VOXELITE_DATA_DIR/recents.json"
   fi
   # shellcheck disable=SC2086 # args are a space-separated list by design
   env HOME="$PR_SHOTS_HOME" XDG_CACHE_HOME="$XDG_RUNTIME_DIR/cache-$name" \

@@ -3,6 +3,7 @@
 pub mod check;
 pub mod cmd;
 pub mod macos;
+pub mod screenshot_fixtures;
 pub mod version;
 pub mod workspace;
 
