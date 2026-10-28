@@ -98,7 +98,8 @@ diff first.
 
 ## Snapshot tests
 
-Snapshot assertions run with `INSTA_UPDATE=no` in CI so unreviewed output changes
+insta detects CI (the `CI` environment variable GitHub Actions sets) and then
+behaves as `INSTA_UPDATE=no`: it never writes snapshots, so unreviewed output changes
 fail tests. Locally, run the relevant tests with `INSTA_UPDATE=new`, then use
 `cargo insta review` to inspect and accept intentional changes. Commit reviewed
 `.snap` files alongside the tests; never commit `.snap.new` or `.pending-snap`
