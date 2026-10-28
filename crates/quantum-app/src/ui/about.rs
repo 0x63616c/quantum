@@ -1,7 +1,10 @@
 //! Small About and acknowledgements panels built from the shared dialog shell.
 use super::*;
 use quantum_ui::Card;
-use quantum_ui::tokens::ControlSize;
+use quantum_ui::ColorToken;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
 
 const TAGLINE: &str = "A voxel workspace by Calum";
 
@@ -73,11 +76,9 @@ impl EditorView {
 
     pub(super) fn about_dialog(&self, acknowledgements: bool, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
-        // Preserve the original content-width compact action (29 × 24).
-        let close = Button::new("close-about", "Close About Quantum", t)
-            .variant(ButtonVariant::Icon)
-            .icon("close")
-            .size(ControlSize::Sm)
+        // Close uses the same square geometry as other compact icon actions.
+        let close = IconButton::new("close-about", "close", "Close About Quantum", t)
+            .height(quantum_ui::ControlHeight::Dense)
             .build()
             .on_click(cx.listener(|this, _, window, cx| this.close_about(window, cx)));
         let panel = if acknowledgements {
@@ -89,20 +90,19 @@ impl EditorView {
                     div()
                         .id("license-list")
                         .flex_1()
-                        .min_h(px(space::NONE))
+                        .min_h(px(Space::S0.px()))
                         .overflow_y_scroll()
-                        .p(px(space::XL))
+                        .p(px(Space::S5.px()))
                         .child(
                             Card::new(t).rows(licenses().into_iter().map(|(name, license)| {
                                 div()
-                                    .p(px(space::LG))
+                                    .p(px(Space::S4.px()))
                                     .child(div().font_weight(type_size::SEMIBOLD).child(name))
                                     .child(
                                         div()
-                                            .mt(px(space::XS))
-                                            .text_size(px(type_size::CAPTION))
-                                            .line_height(px(type_size::LINE_SM))
-                                            .text_color(t.muted())
+                                            .mt(px(Space::S2.px()))
+                                            .text_style(TextSize::Caption)
+                                            .text_color(t.color(ColorToken::TextSecondary))
                                             .child(attribution(license)),
                                     )
                             })),
@@ -110,8 +110,8 @@ impl EditorView {
                 )
                 .child(
                     Dialog::footer(t).child(
-                        Button::new("about-back", "Back", t)
-                            .variant(ButtonVariant::Ghost)
+                        Button::design("about-back", "Back", t)
+                            .style(quantum_ui::ButtonStyle::Ghost)
                             .build()
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.info = Some(("About Quantum", InfoContent::About));
@@ -124,16 +124,16 @@ impl EditorView {
             Dialog::panel("about-quantum", "About Quantum", t, &self.modal_focus)
                 .w(px(metrics::ABOUT_WIDTH))
                 .h(px(metrics::ABOUT_HEIGHT))
-                .child(row().justify_end().p(px(space::MD)).child(close))
+                .child(row().justify_end().p(px(Space::S3.px())).child(close))
                 .child(
                     div()
                         .flex_1()
-                        .min_h(px(space::NONE))
+                        .min_h(px(Space::S0.px()))
                         .flex()
                         .flex_col()
                         .items_center()
-                        .px(px(space::XL))
-                        .gap(px(space::LG))
+                        .px(px(Space::S5.px()))
+                        .gap(px(Space::S4.px()))
                         .child(
                             img("app-icon-256.png")
                                 .size(px(metrics::APP_ICON))
@@ -141,36 +141,36 @@ impl EditorView {
                         )
                         .child(
                             div()
-                                .text_size(px(type_size::DISPLAY))
+                                .text_style(TextSize::Display)
                                 .font_weight(type_size::BOLD)
                                 .child("Quantum"),
                         )
                         .child(
                             div()
-                                .text_size(px(type_size::BODY))
-                                .text_color(t.muted())
+                                .text_style(TextSize::Small)
+                                .text_color(t.color(ColorToken::TextSecondary))
                                 .text_center()
                                 .child(version_label(crate::ui::APP_VERSION, crate::ui::APP_BUILD)),
                         )
                         .child(
                             div()
-                                .text_size(px(type_size::BODY))
+                                .text_style(TextSize::Small)
                                 .text_center()
                                 .child(TAGLINE),
                         )
                         .child(
                             div()
-                                .text_size(px(type_size::CAPTION))
-                                .text_color(t.muted())
+                                .text_style(TextSize::Caption)
+                                .text_color(t.color(ColorToken::TextSecondary))
                                 .child("© 2026 Calum Webb"),
                         ),
                 )
                 .child(
                     row()
                         .justify_center()
-                        .gap(px(space::XS))
-                        .px(px(space::MD))
-                        .pb(px(space::XXL))
+                        .gap(px(Space::S2.px()))
+                        .px(px(Space::S3.px()))
+                        .pb(px(Space::S6.px()))
                         .children(
                             [
                                 (
@@ -185,20 +185,20 @@ impl EditorView {
                                 ),
                             ]
                             .map(|(id, label, url)| {
-                                Button::new(id, label, t)
-                                    .variant(ButtonVariant::Ghost)
-                                    .size(ControlSize::Sm)
+                                Button::design(id, label, t)
+                                    .style(quantum_ui::ButtonStyle::Ghost)
+                                    .height(quantum_ui::ControlHeight::Dense)
                                     .build()
-                                    .px(px(space::SM))
+                                    .px(px(Space::S3.px()))
                                     .on_click(move |_, _, cx| cx.open_url(url))
                             }),
                         )
                         .child(
-                            Button::new("about-licenses", "Acknowledgements", t)
-                                .variant(ButtonVariant::Ghost)
-                                .size(ControlSize::Sm)
+                            Button::design("about-licenses", "Acknowledgements", t)
+                                .style(quantum_ui::ButtonStyle::Ghost)
+                                .height(quantum_ui::ControlHeight::Dense)
                                 .build()
-                                .px(px(space::SM))
+                                .px(px(Space::S3.px()))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.info =
                                         Some(("Acknowledgements", InfoContent::Acknowledgements));

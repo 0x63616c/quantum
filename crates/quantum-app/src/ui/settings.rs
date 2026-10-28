@@ -1,5 +1,5 @@
 //! Settings presented in a native utility window.
-use super::{EditorView, icon, mono, row};
+use super::{AnchoredTooltip, EditorView, TooltipSide, icon, mono, row};
 use crate::{
     actions::{self, Op},
     shortcuts::ShortcutPlatform,
@@ -9,7 +9,15 @@ use crate::{
 use gpui::{prelude::*, *};
 use quantum_app::preferences::{Appearance, Preferences};
 use quantum_render::AmbientOcclusionStrength;
-use quantum_ui::tokens::{metrics, radius, space, type_size};
+use quantum_ui::ColorToken;
+use quantum_ui::Radius;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
+use quantum_ui::tokens::geometry;
+use quantum_ui::tokens::metrics;
+use quantum_ui::tokens::state;
+use quantum_ui::tokens::type_size;
 use quantum_ui::{
     Button, Card, FormRow, IconButton, Panel, SidebarItem, SidebarSection, Slider, SliderRange,
     Toggle,
@@ -216,6 +224,7 @@ fn search_sections(query: &str) -> Vec<SearchResult> {
 }
 
 pub(super) struct SettingsView {
+    overlays: Entity<quantum_ui::OverlayState>,
     history: SectionHistory,
     sidebar_visible: bool,
     pane_scroll: ScrollHandle,
@@ -232,7 +241,7 @@ impl SettingsView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let search = TextField::new("Search settings", cx);
+        let search = TextField::design("Search settings", cx);
         search.update(cx, |field, _| field.embed());
         cx.observe(&search, |_, _, cx| cx.notify()).detach();
         cx.observe_global::<SettingsState>(|_, cx| cx.notify())
@@ -245,6 +254,7 @@ impl SettingsView {
         window.focus(&focus, cx);
         Self {
             history: SectionHistory::new(section),
+            overlays: quantum_ui::OverlayState::new(cx),
             sidebar_visible: true,
             pane_scroll: ScrollHandle::new(),
             search,
@@ -279,7 +289,7 @@ impl SettingsView {
     fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
         self.history.visit(section);
         self.pane_scroll
-            .set_offset(point(px(space::NONE), px(space::NONE)));
+            .set_offset(point(px(Space::S0.px()), px(Space::S0.px())));
         cx.notify();
     }
     fn history_step(&mut self, forward: bool, cx: &mut Context<Self>) {
@@ -289,7 +299,7 @@ impl SettingsView {
             self.history.back();
         }
         self.pane_scroll
-            .set_offset(point(px(space::NONE), px(space::NONE)));
+            .set_offset(point(px(Space::S0.px()), px(Space::S0.px())));
         cx.notify();
     }
     fn appearance_preview(appearance: Appearance) -> Div {
@@ -304,18 +314,18 @@ impl SettingsView {
         };
         div()
             .h(px(metrics::APPEARANCE_PREVIEW_HEIGHT))
-            .rounded(px(radius::LG))
+            .rounded(px(Radius::Md.px()))
             .overflow_hidden()
             .bg(fill)
             .child(
                 row()
-                    .h(px(space::PANEL))
-                    .px(px(space::MD))
-                    .gap(px(space::XS))
+                    .h(px(Space::S5.px()))
+                    .px(px(Space::S3.px()))
+                    .gap(px(Space::S2.px()))
                     .bg(Theme::Dark.preview_chrome())
                     .children(
                         Theme::preview_lights()
-                            .map(|color| div().size(px(space::GLYPH)).rounded_full().bg(color)),
+                            .map(|color| div().size(px(Space::S2.px())).rounded_full().bg(color)),
                     ),
             )
             .child(
@@ -324,13 +334,13 @@ impl SettingsView {
                     .items_stretch()
                     .child(
                         div()
-                            .w(relative(0.28))
-                            .p(px(space::OPTICAL))
+                            .w(relative(geometry::PREVIEW_SIDEBAR_FRACTION))
+                            .p(px(Space::S3.px()))
                             .bg(Theme::Dark.preview_chrome())
                             .children([1.0, 0.8, 0.6].map(|width| {
                                 div()
-                                    .mt(px(space::SM))
-                                    .h(px(space::XS))
+                                    .mt(px(Space::S3.px()))
+                                    .h(px(Space::S2.px()))
                                     .w(relative(width))
                                     .rounded_full()
                                     .bg(Theme::Dark.preview_content())
@@ -339,12 +349,12 @@ impl SettingsView {
                     .child(
                         div()
                             .flex_1()
-                            .p(px(space::INSET))
+                            .p(px(Space::S4.px()))
                             .children([0.9, 0.65, 0.75].map(|width| {
                                 div()
-                                    .mt(px(space::XS))
-                                    .mb(px(space::SM))
-                                    .h(px(space::XS))
+                                    .mt(px(Space::S2.px()))
+                                    .mb(px(Space::S3.px()))
+                                    .h(px(Space::S2.px()))
                                     .w(relative(width))
                                     .rounded_full()
                                     .bg(Theme::Dark.preview_content())
@@ -406,15 +416,15 @@ impl SettingsView {
             Section::Appearance => self.group(
                 vec![
                     div()
-                        .p(px(space::SECTION))
+                        .p(px(Space::S5.px()))
                         .child(
                             div()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .mb(px(space::XL))
+                                .font_weight(type_size::SEMIBOLD)
+                                .mb(px(Space::S5.px()))
                                 .child("Window appearance"),
                         )
                         .child(
-                            row().gap(px(space::LG)).children(
+                            row().gap(px(Space::S4.px())).children(
                                 [
                                     (Appearance::System, "System"),
                                     (Appearance::Light, "Light"),
@@ -424,37 +434,37 @@ impl SettingsView {
                                 .enumerate()
                                 .map(|(i, (appearance, label))| {
                                     let selected = p.appearance == appearance;
-                                    Button::tile(("appearance", i), label)
+                                    quantum_ui::ListRow::frame(("appearance", i), label, t, selected).flex_col().items_stretch()
                                         .tab_index(0)
                                         .role(Role::Button)
                                         .aria_label(label)
                                         .aria_selected(selected)
                                         .flex_1()
-                                        .min_w(px(space::NONE))
-                                        .p(px(space::OPTICAL))
-                                        .rounded(px(radius::APPEARANCE))
-                                        .when(selected, |d| d.bg(t.tint().opacity(0.08)))
+                                        .min_w(px(Space::S0.px()))
+                                        .p(px(Space::S3.px()))
+                                        .rounded(px(Radius::Md.px()))
+                                        .when(selected, |d| d.bg(t.color(ColorToken::Accent).opacity(state::PREVIEW_SELECTED)))
                                         .cursor_pointer()
-                                        .focus_visible(move |d| d.shadow(super::focus_ring(t)))
-                                        .hover(move |d| d.bg(t.tint().opacity(0.1)))
+
+
                                         .child(
                                             Self::appearance_preview(appearance)
                                                 .border_2()
                                                 .border_color(if selected {
-                                                    t.tint()
+                                                    t.color(ColorToken::Accent)
                                                 } else {
-                                                    t.separator()
+                                                    t.color(ColorToken::Border)
                                                 }),
                                         )
                                         .child(
                                             div()
-                                                .mt(px(space::CAPTION_OFFSET))
+                                                .mt(px(Space::S3.px()))
                                                 .text_center()
-                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .font_weight(type_size::SEMIBOLD)
                                                 .text_color(if selected {
-                                                    t.tint()
+                                                    t.color(ColorToken::Accent)
                                                 } else {
-                                                    t.text()
+                                                    t.color(ColorToken::TextPrimary)
                                                 })
                                                 .child(label),
                                         )
@@ -466,9 +476,9 @@ impl SettingsView {
                         )
                         .child(
                             div()
-                                .mt(px(space::SECTION))
-                                .text_size(px(type_size::BODY))
-                                .text_color(t.muted())
+                                .mt(px(Space::S5.px()))
+                                .text_style(TextSize::Small)
+                                .text_color(t.color(ColorToken::TextSecondary))
                                 .child("System follows your device’s light and dark appearance."),
                         ),
                 ],
@@ -529,7 +539,7 @@ impl SettingsView {
                                 }),
                                 mono(format!("{:.2}", p.ambient_occlusion_strength.get())),
                             )
-                            .w(px(200.0)),
+                            .w(px(geometry::SETTINGS_SLIDER)),
                             t,
                         ),
                         self.form_row(
@@ -580,21 +590,20 @@ impl SettingsView {
                             op.label(),
                             op.menu(cfg!(target_os = "macos")),
                             row()
-                                .gap(px(space::MD))
+                                .gap(px(Space::S3.px()))
                                 .child(
                                     quantum_ui::Kbd::well(t)
                                         .child(super::shortcut_hint::sheet_shortcut(op)),
                                 )
                                 // The registry exposes fixed bindings, all already at their defaults.
                                 .child(
-                                    Button::new(("reset-shortcut", i), "Reset", t)
+                                    Button::design(("reset-shortcut", i), "Reset", t)
                                         .disabled(true)
                                         .build()
                                         .aria_label("Reset shortcut")
-                                        .tooltip(super::hint(
+                                        .anchored_hint(
                                             "This shortcut already uses its built-in default.",
-                                            t,
-                                        )),
+                                            t, TooltipSide::Below, &self.overlays),
                                 ),
                             t,
                         )
@@ -632,7 +641,7 @@ impl SettingsView {
                         } else {
                             "Updates are unavailable in this build."
                         },
-                        Button::new("check-updates", "Check for Updates…", t)
+                        Button::design("check-updates", "Check for Updates…", t)
                             .disabled(!updates_available)
                             .build()
                             .aria_description(if updates_available {
@@ -653,7 +662,7 @@ impl SettingsView {
                     self.form_row(
                         "Preferences",
                         "Saved locally on this device.",
-                        icon("lock").text_color(t.muted()),
+                        icon("lock").text_color(t.color(ColorToken::TextSecondary)),
                         t,
                     ),
                     self.form_row(
@@ -702,7 +711,7 @@ impl Render for SettingsView {
         let mut sidebar_rows = div()
             .id("settings-sections")
             .flex_1()
-            .min_h(px(space::NONE))
+            .min_h(px(Space::S0.px()))
             .overflow_y_scroll();
         let mut previous_group = "";
         let mut index = 0;
@@ -727,9 +736,9 @@ impl Render for SettingsView {
         if results.is_empty() {
             sidebar_rows = sidebar_rows.child(
                 div()
-                    .p(px(space::LG))
-                    .text_size(px(type_size::BODY))
-                    .text_color(t.muted())
+                    .p(px(Space::S4.px()))
+                    .text_style(TextSize::Small)
+                    .text_color(t.color(ColorToken::TextSecondary))
                     .child("No matching settings"),
             );
         }
@@ -756,15 +765,15 @@ impl Render for SettingsView {
             .key_context("Settings")
             .track_focus(&self.focus)
             .size_full()
-            .bg(t.surface())
+            .bg(t.color(ColorToken::Surface))
             .font(gpui::font(if cfg!(target_os = "macos") {
                 ".AppleSystemUIFont"
             } else {
                 "Geist"
             }))
-            .text_size(px(type_size::BODY_LG))
-            .text_color(t.text())
-            .rounded(px(radius::WINDOW))
+            .text_style(TextSize::Body)
+            .text_color(t.color(ColorToken::TextPrimary))
+            .rounded(px(Radius::Lg.px()))
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
@@ -792,20 +801,20 @@ impl Render for SettingsView {
                     .id("settings-titlebar")
                     .h(px(metrics::SETTINGS_TITLEBAR))
                     .flex_shrink_0()
-                    .px(px(space::XL))
-                    .gap(px(space::XL))
+                    .px(px(Space::S5.px()))
+                    .gap(px(Space::S5.px()))
                     .when(cfg!(target_os = "macos"), |d| {
                         d.pl(px(metrics::SETTINGS_TRAFFIC_INSET))
                     })
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.start_window_move())
                     .child(
                         row()
-                            .p(px(space::COMPACT))
-                            .gap(px(space::XXS))
+                            .p(px(Space::S2.px()))
+                            .gap(px(Space::S1.px()))
                             .rounded_full()
                             .border_1()
-                            .border_color(t.separator())
-                            .bg(t.surface_raised())
+                            .border_color(t.color(ColorToken::Border))
+                            .bg(t.color(ColorToken::Raised))
                             .child(
                                 self.chrome_button(
                                     "settings-sidebar-toggle",
@@ -860,9 +869,9 @@ impl Render for SettingsView {
                     )
                     .child(
                         div()
-                            .min_w(px(space::NONE))
-                            .text_size(px(type_size::WINDOW_TITLE))
-                            .font_weight(FontWeight::BOLD)
+                            .min_w(px(Space::S0.px()))
+                            .text_style(TextSize::Title)
+                            .font_weight(type_size::BOLD)
                             .child("Quantum Settings"),
                     )
                     .child(div().flex_1())
@@ -874,7 +883,7 @@ impl Render for SettingsView {
             .child(
                 row()
                     .flex_1()
-                    .min_h(px(space::NONE))
+                    .min_h(px(Space::S0.px()))
                     .items_stretch()
                     .when(self.sidebar_visible, |d| {
                         d.child(
@@ -882,33 +891,33 @@ impl Render for SettingsView {
                                 .build()
                                 .w(px(metrics::MENU_WIDTH))
                                 .flex_shrink_0()
-                                .m(px(space::INSET))
-                                .mt(px(space::NONE))
-                                .mr(px(space::NONE))
-                                .p(px(space::INSET))
+                                .m(px(Space::S4.px()))
+                                .mt(px(Space::S0.px()))
+                                .mr(px(Space::S0.px()))
+                                .p(px(Space::S4.px()))
                                 .flex()
                                 .flex_col()
-                                .rounded(px(radius::XL))
+                                .rounded(px(Radius::Lg.px()))
                                 .border_1()
-                                .border_color(t.separator())
-                                .bg(t.sidebar())
+                                .border_color(t.color(ColorToken::Border))
+                                .bg(t.color(ColorToken::Surface))
                                 .child(
                                     quantum_ui::FieldFrame::search_row(
                                         t,
-                                        self.search.read(cx).focused(window),
+                                        self.search.read(cx).focus_visible(window),
                                     )
                                     .flex_shrink_0()
-                                    .mb(px(space::XS))
+                                    .mb(px(Space::S2.px()))
                                     .child(
                                         icon("search")
                                             .size(px(metrics::ICON_DENSE))
                                             .flex_shrink_0()
-                                            .text_color(t.muted()),
+                                            .text_color(t.color(ColorToken::TextSecondary)),
                                     )
                                     .child(
                                         div()
                                             .flex_1()
-                                            .min_w(px(space::NONE))
+                                            .min_w(px(Space::S0.px()))
                                             .child(self.search.clone()),
                                     )
                                     .when(
@@ -922,7 +931,7 @@ impl Render for SettingsView {
                                                     true,
                                                     t,
                                                 )
-                                                .size(px(space::PANEL))
+                                                .size(px(Space::S5.px()))
                                                 .on_click(cx.listener(|this, _, window, cx| {
                                                     this.search.update(cx, |field, cx| {
                                                         field.set(String::new(), cx)
@@ -939,24 +948,24 @@ impl Render for SettingsView {
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(space::NONE))
+                            .min_w(px(Space::S0.px()))
                             .flex()
                             .flex_col()
                             .child(
                                 div()
                                     .id("settings-pane")
                                     .flex_1()
-                                    .min_h(px(space::NONE))
+                                    .min_h(px(Space::S0.px()))
                                     .overflow_y_scroll()
                                     .track_scroll(&self.pane_scroll)
-                                    .px(px(space::PANE))
-                                    .pt(px(space::SECTION))
-                                    .pb(px(space::PANE))
+                                    .px(px(Space::S7.px()))
+                                    .pt(px(Space::S5.px()))
+                                    .pb(px(Space::S7.px()))
                                     .child(
                                         div()
-                                            .mb(px(space::XXL))
-                                            .text_size(px(type_size::DISPLAY))
-                                            .font_weight(FontWeight::BOLD)
+                                            .mb(px(Space::S6.px()))
+                                            .text_style(TextSize::Display)
+                                            .font_weight(type_size::BOLD)
                                             .child(section.title()),
                                     )
                                     .child(self.content(section, t, cx)),
@@ -964,10 +973,10 @@ impl Render for SettingsView {
                             .when_some(state.error, |d, message| {
                                 d.child(
                                     div()
-                                        .px(px(space::PANE))
-                                        .pb(px(space::SECTION))
-                                        .text_size(px(type_size::BODY))
-                                        .text_color(t.danger())
+                                        .px(px(Space::S7.px()))
+                                        .pb(px(Space::S5.px()))
+                                        .text_style(TextSize::Small)
+                                        .text_color(t.color(ColorToken::Danger))
                                         .child(message),
                                 )
                             }),

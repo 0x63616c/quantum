@@ -4,7 +4,11 @@ use crate::{
     shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
 };
 use gpui::{prelude::*, *};
-use quantum_ui::tokens::{metrics, space, type_size};
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
+use quantum_ui::tokens::metrics;
+use quantum_ui::tokens::type_size;
 
 #[derive(Clone, IntoElement)]
 struct Keycap {
@@ -31,8 +35,8 @@ impl Keycap {
 impl RenderOnce for Keycap {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let style = window.text_style();
-        let font_size = px(space::LG);
-        let line_height = px(space::XL);
+        let font_size = px(Space::S4.px());
+        let line_height = px(Space::S5.px());
         let font = gpui::font("Geist");
         let font_id = cx.text_system().resolve_font(&font);
         let cap_height = cx.text_system().cap_height(font_id, font_size);
@@ -52,7 +56,7 @@ impl RenderOnce for Keycap {
             .h(line_height)
             .font(font)
             .text_size(font_size)
-            .font_weight(FontWeight::NORMAL)
+            .font_weight(type_size::NORMAL)
             .line_height(line_height)
             .role(Role::Label)
             .aria_label(label);
@@ -100,7 +104,7 @@ impl RenderOnce for Keycap {
 
 pub(super) fn shortcut(binding: &str) -> Div {
     div()
-        .text_size(px(type_size::BODY))
+        .text_style(TextSize::Small)
         .child(Keycap::new(binding))
 }
 
@@ -139,6 +143,35 @@ impl From<String> for HintText {
 }
 
 impl HintText {
+    pub(super) fn tooltip_parts(self) -> (String, Option<String>) {
+        let last = self.0.len().saturating_sub(1);
+        let separate_shortcut = matches!(self.0.last(), Some(HintPart::Key(_)))
+            && self.0[..last]
+                .iter()
+                .all(|part| matches!(part, HintPart::Text(_)));
+        let mut label = String::new();
+        let mut shortcut = None;
+        for (index, part) in self.0.into_iter().enumerate() {
+            match part {
+                HintPart::Text(text) => label.push_str(&text),
+                HintPart::Key(key) => {
+                    let text = key
+                        .tokens
+                        .iter()
+                        .map(ShortcutToken::text)
+                        .collect::<String>();
+                    if separate_shortcut && index == last {
+                        shortcut = Some(text);
+                    } else {
+                        // Inline keys are part of the sentence, not trailing action hints.
+                        label.push_str(&text);
+                    }
+                }
+            }
+        }
+        (label, shortcut)
+    }
+
     pub(super) fn plain_text(&self) -> Option<&str> {
         match self.0.as_slice() {
             [HintPart::Text(text)] => Some(text.as_ref()),
@@ -178,7 +211,7 @@ impl RenderOnce for HintText {
                 .whitespace_nowrap()
                 .flex_none()
                 .items_center()
-                .gap_x(px(space::OPTICAL))
+                .gap_x(px(Space::S3.px()))
         };
         let mut result = div().flex().flex_col().flex_none().items_start();
         let mut line = new_line();
@@ -206,5 +239,36 @@ impl RenderOnce for HintText {
             }
         }
         result.child(line).into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::prelude::v1::test;
+
+    #[test]
+    fn tooltip_keeps_inline_keys_in_prose_and_one_action_hint_in_a_chip() {
+        let escape = Keycap::new("escape")
+            .tokens
+            .iter()
+            .map(ShortcutToken::text)
+            .collect::<String>();
+        assert_eq!(
+            HintText::from("Box. ")
+                .key("escape")
+                .text(" cancels.")
+                .tooltip_parts(),
+            (format!("Box. {escape} cancels."), None),
+        );
+        assert_eq!(
+            HintText::from("Place").action(Op::Place).tooltip_parts(),
+            ("Place".into(), Some("B".into()))
+        );
+        assert_eq!(
+            HintText::from("Ready").tooltip_parts(),
+            ("Ready".into(), None)
+        );
+        assert_eq!(HintText::default().tooltip_parts(), (String::new(), None));
     }
 }

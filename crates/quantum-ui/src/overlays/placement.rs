@@ -61,7 +61,9 @@ pub struct PlacedOverlay {
     child: AnyElement,
 }
 impl PlacedOverlay {
-    pub(crate) fn measured(
+    /// Position from bounds measured during the trigger's prepaint in the same frame.
+    /// The host writes the cell from a canvas attached to its trigger.
+    pub fn measured(
         trigger: std::rc::Rc<std::cell::Cell<Bounds<Pixels>>>,
         side: PopoverSide,
         child: impl IntoElement,
@@ -145,7 +147,7 @@ impl Element for PlacedOverlay {
     }
 }
 impl Popover {
-    /// Token-only floating surface; legacy constructors retain existing pixels.
+    /// Token-only floating surface with the shared overlay palette and corners.
     pub fn design(theme: Theme) -> Div {
         presentation::surface(theme, C::Overlay, Radius::Md)
             .occlude()

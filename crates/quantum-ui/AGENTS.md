@@ -121,17 +121,16 @@ buttons. Keep behavior in the app and chrome in the library. Preserve accessible
 labels, shortcuts, selection, disabled states and keyboard traversal when migrating.
 Do not attach an enabled callback to a disabled control.
 
-The initial migration prioritizes pixel identity outside square mirror buttons and
-rounded panel-tab highlights. Existing navigation rows (8px), manager swatches
-(4px), compact menu entries (concentric 3px), comment cards/pins (8px), appearance
-choices (10px) and the joined color sample retain their existing outlines. These
-are compatibility exceptions, not defaults for new components. Group exteriors,
-fields, keycaps, circular switches and artwork are separate from button geometry.
-Changing these old outlines requires an explicitly expanded visual scope.
-
-Some legacy icon-bearing `Button` actions in the app's `control()` helper have
-content-driven widths (for example the 34px playback action and 29×24 About close action). Preserve them during
-pixel-identical migrations; new icon-only actions use the square `IconButton`.
+The #134 migration uses the typed design palette, spacing, type and corner scales.
+Old semantic color accessors resolve this same palette. App text fields use
+`TextField::design`; full typography uses `TextSize::apply` or `TextStyle::text_style`.
+Do not attach a second hover, active or focus-visible style to a design component:
+GPUI rejects duplicate handlers. Use its controlled state or rich `ListRow::frame`.
+The palette grid’s cell/pitch metrics must also drive drag hit testing and scrolling.
+Keep document colors, world geometry and viewport/window bounds independent of
+control appearance. Numeric field widths include border and caret clearance.
+`Tooltip::decorate` preserves host builder hooks with an absolute hitbox; it must
+never introduce an in-flow child. Each window owns its shared `OverlayState`.
 
 ## Adding or changing a component
 

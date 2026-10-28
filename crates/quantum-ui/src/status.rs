@@ -152,6 +152,8 @@ pub struct StatusBarItem {
     cells: usize,
     separator: bool,
     theme: Theme,
+    alignment: SlotAlignment,
+    glyph: Option<(SharedString, Hsla)>,
 }
 impl StatusBarItem {
     /// Reserve exactly `cells` Geist Mono digits, truncating overflow with `+`.
@@ -163,11 +165,23 @@ impl StatusBarItem {
     ) -> Self {
         Self {
             label: label.into(),
-            value: fixed_slot(value, cells),
+            value: value.map_or_else(|| "—".into(), |v| v.to_string()),
             cells,
             separator: true,
+            alignment: SlotAlignment::Right,
+            glyph: None,
             theme,
         }
+    }
+    /// Keep coordinate signs and placeholders at the leading edge of the slot.
+    pub fn left_aligned(mut self) -> Self {
+        self.alignment = SlotAlignment::Left;
+        self
+    }
+    /// Fixed leading icon; it never participates in value measurement.
+    pub fn icon(mut self, glyph: impl Into<SharedString>, color: impl Into<Hsla>) -> Self {
+        self.glyph = Some((glyph.into(), color.into()));
+        self
     }
     /// Omit the separator for the first item in a cluster.
     pub fn separator(mut self, separator: bool) -> Self {
@@ -181,7 +195,9 @@ impl StatusBarItem {
             .apply(row())
             .h(px(ControlHeight::Dense.px()))
             .flex_shrink_0()
-            .gap(px(Space::S3.px()))
+            .when(!self.label.is_empty() && self.cells > 0, |d| {
+                d.gap(px(Space::S3.px()))
+            })
             .text_color(self.theme.color(C::TextSecondary))
             .when(self.separator, |d| {
                 d.child(
@@ -192,7 +208,15 @@ impl StatusBarItem {
                         .bg(self.theme.color(C::BorderSubtle)),
                 )
             })
-            .child(self.label)
+            .when_some(self.glyph, |d, (glyph, color)| {
+                d.child(
+                    icon(glyph)
+                        .text_color(color)
+                        .size(px(geometry::ICON))
+                        .mr(px(Space::S2.px())),
+                )
+            })
+            .when(!self.label.is_empty(), |d| d.child(self.label))
             .child(
                 TextSize::Mono
                     .apply(div())
@@ -202,7 +226,12 @@ impl StatusBarItem {
                     .flex_shrink_0()
                     .overflow_hidden()
                     .whitespace_nowrap()
-                    .child(self.value),
+                    .when(self.alignment == SlotAlignment::Right, |d| d.text_right())
+                    .child(fixed_slot_aligned(
+                        Some(self.value),
+                        self.cells,
+                        self.alignment,
+                    )),
             )
     }
 }
@@ -225,7 +254,10 @@ mod tests {
             (None, "\u{00a0}\u{00a0}\u{00a0}\u{00a0}—"),
         ] {
             let item = StatusBarItem::new("Count", value, 5, Theme::Dark);
-            assert_eq!(item.value, expected);
+            assert_eq!(
+                super::fixed_slot_aligned(Some(&item.value), item.cells, item.alignment),
+                expected
+            );
             assert_eq!(item.cells, 5);
             let mut row = item.build();
             assert_eq!(row.style().size.height, Some(px(24.).into()));

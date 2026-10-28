@@ -1,5 +1,8 @@
 //! Shared construction helpers for Settings controls.
 use super::*;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
 
 impl SettingsView {
     pub(super) fn chrome_button(
@@ -13,7 +16,7 @@ impl SettingsView {
         IconButton::button(id, glyph, label, t)
             .disabled(!enabled)
             .build()
-            .tooltip(super::super::hint(label, t))
+            .anchored_hint(label, t, TooltipSide::Below, &self.overlays)
     }
 
     pub(super) fn sidebar_row(
@@ -37,9 +40,9 @@ impl SettingsView {
             selected,
             t,
         )
-        .mb(px(space::XXS))
+        .mb(px(Space::S1.px()))
         .when(setting.is_some(), |d| {
-            d.ml(px(space::XXL)).text_size(px(type_size::CAPTION))
+            d.ml(px(Space::S6.px())).text_style(TextSize::Caption)
         })
         .on_click(cx.listener(move |this, _, window, cx| {
             this.navigate(section, cx);
@@ -53,7 +56,7 @@ impl SettingsView {
         control: impl IntoElement,
         t: Theme,
     ) -> Div {
-        FormRow::row(label, detail, control, t)
+        FormRow::design(label, detail, control, t)
     }
     pub(super) fn group(&self, rows: Vec<Div>, t: Theme) -> Div {
         Card::new(t).rows(rows)
@@ -67,10 +70,15 @@ impl SettingsView {
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         Toggle::switch(id, id, value, t)
-            .tooltip(super::super::hint(if value { "On" } else { "Off" }, t))
+            .anchored_hint(
+                if value { "On" } else { "Off" },
+                t,
+                TooltipSide::Below,
+                &self.overlays,
+            )
             .on_click(cx.listener(move |_, _, _, cx| change(cx, edit)))
     }
     pub(super) fn button(&self, id: &'static str, label: &'static str, t: Theme) -> Stateful<Div> {
-        Button::new(id, label, t).build()
+        Button::design(id, label, t).build()
     }
 }

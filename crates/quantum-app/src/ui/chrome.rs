@@ -1,13 +1,16 @@
 //! Action controls, application menus, titlebar and tool rail.
 use super::*;
+use quantum_ui::ColorToken;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
 
 // Explicit presentation; element identifiers are only identity, never style policy.
 #[derive(Clone, Copy)]
 pub(super) enum ActionPresentation {
-    Button(ButtonStyle),
     Icon(TooltipSide),
     Rail,
-    Mirror(usize),
+    Mirror,
     Segment,
     Frame,
     Search { style: ButtonStyle, compact: bool },
@@ -29,16 +32,16 @@ impl EditorView {
         let selected = self.selected(op) && !matches!(presentation, ActionPresentation::Frame);
         let disabled_reason = self.disabled_reason(op);
         let element = match presentation {
-            ActionPresentation::Rail | ActionPresentation::Mirror(_) => {
+            ActionPresentation::Rail | ActionPresentation::Mirror => {
                 let mut rail = IconButton::rail(id, op.icon(), op.label(), theme)
                     .disabled(!enabled)
                     .selected(selected);
-                if let ActionPresentation::Mirror(_) = presentation {
+                if let ActionPresentation::Mirror = presentation {
                     rail = rail.badge(label);
                 }
                 rail.build()
             }
-            ActionPresentation::Segment => Segment::new(id, label, theme)
+            ActionPresentation::Segment => Segment::design(id, label, theme)
                 .icon(name)
                 .disabled(!enabled)
                 .selected(selected)
@@ -49,10 +52,10 @@ impl EditorView {
                     .selected(selected)
                     .build()
             }
-            ActionPresentation::Button(style) | ActionPresentation::Search { style, .. } => {
+            ActionPresentation::Search { style, .. } => {
                 let mut button =
-                    Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
-                        .legacy_style(style)
+                    Button::design(id, if label.is_empty() { op.label() } else { label }, theme)
+                        .style(style)
                         .disabled(!enabled)
                         .selected(selected);
                 if matches!(
@@ -78,49 +81,61 @@ impl EditorView {
                 },
                 theme,
                 match presentation {
-                    ActionPresentation::Mirror(row) => TooltipSide::Mirror(row),
-                    ActionPresentation::Rail => TooltipSide::Right,
+                    ActionPresentation::Mirror | ActionPresentation::Rail => TooltipSide::Right,
                     ActionPresentation::Segment | ActionPresentation::Frame => TooltipSide::Above,
                     ActionPresentation::Icon(side) => side,
                     _ => TooltipSide::Below,
                 },
+                &self.overlays,
             )
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.invoke(op, window, cx);
-            }))
+            .when(enabled, |d| {
+                d.on_click(cx.listener(move |this, _, window, cx| {
+                    this.invoke(op, window, cx);
+                }))
+            })
     }
     pub(super) fn menubar(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         row()
             .h(px(MENUBAR_HEIGHT))
             .flex_shrink_0()
-            .px(px(space::XXL))
+            .px(px(Space::S6.px()))
             .border_b_1()
-            .border_color(t.line())
-            .gap(px(space::COMPACT))
+            .border_color(t.color(ColorToken::BorderSubtle))
+            .gap(px(Space::S2.px()))
             .child(
                 div()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_size(px(type_size::TITLE))
-                    .mr(px(space::SECTION))
+                    .font_weight(type_size::SEMIBOLD)
+                    .text_style(TextSize::Title)
+                    .mr(px(Space::S5.px()))
                     .child("Quantum"),
             )
             .children(MENUS.iter().enumerate().map(|(i, (name, _))| {
-                Button::custom(("menu", i), *name)
-                    .h(px(space::XXXL))
-                    .px(px(space::INSET))
-                    .rounded(px(radius::CONTROL))
-                    .text_color(t.muted())
-                    .cursor_pointer()
-                    .child(*name)
-                    .when(self.menu == Some(i), |d| d.bg(t.hover()))
-                    .hover(move |d| d.bg(t.hover()))
+                let anchor = self.menu_bounds.clone();
+                let selected = self.menu == Some(i);
+                Button::design(("menu", i), *name, t)
+                    .style(ButtonStyle::Ghost)
+                    .selected(self.menu == Some(i))
+                    .build()
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.menu = if this.menu == Some(i) { None } else { Some(i) };
                         this.menu_index = 0;
                         this.commands.close();
                         cx.notify();
                     }))
+                    .relative()
+                    .child(
+                        canvas(
+                            move |bounds, _, _| {
+                                if selected {
+                                    anchor.set(bounds);
+                                }
+                            },
+                            |_, _, _, _| {},
+                        )
+                        .absolute()
+                        .inset_0(),
+                    )
             }))
             .child(div().flex_1())
     }
@@ -142,10 +157,10 @@ impl EditorView {
             )
             .child(
                 div()
-                    .w(px(space::XXL))
+                    .w(px(Space::S6.px()))
                     .h(px(metrics::EDGE))
-                    .my(px(space::SM))
-                    .bg(t.line()),
+                    .my(px(Space::S3.px()))
+                    .bg(t.color(ColorToken::BorderSubtle)),
             )
             .children(
                 [
@@ -154,16 +169,8 @@ impl EditorView {
                     ("rail-mirror-z", "Z", Op::MirrorZ),
                 ]
                 .into_iter()
-                .enumerate()
-                .map(|(index, (id, label, op))| {
-                    self.button(
-                        id,
-                        op.icon(),
-                        label,
-                        op,
-                        ActionPresentation::Mirror(index),
-                        cx,
-                    )
+                .map(|(id, label, op)| {
+                    self.button(id, op.icon(), label, op, ActionPresentation::Mirror, cx)
                 }),
             )
     }
@@ -181,7 +188,11 @@ impl EditorView {
             .when(cfg!(target_os = "macos"), |d| {
                 d.pl(px(metrics::TOOLBAR_TRAFFIC_INSET))
             })
-            .child(icon("cube").text_color(t.muted()).size(px(metrics::KEYCAP)))
+            .child(
+                icon("cube")
+                    .text_color(t.color(ColorToken::TextSecondary))
+                    .size(px(metrics::KEYCAP)),
+            )
             .child(
                 div()
                     .w(px(if compact {
@@ -189,16 +200,16 @@ impl EditorView {
                     } else {
                         metrics::DOCUMENT_WIDTH
                     }))
-                    .min_w(px(space::NONE))
+                    .min_w(px(Space::S0.px()))
                     .flex_shrink_0()
                     .child(
                         row()
-                            .gap(px(space::GLYPH))
-                            .text_size(px(type_size::DOCUMENT))
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .gap(px(Space::S2.px()))
+                            .text_style(TextSize::Title)
+                            .font_weight(type_size::SEMIBOLD)
                             .child(
                                 div()
-                                    .min_w(px(space::NONE))
+                                    .min_w(px(Space::S0.px()))
                                     .overflow_hidden()
                                     .text_ellipsis()
                                     .child(format!("{}.voxl", self.editor.display_snapshot().name)),
@@ -207,9 +218,9 @@ impl EditorView {
                                 d.child(
                                     div()
                                         .flex_shrink_0()
-                                        .text_size(px(type_size::BODY_LG))
-                                        .font_weight(FontWeight::NORMAL)
-                                        .text_color(t.muted())
+                                        .text_style(TextSize::Body)
+                                        .font_weight(type_size::NORMAL)
+                                        .text_color(t.color(ColorToken::TextSecondary))
                                         .child("— Edited"),
                                 )
                             }),
@@ -229,7 +240,7 @@ impl EditorView {
                     cx,
                 )
                 .h(px(metrics::RAIL_BUTTON))
-                .gap(px(space::LG))
+                .gap(px(Space::S4.px()))
                 .child(action_shortcut(Op::Commands)),
             )
     }
@@ -243,39 +254,34 @@ impl EditorView {
     ) -> Stateful<Div> {
         let t = self.theme;
         let enabled = self.enabled(op);
-        quantum_ui::SidebarItem::row(
+        quantum_ui::MenuItem::new(
             ("action-row", index),
             op.display_label(window.is_fullscreen()),
-            op.icon(),
-            false,
             t,
         )
+        .icon(op.icon())
+        .selected(selected)
+        .disabled(!enabled)
+        .on_click(cx.listener(move |this, _, window, cx| {
+            this.invoke(op, window, cx);
+        }))
+        .build()
         .tab_stop(false)
-        .role(Role::MenuItem)
         .aria_selected(selected)
         .aria_keyshortcuts(op.shortcut())
-        .when(selected, |d| d.bg(t.hover()).aria_active_descendant())
-        .text_color(if enabled { t.text() } else { t.disabled() })
+        .when(selected, |d| d.aria_active_descendant())
         .when(self.selected(op), |d| {
-            d.child(
-                icon("check")
-                    .size(px(metrics::ICON_SM))
-                    .text_color(t.accent()),
-            )
+            d.child(icon("check").text_color(t.color(ColorToken::AccentText)))
         })
         .child(
             div()
                 .max_w(px(metrics::ACTION_HINT_WIDTH))
-                .text_size(px(type_size::CAPTION))
-                .text_color(t.muted())
+                .text_style(TextSize::Caption)
+                .text_color(t.color(ColorToken::TextSecondary))
                 .when(enabled, |d| d.child(action_shortcut(op)))
                 .when(!enabled, |d| {
                     d.whitespace_normal().child(self.disabled_reason(op))
                 }),
         )
-        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .on_click(cx.listener(move |this, _, window, cx| {
-            this.invoke(op, window, cx);
-        }))
     }
 }

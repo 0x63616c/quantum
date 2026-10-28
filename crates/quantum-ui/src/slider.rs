@@ -147,7 +147,9 @@ impl Slider {
                     .w_full()
                     .h(px(metrics::TRACK))
                     .rounded_full()
-                    .bg(self.track.unwrap_or_else(|| t.control().into()))
+                    .bg(self
+                        .track
+                        .unwrap_or_else(|| t.color(crate::ColorToken::Border).into()))
                     .child(
                         canvas(move |b, _, _| painted.set(b), |_, _, _, _| ())
                             .absolute()

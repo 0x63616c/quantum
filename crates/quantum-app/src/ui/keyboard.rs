@@ -1,5 +1,6 @@
 //! Focus-aware keyboard routing for the editor shell.
 use super::*;
+use quantum_ui::Space;
 
 use crate::shortcuts::EditorKey;
 
@@ -86,7 +87,7 @@ impl EditorView {
                     .and_then(|out| out.selected)
                 {
                     self.swatch_scroll.set_offset(point(
-                        px(space::NONE),
+                        px(Space::S0.px()),
                         -px((next / 8) as f32 * metrics::SWATCH_PITCH),
                     ));
                     cx.notify();
