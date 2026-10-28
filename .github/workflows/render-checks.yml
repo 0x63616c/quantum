@@ -63,7 +63,7 @@ jobs:
       RENDER_RUNS: ${{ inputs.runs || '3' }}
       RENDER_SCENES: ${{ inputs.scenes || 'autumn terrain1m sponge1m terrain10m' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up runner tools
@@ -109,7 +109,7 @@ jobs:
           cargo xtask "${args[@]}"
       - name: Upload visual reports and mismatch images
         if: always() && (env.RENDER_COMMAND == 'visual' || env.RENDER_COMMAND == 'rebaseline-visual')
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-report-${{ github.run_id }}
           path: target/visual/
@@ -117,7 +117,7 @@ jobs:
           retention-days: 14
       - name: Upload performance JSON and markdown
         if: always() && (env.RENDER_COMMAND == 'bench' || env.RENDER_COMMAND == 'bench-baseline')
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bench-report-${{ github.run_id }}
           path: target/bench/
@@ -125,7 +125,7 @@ jobs:
           retention-days: 14
       - name: Upload explicitly generated goldens
         if: success() && env.RENDER_COMMAND == 'rebaseline-visual'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-goldens-${{ github.run_id }}
           path: bench/golden/
@@ -133,7 +133,7 @@ jobs:
           retention-days: 14
       - name: Upload explicitly generated performance baseline
         if: success() && env.RENDER_COMMAND == 'bench-baseline'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bench-baseline-${{ github.run_id }}
           path: bench/baseline/
