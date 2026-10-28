@@ -857,3 +857,8 @@ pub(super) fn show_deferred(samples: bool, cx: &mut App) {
         Err(error) => eprintln!("Could not open welcome window: {error}"),
     });
 }
+
+#[cfg(feature = "ui-snapshots")]
+mod snapshot;
+#[cfg(feature = "ui-snapshots")]
+pub(crate) use snapshot::{prepare_snapshot, snapshot_ready};
