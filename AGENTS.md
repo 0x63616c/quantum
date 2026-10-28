@@ -94,8 +94,8 @@ cargo test -p voxelite-render --locked --test boundary normal_workspace_dependen
 - Follow [the plugin guide](crates/plugins/README.md) and run:
 
 ```sh
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
+cargo test -p xtask --locked checks::plugin_deps
 ```
 
 ## Rust and change conventions
@@ -120,19 +120,33 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
 
 ## Build, test and lint
 
+`cargo xtask validate` runs the registered gates: tidy, plugin-deps, brand,
+docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
+machete. Missing tools skip with a reason; use `--strict` to fail instead.
+Use `cargo xtask check --list` to list checks,
+`cargo xtask check tidy fmt` for named checks, or `validate --only tidy fmt` /
+`validate --skip test` to select gates. Script and platform checks below remain
+separate. See [xtask/README.md](xtask/README.md) for the library and registry.
+Build ordinary xtask command vectors with `xshell::cmd!` and convert them to
+`cmd::Command` (or use `macos::Context::script`) before running through the
+injectable `Runner`. Apply secret markers and execution policy after conversion;
+keep process-group cancellation in the shared runner.
+
 Run from the repository root. These are the general macOS CI checks:
 
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo test --workspace --locked --no-fail-fast
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
-python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
+cargo xtask check plugin-deps
+cargo test -p xtask --locked
 ```
 
 | Purpose | Command |
 | --- | --- |
+| All registered Rust validation gates | `cargo xtask validate --strict` |
+| List / run named checks | `cargo xtask check --list` / `cargo xtask check tidy fmt` |
+| Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
 | Start native editor | `cargo run -p voxelite-app --bin voxelite` |
 | Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
 | Standard workspace tests | `cargo test --workspace` |
@@ -140,23 +154,24 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Editor model without GPUI | `cargo test -p voxelite-app --no-default-features --locked` |
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
-| All Python regressions | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Repository consistency (plugins, branding, documentation) | `cargo xtask check plugin-deps brand docs-links docs-assets` |
+| Remaining Python regressions (site, PII scan) | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
 | Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
 | Dependency licenses, advisories and sources | `cargo deny check` |
 | Unused dependencies | `cargo machete` |
-| Render harness help | `cargo xtask --help` |
+| Task / render harness help | `cargo xtask --help` / `cargo xtask bench --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
 | Full site build | `scripts/build-site.sh` |
 | Site generator tests | `cargo test --locked -p voxelite-site` |
 | Built-site validation | `python3 scripts/check-site.py` |
-| Offline feed validation | `python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty` |
+| Offline feed validation | `cargo xtask macos check-appcast site/appcast.xml --allow-empty` |
 
 - Core/MCP, Python tests and site builds can run on Linux. Full workspace and
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
 - Keep the Linux GUI build for CI and UI capture work; see
   [ADR 0004](docs/adr/0004-keep-linux-gui-build.md).
-- Run Metal/AppKit/Sparkle checks and `scripts/package-macos.sh` on macOS. CI uses
+- Run Metal/AppKit/Sparkle checks and `cargo xtask macos package` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
   from Linux checks or mocked packaging tools.
 - In the documented Linux harness workspace, use
@@ -310,8 +325,8 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   maintain them separately; their source is `crates/voxelite-site/src/install.rs`
   and its templates.
 - Generate signed appcasts through the release workflow and
-  `scripts/generate-macos-appcast.sh`; fetch release feeds with
-  `scripts/fetch-macos-appcast.py`. Preserve signed XML/HTML bytes. Never hand-edit
+  `cargo xtask macos appcast`; fetch release feeds with
+  `cargo xtask macos fetch-appcast <out>`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
 - Review built output and relative links. Keep generated site output and
   local benchmark outputs out of source commits.
@@ -351,7 +366,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging script tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
@@ -369,7 +384,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
   prints redacted findings to stdout. Run it when relevant, review its report
   deliberately, and do not treat it as proof of no secrets.
   Keep private values out of logs and PRs.
-- Write release-worthy subjects: `scripts/generate-macos-release-notes.py`
+- Write release-worthy subjects: `cargo xtask macos release-notes`
   includes non-merge commit subjects in public release notes.
 
 ## Releases
