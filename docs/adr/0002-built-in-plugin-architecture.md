@@ -509,7 +509,7 @@ normal and build dependencies. This includes optional, renamed and target-specif
 dependencies. Direct dependencies on any other workspace crate, including
 `voxelite-core`, are forbidden; shared core types must be exposed through the API
 crate. Dev-dependencies are exempt so tests can use the host's conformance harness.
-`scripts/check-plugin-deps.py` enforces this boundary from Cargo metadata in CI,
+`cargo xtask check plugin-deps` enforces this boundary from Cargo metadata in CI,
 trying locked offline resolution first and retrying without offline mode if needed.
 
 `voxelite-plugin-example` is a minimal template (`dev.voxelite.example`,
