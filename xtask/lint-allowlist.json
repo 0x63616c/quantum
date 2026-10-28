@@ -78,6 +78,5 @@
   "xtask/src/macos/package.rs:function-lines:::build": 292,
   "xtask/src/macos/tests/support.rs:function-lines:impl Runner for FakeRunner::execute": 229,
   "xtask/src/release.rs:function-lines:::run": 105,
-  "xtask/src/screenshots.rs:function-lines:::run": 134,
-  "xtask/src/version.rs:function-lines:impl  for Plan::prepare": 101
+  "xtask/src/screenshots.rs:function-lines:::run": 134
 }

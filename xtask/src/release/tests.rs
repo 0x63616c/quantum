@@ -15,7 +15,6 @@ fn fixture() -> (tempfile::TempDir, Workspace) {
         "README.md",
         "xtask/Cargo.toml",
         "spec/mcp/v1/compatibility.json",
-        "crates/quantum-site/templates/download.html",
     ] {
         let to = dir.path().join(path);
         fs::create_dir_all(to.parent().unwrap()).unwrap();
@@ -35,7 +34,7 @@ fn replies(values: &[&str]) -> RecordingRunner {
     }
     runner
 }
-const TRACKED: &str = "Cargo.toml\0Cargo.lock\0README.md\0spec/mcp/v1/compatibility.json\0crates/quantum-site/templates/download.html\0";
+const TRACKED: &str = "Cargo.toml\0Cargo.lock\0README.md\0spec/mcp/v1/compatibility.json\0";
 const GREEN: &str = r#"{"total_count":1,"check_runs":[{"head_sha":"abc","status":"completed","conclusion":"success"}]}"#;
 
 #[test]
@@ -175,7 +174,6 @@ fn execute_preparation_only_uses_expected_fake_commands() {
             "--",
             "Cargo.toml",
             "README.md",
-            "crates/quantum-site/templates/download.html",
             "spec/mcp/v1/compatibility.json",
             "Cargo.lock",
             "CHANGELOG.md",

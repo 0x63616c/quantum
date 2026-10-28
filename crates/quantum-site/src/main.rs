@@ -5,9 +5,11 @@ use std::{error::Error, fmt::Write as _, fs, path::Path};
 
 mod install;
 mod markdown;
+mod news;
 mod seo;
 
-const SITE_BASE_URL: &str = "https://quantum.worldwidewebb.co";
+mod brand;
+const SITE_BASE_URL: &str = "@@site_url@@";
 const GITHUB_LINK: &str = include_str!("../templates/github-link.html");
 
 struct DocPage {
@@ -35,37 +37,37 @@ const PAGES: &[DocPage] = &[
     DocPage {
         slug: "",
         title: "Documentation",
-        description: "Learn how to build voxel models with Quantum, connect an AI agent through MCP, work in the macOS desktop editor, and save portable projects.",
+        description: "Learn how to build voxel models with @@product@@, connect an AI agent through MCP, work in the macOS desktop editor, and save portable projects.",
         content: include_str!("../../../site/content/overview.html"),
     },
     DocPage {
         slug: "getting-started",
         title: "Getting started",
-        description: "Download Quantum for Mac or build from source, connect your AI agent through MCP, and create your first voxel model with a guide to editing and exports.",
+        description: "Download @@product@@ for Mac or build from source, connect your AI agent through MCP, and create your first voxel model with a guide to editing and exports.",
         content: include_str!("../../../site/content/getting-started.html"),
     },
     DocPage {
         slug: "mcp",
         title: "MCP tools",
-        description: "Explore Quantum's MCP tool reference, including input and output schemas, atomic edits, rendered previews, revision guards, and error recovery.",
+        description: "Explore @@product@@'s MCP tool reference, including input and output schemas, atomic edits, rendered previews, revision guards, and error recovery.",
         content: include_str!("../../../site/content/mcp.html"),
     },
     DocPage {
         slug: "format",
         title: "The .voxl format",
-        description: "Understand Quantum's .voxl project format: JSON structure, voxel coordinates, palettes, layers, canonical hashes, parser limits, and compatibility.",
+        description: "Understand @@product@@'s .voxl project format: JSON structure, voxel coordinates, palettes, layers, canonical hashes, parser limits, and compatibility.",
         content: include_str!("../../../site/content/format.html"),
     },
     DocPage {
         slug: "skills",
         title: "Agent skills",
-        description: "Give your AI agent reusable Quantum skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.",
+        description: "Give your AI agent reusable @@product@@ skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.",
         content: include_str!("../../../site/content/skills.html"),
     },
     DocPage {
         slug: "plugins",
         title: "Plugins",
-        description: "Explore Quantum's built-in plugins, the core boundary, manifests, lifecycle, versioned project data, and a walkthrough for writing a plugin.",
+        description: "Explore @@product@@'s built-in plugins, the core boundary, manifests, lifecycle, versioned project data, and a walkthrough for writing a plugin.",
         content: include_str!("../../../site/content/plugins.html"),
     },
 ];
@@ -115,6 +117,26 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
             )
         })
         .unwrap_or_default();
+    let docs_current = if PAGES.iter().any(|page| page.slug == slug) {
+        " aria-current=\"page\""
+    } else {
+        ""
+    };
+    let changelog_current = if slug == "/changelog/" {
+        " aria-current=\"page\""
+    } else {
+        ""
+    };
+    let blog_current = if slug.starts_with("/blog/") {
+        " aria-current=\"page\""
+    } else {
+        ""
+    };
+    let build_note = if PAGES.iter().any(|page| page.slug == slug) {
+        "<p class=\"build-note\">This development build uses API <code>voxelite.v1</code>.</p>"
+    } else {
+        ""
+    };
     let sections = section_links(content);
     let mobile_sections = if sections.is_empty() {
         String::new()
@@ -146,8 +168,8 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {metadata}{markdown_metadata}
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){{(window.vaq=window.vaq||[]).push(arguments)}};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){{(window.siq=window.siq||[]).push(arguments)}};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
-<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><img src="/assets/mark.svg" width="25" height="25" alt="">Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
-<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">Quantum documentation</p>{navigation}</nav><main class="docs-content" id="main"><h1>{title}</h1>{markdown_actions}<p class="build-note">This development build uses API <code>voxelite.v1</code>.</p>{content}<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><img src="/assets/mark.svg" width="25" height="25" alt="">@@product@@</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/"{docs_current}>Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a><a href="/changelog/"{changelog_current}>Changelog</a><a href="/blog/"{blog_current}>Blog</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
+<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">@@product@@ documentation</p>{navigation}</nav><main class="docs-content" id="main"><h1>{title}</h1>{markdown_actions}{build_note}{content}<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">@@product@@</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/changelog/">Changelog</a><a href="/blog/">Blog</a><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
 "##,
         github_link = GITHUB_LINK.trim(),
     )
@@ -258,6 +280,7 @@ fn article_body(page: &DocPage, tools: &[Value]) -> Result<String, Box<dyn Error
 
 #[expect(clippy::print_stdout, reason = "CLI output")]
 fn main() -> Result<(), Box<dyn Error>> {
+    brand::validate()?;
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);
     let tools: Vec<Value> = serde_json::from_str(include_str!("../../../spec/mcp/v1/tools.json"))?;
@@ -272,7 +295,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site/appcast.xml"),
         root,
     )?;
-    quantum_format::storage::safe_write(
+    brand::write(
         root.join("index.html"),
         format!(
             include_str!("../templates/index.html"),
@@ -282,14 +305,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         ),
     )?;
     fs::create_dir_all(root.join("download"))?;
-    quantum_format::storage::safe_write(
+    brand::write(
         root.join("download/index.html"),
         format!(
             include_str!("../templates/download.html"),
             metadata = seo::metadata(
                 "/download/",
-                "Download Quantum for Mac: Quantum",
-                "Download Quantum for Mac, the free voxel editor built for AI agents. Install on Apple silicon with macOS 13 or later and start creating.",
+                "Download @@product@@ for Mac: @@product@@",
+                "Download @@product@@ for Mac, the free voxel editor built for AI agents. Install on Apple silicon with macOS 13 or later and start creating.",
             ),
             github_link = GITHUB_LINK.trim(),
         ),
@@ -305,36 +328,38 @@ fn main() -> Result<(), Box<dyn Error>> {
         let body = article_body(page, &tools)?;
         let metadata = seo::metadata(
             &page.path(),
-            &format!("{}: Quantum docs", page.title),
+            &format!("{}: @@product@@ docs", page.title),
             page.description,
         );
-        quantum_format::storage::safe_write(
+        brand::write(
             directory.join("index.html"),
             layout(page.slug, page.title, &metadata, &body),
         )?;
         let markdown = markdown::render(page, &body)?;
-        quantum_format::storage::safe_write(
+        brand::write(
             root.join(page.markdown_path().trim_start_matches('/')),
             &markdown,
         )?;
-        quantum_format::storage::safe_write(directory.join("index.md"), &markdown)?;
+        brand::write(directory.join("index.md"), &markdown)?;
         documents.push((page, markdown));
     }
     markdown::write_indexes(root, &documents)?;
-    quantum_format::storage::safe_write(
+    let news_paths = news::write(root)?;
+    brand::write(
         root.join("404.html"),
         layout(
             "404",
             "A little off the grid",
             &seo::metadata(
                 "/404.html",
-                "Page not found: Quantum",
-                "This page could not be found. Explore Quantum's documentation to build voxel models, connect an AI agent, or download the macOS desktop app.",
+                "Page not found: @@product@@",
+                "This page could not be found. Explore @@product@@'s documentation to build voxel models, connect an AI agent, or download the macOS desktop app.",
             ),
-            "<p>This page could not be found. Head back to the <a href=\"/\">Quantum homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
+            "<p>This page could not be found. Head back to the <a href=\"/\">@@product@@ homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
         ),
     )?;
     let mut public_paths = vec!["/".to_owned(), "/download/".to_owned()];
+    public_paths.extend(news_paths);
     public_paths.extend(PAGES.iter().map(DocPage::path));
     public_paths.extend(PAGES.iter().map(DocPage::markdown_path));
     public_paths.extend(["/llms.txt".to_owned(), "/llms-full.txt".to_owned()]);

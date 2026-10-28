@@ -199,7 +199,8 @@ only a container.
 | [quantum-app](crates/quantum-app/) | Editor state and native GPUI shell; native binary `quantum`. |
 | [quantum-mcp](crates/quantum-mcp/) | Standalone MCP authority, stdio transport and live native-session bridge. |
 | [quantum-bench](crates/quantum-bench/) | Production-GPU performance measurements and golden-image comparisons. |
-| [quantum-site](crates/quantum-site/) | Static site, MCP reference, Markdown/LLM indexes and integration generation. |
+| [quantum-brand](crates/quantum-brand/) | Typed product metadata shared by site generation and repository checks. |
+| [quantum-site](crates/quantum-site/) | Static site, MCP reference, Markdown/LLM indexes, changelog, blog and integrations. |
 | [quantum-plugin-tools](crates/plugins/quantum-plugin-tools/) | Place, Erase, Paint, Fill, Box and Picker behavior through typed command proposals. |
 | [quantum-plugin-mirror](crates/plugins/quantum-plugin-mirror/) | Centered X/Y/Z transformations of pending tool commands. |
 | [quantum-plugin-gizmo-grid](crates/plugins/quantum-plugin-gizmo-grid/) | Camera orientation widget, navigation interaction and ground-grid overlays. |

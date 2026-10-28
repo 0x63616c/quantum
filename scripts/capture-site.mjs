@@ -67,7 +67,7 @@ try {
       const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: 'reduce' });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/']) {
+      for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/', '/changelog/', '/blog/', '/blog/2026-10-28-rename/']) {
         const response = await page.goto(base + route);
         assert.equal(response.status(), 200);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} fits ${width}`);
@@ -76,6 +76,13 @@ try {
         if (sections.length) {
           const index = page.locator(width < 1100 ? '.docs-mobile-nav nav[aria-label="Page sections"]' : '.docs-toc nav');
           assert.deepEqual(await index.locator('a').evaluateAll(links => links.map(link => link.getAttribute('href'))), sections, 'Section index matches the article');
+        }
+        if ((route === '/changelog/' || route.startsWith('/blog/')) && (width === 1440 || width === 390)) {
+          await page.evaluate(() => document.fonts.ready);
+          const slug = route.split('/').filter(Boolean).join('-');
+          const name = `${slug}-${width === 1440 ? 'desktop' : 'mobile'}-${theme}`;
+          await page.screenshot({ path: `${directory}/${name}.png` });
+          report.captures.push({ name, width, height: 900, fullPage: false });
         }
         if (route === '/docs/getting-started/' && (width === 1440 || width === 390)) {
           await page.evaluate(() => document.fonts.ready);

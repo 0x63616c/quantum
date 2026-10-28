@@ -11,6 +11,8 @@ use crate::{
     workspace::Workspace,
 };
 
+mod legacy;
+
 type Inventory = BTreeMap<String, BTreeMap<String, Entry>>;
 
 #[derive(Deserialize)]
@@ -21,7 +23,10 @@ struct Entry {
 }
 
 pub(crate) fn run(context: &Context<'_>) -> Outcome {
-    super::outcome(check(context.workspace))
+    super::outcome(check(context.workspace).and_then(|mut errors| {
+        errors.extend(legacy::check(context)?);
+        Ok(errors)
+    }))
 }
 
 fn read_toml<T: DeserializeOwned>(workspace: &Workspace, path: &str) -> Result<T> {
@@ -257,16 +262,12 @@ impl Audit<'_> {
 
     fn site(&mut self) -> Result<()> {
         let domain = self.identifier("site_domain")?;
-        self.capture(
-            "crates/quantum-site/src/main.rs",
-            r#"const\s+SITE_BASE_URL\s*:\s*&str\s*=\s*"([^"]+)""#,
-            &format!("https://{domain}"),
-        )?;
-        self.capture(
-            "crates/quantum-site/templates/github-link.html",
-            r#"href="([^"]+)""#,
-            &self.identifier("github_repo_url")?,
-        )?;
+        let brand = quantum_brand::Brand::parse(
+            &self.workspace.read("brand.toml")?,
+            &self.workspace.read("Cargo.toml")?,
+        )
+        .map_err(|error| Error::Invalid(error.to_string()))?;
+        self.equal("site origin", brand.site_url(), format!("https://{domain}"));
         let appcast =
             url::Url::parse(&self.identifier("sparkle_appcast_url")?).map_err(|error| {
                 Error::Invalid(format!("brand.toml: invalid sparkle_appcast_url: {error}"))

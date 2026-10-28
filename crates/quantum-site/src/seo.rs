@@ -4,11 +4,11 @@ use std::{error::Error, fmt::Write as _, path::Path};
 
 use crate::{SITE_BASE_URL, escape};
 
-pub const HOME_TITLE: &str = "Quantum: The voxel editor built for AI agents";
-pub const HOME_DESCRIPTION: &str = "Quantum is a free Rust voxel editor. Build models through MCP, watch agent edits in the native app, and refine every detail by hand.";
+pub const HOME_TITLE: &str = "@@product@@: The voxel editor built for AI agents";
+pub const HOME_DESCRIPTION: &str = "@@product@@ is a free Rust voxel editor. Build models through MCP, watch agent edits in the native app, and refine every detail by hand.";
 const IMAGE_PATH: &str = "/assets/session-dark.png";
 const IMAGE_ALT: &str =
-    "Quantum editor showing the Autumn Workshop model, palette, layers, and agent activity.";
+    "@@product@@ editor showing the Autumn Workshop model, palette, layers, and agent activity.";
 
 pub fn metadata(path: &str, title: &str, description: &str) -> String {
     let title = escape(title);
@@ -30,7 +30,7 @@ pub fn metadata(path: &str, title: &str, description: &str) -> String {
 <meta property="og:image" content="{image}">
 <meta property="og:image:alt" content="{IMAGE_ALT}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Quantum">
+<meta property="og:site_name" content="@@product@@">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{description}">
@@ -49,14 +49,15 @@ pub fn software_application() -> String {
     let application = json!({
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "Quantum",
-        "description": HOME_DESCRIPTION,
-        "url": format!("{SITE_BASE_URL}/"),
-        "image": format!("{SITE_BASE_URL}{IMAGE_PATH}"),
+        "name": crate::brand::get().product.display_name.current,
+        "description": crate::brand::expand(HOME_DESCRIPTION),
+        "url": format!("{}/", crate::brand::get().site_url()),
+        "image": format!("{}{IMAGE_PATH}", crate::brand::get().site_url()),
         "applicationCategory": "DesignApplication",
         "operatingSystem": "macOS",
+        "softwareVersion": crate::brand::get().version,
         "isAccessibleForFree": true,
-        "license": format!("{SITE_BASE_URL}/assets/LICENSE"),
+        "license": format!("{}/assets/LICENSE", crate::brand::get().site_url()),
         "offers": {"@type": "Offer", "price": 0, "priceCurrency": "USD"},
         "author": organization,
         "publisher": organization,
@@ -78,8 +79,8 @@ pub fn write_crawl_files(root: &Path, paths: &[String]) -> Result<(), Box<dyn Er
         )?;
     }
     sitemap.push_str("</urlset>\n");
-    quantum_format::storage::safe_write(root.join("sitemap.xml"), sitemap)?;
-    quantum_format::storage::safe_write(
+    crate::brand::write(root.join("sitemap.xml"), sitemap)?;
+    crate::brand::write(
         root.join("robots.txt"),
         format!(
             "User-agent: *\nAllow: /\n\nSitemap: {SITE_BASE_URL}/sitemap.xml\n\n# Markdown documentation: {SITE_BASE_URL}/llms.txt\n# Complete documentation: {SITE_BASE_URL}/llms-full.txt\n"

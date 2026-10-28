@@ -6,8 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+quantum-brand.workspace = true
 quantum-format.workspace = true
 base64.workspace = true
+pulldown-cmark = { workspace = true, features = ["html"] }
 htmd = "0.5.6"
 percent-encoding.workspace = true
 same-file = "1"
