@@ -153,15 +153,15 @@ fn member_patterns_deduplicate_and_exclude_container_manifest() {
 fn source_captures_require_exactly_one_match_and_skill_names_match_whole_lines() {
     let pattern = r#"format!\(\s*"([^"]+)\{name\}"\s*\)"#;
     assert_eq!(
-        super::super::captures("format!( \"voxelite_{name}\" )", pattern).unwrap(),
-        ["voxelite_"]
+        super::super::captures("format!( \"quantum_{name}\" )", pattern).unwrap(),
+        ["quantum_"]
     );
     let names = super::super::captures(
-        "---\nname: voxelite-one\nother-name: ignored\nname: voxelite-two\n",
+        "---\nname: quantum-one\nother-name: ignored\nname: quantum-two\n",
         r"(?m)^name:\s*(\S+)\s*$",
     )
     .unwrap();
-    assert_eq!(names, ["voxelite-one", "voxelite-two"]);
+    assert_eq!(names, ["quantum-one", "quantum-two"]);
     let workspace = Workspace::discover().unwrap();
     let mut audit = Audit {
         workspace: &workspace,
@@ -183,16 +183,16 @@ fn repository_brand_consistency() {
 fn storage_checks_production_paths_and_env_even_with_unchanged_test_literals() {
     let workspace = Workspace::discover().unwrap();
     let source = workspace
-        .read("crates/voxelite-app/src/local_settings.rs")
+        .read("crates/quantum-app/src/local_settings.rs")
         .unwrap();
     for (old, new) in [
         (
-            "Library/Application Support/voxelite",
             "Library/Application Support/quantum",
+            "Library/Application Support/renamed",
         ),
-        (".join(\"voxelite\")", ".join(\"quantum\")"),
+        (".join(\"quantum\")", ".join(\"renamed\")"),
         (".local/share", ".local/data"),
-        ("VOXELITE_DATA_DIR", "QUANTUM_DATA_DIR"),
+        ("QUANTUM_DATA_DIR", "RENAMED_DATA_DIR"),
         ("XDG_DATA_HOME", "XDG_CONFIG_HOME"),
     ] {
         let mut audit = Audit {

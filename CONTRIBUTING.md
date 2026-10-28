@@ -1,6 +1,6 @@
 # Contributing to Quantum
 
-Quantum (repository `voxelite`) is tracked on the
+Quantum is tracked on the
 [Quantum project board](https://github.com/users/0x63616c/projects). Every change
 starts as an issue and lands as one focused pull request that closes it. These
 rules apply to people and coding agents alike; [AGENTS.md](AGENTS.md) covers the

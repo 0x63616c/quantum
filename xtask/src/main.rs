@@ -279,7 +279,7 @@ fn harness_command(workspace: &Workspace, subcommand: &str, args: &[OsString]) -
     let mut command =
         workspace
             .cargo()
-            .args(["run", "--release", "--locked", "-p", "voxelite-bench"]);
+            .args(["run", "--release", "--locked", "-p", "quantum-bench"]);
     if args
         .windows(2)
         .any(|pair| pair[0] == "--scene" && pair[1] == "terrain10m")

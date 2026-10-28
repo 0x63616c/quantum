@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Capture PR screenshot screens from one built `voxelite` binary on a virtual X display.
+# Capture PR screenshot screens from one built `quantum` binary on a virtual X display.
 # Called by `cargo xtask screenshots`; see .agents/skills/ui-pr-screenshots/SKILL.md.
 #
 # usage: capture-pr-screens.sh BINARY OUT_DIR SPEC_FILE
@@ -38,14 +38,16 @@ cleanup() {
 trap cleanup EXIT
 while IFS=$'\t' read -r name title width height args; do
   [[ -z "$name" || "$name" == \#* ]] && continue
-  export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
-  mkdir -p "$VOXELITE_DATA_DIR"
+  export QUANTUM_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
+  # Baseline revisions predate the environment-variable rename.
+  export VOXELITE_DATA_DIR="$QUANTUM_DATA_DIR"
+  mkdir -p "$QUANTUM_DATA_DIR"
   if [[ "$name" == welcome-recents-* ]]; then
     # xtask seeds one history with real projects for both revisions.
-    cp "$PR_SHOTS_HOME/../welcome-data/recents.json" "$VOXELITE_DATA_DIR/recents.json"
+    cp "$PR_SHOTS_HOME/../welcome-data/recents.json" "$QUANTUM_DATA_DIR/recents.json"
   fi
   # A private cwd keeps the displayed relative socket path stable across captures.
-  cd "$VOXELITE_DATA_DIR"
+  cd "$QUANTUM_DATA_DIR"
   # shellcheck disable=SC2086 # args are a space-separated list by design
   env HOME="$PR_SHOTS_HOME" XDG_CACHE_HOME="$XDG_RUNTIME_DIR/cache-$name" \
     XDG_CONFIG_HOME="$XDG_RUNTIME_DIR/config-$name" XDG_DATA_HOME="$XDG_RUNTIME_DIR/share-$name" \

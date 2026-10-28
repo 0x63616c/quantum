@@ -1,0 +1,18 @@
+[package]
+name = "quantum-plugin-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+quantum-core.workspace = true
+quantum-plugin-api.workspace = true
+quantum-render-plan.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+quantum-format.workspace = true
+
+[lints]
+workspace = true

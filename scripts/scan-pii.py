@@ -38,7 +38,7 @@ for name, email in identities:
     if len(local) >= 4:
         identity_terms.add(local)
 # Product/bot labels are not human identity leaks in prose.
-identity_terms = {term for term in identity_terms if term.lower() not in {'voxelite', 'voxelite contributors', 'voxelite agent', 'codex', 'openai', 'root', 'agent', 'contributors'}}
+identity_terms = {term for term in identity_terms if term.lower() not in {'quantum', 'quantum contributors', 'quantum agent', 'codex', 'openai', 'root', 'agent', 'contributors'}}
 if identity_terms:
     patterns['Git identity name/username'] = re.compile(r'(?<![\w-])(?:' + '|'.join(re.escape(x) for x in sorted(identity_terms)) + r')(?![\w-])', re.I)
 

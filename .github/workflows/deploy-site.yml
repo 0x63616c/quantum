@@ -74,7 +74,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == '0x63616c/voxelite' && github.actor == '0x63616c'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == '0x63616c/voxelite' || github.repository == '0x63616c/quantum') && github.actor == '0x63616c'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -118,7 +118,7 @@ jobs:
       - name: Deploy site to Vercel production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          # Identifiers, not credentials: team "Calums Projects" and project "voxelite".
+          # Identifiers, not credentials: team "Calums Projects" and the existing site project.
           VERCEL_ORG_ID: team_9RGvkGZTIxuS3X5hhsvfHK6N
           VERCEL_PROJECT_ID: prj_m4pSJixQnOROg4B2Ak54pABlCQyR
         run: |

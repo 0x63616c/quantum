@@ -1,0 +1,31 @@
+[package]
+name = "quantum-plugin-exporters"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+quantum-plugin-api.workspace = true
+serde_json.workspace = true
+png.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+quantum-plugin-host.workspace = true
+quantum-render.workspace = true
+quantum-core.workspace = true
+quantum-format.workspace = true
+gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
+proptest.workspace = true
+
+[lints]
+workspace = true
+
+[[example]]
+name = "cottage"
+path = "../../../examples/cottage.rs"
+
+[[example]]
+name = "shadow_bench"
+path = "../../../examples/shadow_bench.rs"

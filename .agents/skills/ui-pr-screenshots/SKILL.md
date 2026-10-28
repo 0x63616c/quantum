@@ -1,6 +1,6 @@
 ---
 name: ui-pr-screenshots
-description: Use whenever a pull request changes anything a user can see (crates/voxelite-app, crates/voxelite-ui, rendering, plugins with UI, themes, icons, fonts), before opening it, after each push to it, and before asking for review. Produces before/after screenshots in the PR description's Screenshots section and keeps PR descriptions consistent.
+description: Use whenever a pull request changes anything a user can see (crates/quantum-app, crates/quantum-ui, rendering, plugins with UI, themes, icons, fonts), before opening it, after each push to it, and before asking for review. Produces before/after screenshots in the PR description's Screenshots section and keeps PR descriptions consistent.
 ---
 
 # UI PR screenshots
@@ -82,7 +82,7 @@ scripting clicks, so it stays deterministic.
 
 The app's development-only `--show <state>` opens the bundled example directly in
 an editor surface or a Settings page. The complete state list and manual/platform
-exclusions are in [the app README](../../../crates/voxelite-app/README.md#ui-capture-states).
+exclusions are in [the app README](../../../crates/quantum-app/README.md#ui-capture-states).
 Use `chrome-menu-*`, `panels-*`, `dialogs-*`, `popovers-*`, `overlays-debug` and
 `settings-*` states. Each entry in the `screens!` registry expands into both
 `<state>-dark` and `<state>-light`; select both with `--screen 'dialogs-about-*'`,

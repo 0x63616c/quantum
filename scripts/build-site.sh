@@ -8,7 +8,7 @@ if (( $# != 0 )); then
   exit 2
 fi
 # Also exports Markdown/LLM indexes and preserves site/appcast.xml if supplied.
-cargo run --locked -p voxelite-site -- site --write-integrations
+cargo run --locked -p quantum-site -- site --write-integrations
 mkdir -p site/assets/skills
 cp -R skills/. site/assets/skills/
 mkdir -p site/assets/integrations
@@ -17,7 +17,7 @@ cp -R integrations/. site/assets/integrations/
 python3 - <<'PYZIP'
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
-with ZipFile('site/assets/voxelite-skills.zip', 'w', compression=ZIP_DEFLATED) as archive:
+with ZipFile('site/assets/quantum-skills.zip', 'w', compression=ZIP_DEFLATED) as archive:
     for root in ('skills', 'integrations'):
         for path in sorted(Path(root).rglob('*')):
             if path.is_file():

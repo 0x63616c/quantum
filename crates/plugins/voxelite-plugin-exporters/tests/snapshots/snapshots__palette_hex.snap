@@ -1,5 +1,0 @@
----
-source: crates/plugins/voxelite-plugin-exporters/tests/snapshots.rs
-expression: "String::from_utf8(bytes).unwrap()"
----
-ffffff

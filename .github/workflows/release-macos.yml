@@ -38,15 +38,15 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
       - name: Clippy workspace
-        run: cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked --features quantum-app/test-support -- -D warnings
       - name: Test workspace
-        run: cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast
+        run: cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast
       - name: Build app without signing credentials
         run: |
           cargo build --release --locked -p xtask
           target/release/xtask version --check-tag "$TAG"
-          cargo build --release --locked -p voxelite-app --bin voxelite
-          cargo build --release --locked -p voxelite-mcp
+          cargo build --release --locked -p quantum-app --bin quantum
+          cargo build --release --locked -p quantum-mcp
       - name: Sign and package
         env:
           MACOS_SIGNING_MODE: auto
@@ -86,7 +86,7 @@ jobs:
           # Creation fails if this tag already has a release. Never replace bytes
           # referenced by an existing signed appcast, even when retrying a run.
           test "$APPCAST_GENERATED" = true
-          gh release create "$TAG" --draft --title "Voxelite $TAG" --notes-file dist/RELEASE_NOTES.md --verify-tag
-          assets=(dist/Voxelite.dmg dist/Voxelite.dmg.sha256 dist/Voxelite.html site/appcast.xml)
+          gh release create "$TAG" --draft --title "Quantum $TAG" --notes-file dist/RELEASE_NOTES.md --verify-tag
+          assets=(dist/Quantum.dmg dist/Quantum.dmg.sha256 dist/Quantum.html site/appcast.xml)
           gh release upload "$TAG" "${assets[@]}"
           gh release edit "$TAG" --draft=false

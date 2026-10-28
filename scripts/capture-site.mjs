@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
-const base = process.env.VOXELITE_SITE_URL || 'http://127.0.0.1:8090';
+const base = process.env.QUANTUM_SITE_URL || 'http://127.0.0.1:8090';
 const directory = process.argv[2] || 'screenshots/site';
 await mkdir(directory, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });

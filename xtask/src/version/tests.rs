@@ -122,7 +122,7 @@ fn fixture() -> (tempfile::TempDir, Workspace, RecordingRunner) {
         ("external/src/lib.rs", "//! Non-workspace dependency.\n"),
         ("README.md", "The current workspace version is **1.2.3**.\n"),
         (
-            "crates/voxelite-site/templates/download.html",
+            "crates/quantum-site/templates/download.html",
             "Version 1.2.3 for macOS 13+\n",
         ),
         (
