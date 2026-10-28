@@ -37,7 +37,7 @@ impl Theme {
     /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn background(self) -> Hsla {
         rgb(if self == Self::Dark {
-            0x000000
+            0x240000
         } else {
             0xffffff
         })
