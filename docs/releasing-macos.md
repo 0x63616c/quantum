@@ -116,6 +116,11 @@ Python 3, curl, and GitHub CLI for releases. The runner must support
 the v4 checkout and artifact actions, pinned to commit SHAs in the
 workflows.
 
+Every self-hosted macOS job sets `CARGO_BUILD_JOBS: 4` in its job env. Two
+runners share one 8 GB Mac mini, so this cap limits CPU and memory contention
+and avoids heavy swap when both runners build at once. PR screenshots runs on
+Ubuntu and does not use this Mac limit.
+
 CI checks formatting, runs the mocked packaging/release regression tests,
 runs `cargo clippy --workspace --locked -- -D warnings`,
 runs `cargo test --workspace --locked --no-fail-fast`, and, when selected above,

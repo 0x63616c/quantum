@@ -55,12 +55,14 @@ site_domain = { current = "voxelite.worldwidewebb.co", stable = true }
 github_repo_url = { current = "https://github.com/0x63616c/voxelite", stable = true }
 
 [storage]
-# crates/voxelite-app/src/{attachment,local_settings}.rs. The desktop uses this
-# XDG layout on macOS too; there is currently no Application Support directory.
+# crates/voxelite-app/src/{attachment,local_settings}.rs. macOS uses Application
+# Support and migrates legacy JSON files from the XDG/fallback directory. Other
+# platforms use XDG_DATA_HOME or the fallback; VOXELITE_DATA_DIR overrides both.
 # settings.json, palettes.json, recents.json, thumbnails and session-<pid>.sock
 # live under the data directory.
 documents_directory = { current = "~/Documents/Voxelite", stable = true }
 data_directory_name = { current = "voxelite", stable = true }
+macos_data_directory = { current = "~/Library/Application Support/voxelite", stable = true }
 xdg_data_directory = { current = "$XDG_DATA_HOME/voxelite", stable = true }
 fallback_data_directory = { current = "~/.local/share/voxelite", stable = true }
 data_directory_env = { current = "VOXELITE_DATA_DIR", stable = true }

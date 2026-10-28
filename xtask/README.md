@@ -1,6 +1,8 @@
 # Repository tasks
 
-Run from the repository with `cargo xtask --help`.
+Run from the repository with `cargo xtask --help`. Tasks discover the workspace
+from the current directory (including subdirectories), so shared Cargo build
+artifacts do not redirect checks to the worktree where xtask was compiled.
 
 ```sh
 cargo xtask validate --strict
@@ -15,6 +17,52 @@ cargo xtask macos package --dry-run
 cargo xtask macos check-appcast site/appcast.xml --allow-empty
 cargo xtask bench --help
 ```
+
+## PR screenshots
+
+`cargo xtask screenshots` captures only the key set: `welcome`, `editor-dark` and
+`editor-light`. The other registered surfaces are opt-in, keeping routine CI time
+independent of the size of the capture catalog. Capture quality and sizes stay fixed.
+
+```sh
+cargo xtask screenshots --screen 'settings-*'
+cargo xtask screenshots --screen 'panels-*' --screen 'dialogs-about-*'
+cargo xtask screenshots --screen editor-dark
+cargo xtask screenshots --screen '*' # explicitly capture the whole catalog
+cargo xtask screenshots --publish 123
+```
+
+`--screen` selects exactly the union of its matches, deduplicated in registry order.
+Selectors are exact names or prefixes ending in one `*`; quote patterns in the
+shell. Unknown names, unsupported syntax and patterns matching nothing fail before
+output is cleaned or either binary is built. The registry is `src/screenshots.rs`.
+
+For migration PRs, add one plain line at column zero in the body, outside the
+generated Screenshots section: `Screens: panels-* settings-general-*`. CI and
+`--publish` read this whitespace-separated list and add its matches to the key set.
+A missing or empty line uses only the defaults; duplicate lines fail. It is data,
+not shell syntax. Explicit `--screen` options override PR-body selection locally.
+To preview the CI selection locally:
+
+```sh
+gh pr view 123 --json body -q .body > target/screenshot-pr-body.md
+cargo xtask screenshots --pr-body target/screenshot-pr-body.md
+```
+
+`--pr-body FILE` and `--screen` are mutually exclusive. The workflow fetches the
+body with `gh pr view` into a file, then passes its path as a separate argument;
+Rust validates each selector against the registry before using fixed capture args.
+Dispatch's optional `screens` field accepts the same list and replaces the body's
+extra selectors for that run; blank uses the body. Body edits alone do not rerun
+the workflow: push or dispatch after changing the line.
+
+Only changed/new/removed images and their zoom crops are pushed to `pr-assets`.
+Unchanged screens appear in a collapsed text list; an entirely unchanged run makes
+no assets commit. All captures remain in `target/pr-screenshots/` and CI artifacts.
+See the [screenshot skill](../.agents/skills/ui-pr-screenshots/SKILL.md) for Linux
+dependencies, publishing and visual review.
+
+## Validation and task library
 
 `validate` runs every registered check in order and continues after failures.
 Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
@@ -33,8 +81,14 @@ The repository checks run in-process from `src/checks/`:
   adds its timed summary on stdout. Failures exit with status 1.
 - `brand`: `brand.toml` stability and consistency with packaging, package names,
   app IDs, MCP names, site metadata, project format, storage paths and skills.
-- `docs-links`: local links in the glossary and product direction, resolved
-  relative to each document with URL escapes decoded.
+  Storage checks match the production path-selection functions, verifying macOS
+  Application Support, XDG/fallback paths and the environment override without
+  counting migration code or test assertions.
+- `docs-links`: local file and directory links in every tracked `docs/**/*.md`,
+  resolved relative to each document with URL escapes decoded. Parses inline and
+  reference Markdown links and images, skipping code examples and external URLs;
+  fragments and queries are stripped (anchors are not validated). Generated and
+  untracked documents are excluded.
 - `docs-assets`: local image links in the root guides, docs and crate READMEs;
   images must exist outside `screenshots/`. Checks Git ignores captures while
   keeping `docs/images/*.png` available.

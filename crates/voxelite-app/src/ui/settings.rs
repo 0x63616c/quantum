@@ -79,7 +79,7 @@ pub(super) fn change(cx: &mut App, edit: impl FnOnce(&mut Preferences)) {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Section {
+pub(crate) enum Section {
     General,
     Appearance,
     Viewport,
@@ -89,7 +89,7 @@ pub(super) enum Section {
     Advanced,
 }
 impl Section {
-    const ALL: [Self; 7] = [
+    pub(super) const ALL: [Self; 7] = [
         Self::General,
         Self::Appearance,
         Self::Viewport,

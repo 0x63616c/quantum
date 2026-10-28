@@ -93,6 +93,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, xcode]
     timeout-minutes: 60
     env:
+      CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       MACOS_SIGNING_MODE: adhoc
       SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}

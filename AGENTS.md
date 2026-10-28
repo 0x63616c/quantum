@@ -370,6 +370,8 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
+- Set `CARGO_BUILD_JOBS: 4` in every self-hosted macOS job env. Two runners
+  share one 8 GB Mac mini; this limits CPU and memory contention and swap.
 - Root `Cargo.toml` and `Cargo.lock` changes do not trigger **Rendering checks**.
   A nightly **Rendering checks** run on `main` covers dependency bumps; dispatch
   `visual` on the PR when a render dependency changes. Only `xtask/src/main.rs`, the
