@@ -12,14 +12,15 @@ set -euo pipefail
 for tool in xvfb-run xdotool import dbus-run-session; do
   command -v "$tool" >/dev/null || { echo "missing $tool (apt install xvfb xdotool imagemagick dbus mesa-vulkan-drivers)" >&2; exit 2; }
 done
-export PR_SHOTS_BIN PR_SHOTS_OUT PR_SHOTS_SPEC
+export PR_SHOTS_BIN PR_SHOTS_OUT PR_SHOTS_SPEC PR_SHOTS_ROOT
+PR_SHOTS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PR_SHOTS_BIN="$(realpath "$1")"
 mkdir -p "$2"
 PR_SHOTS_OUT="$(realpath "$2")"
 PR_SHOTS_SPEC="$(realpath "$3")"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 export LANG=C.UTF-8 TZ=UTC
-xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' dbus-run-session -- bash <<'CAPTURE' 2> >(grep -v -E 'xdg-desktop-portal|pw\.conf|PipeWire|dbus-daemon|^$' >&2)
+xvfb-run -a -s "-screen 0 ${PR_SHOTS_DISPLAY:-1600x1000x24} -nolisten tcp" dbus-run-session -- bash <<'CAPTURE' 2> >(grep -v -E 'xdg-desktop-portal|pw\.conf|PipeWire|dbus-daemon|^$' >&2)
 set -euo pipefail
 export XDG_RUNTIME_DIR
 XDG_RUNTIME_DIR="$(mktemp -d)"
@@ -36,6 +37,10 @@ while IFS=$'\t' read -r name title width height args; do
   [[ -z "$name" || "$name" == \#* ]] && continue
   export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
   mkdir -p "$VOXELITE_DATA_DIR"
+  if [[ "$name" == welcome-recents-* ]]; then
+    python3 "$PR_SHOTS_ROOT/scripts/prepare-welcome-capture.py" \
+      "$PR_SHOTS_ROOT" "$(dirname "$PR_SHOTS_OUT")/fixtures" "$VOXELITE_DATA_DIR"
+  fi
   # shellcheck disable=SC2086 # args are a space-separated list by design
   "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/$name.sock" \
     >"$XDG_RUNTIME_DIR/$name.log" 2>&1 </dev/null &
@@ -55,7 +60,7 @@ while IFS=$'\t' read -r name title width height args; do
     continue
   fi
   xdotool windowmove "$window" 0 0 windowsize "$window" "$width" "$height" || true
-  xdotool mousemove 1599 999
+  xdotool mousemove 0 9999
   # Let the CPU renderer finish full-quality frames and any entrance animation.
   sleep "${PR_SHOTS_SETTLE:-6}"
   import -window "$window" "$PR_SHOTS_OUT/$name.png"

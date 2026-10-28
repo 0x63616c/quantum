@@ -26,10 +26,31 @@ struct Screen {
 const SCREENS: &[Screen] = &[
     Screen {
         name: "welcome",
-        caption: "Welcome window (no recent projects)",
+        caption: "Welcome window, dark theme (no recent projects)",
         title: "Quantum",
-        size: (1024, 704),
+        size: (760, 620),
         args: "--theme dark",
+    },
+    Screen {
+        name: "welcome-light",
+        caption: "Welcome window, light theme (no recent projects)",
+        title: "Quantum",
+        size: (760, 620),
+        args: "--theme light",
+    },
+    Screen {
+        name: "welcome-recents-dark",
+        caption: "Welcome window, dark theme (five recent projects)",
+        title: "Quantum",
+        size: (760, 620),
+        args: "--theme dark",
+    },
+    Screen {
+        name: "welcome-recents-light",
+        caption: "Welcome window, light theme (five recent projects)",
+        title: "Quantum",
+        size: (760, 620),
+        args: "--theme light",
     },
     Screen {
         name: "editor-dark",
@@ -58,7 +79,7 @@ const CHANGED_FRACTION: f64 = 0.0005;
 pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen NAME ...] [--out DIR] [--publish PR] [--remote NAME]
   --base     before ref (default: merge-base of HEAD and <remote>/main)
   --head     after ref (default: the current working tree, uncommitted changes included)
-  --screen   limit to these screens (welcome, editor-dark, editor-light); default all
+  --screen   limit to these screens (welcome, welcome-light, welcome-recents-dark, welcome-recents-light, editor-dark, editor-light); default all
   --out      output directory (default: target/pr-screenshots)
   --publish  push PNGs to the pr-assets branch and fill the PR's Screenshots section
   --remote   git remote for the base default and publishing (default: origin, else the only remote)
