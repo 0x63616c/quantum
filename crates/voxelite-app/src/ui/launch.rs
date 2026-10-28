@@ -151,12 +151,14 @@ impl EditorView {
                     .editor
                     .engine
                     .history()
-                    .next_back()
-                    .ok_or_else(|| anyhow::anyhow!("agent capture requires example history"))?;
+                    .find(|entry| entry.label == "Create named version")
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("agent capture requires the example version entry")
+                    })?;
                 self.agent
                     .events
                     .push_back(voxelite_mcp::attached::SessionEvent {
-                        tool: "voxelite_apply_commands".into(),
+                        tool: "voxelite_versions_save".into(),
                         label: entry.label.clone(),
                         success: true,
                         revision: entry.result_revision,
@@ -169,8 +171,8 @@ impl EditorView {
                 self.agent
                     .events
                     .push_back(voxelite_mcp::attached::SessionEvent {
-                        tool: "voxelite_apply_commands".into(),
-                        label: "voxelite_apply_commands".into(),
+                        tool: "voxelite_voxels_batch".into(),
+                        label: "voxelite_voxels_batch".into(),
                         success: false,
                         revision: self.editor.engine.revision(),
                         entry: None,
