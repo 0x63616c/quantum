@@ -170,11 +170,13 @@ fn capture(root: &Path, out: &Path, home: &Path, actual: &Path, screens: &[&Scre
     if !icd.is_file() {
         return Err("install mesa-vulkan-drivers: lavapipe ICD missing".into());
     }
-    for screen in screens {
+    for (index, screen) in screens.iter().enumerate() {
         let name = screen.name;
         let (width, height) = (screen.size.0.to_string(), screen.size.1.to_string());
         let output = actual.join(format!("{name}.png"));
-        let data = out.join("data").join(name);
+        // The app binds its session socket inside the data directory. Unix socket
+        // paths are limited to ~104 bytes, so keep this per-screen path short.
+        let data = out.join("data").join(index.to_string());
         fs::create_dir_all(&data)?;
         if name.starts_with("welcome-recents-") {
             xtask::screenshot_fixtures::prepare_welcome(root, home, &data)?;
