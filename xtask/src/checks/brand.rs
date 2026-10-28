@@ -329,38 +329,60 @@ impl Audit<'_> {
     fn storage(&mut self) -> Result<()> {
         let path = "crates/voxelite-app/src/local_settings.rs";
         let source = self.workspace.read(path)?;
-        self.equal(
-            &format!("{path}: environment variables"),
-            super::captures(&source, r#"var_os\(\s*"([^"]+)"\s*\)"#)?,
-            vec![
-                self.text("storage", "data_directory_env")?,
-                "XDG_DATA_HOME".into(),
-                "HOME".into(),
-            ],
-        );
-        let parts = super::captures(&source, r#"\.join\(\s*"([^"]+)"\s*\)"#)?;
-        let directory = self.text("storage", "data_directory_name")?;
-        self.equal(
-            &format!("{path}: path components"),
-            parts.clone(),
-            vec![".local/share".to_owned(), directory.clone()],
-        );
-        self.equal(
-            "fallback data directory",
-            self.text("storage", "fallback_data_directory")?,
-            format!("~/{}", parts.join("/")),
-        );
-        self.equal(
-            "XDG data directory",
-            self.text("storage", "xdg_data_directory")?,
-            format!("$XDG_DATA_HOME/{directory}"),
-        );
+        self.storage_source(&source)?;
         let documents = self.text("storage", "documents_directory")?;
         self.capture(
             "crates/voxelite-app/src/attachment.rs",
             r#"home\.join\(\s*"([^"]+)"\s*\)"#,
             documents.strip_prefix("~/").unwrap_or(&documents),
         )?;
+        Ok(())
+    }
+
+    // Match only the two path-selection functions, excluding migration and test code.
+    fn storage_source(&mut self, source: &str) -> Result<()> {
+        let data_dir = super::captures(source, r"(?ms)^pub fn data_dir\(\) -> PathBuf \{(.*?)^\}")?;
+        let settings_dir = super::captures(
+            source,
+            r"(?ms)^fn settings_dir\([^\n]*\) -> PathBuf \{(.*?)^\}",
+        )?;
+        self.equal("data_dir function count", data_dir.len(), 1);
+        self.equal("settings_dir function count", settings_dir.len(), 1);
+        self.equal(
+            "data_dir: environment variables",
+            super::captures(&data_dir.join(""), r#"var_os\(\s*"([^"]+)"\s*\)"#)?,
+            vec![
+                self.text("storage", "data_directory_env")?,
+                "HOME".into(),
+                "XDG_DATA_HOME".into(),
+            ],
+        );
+        let parts = super::captures(&settings_dir.join(""), r#"\.join\(\s*"([^"]+)"\s*\)"#)?;
+        let directory = self.text("storage", "data_directory_name")?;
+        self.equal(
+            "settings_dir: path components",
+            parts,
+            vec![
+                self.text("storage", "macos_data_directory")?
+                    .strip_prefix("~/")
+                    .ok_or_else(|| {
+                        Error::Invalid("macos_data_directory must start with ~/".into())
+                    })?
+                    .to_owned(),
+                ".local/share".to_owned(),
+                directory.clone(),
+            ],
+        );
+        self.equal(
+            "fallback data directory",
+            self.text("storage", "fallback_data_directory")?,
+            format!("~/.local/share/{directory}"),
+        );
+        self.equal(
+            "XDG data directory",
+            self.text("storage", "xdg_data_directory")?,
+            format!("$XDG_DATA_HOME/{directory}"),
+        );
         Ok(())
     }
 
