@@ -665,6 +665,14 @@ impl EditorView {
         if self.capture_status(e, cx) {
             return;
         }
+        if self.save_flow.picker.waiting() {
+            if navigation_key(&e.keystroke) == Some("escape") {
+                self.cancel_save_picker(cx);
+                window.focus(&self.focus, cx);
+            }
+            cx.stop_propagation();
+            return;
+        }
         self.reconcile_palette_panel(window, cx);
         if self.save_flow.needs_confirmation() {
             self.pending_key(&e.keystroke, cx);
@@ -1854,7 +1862,23 @@ impl EditorView {
                     .items_center()
                     .justify_center()
                     .bg(t.app_scrim())
-                    .child(self.floating().p(px(space::XXL)).child(self.status.clone()))
+                    .child(
+                        self.floating()
+                            .p(px(space::XXL))
+                            .child(self.status.clone())
+                            .when(self.save_flow.picker.waiting(), |d| {
+                                d.child(
+                                    row().mt(px(space::XL)).child(
+                                        Button::new("cancel-save-picker", "Cancel", t)
+                                            .build()
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.cancel_save_picker(cx);
+                                                window.focus(&this.focus, cx);
+                                            })),
+                                    ),
+                                )
+                            }),
+                    )
                     .into_any_element(),
             );
         }
