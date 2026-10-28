@@ -187,7 +187,8 @@ fn fallback_encodes_every_query_and_caps_final_bytes() {
     let url = payload.github_url(100_000).unwrap();
     let parsed = url::Url::parse(&url).unwrap();
     let pairs: std::collections::HashMap<_, _> = parsed.query_pairs().collect();
-    assert_eq!(pairs["body"], payload.body);
+    assert_eq!(pairs["details"], payload.body);
+    assert_eq!(pairs["why"], payload.title);
     assert_eq!(pairs["title"], payload.title);
     assert_eq!(pairs["template"], "feature.yml");
     assert_eq!(pairs["labels"], "type:feat");
