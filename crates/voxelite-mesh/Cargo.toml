@@ -10,8 +10,13 @@ voxelite-core.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+divan.workspace = true
 glam.workspace = true
 proptest.workspace = true
+
+[[bench]]
+name = "greedy"
+harness = false
 
 [lints]
 workspace = true

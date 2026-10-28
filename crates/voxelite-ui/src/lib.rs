@@ -26,3 +26,6 @@ pub use menu::*;
 pub use slider::*;
 pub use status::*;
 pub use tokens::Theme;
+
+mod spinner;
+pub use spinner::Spinner;

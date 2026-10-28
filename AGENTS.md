@@ -192,6 +192,12 @@ cargo test -p xtask --locked
   and correctness evidence in the PR.
 - Use the independent GPU visual/performance harnesses. `xtask` runs in release
   with `--locked`; headless timings exclude NV12/IOSurface/GPUI presentation.
+- Rendering visual jobs run on either Mac mini runner; both were verified
+  bit-exact against the committed goldens with `--determinism` (#165). `bench`
+  and `bench-baseline` always require the `golden` runner. Before a new runner
+  takes visual jobs, give it a neutral label, add it to the `runner_label`
+  dispatch options and pass a `visual` run on it. Never put personal information
+  in runner labels.
 - Use [bench/pinned-machine.toml](bench/pinned-machine.toml)'s Apple M2 Metal owner
   for authoritative [goldens](bench/golden/apple-m2-metal/). Run
   `cargo xtask visual --determinism` at default tight tolerances. Driver tolerances
@@ -363,6 +369,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
+
+- Root `Cargo.toml` and `Cargo.lock` changes do not trigger **Rendering checks**.
+  A nightly **Rendering checks** run on `main` covers dependency bumps; dispatch
+  `visual` on the PR when a render dependency changes. Only `xtask/src/main.rs`, the
+  visual/bench launcher, is included from `xtask/` in the rendering path filter.
 
 - Respect owner-only, same-repository guards on self-hosted macOS jobs. Fork PRs
   do not run them; a skipped job is not verification. Arrange trusted verification
