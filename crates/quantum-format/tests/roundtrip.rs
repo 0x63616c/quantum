@@ -27,6 +27,25 @@ fn golden_and_idempotence() {
     assert_eq!(from_bytes(GOLDEN).unwrap().document, p.document);
 }
 #[test]
+fn legacy_discriminator_loads_and_resaves_as_quantum() {
+    let legacy = include_bytes!("../../../spec/voxl/1.0/fixtures/legacy.input.voxl");
+    let legacy_json: Value = serde_json::from_slice(legacy).unwrap();
+    let schema: Value =
+        serde_json::from_str(include_str!("../../../spec/voxl/1.0/schema.json")).unwrap();
+    assert_eq!(
+        schema["properties"]["format"]["enum"],
+        json!(["quantum", legacy_json["format"]])
+    );
+    for project in [
+        from_bytes(legacy).unwrap(),
+        read(legacy.as_slice()).unwrap(),
+    ] {
+        assert_eq!(project.document, from_bytes(INPUT).unwrap().document);
+        assert_eq!(project.to_bytes().unwrap(), GOLDEN);
+        assert_eq!(MIME_TYPE, "application/vnd.quantum.project+json");
+    }
+}
+#[test]
 fn slice_and_reader_preserve_identical_projects() {
     for bytes in [INPUT, GOLDEN] {
         let slice = from_bytes(bytes).unwrap();
@@ -41,7 +60,7 @@ fn slice_and_reader_reject_the_same_invalid_inputs() {
     let mut trailing = GOLDEN.to_vec();
     trailing.extend_from_slice(b"true");
     for bytes in [
-        b"{\"format\":\"voxelite\",\"format\":\"voxelite\"}".as_slice(),
+        b"{\"format\":\"quantum\",\"format\":\"quantum\"}".as_slice(),
         b"{\"layers\":[{\"voxels\":[[0,0,0,1],[0,0,0,1]]}]}",
         b"{\"layers\":[{\"voxels\":[[0,0,0,1,2]]}]}",
         b"{\"x\":\"\\ud800\"}",
@@ -75,7 +94,7 @@ fn unknown_fields_every_level_survive_and_minor_is_retained() {
 #[test]
 fn duplicate_keys_and_coordinates_rejected() {
     for text in [
-        "{\"format\":\"voxelite\",\"format\":\"voxelite\"}",
+        "{\"format\":\"quantum\",\"format\":\"quantum\"}",
         "{\"extensions\":{\"x\":1,\"x\":2}}",
     ] {
         assert!(from_bytes(text.as_bytes()).is_err());
@@ -87,6 +106,7 @@ fn duplicate_keys_and_coordinates_rejected() {
 #[test]
 fn strict_model_validation() {
     let cases = [
+        ("/format", json!("unrecognized")),
         ("/version/major", json!(2)),
         ("/required_features", json!(["unknown"])),
         ("/palette/order", json!([1, 1])),

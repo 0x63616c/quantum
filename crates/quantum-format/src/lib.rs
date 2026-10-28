@@ -23,7 +23,7 @@ pub const MAX_FILE_BYTES: usize = 128 * 1024 * 1024;
 /// Maximum metadata retained during parsing, independent of voxel storage.
 pub const MAX_METADATA_BYTES: usize = 8 * 1024 * 1024;
 /// `.voxl` media type.
-pub const MIME_TYPE: &str = "application/vnd.voxelite.project+json";
+pub const MIME_TYPE: &str = "application/vnd.quantum.project+json";
 /// A syntax, compatibility, resource, or document-invariant error.
 #[derive(Debug, thiserror::Error)]
 pub enum FormatError {
@@ -201,7 +201,7 @@ impl Project {
         let mut comments = s.comments.clone();
         comments.sort_by_key(|c| c.id);
         let wire = Wire {
-            format: "voxelite".into(),
+            format: "quantum".into(),
             version: self.version,
             required_features: vec![],
             document: Header {
@@ -240,7 +240,7 @@ fn finish_read(
 ) -> FormatResult<Project> {
     validate_metadata(&metadata, &extensions)?;
     let mut wire: Wire = serde_json::from_value(metadata.clone())?;
-    if wire.format != "voxelite" || wire.version.major != 1 {
+    if (wire.format != "quantum" && wire.format != "voxelite") || wire.version.major != 1 {
         return Err(FormatError::Invalid(
             "expected quantum major version 1".into(),
         ));

@@ -83,7 +83,7 @@ macro_rules! tools {
 
 tools! {
     CapabilitiesGet => capabilities_get [Session, Capabilities]
-        "Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits." {
+        "Discover quantum.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits." {
     };
     CommentsAdd => comments_add [Write, Message]
         "Create a persistent voxel/region anchored thread. Author is always agent, never caller-supplied. Text is plain text, max 4096 UTF-8 bytes. Returns thread/message IDs; undoable and saved in .voxl." {

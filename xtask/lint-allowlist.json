@@ -71,7 +71,7 @@
   "examples/support/autumn_workshop.rs:function-lines:::build": 545,
   "xtask/src/cmd.rs:function-lines:impl Runner for SystemRunner::execute": 144,
   "xtask/src/macos/appcast.rs:function-lines:::generate": 141,
-  "xtask/src/macos/package.rs:function-lines:::build": 292,
+  "xtask/src/macos/package.rs:function-lines:::build": 288,
   "xtask/src/macos/tests/support.rs:function-lines:impl Runner for FakeRunner::execute": 229,
   "xtask/src/release.rs:function-lines:::run": 105,
   "xtask/src/screenshots.rs:function-lines:::run": 134
