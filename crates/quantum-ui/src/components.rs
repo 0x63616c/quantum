@@ -1,5 +1,6 @@
 //! Composable presentation builders; `build` exposes GPUI event and tooltip hooks.
 use crate::tokens::{self, ControlSize, Theme, metrics, radius, space, type_size};
+use crate::{ColorToken, ControlHeight, Radius, Space, TextSize, TextStyle};
 use gpui::{prelude::*, *};
 
 /// A horizontal row aligned on the center line.
@@ -8,10 +9,7 @@ pub fn row() -> Div {
 }
 /// Fixed-advance text using the bundled Geist Mono family.
 pub fn mono(text: impl Into<SharedString>) -> Div {
-    div()
-        .font_family(type_size::MONO)
-        .text_size(px(type_size::BODY))
-        .child(text.into())
+    TextSize::Mono.apply(div()).child(text.into())
 }
 /// An icon from the shell's asset source. The library owns no icon assets.
 pub fn icon(name: impl AsRef<str>) -> Svg {
@@ -82,7 +80,7 @@ impl FieldFrame {
             })
             .bg(t.background())
             .font_family(type_size::UI)
-            .text_size(px(type_size::BODY_LG))
+            .text_style(TextSize::Body)
             .overflow_hidden()
             .cursor_text()
             .when(self.embedded, |d| {
@@ -103,23 +101,21 @@ impl FieldFrame {
                     .font_family(type_size::MONO)
             })
     }
-    /// A search field row with space for an icon, editor, and clear button.
-    pub fn search_row(theme: Theme, focused: bool) -> Div {
-        row()
-            .h(px(ControlSize::Lg.height()))
-            .px(px(space::LG))
-            .gap(px(space::SM))
-            .rounded(px(radius::LG))
+    /// A search row with icon/editor space and the embedded editor’s keyboard focus ring.
+    /// Pass true only when that editor is focused and the last input was keyboard input.
+    pub fn search_row(theme: Theme, focus_visible: bool) -> Div {
+        TextSize::Body
+            .apply(row())
+            .h(px(ControlHeight::Large.px()))
+            .px(px(Space::S4.px()))
+            .gap(px(Space::S3.px()))
+            .rounded(px(Radius::Sm.px()))
             .border_1()
-            .border_color(if focused {
-                theme.accent()
-            } else {
-                theme.separator()
+            .border_color(theme.color(ColorToken::Border))
+            .bg(theme.color(ColorToken::Raised))
+            .when(focus_visible, |d| {
+                d.shadow(crate::presentation::ring(theme, ColorToken::Surface))
             })
-            .bg(theme.surface_raised())
-            .when(focused, |d| d.shadow(tokens::focus_ring(theme)))
-            .font_family(type_size::UI)
-            .text_size(px(type_size::BODY_LG))
     }
 }
 /// Selectable square color with an inset edge and optional read-only badge.
@@ -150,18 +146,12 @@ impl Swatch {
         color: impl Into<Hsla>,
         selected: bool,
     ) -> Stateful<Div> {
-        row()
+        Self::design(theme, color)
+            .selected(selected)
+            .build()
             .id(id)
-            .size(px(ControlSize::Md.height()))
-            .justify_center()
-            .rounded(px(radius::CONTROL))
-            .border_1()
-            .border_color(theme.swatch_edge())
-            .bg(color.into())
-            .when(selected, |d| d.border_2().border_color(theme.text()))
             .cursor_pointer()
-            .hover(move |d| d.border_color(theme.text()))
-            .active(move |d| d.border_2().border_color(theme.accent()))
+            .hover(move |d| d.border_color(theme.color(ColorToken::TextPrimary)))
     }
 
     /// Construct a medium swatch. Add IDs, labels and listeners to the returned div.
@@ -188,6 +178,13 @@ impl Swatch {
     /// Set the square size.
     pub fn size(mut self, size: ControlSize) -> Self {
         self.size = size;
+        if self.design.is_some() {
+            self.design = Some(match size {
+                ControlSize::Sm => ControlHeight::Dense,
+                ControlSize::Md => ControlHeight::Default,
+                ControlSize::Lg => ControlHeight::Large,
+            });
+        }
         self
     }
     /// Build the square; interactive callers should add a label and tab stop.
@@ -262,7 +259,7 @@ impl Card {
                             div()
                                 .mx(px(space::XL))
                                 .h(px(metrics::EDGE))
-                                .bg(t.separator().opacity(0.7)),
+                                .bg(t.color(ColorToken::BorderSubtle)),
                         )
                     })
                     .child(item)
@@ -288,7 +285,7 @@ impl FormRow {
             .py(px(space::LG))
             .gap(px(space::XL))
             .font_family(type_size::UI)
-            .text_size(px(type_size::BODY_LG))
+            .text_style(TextSize::Body)
             .text_color(theme.text())
             .child(
                 div()
@@ -300,7 +297,7 @@ impl FormRow {
                             div()
                                 .mt(px(space::XS))
                                 .whitespace_normal()
-                                .text_size(px(type_size::BODY))
+                                .text_style(TextSize::Small)
                                 .line_height(px(type_size::LINE_SM))
                                 .text_color(theme.muted())
                                 .child(detail),
@@ -331,21 +328,11 @@ impl SidebarItem {
         selected: bool,
         theme: Theme,
     ) -> Stateful<Div> {
-        let label = label.into();
-        Self::custom(id, label.clone(), selected, theme)
-            .child(icon(glyph).text_color(if selected {
-                theme.accent_fg()
-            } else {
-                theme.muted()
-            }))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(space::NONE))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .child(label),
-            )
+        crate::ListRow::new(id, label, theme)
+            .icon(glyph)
+            .selected(selected)
+            .navigation(true)
+            .build()
     }
     /// Build the navigation frame for custom content such as a palette thumbnail.
     /// The label names the complete row for assistive technology.
@@ -396,7 +383,7 @@ impl SidebarSection {
             .px(px(space::LG))
             .pt(px(space::XL))
             .pb(px(space::SM))
-            .text_size(px(type_size::CAPTION))
+            .text_style(TextSize::Caption)
             .font_weight(type_size::SEMIBOLD)
             .text_color(theme.muted())
             .child(label.into())
@@ -413,7 +400,8 @@ impl Toolbar {
             .px(px(space::XXL))
             .gap(px(space::XL))
             .border_b_1()
-            .border_color(theme.line())
+            .border_color(theme.color(ColorToken::BorderSubtle))
+            .bg(theme.color(ColorToken::Surface))
     }
 }
 /// A non-shrinking toolbar/status divider.
@@ -453,8 +441,8 @@ impl Dialog {
         theme: Theme,
         focus: &FocusHandle,
     ) -> Stateful<Div> {
-        crate::Popover::new(theme)
-            .build()
+        crate::Popover::design(theme)
+            .rounded(px(Radius::Lg.px()))
             .id(id)
             .role(Role::Dialog)
             .aria_label(title)
@@ -469,7 +457,7 @@ impl Dialog {
             .flex_col()
             .text_color(theme.text())
             .font_family(type_size::UI)
-            .text_size(px(type_size::BODY_LG))
+            .text_style(TextSize::Body)
             // GPUI 1.25 only masks a rectangle, inside the border. Inset
             // controls (including their focus rings) and round flush child
             // backgrounds explicitly. The panel shadow paints before this mask;
@@ -488,7 +476,7 @@ impl Dialog {
             .child(
                 div()
                     .flex_1()
-                    .text_size(px(type_size::HEADLINE))
+                    .text_style(TextSize::Title)
                     .font_weight(type_size::SEMIBOLD)
                     .child(title.into()),
             )
@@ -529,7 +517,7 @@ impl Badge {
             .rounded(px(radius::SM))
             .bg(theme.surface_raised())
             .text_color(theme.muted())
-            .text_size(px(type_size::CAPTION))
+            .text_style(TextSize::Caption)
             .child(label.into())
     }
 }
@@ -564,7 +552,7 @@ impl Kbd {
     /// Build a single key cap.
     pub fn key(label: impl Into<SharedString>, theme: Theme) -> Div {
         mono(label)
-            .text_size(px(type_size::CAPTION))
+            .text_style(TextSize::Caption)
             .px(px(space::XS))
             .rounded(px(radius::SM))
             .border_1()
@@ -594,7 +582,11 @@ impl Toggle {
             .flex_shrink_0()
             .p(px(space::XS))
             .rounded_full()
-            .bg(if value { theme.tint() } else { theme.control() })
+            .bg(theme.color(if value {
+                ColorToken::Accent
+            } else {
+                ColorToken::Border
+            }))
             .when(value, |d| d.justify_end())
             .cursor_pointer()
             .focus_visible(move |d| d.shadow(tokens::focus_ring(theme)))
@@ -619,7 +611,7 @@ pub fn tooltip(theme: Theme) -> Div {
         .py(px(space::SM))
         .text_color(theme.text())
         .font_family(type_size::UI)
-        .text_size(px(type_size::BODY))
+        .text_style(TextSize::Small)
         .line_height(px(type_size::LINE_SM))
 }
 

@@ -4,6 +4,7 @@
 //! must not consume a command deferred until a project save succeeds; choosing
 //! an export instead of a project save cancels that deferred command.
 use super::*;
+use quantum_ui::Space;
 
 use quantum_app::save_format::SaveFormat;
 #[cfg(target_os = "macos")]
@@ -625,10 +626,10 @@ impl EditorView {
             .bg(t.app_scrim())
             .child(
                 self.floating()
-                    .p(px(space::XXL))
+                    .p(px(Space::S6.px()))
                     .child(
                         row()
-                            .gap(px(space::SM))
+                            .gap(px(Space::S3.px()))
                             .when(self.save_flow.picker.waiting(), |d| {
                                 let reduced = quantum_app::reduce_motion::prefers_reduced_motion();
                                 d.child(
@@ -655,8 +656,8 @@ impl EditorView {
                     )
                     .when(self.save_flow.picker.waiting(), |d| {
                         d.child(
-                            row().mt(px(space::XL)).child(
-                                Button::new("cancel-save-picker", "Cancel", t)
+                            row().mt(px(Space::S5.px())).child(
+                                Button::design("cancel-save-picker", "Cancel", t)
                                     .build()
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.cancel_save_picker(cx);

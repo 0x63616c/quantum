@@ -1,8 +1,8 @@
 //! Pure display-position math; palette mutations and stable identities stay in the domain.
 
 pub(super) const COLUMNS: usize = 16;
-pub(super) const CELL: f32 = quantum_ui::tokens::ControlSize::Md.height();
-pub(super) const GAP: f32 = quantum_ui::tokens::space::XS;
+pub(super) const CELL: f32 = quantum_ui::ControlHeight::Default.px();
+pub(super) const GAP: f32 = quantum_ui::Space::S2.px();
 
 /// Arrow traversal clamps at the first/last swatch, including partial final rows.
 pub(super) fn navigate(index: usize, count: usize, columns: usize, key: &str) -> usize {

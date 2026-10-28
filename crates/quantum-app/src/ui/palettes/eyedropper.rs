@@ -55,9 +55,9 @@ async fn sample() -> Sample {
 impl EditorView {
     pub(super) fn palette_eyedropper(&self, cx: &Context<Self>) -> Stateful<Div> {
         let enabled = available() && !self.palettes.sampler_failed;
-        Button::new("palette-eyedropper", "Pick from screen", self.theme)
+        Button::design("palette-eyedropper", "Pick from screen", self.theme)
             .icon("picker")
-            .variant(ButtonVariant::Ghost)
+            .style(quantum_ui::ButtonStyle::Ghost)
             .size(quantum_ui::tokens::ControlSize::Sm)
             .disabled(!enabled)
             .build()

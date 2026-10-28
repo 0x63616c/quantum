@@ -4,9 +4,12 @@
 state, actions, focus restoration and open/close state. They must not choose their
 own colors, type sizes, spacing, radii or control geometry.
 
-Issue #133 supplies the new API. Issue #134 migrates screens. Existing constructors
-and the documented `tokens::legacy` compatibility aliases preserve existing pixels;
-new code uses `::design` (or the new component's `::new`) and the typed tokens below.
+Issue #133 supplies the API; #134 migrates every application surface. App actions,
+fields, tabs, segments, rows and swatches use `::design` (or the component’s `::new`)
+and the typed tokens below. Shared compatibility color accessors now resolve the
+same semantic palette; they no longer define a second set of screen colors. Layout
+metrics retain viewport/window sizes and platform artwork geometry. See the
+[migration audit](../../docs/design-system-migration.md) for coverage and verification.
 Do not add new compatibility colors. `Theme::palette()` is the only new color system.
 
 ## Tokens
@@ -76,8 +79,9 @@ surface used for the focus offset; menus, segments and dialogs supply it automat
 
 Use the builder's guarded `on_click` for new controls. Adding a callback directly
 to a raw `build()` result transfers disabled/loading enforcement to the caller.
-Legacy `Button::legacy_style(ButtonStyle)` preserves current screen appearance
-while removing style policy based on IDs, labels or icon names.
+The app uses `ButtonStyle` directly. Rich rows use `ListRow::frame` so hover,
+pressed and keyboard focus styles remain owned by the library. Do not add a second
+GPUI hover/active/focus-visible style to a component that already supplies one.
 
 ## Overlay lifecycle
 
@@ -89,8 +93,9 @@ or dialog is open hints are suppressed. A new hover is required after dismissal.
 Mouse presses (including capture-phase presses on children) cancel pending timers.
 
 `OverlayLayer` is the single deferred ordering contract: Tooltip < Popover < Dialog.
-The new tooltip does not use GPUI's native topmost tooltip slot. Existing app tooltips
-are untouched until #134. `Popover::anchored` measures content before positioning;
+The new tooltip does not use GPUI's native topmost tooltip slot. App tooltips share one overlay state per window. `Tooltip::decorate` keeps host
+event hooks and places its hitbox outside layout; opening editor overlays suppresses
+those hints before they paint. `Popover::anchored` measures content before positioning;
 submenus and tooltips use the same placement function. The host owns trigger bounds
 and dialog focus restoration. `Dialog::build()` is an inline preview; render the
 builder or call `overlay()` for a modal scrim and proper layer ordering.

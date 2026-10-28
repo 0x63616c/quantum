@@ -22,6 +22,23 @@ pub struct ListRow {
 }
 type RowListener = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 impl ListRow {
+    /// Shared interactive frame for rows whose rich content is composed by the host.
+    /// Selection, hover, press, focus, typography and corners match ordinary rows.
+    pub fn frame(
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        theme: Theme,
+        selected: bool,
+    ) -> Stateful<Div> {
+        Button::design(id, "", theme)
+            .style(crate::ButtonStyle::Ghost)
+            .selected(selected)
+            .build()
+            .aria_label(label)
+            .h_auto()
+            .min_h(px(ControlHeight::Default.px()))
+            .justify_start()
+    }
     /// Construct a row; long titles always ellipsize inside the flexible column.
     pub fn new(id: impl Into<ElementId>, title: impl Into<SharedString>, theme: Theme) -> Self {
         Self {
@@ -312,7 +329,7 @@ impl RenderOnce for EmptyState {
 }
 
 impl crate::SidebarItem {
-    /// Opt into the shared ListRow API; legacy `row` preserves existing screen pixels.
+    /// Opt into the shared ListRow API and its complete interaction states.
     pub fn design(
         id: impl Into<ElementId>,
         title: impl Into<SharedString>,
@@ -322,14 +339,14 @@ impl crate::SidebarItem {
     }
 }
 impl crate::FormRow {
-    /// New settings-row presentation; legacy `row` remains frozen until #134.
+    /// Settings-row presentation with shared typography and horizontal insets.
     pub fn design(
         title: impl Into<SharedString>,
         description: impl Into<SharedString>,
         control: impl IntoElement,
         theme: Theme,
     ) -> Div {
-        SettingsRow::row(title, description, control, theme)
+        SettingsRow::row(title, description, control, theme).px(px(Space::S5.px()))
     }
 }
 

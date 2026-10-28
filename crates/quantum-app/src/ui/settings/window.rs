@@ -1,5 +1,6 @@
 //! Settings window lifecycle and editor preference synchronization.
 use super::*;
+use quantum_ui::Space;
 
 impl EditorView {
     pub(in crate::ui) fn open_settings(
@@ -44,7 +45,7 @@ impl EditorView {
                             title: Some("Quantum Settings".into()),
                             appears_transparent: true,
                             traffic_light_position: Some(point(
-                                px(space::SECTION),
+                                px(Space::S5.px()),
                                 px(metrics::TRAFFIC_TOP),
                             )),
                         }),

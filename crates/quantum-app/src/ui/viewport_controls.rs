@@ -1,5 +1,8 @@
 //! Viewport composition and pointer navigation.
 use super::*;
+use quantum_ui::ColorToken;
+use quantum_ui::Radius;
+use quantum_ui::Space;
 
 impl EditorView {
     pub(super) fn pointer_move(
@@ -87,14 +90,14 @@ impl EditorView {
             .id("preview-banner")
             .absolute()
             .top(px(metrics::COMMAND_SEARCH_HEIGHT))
-            .left(px(space::XXL))
-            .px(px(space::LG))
-            .py(px(space::SM))
-            .rounded(px(radius::CONTROL))
+            .left(px(Space::S6.px()))
+            .px(px(Space::S4.px()))
+            .py(px(Space::S3.px()))
+            .rounded(px(Radius::Sm.px()))
             .bg(t.selected())
-            .text_color(t.accent())
-            .gap(px(space::MD))
-            .child(icon("lock").text_color(t.accent()))
+            .text_color(t.color(ColorToken::AccentText))
+            .gap(px(Space::S3.px()))
+            .child(icon("lock").text_color(t.color(ColorToken::AccentText)))
             .child("Read-only preview")
             .child(
                 self.control(
@@ -115,9 +118,9 @@ impl EditorView {
     fn viewport_help(&self, cx: &Context<Self>) -> Div {
         row()
             .absolute()
-            .bottom(px(space::PANEL))
-            .left(px(space::XXL))
-            .gap(px(space::XS))
+            .bottom(px(Space::S5.px()))
+            .left(px(Space::S6.px()))
+            .gap(px(Space::S2.px()))
             .child(self.button(
                 "view-settings",
                 "settings",
@@ -142,10 +145,10 @@ impl EditorView {
         let t = self.theme;
         div()
             .absolute()
-            .bottom(px(space::XL))
-            .right(px(space::XXL))
+            .bottom(px(Space::S5.px()))
+            .right(px(Space::S6.px()))
             .child(
-                SegmentedControl::row(t)
+                SegmentedControl::design(t)
                     .children(
                         [
                             ("view-iso", "Iso", Op::Frame),
@@ -159,12 +162,12 @@ impl EditorView {
                                 .border_color(transparent_black())
                                 .when(self.camera_view == Some(op), |d| {
                                     d.bg(t.selected())
-                                        .text_color(t.accent())
-                                        .border_color(t.accent())
+                                        .text_color(t.color(ColorToken::AccentText))
+                                        .border_color(t.color(ColorToken::AccentText))
                                 })
                         }),
                     )
-                    .child(ToolbarSeparator::line(t).mx(px(space::XS)))
+                    .child(ToolbarSeparator::line(t).mx(px(Space::S2.px())))
                     .child(self.button(
                         "view-fit",
                         "fit",

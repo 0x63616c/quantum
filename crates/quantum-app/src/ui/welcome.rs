@@ -1,6 +1,6 @@
 //! Native project launcher and recent-file integration. The editor remains the
 //! sole document owner; requests made here reuse its unsaved-change flow.
-use super::{EditorView, hint, settings, welcome_style as layout};
+use super::{AnchoredTooltip, EditorView, TooltipSide, settings, welcome_style as layout};
 use crate::{
     actions::{self, Op, OpenRecentProject},
     shortcuts::{ShortcutPlatform, navigation_key},
@@ -13,9 +13,10 @@ use quantum_app::{
     samples::Sample,
     thumbnails::{SamplePreview, ThumbnailCache},
 };
+use quantum_ui::Space;
 use quantum_ui::{
-    AsciiReveal, Button, SidebarItem, icon, row,
-    tokens::{metrics, radius, space, type_size},
+    AsciiReveal, icon, row,
+    tokens::{metrics, type_size},
 };
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -277,7 +278,7 @@ pub(crate) fn open_editor(editor: Editor, cx: &mut App) -> anyhow::Result<()> {
                     appears_transparent: true,
                     traffic_light_position: Some(point(
                         px(layout::EDITOR_TRAFFIC_LEFT),
-                        px(space::XXL),
+                        px(Space::S6.px()),
                     )),
                 })
             } else {
@@ -343,7 +344,7 @@ pub(crate) fn show(cx: &mut App) -> anyhow::Result<WindowHandle<WelcomeView>> {
             titlebar: Some(TitlebarOptions {
                 title: (!cfg!(target_os = "macos")).then(|| "Quantum".into()),
                 appears_transparent: true,
-                traffic_light_position: Some(point(px(space::SECTION), px(metrics::TRAFFIC_TOP))),
+                traffic_light_position: Some(point(px(Space::S5.px()), px(metrics::TRAFFIC_TOP))),
             }),
             app_owns_titlebar_drag: cfg!(target_os = "macos"),
             window_background: if cfg!(target_os = "macos") {
@@ -390,6 +391,7 @@ pub(super) fn request(op: Op, path: Option<PathBuf>, cx: &mut App) {
 }
 
 pub(crate) struct WelcomeView {
+    overlays: Entity<quantum_ui::OverlayState>,
     focus: FocusHandle,
     list_focus: FocusHandle,
     sidebar_focus: [FocusHandle; 4],
@@ -465,6 +467,7 @@ impl WelcomeView {
 
     fn initial(cx: &mut Context<Self>) -> Self {
         Self {
+            overlays: quantum_ui::OverlayState::new(cx),
             focus: cx.focus_handle(),
             list_focus: cx.focus_handle(),
             sidebar_focus: std::array::from_fn(|_| cx.focus_handle()),
