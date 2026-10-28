@@ -107,6 +107,10 @@ impl Headless {
     /// Sync on content changes, encode, submit and wait for GPU completion.
     /// `None` reuses the last snapshot exactly as camera-only production requests do.
     #[allow(clippy::too_many_arguments)]
+    #[cfg_attr(
+        feature = "profiling",
+        tracing::instrument(name = "render.gpu.headless", skip_all)
+    )]
     pub async fn render(
         &mut self,
         snapshot: Option<Snapshot>,

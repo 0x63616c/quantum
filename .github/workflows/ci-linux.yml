@@ -54,6 +54,11 @@ jobs:
       - name: Test workspace
         run: cargo nextest run --workspace --locked --features quantum-app/test-support --profile ci
 
+      - name: Check opt-in profiling
+        run: |
+          cargo clippy -p quantum-app --all-targets --locked --features profiling -- -D warnings
+          cargo nextest run -p quantum-render --locked --features profiling,headless-vulkan --profile ci
+
       - name: Test doctests (--workspace)
         if: ${{ !cancelled() }}
         run: cargo test --doc --workspace --locked --features quantum-app/test-support

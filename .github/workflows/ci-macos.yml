@@ -165,7 +165,9 @@ jobs:
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
       # Linux checks the workspace; Mac change runs check platform-specific crates.
       - name: Clippy
-        run: cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
+        run: |
+          cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
+          cargo check -p quantum-app --bin quantum --locked --features profiling
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:

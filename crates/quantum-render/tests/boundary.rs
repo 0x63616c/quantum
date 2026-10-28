@@ -65,3 +65,41 @@ fn normal_workspace_dependencies_preserve_renderer_boundary() {
         );
     }
 }
+
+#[test]
+fn default_app_excludes_profiling_runtime_dependencies() {
+    let output = Command::new(env!("CARGO"))
+        .args([
+            "tree",
+            "--locked",
+            "--offline",
+            "-p",
+            "quantum-app",
+            "--edges",
+            "normal",
+            "--prefix",
+            "none",
+        ])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .expect("inspect default app dependency tree");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let tree = String::from_utf8(output.stdout).unwrap();
+    for dependency in [
+        "tracing-tracy",
+        "tracy-client",
+        "tracy-client-sys",
+        "tracing-subscriber",
+    ] {
+        assert!(
+            !tree
+                .lines()
+                .any(|line| line.split_whitespace().next() == Some(dependency)),
+            "default app unexpectedly links {dependency}",
+        );
+    }
+}

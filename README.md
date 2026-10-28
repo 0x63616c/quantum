@@ -313,6 +313,8 @@ UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_r
 
 ### Rendering correctness and performance
 
+For live frame traces, see [Tracy profiling](docs/perf/profiling.md).
+
 Read [docs/perf/rendering-harness.md](docs/perf/rendering-harness.md) and
 [bench/README.md](bench/README.md) before changing the renderer. Both harnesses
 exercise the production GPU viewport at fixed quality; CPU exports are separate.

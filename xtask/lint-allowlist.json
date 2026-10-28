@@ -60,7 +60,6 @@
   "crates/quantum-mcp/tests/stdio.rs:function-lines:::workflow": 133,
   "crates/quantum-plugin-host/src/conformance.rs:function-lines:::check": 225,
   "crates/quantum-render/src/chunk_mesh/reference.rs:function-lines:::mesh_chunk": 102,
-  "crates/quantum-render/src/gpu.rs:file-lines": 1031,
   "crates/quantum-render/src/gpu.rs:function-lines:impl  for Viewport::render": 255,
   "crates/quantum-render/src/gpu.rs:function-lines:impl  for Viewport::with_options": 170,
   "crates/quantum-render/src/gpu/diagnostics_tests.rs:function-lines:::runtime_diagnostics_release_resources_and_preserve_pixels": 130,
