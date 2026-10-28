@@ -418,7 +418,7 @@ fn build_at_commit(root: &Path, out: &Path, sha: &str, label: &str) -> Result<Pa
 }
 
 /// Debug build, sharing the workspace target directory so dependencies stay cached.
-fn build(tree: &Path, out: &Path, label: &str) -> Result<PathBuf> {
+pub(crate) fn build(tree: &Path, out: &Path, label: &str) -> Result<PathBuf> {
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../target"));
@@ -869,3 +869,24 @@ fn status(command: &mut Command) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+/// Share the PR capture registry with the stricter native golden gate.
+pub(crate) fn golden_spec() -> String {
+    let mut spec = String::new();
+    // Welcome's established PR key is dark-only; explicitly add its light counterpart.
+    spec.push_str("welcome-light\tQuantum\t1024\t704\t--theme light\n");
+    for screen in SCREENS.iter().filter(|s| {
+        s.key
+            || s.name.starts_with("settings-")
+            || s.name.starts_with("panels-palette-")
+            || s.name.starts_with("panels-comments-empty-")
+            || s.name.starts_with("dialogs-about-")
+    }) {
+        let _ = writeln!(
+            spec,
+            "{}\t{}\t{}\t{}\t{}",
+            screen.name, screen.title, screen.size.0, screen.size.1, screen.args
+        );
+    }
+    spec
+}

@@ -256,3 +256,7 @@ The other migrated commands map as follows:
 | `git tag --merged ... --no-contains ...` | `release_notes::generate`, strict ancestors only |
 | `git describe --tags --abbrev=0 --match=...` | `release_notes::generate`, stable tags only |
 | `git log --no-merges --no-show-signature --no-color --pretty=- %s (%h) ... --` | `release_notes::generate`, fully qualified tag range |
+
+Native UI regression checks: `cargo xtask ui-snapshots` compares key screens in both
+themes at native 1x/2x on the golden Mac. Only `--rebaseline` writes references.
+See [setup and review flow](../docs/ui-snapshots.md).

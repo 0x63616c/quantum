@@ -1,0 +1,76 @@
+name: UI screenshot goldens
+
+on:
+  pull_request:
+    paths:
+      - 'crates/voxelite-app/**'
+      - 'crates/voxelite-ui/**'
+      - 'crates/voxelite-render/**'
+      - 'crates/plugins/**'
+      - 'vendor/**'
+      - 'assets/**'
+      - 'examples/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/**'
+      - 'bench/ui-golden/**'
+      - 'xtask/**'
+      - 'scripts/capture-ui-snapshots.sh'
+      - 'scripts/ui-snapshots/**'
+      - '.github/workflows/ui-snapshots.yml'
+  workflow_dispatch:
+    inputs:
+      rebaseline:
+        description: Generate reference images for review (never commits them)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Native windows share one GUI session; do not capture two UI jobs simultaneously.
+concurrency:
+  group: golden-mac-ui-session
+  cancel-in-progress: false
+
+jobs:
+  ui-snapshots:
+    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, macOS, ARM64, xcode, golden]
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: 4
+      DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
+      REBASELINE: ${{ github.event_name == 'workflow_dispatch' && inputs.rebaseline }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Set up runner tools
+        run: |
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          echo '/opt/homebrew/bin' >> "$GITHUB_PATH"
+      - name: Compare native UI goldens or explicitly generate references
+        shell: bash
+        run: |
+          args=(ui-snapshots)
+          if [[ "$REBASELINE" == true ]]; then
+            args+=(--rebaseline)
+          fi
+          cargo xtask "${args[@]}"
+      - name: Upload captures, diffs and reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ui-snapshots-${{ github.run_id }}
+          path: target/ui-snapshots/capture-*/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload explicitly generated references
+        if: success() && env.REBASELINE == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ui-goldens-${{ github.run_id }}
+          path: bench/ui-golden/macos/
+          if-no-files-found: error
+          retention-days: 14
