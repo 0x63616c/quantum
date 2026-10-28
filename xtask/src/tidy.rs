@@ -28,6 +28,7 @@ const ROOT_ENTRIES: &[&str] = &[
     "bench",
     "brand.toml",
     "clippy.toml",
+    "concepts",
     "crates",
     "deny.toml",
     "design",

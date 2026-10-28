@@ -124,13 +124,9 @@ read from the actual Autumn Workshop document. Accent colours match
 text. Typography uses system SF. Source artwork and sample data retain the
 repository's MIT licence.
 
-## Repository integration caveat
+## Repository integration
 
-The current repository hygiene gate (`cargo xtask check tidy`) has an explicit
-root-directory allowlist in `xtask/src/tidy.rs` that does not yet include
-`concepts`. It rejects this new directory even though Cargo correctly ignores the
-Swift package. The task explicitly limits changes to this concept directory, so
-the allowlist is unchanged. A separately authorised `concepts` allowance is
-needed before the parent opens a PR that must pass that gate. No Rust build or
-runtime code has been changed. PR publication and issue closure belong to the
-parent task.
+`concepts` is on the root-directory allowlist in `xtask/src/tidy.rs`, so
+`cargo xtask check tidy` accepts this directory. Cargo ignores the Swift package:
+it is not under `crates/` and is not a workspace member. No Rust build or runtime
+code changes.
