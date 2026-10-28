@@ -3,9 +3,10 @@
 The product, Cargo packages, binaries, MCP tool names, plugin declarations,
 installed skills, artwork filenames and new release assets use Quantum. The
 exhaustive legacy-string allowlist lives in [brand.toml](../brand.toml), with
-exact strings, path globs and reasons. It is intentionally separate from the
-future enforcement work in #140. Repository renaming is #91; no remote or
-published release is changed here.
+exact strings, path globs and reasons, and `cargo xtask check brand` (#140)
+fails on any legacy name outside it. The GitHub repository was renamed to
+`0x63616c/quantum` (#91); GitHub redirects the old URLs, and no published
+release was changed.
 
 ## macOS updates
 
@@ -45,9 +46,9 @@ use GitHub asset URLs, so no other site-host path needs an updater exception.
 
 `site/vercel.json` is copied into the built site artifact, then deployed from
 `site-dist` by Deploy site. The owner must attach the canonical hostname and DNS
-to the existing Vercel project while retaining the old hostname. Until #91,
-workflow guards and release-fetch commands accept both owner repository slugs;
-new public links already use the canonical slug. Existing signed feeds retain
+to the existing Vercel project while retaining the old hostname. Workflow guards
+and release-fetch commands accept only the canonical `0x63616c/quantum` slug
+since the repository rename (#91). Existing signed feeds retain
 old GitHub URLs and `Voxelite.dmg` / `Voxelite.html` names. Validation accepts
 both exact asset naming schemes and repository prefixes, including size metadata
 returned by GitHub after its repository redirect. It never edits signed history.
