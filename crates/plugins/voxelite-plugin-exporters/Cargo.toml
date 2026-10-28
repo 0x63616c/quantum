@@ -11,6 +11,7 @@ serde_json.workspace = true
 png.workspace = true
 
 [dev-dependencies]
+insta.workspace = true
 voxelite-plugin-host.workspace = true
 voxelite-render.workspace = true
 voxelite-core.workspace = true
