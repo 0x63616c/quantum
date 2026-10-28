@@ -17,6 +17,8 @@ pub(crate) enum LaunchState {
     AgentInspection,
     ConnectAgent,
     About,
+    Feedback,
+    CrashReport,
     Acknowledgements,
     KeyboardGuide,
     Commands,
@@ -55,6 +57,8 @@ impl LaunchState {
         ("panels-agent-inspection", Self::AgentInspection),
         ("popovers-connect-agent", Self::ConnectAgent),
         ("dialogs-about", Self::About),
+        ("dialogs-feedback", Self::Feedback),
+        ("dialogs-crash-report", Self::CrashReport),
         ("dialogs-acknowledgements", Self::Acknowledgements),
         ("dialogs-keyboard-guide", Self::KeyboardGuide),
         ("dialogs-commands", Self::Commands),
@@ -145,57 +149,12 @@ impl EditorView {
                 self.request_render(cx);
             }
             LaunchState::AgentActivity | LaunchState::AgentInspection => {
-                // Reuse a real committed example entry so the expanded Revert control
-                // points to an actual transaction. The second event exercises failure UI.
-                let entry = self
-                    .editor
-                    .engine
-                    .history()
-                    .find(|entry| entry.label == "Create named version")
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("agent capture requires the example version entry")
-                    })?;
-                self.agent
-                    .events
-                    .push_back(quantum_mcp::attached::SessionEvent {
-                        tool: "quantum_versions_save".into(),
-                        label: entry.label.clone(),
-                        success: true,
-                        revision: entry.result_revision,
-                        entry: Some(entry.id),
-                        changes: entry.changes.clone(),
-                        error: None,
-                        inspection: None,
-                        views: Vec::new(),
-                    });
-                self.agent
-                    .events
-                    .push_back(quantum_mcp::attached::SessionEvent {
-                        tool: "quantum_voxels_batch".into(),
-                        label: "quantum_voxels_batch".into(),
-                        success: false,
-                        revision: self.editor.engine.revision(),
-                        entry: None,
-                        changes: Default::default(),
-                        error: Some(
-                            "Revision changed; inspect the document before retrying.".into(),
-                        ),
-                        inspection: None,
-                        views: Vec::new(),
-                    });
-                // The newest event is painted first. Keep its expanded controls visible.
-                self.agent.events.swap(0, 1);
-                self.agent.expanded = Some(1);
-                if state == LaunchState::AgentInspection {
-                    self.capture_agent_views(
-                        Arc::new(self.editor.snapshot().clone()),
-                        ["iso", "front", "right"].map(str::to_owned).into(),
-                        self.editor.engine.revision(),
-                        cx,
-                    );
-                }
+                self.capture_agent_activity(state, cx)?;
             }
             LaunchState::ConnectAgent => self.invoke(Op::Agent, window, cx),
+            LaunchState::Feedback | LaunchState::CrashReport => {
+                feedback::fixture(state == LaunchState::CrashReport, cx);
+            }
             LaunchState::About => self.invoke(Op::About, window, cx),
             LaunchState::Acknowledgements => {
                 self.info = Some(("Acknowledgements", InfoContent::Acknowledgements));
@@ -246,6 +205,58 @@ impl EditorView {
             LaunchState::Settings(section) => self.open_settings(section, window, cx),
         }
         cx.notify();
+        Ok(())
+    }
+    fn capture_agent_activity(
+        &mut self,
+        state: LaunchState,
+        cx: &mut Context<Self>,
+    ) -> anyhow::Result<()> {
+        // Reuse a real committed example entry so the expanded Revert control
+        // points to an actual transaction. The second event exercises failure UI.
+        let entry = self
+            .editor
+            .engine
+            .history()
+            .find(|entry| entry.label == "Create named version")
+            .ok_or_else(|| anyhow::anyhow!("agent capture requires the example version entry"))?;
+        self.agent
+            .events
+            .push_back(quantum_mcp::attached::SessionEvent {
+                tool: "quantum_versions_save".into(),
+                label: entry.label.clone(),
+                success: true,
+                revision: entry.result_revision,
+                entry: Some(entry.id),
+                changes: entry.changes.clone(),
+                error: None,
+                inspection: None,
+                views: Vec::new(),
+            });
+        self.agent
+            .events
+            .push_back(quantum_mcp::attached::SessionEvent {
+                tool: "quantum_voxels_batch".into(),
+                label: "quantum_voxels_batch".into(),
+                success: false,
+                revision: self.editor.engine.revision(),
+                entry: None,
+                changes: Default::default(),
+                error: Some("Revision changed; inspect the document before retrying.".into()),
+                inspection: None,
+                views: Vec::new(),
+            });
+        // The newest event is painted first. Keep its expanded controls visible.
+        self.agent.events.swap(0, 1);
+        self.agent.expanded = Some(1);
+        if state == LaunchState::AgentInspection {
+            self.capture_agent_views(
+                Arc::new(self.editor.snapshot().clone()),
+                ["iso", "front", "right"].map(str::to_owned).into(),
+                self.editor.engine.revision(),
+                cx,
+            );
+        }
         Ok(())
     }
 }

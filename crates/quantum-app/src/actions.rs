@@ -71,6 +71,7 @@ operations! {
     Extensions => "dev.quantum.agent.extensions",
     Minimize => "dev.quantum.core.minimize",
     ZoomWindow => "dev.quantum.core.zoom_window",
+    Feedback => "dev.quantum.core.feedback",
     Help => "dev.quantum.core.help",
     About => "dev.quantum.core.about",
     CheckUpdates => "dev.quantum.core.check_updates",
@@ -297,7 +298,8 @@ impl Op {
                         Err("Updates are unavailable in this build.")
                     }
                     Self::Welcome => Ok(()),
-                    Self::About
+                    Self::Feedback
+                    | Self::About
                     | Self::Settings
                     | Self::CheckUpdates
                     | Self::Quit
@@ -638,6 +640,8 @@ impl ShellCommands {
 #[cfg(test)]
 mod snapshot;
 
+#[cfg(test)]
+mod availability_tests;
 #[cfg(test)]
 #[path = "actions/tests.rs"]
 mod test_shell;
@@ -1016,34 +1020,6 @@ mod tests {
         });
         assert_eq!(Op::Undo.availability(redo_only), Err("Nothing to undo"));
         assert_eq!(Op::Redo.availability(redo_only), Ok(()));
-    }
-
-    #[test]
-    fn settings_availability_keeps_editor_commands_disabled() {
-        let available = [
-            Op::Welcome,
-            Op::About,
-            Op::Settings,
-            Op::CheckUpdates,
-            Op::Quit,
-            Op::Hide,
-            Op::HideOthers,
-            Op::ShowAll,
-            Op::Minimize,
-            Op::ZoomWindow,
-            Op::FullScreen,
-            Op::Help,
-        ];
-        for op in Op::ALL {
-            for updates_available in [false, true] {
-                assert_eq!(
-                    op.availability(CommandContext::Settings { updates_available })
-                        .is_ok(),
-                    available.contains(op) && (*op != Op::CheckUpdates || updates_available),
-                    "{op:?}"
-                );
-            }
-        }
     }
 
     #[test]

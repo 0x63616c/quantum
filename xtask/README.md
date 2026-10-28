@@ -147,6 +147,14 @@ are not expanded. Dynamic document colors and `px(metrics::TOKEN)` are permitted
 put new control styling in `quantum-ui` components/tokens. Shared UI owns styling
 and is exempt from the app styling rules, but retains the source size budgets.
 
+Across `crates/`, `raw-radius` rejects numeric literals inside `rounded` and
+`rounded_*` arguments, including corner-specific calls and macro tokens. Fixed
+shortcuts such as `rounded_sm()` also fail. Use `quantum-ui` radius tokens or
+token-based concentric calculations; `rounded_full()` remains the intentional
+circular-shape exception. Only `quantum-ui/src/tokens.rs` and its `tokens/`
+submodules may define literal radii. Numeric expected values in style assertions
+remain independent checks of the rendered geometry.
+
 `xtask/lint-allowlist.json` records existing debt by file/rule and qualified
 function. Every entry must exactly match the remaining count or oversized line
 count: growth and new entries fail; fixes also fail until the entry is reduced or

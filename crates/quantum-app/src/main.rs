@@ -103,7 +103,8 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
 }
 #[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
 fn main() -> anyhow::Result<()> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    quantum_app::local_settings::initialize_data_dir()?;
+    install_diagnostics()?;
     let options = options(std::env::args().skip(1))?;
     if let Some(path) = options.viewport_png {
         let editor = match options.path.as_ref() {
@@ -130,7 +131,6 @@ fn main() -> anyhow::Result<()> {
         quantum_format::storage::safe_write(path, bytes)?;
         return Ok(());
     }
-    quantum_app::local_settings::initialize_data_dir()?;
     let (editor, open_error) = if options.example || options.show.is_some() {
         (Some(Editor::example()?), None)
     } else {
@@ -172,6 +172,9 @@ fn main() -> anyhow::Result<()> {
                 eprintln!("Cannot open Quantum: {error}");
                 cx.quit();
             }
+            if options.show.is_none() {
+                ui::feedback::offer_pending(cx);
+            }
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {
                     cx.quit();
@@ -191,6 +194,31 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn install_diagnostics() -> anyhow::Result<()> {
+    use std::io::Write;
+    let tail = quantum_crash::LogTail::new(20);
+    let logs = tail.clone();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .format(move |buffer, record| {
+            let line = format!("{}: {}", record.level(), record.args());
+            logs.push(&line);
+            writeln!(buffer, "{line}")
+        })
+        .init();
+    let redactor = quantum_app::diagnostics::redactor().map_err(anyhow::Error::new)?;
+    if quantum_crash::install_panic_hook(quantum_crash::HookConfig {
+        directory: quantum_app::diagnostics::directory(),
+        environment: quantum_app::diagnostics::environment(),
+        redactor,
+        log_tail: tail,
+    })
+    .is_err()
+    {
+        eprintln!("Could not enable local crash reports; the editor will still start.");
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Options, Theme, options, ui};
@@ -198,6 +226,37 @@ mod tests {
 
     fn parse(args: &[&str]) -> anyhow::Result<Options> {
         options(args.iter().map(|arg| (*arg).to_owned()))
+    }
+
+    #[test]
+    fn shell_panic_hook_persists_redacted_report_for_next_launch() {
+        const CHILD: &str = "QUANTUM_SHELL_PANIC_TEST";
+        if std::env::var_os(CHILD).is_some() {
+            super::install_diagnostics().unwrap();
+            panic!("forced panic /Users/private/model.voxl private@example.com");
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "tests::shell_panic_hook_persists_redacted_report_for_next_launch",
+            ])
+            .env(CHILD, "1")
+            .env("QUANTUM_DATA_DIR", dir.path())
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        let pending = quantum_crash::list_pending(&dir.path().join("crashes")).unwrap();
+        assert_eq!(pending.len(), 1);
+        let redactor = quantum_app::diagnostics::redactor().unwrap();
+        let report = quantum_crash::load(&pending[0], &redactor).unwrap();
+        let quantum_crash::Report::Crash(crash) = report else {
+            panic!("expected crash report")
+        };
+        assert!(!crash.panic_message.contains("/Users/private"));
+        assert!(!crash.panic_message.contains("private@example.com"));
+        assert!(!crash.backtrace.is_empty());
+        assert_eq!(crash.environment.app_version, env!("CARGO_PKG_VERSION"));
     }
 
     #[test]

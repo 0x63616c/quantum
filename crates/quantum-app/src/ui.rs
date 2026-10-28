@@ -14,6 +14,7 @@ mod comments;
 mod debug_overlay;
 mod dialogs;
 mod dispatch;
+pub(crate) mod feedback;
 mod history;
 mod keyboard;
 mod keyboard_guide;

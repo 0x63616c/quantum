@@ -297,6 +297,16 @@ const CORE_COMMANDS: &[CoreCommand] = &[
         None,
     ),
     (
+        "dev.quantum.core.feedback",
+        "Send feedback…",
+        None,
+        None,
+        "comment",
+        "Help",
+        355,
+        None,
+    ),
+    (
         "dev.quantum.core.help",
         "Keyboard & mouse guide",
         None,

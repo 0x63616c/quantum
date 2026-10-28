@@ -129,6 +129,7 @@ impl EditorView {
     pub(super) fn run(&mut self, op: Op, cx: &mut Context<Self>) {
         match op {
             Op::Settings | Op::Theme | Op::Minimize | Op::ZoomWindow | Op::FullScreen | Op::ShowPalette => {},
+            Op::Feedback => feedback::show_deferred(cx),
             Op::About => self.info = Some(("About Quantum", InfoContent::About)),
             Op::CheckUpdates => check_for_updates(),
             Op::Hide => cx.hide(),

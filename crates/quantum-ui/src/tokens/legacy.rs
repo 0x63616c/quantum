@@ -346,6 +346,10 @@ impl ControlSize {
 }
 /// Legacy application geometry; migrate control metrics in #134.
 pub mod metrics {
+    /// Diagnostics window width, accommodating explicit consent actions.
+    pub const REPORT_WIDTH: f32 = 880.0;
+    /// Diagnostics window height; report previews scroll within this surface.
+    pub const REPORT_HEIGHT: f32 = 760.0;
     /// Split Welcome window and its native editor launch geometry.
     pub mod welcome {
         /// Default Welcome window width.
