@@ -57,6 +57,7 @@ jobs:
     runs-on: ${{ fromJSON((inputs.command == 'bench' || inputs.command == 'bench-baseline') && '["self-hosted","macOS","ARM64","xcode","golden"]' || (inputs.runner_label == 'golden' && '["self-hosted","macOS","ARM64","xcode","golden"]') || (inputs.runner_label == 'runner-2' && '["self-hosted","macOS","ARM64","xcode","runner-2"]') || '["self-hosted","macOS","ARM64","xcode"]') }}
     timeout-minutes: 60
     env:
+      CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       RENDER_COMMAND: ${{ inputs.command || 'visual' }}
       RENDER_RUNS: ${{ inputs.runs || '3' }}
