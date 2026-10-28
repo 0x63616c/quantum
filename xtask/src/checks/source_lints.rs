@@ -129,6 +129,12 @@ fn inspect(path: &str, source: &str, counts: &mut Counts) -> Result<()> {
     if visitor.app {
         visitor.styles(syntax.to_token_stream());
     }
+    if path.starts_with("crates/")
+        && path != "crates/voxelite-ui/src/tokens.rs"
+        && !path.starts_with("crates/voxelite-ui/src/tokens/")
+    {
+        visitor.radii(syntax.to_token_stream());
+    }
     visitor.visit_file(&syntax);
     Ok(())
 }
@@ -140,6 +146,27 @@ struct Inspector<'a> {
     app: bool,
 }
 impl Inspector<'_> {
+    fn radii(&mut self, tokens: TokenStream) {
+        let tokens: Vec<_> = tokens.into_iter().collect();
+        for pair in tokens.windows(2) {
+            if let [TokenTree::Ident(name), TokenTree::Group(args)] = pair
+                && args.delimiter() == proc_macro2::Delimiter::Parenthesis
+            {
+                let name = name.to_string();
+                if (name == "rounded" || name.starts_with("rounded_"))
+                    && name != "rounded_full"
+                    && (args.stream().is_empty() || contains_number(args.stream()))
+                {
+                    self.count("raw-radius");
+                }
+            }
+        }
+        for token in tokens {
+            if let TokenTree::Group(group) = token {
+                self.radii(group.stream());
+            }
+        }
+    }
     fn count(&mut self, rule: &str) {
         *self
             .counts
@@ -237,6 +264,16 @@ impl Inspector<'_> {
                 .or_insert(lines);
         }
     }
+}
+fn contains_number(tokens: TokenStream) -> bool {
+    tokens.into_iter().any(|token| match token {
+        TokenTree::Literal(literal) => matches!(
+            syn::parse_str::<syn::Lit>(&literal.to_string()),
+            Ok(syn::Lit::Int(_) | syn::Lit::Float(_))
+        ),
+        TokenTree::Group(group) => contains_number(group.stream()),
+        _ => false,
+    })
 }
 fn numeric(expr: &syn::Expr) -> bool {
     match expr {
@@ -337,6 +374,36 @@ mod tests {
         let mut counts = Counts::new();
         inspect("crates/voxelite-app/src/ui.rs", source, &mut counts).unwrap();
         counts
+    }
+    #[test]
+    fn corner_radii_require_tokens_in_app_shared_controls_and_macros() {
+        let source = r#"fn view() {
+            // .rounded(px(42.))
+            let _ = ".rounded_sm()";
+            ui! { div().rounded(px(6.)).rounded_tl(px(-2.)) }
+            div().rounded_sm().rounded_none().rounded(4.);
+            div().rounded(px(radius::concentric(radius::XL, 1.)));
+            div().rounded_full().rounded(px(radius::CONTROL));
+            div().rounded_l(px(Radius::Sm.px()));
+            div().rounded(px(radius::concentric(radius::XL, metrics::EDGE)));
+        }"#;
+        for path in [
+            "crates/voxelite-app/src/ui.rs",
+            "crates/voxelite-ui/src/components.rs",
+            "crates/voxelite-ui/examples/ui_kit/sections.rs",
+        ] {
+            let mut counts = Counts::new();
+            inspect(path, source, &mut counts).unwrap();
+            assert_eq!(counts[&format!("{path}:raw-radius")], 6);
+        }
+        for path in [
+            "crates/voxelite-ui/src/tokens.rs",
+            "crates/voxelite-ui/src/tokens/legacy.rs",
+        ] {
+            let mut counts = Counts::new();
+            inspect(path, source, &mut counts).unwrap();
+            assert!(counts.is_empty());
+        }
     }
     #[test]
     fn base_revision_fixture_bootstraps_only_an_absent_file() {
