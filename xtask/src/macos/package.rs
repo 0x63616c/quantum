@@ -100,6 +100,7 @@ pub fn package(context: &Context<'_>, options: &Options<'_>) -> Result<()> {
     Ok(())
 }
 
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn build<'a, 'b>(
     context: &'a Context<'b>,
     options: &Options<'_>,
