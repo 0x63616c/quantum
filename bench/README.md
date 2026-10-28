@@ -36,7 +36,7 @@ deterministically and verified by scene hash.
 dispatch (run 40613358223, 3 runs, commit 7d58723) with no other CI job on the
 mini. The 1-minute load average was 7.0 at start, then 3.6, 2.9 and 7.7 after each run
 (see `meta.load_average` and `meta.run_load`). Run-to-run p50 spread is under 2% for
-steady phases. Cold and recolor phases vary more, up to about 15% on `terrain10m`,
+steady phases. Cold and recolor phases vary more, up to about 20% on `terrain10m`,
 so judge them from the spread, not one run. All four scenes are included, `terrain10m`
 too. Re-record it (`gh workflow run render-checks.yml -f command=bench-baseline`)
 after intentional performance changes or a macOS/driver update. Visual goldens are
