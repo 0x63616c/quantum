@@ -149,7 +149,15 @@ impl Runner for FakeRunner {
                     "voxelite"
                 };
                 write(
-                    root.join(format!("target/release/{binary}")),
+                    root.join(
+                        command
+                            .environment()
+                            .find_map(|(key, value)| {
+                                (key == "CARGO_TARGET_DIR").then_some(value).flatten()
+                            })
+                            .expect("explicit build target"),
+                    )
+                    .join(format!("release/{binary}")),
                     format!("fixture {binary}"),
                 );
             }

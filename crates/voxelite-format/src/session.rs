@@ -5,7 +5,6 @@
 use crate::{FormatError, Project};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, path::PathBuf};
-#[cfg(not(target_family = "wasm"))]
 use std::{path::Path, sync::Arc};
 use voxelite_core::{Engine, Limits};
 
@@ -62,14 +61,12 @@ pub struct DocumentSession {
     pub path: Option<PathBuf>,
     project: Project,
     baselines: BTreeMap<PathBuf, String>,
-    #[cfg(not(target_family = "wasm"))]
     identity: Arc<()>,
 }
 impl DocumentSession {
     /// Restore a project and its build history with host-selected history limits.
     /// An optional existing path establishes the initial disk fingerprint.
     pub fn new(project: Project, path: Option<PathBuf>, limits: Limits) -> SessionResult<Self> {
-        #[cfg(not(target_family = "wasm"))]
         let baselines = path
             .as_deref()
             .map(|path| {
@@ -80,15 +77,12 @@ impl DocumentSession {
             .transpose()?
             .into_iter()
             .collect();
-        #[cfg(target_family = "wasm")]
-        let baselines = BTreeMap::new();
         let engine = project.open_engine(limits)?;
         Ok(Self {
             engine,
             path,
             project,
             baselines,
-            #[cfg(not(target_family = "wasm"))]
             identity: Arc::new(()),
         })
     }
@@ -102,13 +96,11 @@ impl DocumentSession {
             project,
             path: None,
             baselines: BTreeMap::new(),
-            #[cfg(not(target_family = "wasm"))]
             identity: Arc::new(()),
         })
     }
 
     /// Open a bounded disk snapshot, fingerprinting exactly the bytes parsed.
-    #[cfg(not(target_family = "wasm"))]
     pub fn open(path: &Path, limits: Limits) -> SessionResult<Self> {
         let path = path.canonicalize()?;
         let bytes = read(&path)?;
@@ -136,7 +128,6 @@ impl DocumentSession {
     }
 
     /// Capture an immutable save job without performing filesystem I/O.
-    #[cfg(not(target_family = "wasm"))]
     pub fn prepare_save(&self, path: &Path, policy: SavePolicy) -> SaveTask {
         SaveTask {
             project: self.project(),
@@ -149,7 +140,6 @@ impl DocumentSession {
     }
 
     /// Adopt a durable receipt from this session instance; later edits remain dirty.
-    #[cfg(not(target_family = "wasm"))]
     pub fn finish_save(&mut self, saved: SavedProject) {
         if !Arc::ptr_eq(&saved.identity, &self.identity)
             || saved.project.document.id != self.engine.document().id
@@ -167,7 +157,6 @@ impl DocumentSession {
 }
 
 /// Immutable project snapshot that can be written on a background worker.
-#[cfg(not(target_family = "wasm"))]
 pub struct SaveTask {
     project: Project,
     path: PathBuf,
@@ -177,7 +166,6 @@ pub struct SaveTask {
     policy: SavePolicy,
 }
 /// Receipt produced only after a successful durable save.
-#[cfg(not(target_family = "wasm"))]
 pub struct SavedProject {
     project: Project,
     path: PathBuf,
@@ -187,7 +175,6 @@ pub struct SavedProject {
     identity: Arc<()>,
     policy: SavePolicy,
 }
-#[cfg(not(target_family = "wasm"))]
 impl SavedProject {
     /// SHA-256 of the exact bytes written, for protocol responses.
     pub fn fingerprint(&self) -> &str {
@@ -198,7 +185,6 @@ impl SavedProject {
         self.bytes
     }
 }
-#[cfg(not(target_family = "wasm"))]
 impl SaveTask {
     /// Serialize, stage, recheck the destination, and atomically rename.
     pub fn write(self) -> SessionResult<SavedProject> {
@@ -238,7 +224,6 @@ pub fn fingerprint(bytes: &[u8]) -> String {
 }
 
 /// Read only a regular file, bounded by the portable project size limit.
-#[cfg(not(target_family = "wasm"))]
 pub fn read(path: &Path) -> SessionResult<Vec<u8>> {
     use std::{
         fs::{self, File},
@@ -261,7 +246,6 @@ pub fn read(path: &Path) -> SessionResult<Vec<u8>> {
     Ok(bytes)
 }
 
-#[cfg(not(target_family = "wasm"))]
 fn destination(path: &Path) -> SessionResult<PathBuf> {
     let parent = path
         .parent()
@@ -278,12 +262,10 @@ fn destination(path: &Path) -> SessionResult<PathBuf> {
 }
 
 /// Persist an exported artifact without replacing an existing file.
-#[cfg(not(target_family = "wasm"))]
 pub fn write_new(path: &Path, bytes: &[u8]) -> SessionResult<()> {
     atomic_write(path, bytes, None, SavePolicy::CreateOrTracked)
 }
 
-#[cfg(not(target_family = "wasm"))]
 fn atomic_write(
     path: &Path,
     bytes: &[u8],
@@ -340,5 +322,5 @@ fn atomic_write(
     Ok(())
 }
 
-#[cfg(all(test, not(target_family = "wasm")))]
+#[cfg(test)]
 mod tests;

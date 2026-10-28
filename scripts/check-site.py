@@ -12,8 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'site'
 BASE_URL = 'https://voxelite.worldwidewebb.co'
 
-for name in ('index.html', 'docs/index.html', 'app/index.html',
-             'app/voxelite_app.js', 'app/voxelite_app_bg.wasm'):
+for name in ('index.html', 'docs/index.html', 'download/index.html'):
     if not (SITE / name).is_file():
         raise SystemExit(f'Missing site/{name}; run scripts/build-site.sh first.')
 
@@ -164,9 +163,6 @@ def check_analytics(path, page):
 
 
 def check_fonts(page):
-    # The wasm canvas embeds its native TTFs; its loading screen uses system-ui.
-    if not page.tags('link', rel='stylesheet', href='/assets/site.css'):
-        return
     for name in ('Geist', 'GeistMono'):
         preload = page.tags('link', rel='preload', href=f'/assets/fonts/{name}.woff2')
         assert len(preload) == 1, f'Missing or duplicated {name} preload'
@@ -198,7 +194,7 @@ for key, expected in {
     'name': 'Quantum',
     'description': home.meta('description'),
     'applicationCategory': 'DesignApplication',
-    'operatingSystem': 'Web, macOS',
+    'operatingSystem': 'macOS',
     'url': f'{BASE_URL}/',
     'image': home.meta('og:image', 'property'),
     'license': f'{BASE_URL}/assets/LICENSE',
@@ -289,6 +285,8 @@ for name in ('Geist', 'GeistMono'):
     assert (SITE / f'assets/fonts/{name}.woff2').read_bytes()[:4] == b'wOF2'
     assert (SITE / f'assets/fonts/OFL-{name}.txt').is_file()
 hosting = json.loads((SITE / 'vercel.json').read_text())
+for source in ('/app', '/app/:path*'):
+    assert {'source': source, 'destination': '/download', 'permanent': True} in hosting['redirects'], f'Missing download redirect: {source}'
 assert 'outputDirectory' not in hosting, 'site/ is published as the site-dist root'
 assert any(rule['source'] == '/assets/fonts/(.*)' and
            {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
@@ -300,8 +298,5 @@ with ZipFile(SITE / 'assets/voxelite-skills.zip') as archive:
         assert archive.read(name) == source.read_bytes(), f'Stale archive: {name}'
         assert (SITE / 'assets' / name).read_bytes() == source.read_bytes(), f'Stale site skill: {name}'
 assert json.loads((SITE / 'assets/mcp-tools.json').read_text()) == json.loads((ROOT / 'spec/mcp/v1/tools.json').read_text())
-for name in ('index.html', 'voxelite_app.js', 'voxelite_app_bg.wasm'):
-    assert (SITE / 'app' / name).read_bytes() == (ROOT / 'web/dist' / name).read_bytes(), f'Stale app: {name}'
-assert (SITE / 'app/index.html').read_bytes() == (ROOT / 'web/index.html').read_bytes(), 'Stale app template'
 print(f'Checked {len(pages)} pages with SEO metadata, {len(doc_pages) * 2} Markdown exports, LLM indexes, {len(locations)} sitemap URLs, robots.txt, '
-      f'homepage JSON-LD, {checked} local links/assets, skill archive, MCP catalog and bundled app.')
+      f'homepage JSON-LD, {checked} local links/assets, skill archive, MCP catalog and download redirects.')

@@ -47,6 +47,7 @@ impl Environment {
     pub fn from_process() -> Self {
         let mut env = Self::default();
         for name in SECRETS.iter().copied().chain([
+            "CARGO_TARGET_DIR",
             "VERSION",
             "MACOS_SIGNING_MODE",
             "SPARKLE_PUBLIC_ED_KEY",

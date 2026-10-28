@@ -3,7 +3,7 @@
 The stage evidence below is historical.
 
 Verified 2026-10-25 in the Linux build worktree. Scope: `voxelite-app`, binary
-`voxelite`. No plugin or web application was built.
+`voxelite`. No plugin application was built.
 
 ## Build and automated checks
 

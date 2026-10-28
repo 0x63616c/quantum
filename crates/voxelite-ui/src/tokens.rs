@@ -14,10 +14,6 @@ impl Theme {
     pub fn app_scrim(self) -> Hsla {
         gpui::rgba(0x00000070).into()
     }
-    /// Existing browser settings backdrop.
-    pub fn settings_scrim(self) -> Hsla {
-        gpui::rgba(0x00000060).into()
-    }
     /// Appearance-preview artwork, separate from live UI surfaces.
     pub fn preview_background(self) -> Hsla {
         self.pair(0x303030, 0xfafafa)
@@ -264,6 +260,12 @@ pub mod radius {
 }
 /// Font families, type scale and weights.
 pub mod type_size {
+    /// ASCII skeleton paragraph line height, matching upstream's 1.3em.
+    pub const ASCII_LINE_EM: f32 = 1.3;
+    /// Dither skeleton glyph tracking, matching upstream's -.02em.
+    pub const ASCII_DITHER_TRACKING_EM: f32 = -0.02;
+    /// Paragraph skeleton row gap, matching upstream's .55em.
+    pub const ASCII_GAP_EM: f32 = 0.55;
     /// Axis badge inside a rail button.
     pub const BADGE: f32 = 9.;
     /// Document title in the toolbar.
@@ -364,16 +366,8 @@ pub mod metrics {
     pub const TAB_UNDERLINE: f32 = 2.;
     /// Selected tab underline horizontal inset.
     pub const TAB_UNDERLINE_INSET: f32 = 2.;
-    /// History legend glyph.
-    pub const ICON_TINY: f32 = 10.;
-    /// Disclosure glyph.
-    pub const ICON_DISCLOSURE: f32 = 14.;
     /// Dense search and layer action glyph.
     pub const ICON_DENSE: f32 = 15.;
-    /// Swatch check and layer glyph.
-    pub const ICON_CHECK: f32 = 16.;
-    /// Toolbar brand icon.
-    pub const ICON_BRAND: f32 = 22.;
     /// Inline shortcut keycap side.
     pub const KEYCAP: f32 = 22.;
     /// Settings shortcut well minimum width.
@@ -408,12 +402,6 @@ pub mod metrics {
     pub const PALETTE_DIALOG_HEIGHT: f32 = 780.;
     /// Palette preview thumbnail width.
     pub const THUMBNAIL_WIDTH: f32 = 44.;
-    /// Palette preview thumbnail height.
-    pub const THUMBNAIL_HEIGHT: f32 = 28.;
-    /// Palette chooser preview tile width.
-    pub const PREVIEW_TILE_WIDTH: f32 = 15.;
-    /// Palette chooser preview tile height.
-    pub const PREVIEW_TILE_HEIGHT: f32 = 14.;
     /// Two rows of sidebar swatches.
     pub const PALETTE_SCROLL_STEP: f32 = 76.;
     /// Sidebar swatch size plus gap.
@@ -440,8 +428,6 @@ pub mod metrics {
     pub const APPEARANCE_BODY_HEIGHT: f32 = 70.;
     /// Native agent connection popover width.
     pub const AGENT_POPOVER_WIDTH: f32 = 460.;
-    /// Browser agent popover width.
-    pub const WEB_AGENT_POPOVER_WIDTH: f32 = 420.;
     /// Agent popover top anchor.
     pub const AGENT_POPOVER_TOP: f32 = 100.;
     /// Recent history height below agent invitation.
@@ -466,8 +452,6 @@ pub mod metrics {
     pub const TIMELINE_HEIGHT: f32 = 26.;
     /// Existing compact playback action width.
     pub const PLAYBACK_WIDTH: f32 = 34.;
-    /// Full layers panel minimum height.
-    pub const LAYERS_MIN_HEIGHT: f32 = 216.;
     /// Compact layers panel minimum height.
     pub const LAYERS_COMPACT_MIN_HEIGHT: f32 = 180.;
     /// Full layer list maximum height.
@@ -476,8 +460,6 @@ pub mod metrics {
     pub const LAYERS_COMPACT_SCROLL_HEIGHT: f32 = 128.;
     /// Recent history panel minimum height.
     pub const HISTORY_MIN_HEIGHT: f32 = 204.;
-    /// Compact recent history minimum height.
-    pub const HISTORY_COMPACT_MIN_HEIGHT: f32 = 112.;
     /// Full document title width.
     pub const DOCUMENT_WIDTH: f32 = 340.;
     /// Compact document title width.

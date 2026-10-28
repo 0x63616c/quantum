@@ -144,3 +144,33 @@ fn harness_signal_termination_is_failure() {
     });
     assert_eq!(harness_status(&Command::new("not-executed"), &runner), 1);
 }
+
+#[test]
+fn screenshots_ci_arguments_are_forwarded() {
+    for args in [
+        vec!["--help"],
+        vec![
+            "--remote",
+            "origin",
+            "--base",
+            "base-ref",
+            "--head",
+            "HEAD",
+            "--publish",
+            "154",
+        ],
+        vec!["--screen", "welcome", "--out", "path with spaces"],
+    ] {
+        let cli = parse_cli(
+            ["xtask", "screenshots"]
+                .into_iter()
+                .chain(args.iter().copied())
+                .map(OsString::from),
+        )
+        .unwrap();
+        let Some(Task::Screenshots(task)) = cli.command else {
+            panic!("expected screenshots")
+        };
+        assert_eq!(task.args, args);
+    }
+}

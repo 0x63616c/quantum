@@ -607,3 +607,5 @@ partial-draw disposal, error handling and panic quarantine.
 
 The palette manager contract, preview lifecycle, and backward-compatible recent
 color persistence are described in [palette-manager.md](../palette-manager.md).
+
+Update (2026-10-27): the browser/wasm build was removed; Quantum is macOS-only.
