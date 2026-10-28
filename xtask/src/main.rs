@@ -1,6 +1,7 @@
 //! Repository hygiene checks and a release-mode launcher for the GPU harness.
 use std::process::{Command, ExitCode};
 
+mod screenshots;
 mod tidy;
 
 fn main() -> ExitCode {
@@ -8,7 +9,7 @@ fn main() -> ExitCode {
     let subcommand = args.first().map_or("help", String::as_str);
     if ["help", "--help", "-h"].contains(&subcommand) {
         println!(
-            "cargo xtask bench [--scene S ...] [--runs N] [--out FILE] [--compare [FILE]] [--update-baseline] [--markdown FILE]\n  [--memory-pct 10] [--rss-pct 50 --rss-mb 128]\ncargo xtask visual [--scene S ...] [--rebaseline] [--determinism] [--local-baseline]\ncargo xtask tidy  Check tracked root entries, file sizes and junk files.\n\nPass --help after bench or visual for all options. See docs/perf/rendering-harness.md."
+            "cargo xtask bench [--scene S ...] [--runs N] [--out FILE] [--compare [FILE]] [--update-baseline] [--markdown FILE]\n  [--memory-pct 10] [--rss-pct 50 --rss-mb 128]\ncargo xtask visual [--scene S ...] [--rebaseline] [--determinism] [--local-baseline]\ncargo xtask tidy  Check tracked root entries, file sizes and junk files.\ncargo xtask screenshots [--base REF] [--head REF] [--publish PR]  Before/after captures of key screens for UI PRs.\n\nPass --help after bench or visual for all options. See docs/perf/rendering-harness.md."
         );
         return ExitCode::SUCCESS;
     }
@@ -18,6 +19,19 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
         return match tidy::run() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if subcommand == "screenshots" {
+        if args.get(1).is_some_and(|a| a == "--help" || a == "-h") {
+            println!("{}", screenshots::USAGE);
+            return ExitCode::SUCCESS;
+        }
+        return match screenshots::run(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("{error}");

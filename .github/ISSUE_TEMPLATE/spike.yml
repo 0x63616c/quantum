@@ -10,6 +10,17 @@ body:
       description: "The question to answer and the decision it unblocks."
     validations:
       required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: "Model"
+      description: "Maps to the model:astra / model:sol label. Maintainers apply the label."
+      options:
+        - "sol (everyday: fixes, CI, docs, simple refactors)"
+        - "astra (hard: UI/design, complex refactors, spikes, ports)"
+      default: 1
+    validations:
+      required: true
   - type: textarea
     id: details
     attributes:
