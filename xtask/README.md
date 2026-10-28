@@ -16,6 +16,52 @@ cargo xtask macos check-appcast site/appcast.xml --allow-empty
 cargo xtask bench --help
 ```
 
+## PR screenshots
+
+`cargo xtask screenshots` captures only the key set: `welcome`, `editor-dark` and
+`editor-light`. The other registered surfaces are opt-in, keeping routine CI time
+independent of the size of the capture catalog. Capture quality and sizes stay fixed.
+
+```sh
+cargo xtask screenshots --screen 'settings-*'
+cargo xtask screenshots --screen 'panels-*' --screen 'dialogs-about-*'
+cargo xtask screenshots --screen editor-dark
+cargo xtask screenshots --screen '*' # explicitly capture the whole catalog
+cargo xtask screenshots --publish 123
+```
+
+`--screen` selects exactly the union of its matches, deduplicated in registry order.
+Selectors are exact names or prefixes ending in one `*`; quote patterns in the
+shell. Unknown names, unsupported syntax and patterns matching nothing fail before
+output is cleaned or either binary is built. The registry is `src/screenshots.rs`.
+
+For migration PRs, add one plain line at column zero in the body, outside the
+generated Screenshots section: `Screens: panels-* settings-general-*`. CI and
+`--publish` read this whitespace-separated list and add its matches to the key set.
+A missing or empty line uses only the defaults; duplicate lines fail. It is data,
+not shell syntax. Explicit `--screen` options override PR-body selection locally.
+To preview the CI selection locally:
+
+```sh
+gh pr view 123 --json body -q .body > target/screenshot-pr-body.md
+cargo xtask screenshots --pr-body target/screenshot-pr-body.md
+```
+
+`--pr-body FILE` and `--screen` are mutually exclusive. The workflow fetches the
+body with `gh pr view` into a file, then passes its path as a separate argument;
+Rust validates each selector against the registry before using fixed capture args.
+Dispatch's optional `screens` field accepts the same list and replaces the body's
+extra selectors for that run; blank uses the body. Body edits alone do not rerun
+the workflow: push or dispatch after changing the line.
+
+Only changed/new/removed images and their zoom crops are pushed to `pr-assets`.
+Unchanged screens appear in a collapsed text list; an entirely unchanged run makes
+no assets commit. All captures remain in `target/pr-screenshots/` and CI artifacts.
+See the [screenshot skill](../.agents/skills/ui-pr-screenshots/SKILL.md) for Linux
+dependencies, publishing and visual review.
+
+## Validation and task library
+
 `validate` runs every registered check in order and continues after failures.
 Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
 Rustfmt and Clippy are probed because Cargo also lists rustup proxies for
