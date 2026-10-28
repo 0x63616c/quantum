@@ -1,6 +1,8 @@
 //! Prepared preview pixels and ASCII grids. Disk I/O, resizing and sampling run
 //! with the existing background jobs; render only clones shared handles.
 use super::*;
+use quantum_ui::ColorToken;
+use quantum_ui::Space;
 use quantum_ui::{
     AsciiImageReveal, AsciiSkeleton,
     ascii_reveal::media::{MAX_MEDIA_EDGE, Media, MediaOptions},
@@ -148,7 +150,11 @@ pub(super) fn recent(path: &std::path::Path) -> anyhow::Result<PreparedPreview> 
             metrics::welcome::THUMB_WIDTH as u32,
             metrics::welcome::THUMB_HEIGHT as u32,
         ],
-        |theme| theme.background().blend(theme.hover().opacity(0.5)),
+        |theme| {
+            theme
+                .color(ColorToken::Canvas)
+                .blend(theme.hover().opacity(0.5))
+        },
     )
 }
 
@@ -181,7 +187,9 @@ pub(super) fn recent_element(
                     ),
             )
             .into_any_element(),
-        Some(None) => icon("cube").text_color(theme.muted()).into_any_element(),
+        Some(None) => icon("cube")
+            .text_color(theme.color(ColorToken::TextSecondary))
+            .into_any_element(),
         None => div()
             .w(px(metrics::welcome::THUMB_WIDTH))
             .h(px(metrics::welcome::THUMB_HEIGHT))
@@ -233,12 +241,12 @@ impl EditorView {
         let heading = heading.elapsed(std::time::Duration::from_secs(60));
         div()
             .absolute()
-            .top(px(space::PANEL))
-            .left(px(space::XXL))
+            .top(px(Space::S5.px()))
+            .left(px(Space::S6.px()))
             .child(
                 row()
-                    .gap(px(space::INSET))
-                    .text_color(t.muted())
+                    .gap(px(Space::S4.px()))
+                    .text_color(t.color(ColorToken::TextSecondary))
                     .child(heading),
             )
     }
@@ -248,6 +256,7 @@ impl EditorView {
 mod tests {
     use super::{MAX_MEDIA_EDGE, PreparedPreview, Theme, recent};
     use gpui::Rgba;
+    use quantum_ui::ColorToken;
 
     #[test]
     fn preview_validates_dimensions_before_resizing_and_samples_both_backdrops() {
@@ -264,7 +273,7 @@ mod tests {
             .ready();
         for (media, theme) in preview.media.iter().zip([Theme::Dark, Theme::Light]) {
             assert_eq!(media.size(), [64; 2]);
-            let color: Rgba = theme.surface().into();
+            let color: Rgba = theme.color(ColorToken::Surface).into();
             assert_eq!(
                 media.options().background,
                 [color.r, color.g, color.b].map(|c| (c * 255.).round() as u8)
@@ -304,7 +313,10 @@ mod tests {
         let preview = recent(file.path()).unwrap().ready();
         for (media, theme) in preview.media.iter().zip([Theme::Dark, Theme::Light]) {
             assert_eq!(media.size(), [60, 46]);
-            let color: Rgba = theme.background().blend(theme.hover().opacity(0.5)).into();
+            let color: Rgba = theme
+                .color(ColorToken::Canvas)
+                .blend(theme.hover().opacity(0.5))
+                .into();
             assert_eq!(
                 media.options().background,
                 [color.r, color.g, color.b].map(|value| (value * 255.).round() as u8)

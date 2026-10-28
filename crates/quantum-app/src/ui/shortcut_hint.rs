@@ -4,7 +4,10 @@ use crate::{
     shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
 };
 use gpui::{prelude::*, *};
-use quantum_ui::tokens::{metrics, space, type_size};
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
+use quantum_ui::tokens::metrics;
 
 #[derive(Clone, IntoElement)]
 struct Keycap {
@@ -31,8 +34,8 @@ impl Keycap {
 impl RenderOnce for Keycap {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let style = window.text_style();
-        let font_size = px(space::LG);
-        let line_height = px(space::XL);
+        let font_size = px(Space::S4.px());
+        let line_height = px(Space::S5.px());
         let font = gpui::font("Geist");
         let font_id = cx.text_system().resolve_font(&font);
         let cap_height = cx.text_system().cap_height(font_id, font_size);
@@ -100,7 +103,7 @@ impl RenderOnce for Keycap {
 
 pub(super) fn shortcut(binding: &str) -> Div {
     div()
-        .text_size(px(type_size::BODY))
+        .text_style(TextSize::Small)
         .child(Keycap::new(binding))
 }
 
@@ -139,6 +142,23 @@ impl From<String> for HintText {
 }
 
 impl HintText {
+    pub(super) fn tooltip_parts(self) -> (String, Option<String>) {
+        let mut label = String::new();
+        let mut keys = Vec::new();
+        for part in self.0 {
+            match part {
+                HintPart::Text(text) => label.push_str(&text),
+                HintPart::Key(key) => keys.push(
+                    key.tokens
+                        .iter()
+                        .map(ShortcutToken::text)
+                        .collect::<String>(),
+                ),
+            }
+        }
+        (label, (!keys.is_empty()).then(|| keys.join(" ")))
+    }
+
     pub(super) fn plain_text(&self) -> Option<&str> {
         match self.0.as_slice() {
             [HintPart::Text(text)] => Some(text.as_ref()),
@@ -178,7 +198,7 @@ impl RenderOnce for HintText {
                 .whitespace_nowrap()
                 .flex_none()
                 .items_center()
-                .gap_x(px(space::OPTICAL))
+                .gap_x(px(Space::S3.px()))
         };
         let mut result = div().flex().flex_col().flex_none().items_start();
         let mut line = new_line();

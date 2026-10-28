@@ -44,7 +44,9 @@ impl FieldFrame {
                 d.w(px(cells as f32
                     * TextSize::Mono.px()
                     * crate::tokens::type_size::MONO_ADVANCE
-                    + Space::S4.px() * 2.))
+                    + Space::S4.px() * 2.
+                    // Border and caret clearance keep a full-width value visible.
+                    + Space::S2.px()))
             })
     }
 }
@@ -108,6 +110,8 @@ mod tests {
         assert_eq!(normal.style().border_color, Some(t.color(C::Border)));
         assert_eq!(invalid.style().border_color, Some(t.color(C::Danger)));
         assert_eq!(normal.style().text.font_size, Some(px(13.).into()));
+        let mut hex = FieldFrame::design(t).numeric(7).build();
+        assert_eq!(hex.style().size.width, Some(px(78.4).into()));
     }
     #[test]
     fn swatch_selection_never_changes_document_color_or_dimensions() {

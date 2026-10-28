@@ -5,6 +5,7 @@ use block2::RcBlock;
 use futures_channel::oneshot;
 use objc2::{MainThreadMarker, runtime::AnyClass};
 use objc2_app_kit::{NSColor, NSColorSampler, NSColorSpace};
+use quantum_ui::Space;
 use std::cell::Cell;
 
 type Sample = Result<Option<[u8; 3]>, ()>;
@@ -55,9 +56,9 @@ async fn sample() -> Sample {
 impl EditorView {
     pub(super) fn palette_eyedropper(&self, cx: &Context<Self>) -> Stateful<Div> {
         let enabled = available() && !self.palettes.sampler_failed;
-        Button::new("palette-eyedropper", "Pick from screen", self.theme)
+        Button::design("palette-eyedropper", "Pick from screen", self.theme)
             .icon("picker")
-            .variant(ButtonVariant::Ghost)
+            .style(quantum_ui::ButtonStyle::Ghost)
             .size(quantum_ui::tokens::ControlSize::Sm)
             .disabled(!enabled)
             .build()

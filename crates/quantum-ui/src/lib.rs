@@ -36,3 +36,12 @@ pub use menu::*;
 pub use slider::*;
 pub use status::*;
 pub use tokens::{ColorToken, ControlHeight, Palette, Radius, Space, TextSize, Theme};
+
+/// Apply a complete typography token in a GPUI builder chain.
+pub trait TextStyle: gpui::Styled + Sized {
+    /// Set the family, size, weight and line height together.
+    fn text_style(self, size: TextSize) -> Self {
+        size.apply(self)
+    }
+}
+impl<T: gpui::Styled> TextStyle for T {}

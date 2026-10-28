@@ -259,6 +259,12 @@ pub mod state {
 }
 /// Component geometry that is not spacing or typography.
 pub mod geometry {
+    /// Half-pixel overlap prevents seams between neighboring color-plane cells.
+    pub const COLOR_CELL_OVERLAP: f32 = 0.5;
+    /// Stroke for the projected voxel hover outline.
+    pub const VOXEL_OUTLINE: f32 = 1.4;
+    /// Settings slider width, independent of its changing value label.
+    pub const SETTINGS_SLIDER: f32 = 200.;
     /// Hairline border.
     pub const EDGE: f32 = 1.;
     /// Standard glyph within dense/default controls.

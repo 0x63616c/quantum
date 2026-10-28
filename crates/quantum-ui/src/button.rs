@@ -79,11 +79,26 @@ impl Button {
     /// Set the action hierarchy.
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
+        if let Some(design) = &mut self.design {
+            design.style = match variant {
+                ButtonVariant::Primary => ButtonStyle::Primary,
+                ButtonVariant::Secondary => ButtonStyle::Secondary,
+                ButtonVariant::Danger => ButtonStyle::Danger,
+                ButtonVariant::Ghost | ButtonVariant::Icon => ButtonStyle::Ghost,
+            };
+        }
         self
     }
     /// Set the shared height.
     pub fn size(mut self, size: ControlSize) -> Self {
         self.size = size;
+        if let Some(design) = &mut self.design {
+            design.height = match size {
+                ControlSize::Sm => crate::ControlHeight::Dense,
+                ControlSize::Md => crate::ControlHeight::Default,
+                ControlSize::Lg => crate::ControlHeight::Large,
+            };
+        }
         self
     }
     /// Add a leading icon from `icons/<name>.svg`.
@@ -223,10 +238,10 @@ impl IconButton {
         theme: Theme,
     ) -> Self {
         Self {
-            button: Button::new(id, label, theme)
+            button: Button::design(id, label, theme)
                 .variant(ButtonVariant::Icon)
                 .icon(name),
-            side: ControlSize::Md.height(),
+            side: crate::ControlHeight::Default.px(),
             rail: false,
             badge: None,
             overlays: None,

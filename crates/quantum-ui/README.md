@@ -309,5 +309,5 @@ See [the exact lint rules](../../xtask/README.md) for scope and baseline updates
 ## Typed design system (#133)
 
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
-overlay lifecycle, headless tests and interactive dark/light gallery. Existing
-constructors retain their screen appearance until the #134 migration.
+overlay lifecycle, headless tests and interactive dark/light gallery. The app migration and retained platform/layout boundaries are documented in the
+[migration audit](../../docs/design-system-migration.md).

@@ -1,13 +1,12 @@
-//! Frozen compatibility tokens for existing screens; migrate in #134.
+//! Compatibility names for shared layout metrics and the typed design tokens.
 //! New components must use the typed tokens in the parent module.
 use super::{ColorToken, Theme};
 use gpui::{Hsla, rgb};
 
 impl Theme {
     /// Existing application-modal scrim, retaining its exact 8-bit alpha.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn app_scrim(self) -> Hsla {
-        gpui::rgba(0x00000070).into()
+        super::state::scrim()
     }
     /// Appearance-preview artwork, separate from live UI surfaces.
     pub fn preview_background(self) -> Hsla {
@@ -34,97 +33,55 @@ impl Theme {
         rgb(if light_background { 0x000000 } else { 0xffffff }).into()
     }
     /// Canvas background.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn background(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0x000000
-        } else {
-            0xffffff
-        })
-        .into()
+        self.color(ColorToken::Canvas)
     }
     /// Primary text.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn text(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0xfafafa
-        } else {
-            0x171717
-        })
-        .into()
+        self.color(ColorToken::TextPrimary)
     }
     /// Secondary text.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn muted(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0xa3a3a3
-        } else {
-            0x525252
-        })
-        .into()
+        self.color(ColorToken::TextSecondary)
     }
     /// Canvas separators.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn line(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0x232323
-        } else {
-            0xe5e5e5
-        })
-        .into()
+        self.color(ColorToken::BorderSubtle)
     }
     /// Canvas hover fill.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn hover(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0x141414
-        } else {
-            0xf5f5f5
-        })
-        .into()
+        self.color(ColorToken::Surface).blend(
+            self.color(ColorToken::OnAccent)
+                .opacity(super::state::HOVER),
+        )
     }
     /// A quiet inset edge keeps black and white swatches visible on the canvas.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn swatch_edge(self) -> Hsla {
         self.text().opacity(0.18)
     }
     /// Legible accent foreground.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn accent(self) -> Hsla {
         self.color(ColorToken::AccentText)
     }
     /// Quiet selected fill.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn selected(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0x142033
-        } else {
-            0xeff5ff
-        })
-        .into()
+        self.color(ColorToken::Accent)
+            .opacity(super::state::SELECTED)
     }
     /// Selected text background, distinct from a selected control surface.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn text_selection(self) -> Hsla {
         self.accent().opacity(0.25)
     }
     /// Destructive foreground.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn danger(self) -> Hsla {
-        rgb(if self == Self::Dark {
-            0xfca5a5
-        } else {
-            0xb91c1c
-        })
-        .into()
+        self.color(ColorToken::Danger)
     }
     /// Disabled foreground.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn disabled(self) -> Hsla {
-        rgb(0x737373).into()
+        self.color(ColorToken::TextPrimary)
+            .opacity(super::state::DISABLED)
     }
     /// Conventional world-axis colors with legible inverse labels in both themes.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn axis(self, axis: usize) -> Hsla {
         rgb(match self {
             Self::Dark => [0xf87171, 0x86efac, 0x93c5fd][axis],
@@ -140,54 +97,44 @@ impl Theme {
         rgb(if self == Self::Dark { dark } else { light }).into()
     }
     /// Window surface used by settings and dialogs.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn surface(self) -> Hsla {
-        self.pair(0x1e1e1e, 0xf5f5f7)
+        self.color(ColorToken::Surface)
     }
     /// Raised controls and search fields.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn surface_raised(self) -> Hsla {
-        self.pair(0x2b2b2b, 0xe0e0e3)
+        self.color(ColorToken::Raised)
     }
     /// Grouped form background.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn card(self) -> Hsla {
-        self.pair(0x262626, 0xffffff)
+        self.color(ColorToken::Raised)
     }
     /// Sidebar background.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn sidebar(self) -> Hsla {
-        self.pair(0x191919, 0xebebed)
+        self.color(ColorToken::Surface)
     }
     /// Secondary control fill.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn control(self) -> Hsla {
-        self.pair(0x353535, 0xe6e6e9)
+        self.color(ColorToken::Raised)
     }
     /// Group and control hairlines.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn separator(self) -> Hsla {
-        self.pair(0x393939, 0xd7d7db)
+        self.color(ColorToken::Border)
     }
     /// Filled selection / switch tint.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn tint(self) -> Hsla {
-        rgb(0x007aff).into()
+        self.color(ColorToken::Accent)
     }
     /// Foreground on the filled tint.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn accent_fg(self) -> Hsla {
         self.color(ColorToken::OnAccent)
     }
     /// Modal backdrop.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn scrim(self) -> Hsla {
-        gpui::black().opacity(0.38)
+        super::state::scrim()
     }
     /// Quiet backdrop for the small About panel.
-    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn quiet_scrim(self) -> Hsla {
-        gpui::black().opacity(0.12)
+        super::state::scrim()
     }
 }
 
@@ -473,9 +420,9 @@ pub mod metrics {
     /// Palette preview thumbnail width.
     pub const THUMBNAIL_WIDTH: f32 = 44.;
     /// Two rows of sidebar swatches.
-    pub const PALETTE_SCROLL_STEP: f32 = 76.;
+    pub const PALETTE_SCROLL_STEP: f32 = SWATCH_PITCH * 2.;
     /// Sidebar swatch size plus gap.
-    pub const SWATCH_PITCH: f32 = 38.;
+    pub const SWATCH_PITCH: f32 = crate::ControlHeight::Default.px() + crate::Space::S3.px();
     /// Settings window initial width.
     pub const SETTINGS_WIDTH: f32 = 880.;
     /// Settings window initial height.

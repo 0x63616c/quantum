@@ -1,4 +1,5 @@
 //! Palette dialog controller. All color and library changes are host-admitted actions.
+use quantum_ui::ColorToken;
 #[cfg(target_os = "macos")]
 mod eyedropper;
 mod files;
@@ -36,14 +37,14 @@ pub(super) struct PaletteManager {
 }
 impl PaletteManager {
     pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
-        let hex = TextField::new("#RRGGBB", cx);
+        let hex = TextField::design("#RRGGBB", cx);
         hex.update(cx, |field, _| field.numeric(7));
         let manager = Self {
             open: false,
-            name: TextField::new("Palette name", cx),
+            name: TextField::design("Palette name", cx),
             hex,
             channels: ["Red", "Green", "Blue", "Hue", "Saturation", "Brightness"].map(|label| {
-                let field = TextField::new(label, cx);
+                let field = TextField::design(label, cx);
                 field.update(cx, |field, _| field.numeric(3));
                 field
             }),
@@ -573,14 +574,14 @@ impl EditorView {
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
         let t = self.theme;
-        let mut button = Button::new(id, text, t).legacy_style(style);
+        let mut button = Button::design(id, text, t).style(style);
         if !name.is_empty() {
             button = button.icon(name);
         }
         button
             .build()
             .border_1()
-            .border_color(t.line())
+            .border_color(t.color(ColorToken::BorderSubtle))
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus, cx);
                 callback(this, window, cx)
