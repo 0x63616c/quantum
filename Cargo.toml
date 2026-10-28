@@ -11,6 +11,7 @@ rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
+tracing = "0.1.44"
 quantum-brand = { path = "crates/quantum-brand" }
 slotmap = "1.1.1"
 quantum-core = { path = "crates/quantum-core" }

@@ -105,6 +105,8 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
 }
 #[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
 fn main() -> anyhow::Result<()> {
+    #[cfg(feature = "profiling")]
+    initialize_profiling()?;
     #[cfg(feature = "ui-snapshots")]
     if std::env::args().nth(1).as_deref() == Some("--ui-snapshot") {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
@@ -223,6 +225,21 @@ fn install_diagnostics() -> anyhow::Result<()> {
     {
         eprintln!("Could not enable local crash reports; the editor will still start.");
     }
+    Ok(())
+}
+
+#[cfg(feature = "profiling")]
+fn initialize_profiling() -> anyhow::Result<()> {
+    use tracing_subscriber::prelude::*;
+    let targets = tracing_subscriber::filter::Targets::new()
+        .with_target("quantum", tracing::Level::INFO)
+        .with_target("quantum_app", tracing::Level::INFO)
+        .with_target("quantum_render", tracing::Level::INFO)
+        .with_target("quantum_mesh", tracing::Level::INFO);
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::registry()
+            .with(tracing_tracy::TracyLayer::default().with_filter(targets)),
+    )?;
     Ok(())
 }
 

@@ -21,6 +21,10 @@ gh project item-list <project-number> --owner 0x63616c --limit 200   # needs the
 Note what is In progress or In review so you do not duplicate it, and pick work
 from **Next** before **Backlog**. Leave **Later** items alone unless asked.
 
+Before coding, refresh the local symbol graph with `cargo xtask graphify`
+(requires `uv`); follow [AGENTS.md](../../../AGENTS.md#local-code-graph) for
+precise queries and local-only output.
+
 ## 2. One issue per ask
 
 - Every request, idea, bug or promise becomes an issue in the same turn, using a

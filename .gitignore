@@ -25,3 +25,6 @@ __pycache__/
 *.pending-snap
 /site/changelog/
 /site/blog/
+
+# Local graphify graph, reports and extraction cache
+/graphify-out/

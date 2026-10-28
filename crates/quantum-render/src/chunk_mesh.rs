@@ -35,6 +35,10 @@ impl ChunkMeshes {
     /// Synchronize a snapshot already validated by the document engine. Returns
     /// precisely the chunk buffers to replace/delete, including AO halo changes.
     /// Palette/layer-order/visibility changes invalidate the visible composite.
+    #[cfg_attr(
+        feature = "profiling",
+        tracing::instrument(name = "mesh.sync", skip_all)
+    )]
     pub(crate) fn sync_validated(&mut self, snapshot: &Snapshot) -> RenderResult<Vec<Pos>> {
         let full = self.source.as_ref().is_none_or(|old| {
             old.palette != snapshot.palette
@@ -349,6 +353,10 @@ fn emit_quad(mesh: &mut ChunkMesh, quad: Quad, face: Face, palette: &[Option<[f3
     }
 }
 
+#[cfg_attr(
+    feature = "profiling",
+    tracing::instrument(name = "mesh.chunk", skip_all)
+)]
 fn mesh_chunk(
     at: Pos,
     cells: &LocalCells,
