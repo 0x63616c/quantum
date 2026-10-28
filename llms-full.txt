@@ -13707,7 +13707,7 @@ Panic isolation requires unwinding: it cannot recover from an abort or roll back
 
 Plugin packages may depend on `voxelite-plugin-api` and external crates in normal and build dependencies. Every other workspace crate is forbidden there, including `voxelite-core`, `voxelite-app`, `voxelite-render` and `voxelite-ui`. The rule also covers optional, renamed and target-specific dependencies. Shared core types and export encoders are exposed through the API crate.
 
-Dev-dependencies are exempt so tests can use `voxelite_plugin_host::conformance::check`. `scripts/check-plugin-deps.py` enforces the boundary from Cargo metadata.
+Dev-dependencies are exempt so tests can use `voxelite_plugin_host::conformance::check`. `cargo xtask check plugin-deps` enforces the boundary from Cargo metadata.
 
 ## Versioned project data
 
@@ -13729,8 +13729,8 @@ Start with `crates/plugins/voxelite-plugin-example`. Its `ExamplePlugin` uses ID
 
 ```sh
 cargo test --locked -p voxelite-plugin-example
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
+cargo test -p xtask --locked checks::plugin_deps
 ```
 
 The example's conformance test is:
