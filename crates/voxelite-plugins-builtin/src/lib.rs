@@ -31,36 +31,48 @@ pub fn mcp_host() -> Host {
 
 #[cfg(test)]
 mod tests {
-    use voxelite_plugin_api::Plugin;
+    use voxelite_plugin_api::{API_VERSION, Plugin, Version};
 
     #[test]
-    fn manifests_match_original_literals() {
-        // Original literals: id, name, description, version, API, built-in, enabled, disableable.
-        #[rustfmt::skip]
-        let cases = [
-            (voxelite_plugin_agent::AgentPlugin.manifest(), "dev.voxelite.agent", "plugins.agent.name", "plugins.agent.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_comments::CommentsPlugin.manifest(), "dev.voxelite.comments", "plugins.comments.name", "plugins.comments.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_exporters::ExportersPlugin.manifest(), "dev.voxelite.exporters", "plugins.exporters.name", "plugins.exporters.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_gizmo_grid::GizmoGridPlugin.manifest(), "dev.voxelite.gizmo-grid", "plugins.gizmo-grid.name", "plugins.gizmo-grid.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_mirror::MirrorPlugin.manifest(), "dev.voxelite.mirror", "plugins.mirror.name", "plugins.mirror.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_palette::PalettePlugin.manifest(), "dev.voxelite.palette", "plugins.palette.name", "plugins.palette.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_shadows_lighting::ShadowsLightingPlugin.manifest(), "dev.voxelite.shadows-lighting", "plugins.shadows-lighting.name", "plugins.shadows-lighting.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
-            (voxelite_plugin_tools::ToolsPlugin.manifest(), "dev.voxelite.tools", "plugins.tools.name", "plugins.tools.description", env!("CARGO_PKG_VERSION"), "0.9.0", true, true, true),
+    fn optional_builtin_manifests_keep_their_ids_keys_and_policy() {
+        let cases: [(Box<dyn Plugin>, &str); 8] = [
+            (Box::new(voxelite_plugin_agent::AgentPlugin), "agent"),
+            (
+                Box::new(voxelite_plugin_comments::CommentsPlugin),
+                "comments",
+            ),
+            (
+                Box::new(voxelite_plugin_exporters::ExportersPlugin),
+                "exporters",
+            ),
+            (
+                Box::new(voxelite_plugin_gizmo_grid::GizmoGridPlugin),
+                "gizmo-grid",
+            ),
+            (Box::new(voxelite_plugin_mirror::MirrorPlugin), "mirror"),
+            (Box::new(voxelite_plugin_palette::PalettePlugin), "palette"),
+            (
+                Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
+                "shadows-lighting",
+            ),
+            (Box::new(voxelite_plugin_tools::ToolsPlugin), "tools"),
         ];
-        for (manifest, id, name, description, version, api, builtin, enabled, disable) in cases {
+        for (plugin, slug) in cases {
+            let manifest = plugin.manifest();
+            assert_eq!(manifest.id.as_str(), format!("dev.voxelite.{slug}"));
+            assert_eq!(manifest.name_key, format!("plugins.{slug}.name"));
             assert_eq!(
-                manifest,
-                voxelite_plugin_api::Manifest {
-                    id: voxelite_plugin_api::PluginId::new(id).unwrap(),
-                    name_key: name.into(),
-                    description_key: description.into(),
-                    version: voxelite_plugin_api::Version::parse(version).unwrap(),
-                    api_version: voxelite_plugin_api::Version::parse(api).unwrap(),
-                    builtin,
-                    default_enabled: enabled,
-                    can_disable: disable,
-                },
-                "{id}"
+                manifest.description_key,
+                format!("plugins.{slug}.description")
+            );
+            assert_eq!(
+                manifest.version,
+                Version::parse(env!("CARGO_PKG_VERSION")).unwrap()
+            );
+            assert_eq!(manifest.api_version, API_VERSION);
+            assert!(
+                manifest.builtin && manifest.default_enabled && manifest.can_disable,
+                "{slug}"
             );
         }
     }
