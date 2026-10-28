@@ -127,13 +127,16 @@ are in the [private archive](https://github.com/0x63616c/quantum-archive).
 The browser script requires the local server and the repository's Playwright
 installation (`npm ci`, `npx playwright install chromium` when absent). It captures
 1440×900 and 390×900 homepages (full page and first viewport) in both themes,
-plus docs views, both mobile comparison states, and both expanded phone menus
-(20 captures total). It checks homepage/docs widths
-from 320 to 1440px, keyboard comparison controls, focus, reduced motion, theme
-persistence, clipboard copying, no-JavaScript navigation/comparison and absence
+plus docs/news views, both mobile comparison states, and both expanded phone menus
+(32 captures total). It checks every page type's widths
+from 320 to 1440px (including header breakpoint edges and 701/768px), the bounds
+of each visible header control, the 12px docs code floor, scrolling MCP tables,
+skip-link hover/press and text-control press contrast, keyboard comparison controls,
+focus, reduced motion, theme persistence, clipboard copying, no-JavaScript navigation/comparison and absence
 of third-party homepage requests. It also verifies that section indexes match
-article headings, phone menus dismiss and restore focus correctly, and the first
-build example fits the 390px viewport without horizontal scrolling. Hidden comparison images are explicitly loaded
+article headings, phone menus close when focus leaves without moving it and
+still restore focus on Escape, and the first build example fits the 390px viewport
+without horizontal scrolling. Hidden comparison images are explicitly loaded
 for capture so lazy loading cannot leave incomplete screenshots.
 
 `python3 scripts/capture-site-proof.py` records a new real MCP edit and produces

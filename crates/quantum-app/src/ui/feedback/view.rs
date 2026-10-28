@@ -1,15 +1,23 @@
 use super::*;
+use quantum_ui::ColorToken;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
 
 impl FeedbackView {
     fn form(&self, t: Theme, cx: &Context<Self>) -> Div {
         div()
             .flex()
             .flex_col()
-            .gap(px(space::MD))
-            .child(div().text_color(t.muted()).child(PRIVACY))
+            .gap(px(Space::S3.px()))
+            .child(
+                div()
+                    .text_color(t.color(ColorToken::TextSecondary))
+                    .child(PRIVACY),
+            )
             .when(!self.is_crash(), |d| {
                 d.child(
-                    row().gap(px(space::SM)).children(
+                    row().gap(px(Space::S3.px())).children(
                         [
                             ("feedback-bug", "Bug", FeedbackKind::Bug),
                             ("feedback-feature", "Feature", FeedbackKind::Feature),
@@ -17,7 +25,7 @@ impl FeedbackView {
                         .map(|(id, label, kind)| {
                             let selected =
                                 matches!(&self.report, Report::Feedback(r) if r.kind == kind);
-                            Button::new(id, label, t)
+                            Button::design(id, label, t)
                                 .selected(selected)
                                 .build()
                                 .on_click(cx.listener(move |this, _, _, cx| {
@@ -39,7 +47,7 @@ impl FeedbackView {
             })
             .child(self.input.clone())
             .child(
-                Button::new("report-preview", "Update preview", t)
+                Button::design("report-preview", "Update preview", t)
                     .build()
                     .on_click(cx.listener(|this, _, _, cx| this.prepare(cx))),
             )
@@ -48,7 +56,7 @@ impl FeedbackView {
     fn footer(&self, t: Theme, cx: &Context<Self>) -> Div {
         Dialog::footer(t)
             .child(
-                Button::new(
+                Button::design(
                     "report-close",
                     if self.is_crash() {
                         "Keep for later"
@@ -57,22 +65,22 @@ impl FeedbackView {
                     },
                     t,
                 )
-                .variant(ButtonVariant::Ghost)
+                .style(quantum_ui::ButtonStyle::Ghost)
                 .build()
                 .on_click(|_, window, _| window.remove_window()),
             )
             .when(self.pending.is_some(), |d| {
                 d.child(
-                    Button::new("report-delete", "Delete report", t)
-                        .variant(ButtonVariant::Ghost)
+                    Button::design("report-delete", "Delete report", t)
+                        .style(quantum_ui::ButtonStyle::Ghost)
                         .build()
                         .on_click(cx.listener(|this, _, window, cx| this.delete(window, cx))),
                 )
             })
             .when(self.preview.is_some(), |d| {
                 d.child(
-                    Button::new("report-copy", "Copy", t)
-                        .variant(ButtonVariant::Ghost)
+                    Button::design("report-copy", "Copy", t)
+                        .style(quantum_ui::ButtonStyle::Ghost)
                         .build()
                         .on_click(cx.listener(|this, _, _, cx| {
                             if let Some(preview) = &this.preview {
@@ -81,14 +89,14 @@ impl FeedbackView {
                         })),
                 )
                 .child(
-                    Button::new("report-save", "Save…", t)
-                        .variant(ButtonVariant::Ghost)
+                    Button::design("report-save", "Save…", t)
+                        .style(quantum_ui::ButtonStyle::Ghost)
                         .build()
                         .on_click(cx.listener(|this, _, window, cx| this.save(window, cx))),
                 )
                 .child(
-                    Button::new("report-continue", "Continue to GitHub…", t)
-                        .variant(ButtonVariant::Primary)
+                    Button::design("report-continue", "Continue to GitHub…", t)
+                        .style(quantum_ui::ButtonStyle::Primary)
                         .build()
                         .on_click(cx.listener(|this, _, _, cx| this.continue_in_browser(cx))),
                 )
@@ -106,10 +114,10 @@ impl Render for FeedbackView {
         self.sync_menu(window, cx);
         div()
             .size_full()
-            .bg(t.surface())
-            .text_color(t.text())
+            .bg(t.color(ColorToken::Surface))
+            .text_color(t.color(ColorToken::TextPrimary))
             .font_family(type_size::UI)
-            .text_size(px(type_size::BODY))
+            .text_style(TextSize::Small)
             .flex()
             .flex_col()
             .key_context("ReportWindow")
@@ -145,15 +153,19 @@ impl Render for FeedbackView {
                 div()
                     .id("report-content")
                     .flex_1()
-                    .min_h(px(space::NONE))
+                    .min_h(px(Space::S0.px()))
                     .overflow_y_scroll()
-                    .p(px(space::XL))
+                    .p(px(Space::S5.px()))
                     .flex()
                     .flex_col()
-                    .gap(px(space::LG))
+                    .gap(px(Space::S4.px()))
                     .child(self.form(t, cx))
                     .when_some(self.error.clone(), |d, error| {
-                        d.child(div().text_color(t.muted()).child(error))
+                        d.child(
+                            div()
+                                .text_color(t.color(ColorToken::TextSecondary))
+                                .child(error),
+                        )
                     })
                     .child(
                         div()
@@ -161,7 +173,7 @@ impl Render for FeedbackView {
                             .child("Report preview · public GitHub issue"),
                     )
                     .child(
-                        mono("").text_size(px(type_size::CAPTION)).child(
+                        mono("").text_style(TextSize::Caption).child(
                             self.preview
                                 .clone()
                                 .unwrap_or_else(|| "Preview your report before continuing.".into()),

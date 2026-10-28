@@ -172,7 +172,7 @@ impl SegmentedControl {
 /// Audit name for the shared tab strip.
 pub type Tabs = TabBar;
 impl Tab {
-    /// Token-only underline tab. Legacy `new` remains frozen until #134.
+    /// Token-only underline tab with the shared design-system states.
     pub fn design(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
         Self {
             design: true,

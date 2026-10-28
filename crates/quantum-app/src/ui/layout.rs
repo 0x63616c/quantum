@@ -1,5 +1,9 @@
 //! Editor frame synchronization, root layout and event wiring.
 use super::*;
+use quantum_ui::ColorToken;
+use quantum_ui::Space;
+use quantum_ui::TextSize;
+use quantum_ui::TextStyle;
 
 impl Render for EditorView {
     #[cfg_attr(
@@ -10,6 +14,20 @@ impl Render for EditorView {
         #[cfg(feature = "profiling")]
         tracing::event!(tracing::Level::INFO, tracy.frame_mark = true);
         self.prepare_frame(window, cx);
+        let modal = self.palettes.open
+            || self.save_flow.dialog_open()
+            || self.save_flow.needs_confirmation()
+            || self.info.is_some()
+            || self.commands.is_open();
+        self.overlays.update(cx, |state, cx| {
+            state.set_open("editor-modal", quantum_ui::OverlayLayer::Dialog, modal, cx);
+            state.set_open(
+                "editor-popover",
+                quantum_ui::OverlayLayer::Popover,
+                self.menu.is_some() || self.palette_open || self.agent.open,
+                cx,
+            );
+        });
         let size = window.viewport_size();
         let overlay = self.overlay(window, cx);
         div()
@@ -21,10 +39,10 @@ impl Render for EditorView {
             .relative()
             .flex()
             .flex_col()
-            .bg(self.theme.background())
-            .text_color(self.theme.text())
+            .bg(self.theme.color(ColorToken::Canvas))
+            .text_color(self.theme.color(ColorToken::TextPrimary))
             .font(gpui::font("Geist"))
-            .text_size(px(type_size::BODY_LG))
+            .text_style(TextSize::Body)
             .capture_key_down(cx.listener(Self::key_down))
             .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
                 if this.overlay_drag.is_some() {
@@ -61,7 +79,7 @@ impl Render for EditorView {
             .child(
                 row()
                     .flex_1()
-                    .min_h(px(space::NONE))
+                    .min_h(px(Space::S0.px()))
                     .items_stretch()
                     .child(self.tool_rail(cx))
                     .child(self.viewport(cx))

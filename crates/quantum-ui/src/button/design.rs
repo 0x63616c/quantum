@@ -59,7 +59,7 @@ impl Default for Design {
     }
 }
 impl Button {
-    /// New design-system action; legacy `new` retains existing screen pixels.
+    /// Design-system action with typed hierarchy, height and interaction states.
     pub fn design(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
         Self::new(id, label, theme).style(ButtonStyle::Secondary)
     }
@@ -73,7 +73,7 @@ impl Button {
         self.design.get_or_insert_default().surface = surface;
         self
     }
-    /// Typed hierarchy with frozen legacy appearance, for migration in #134.
+    /// Typed hierarchy adapter for callers retaining compatibility geometry.
     pub fn legacy_style(self, style: ButtonStyle) -> Self {
         self.variant(style.into())
     }

@@ -343,3 +343,41 @@ fn parse_publish_accepts_hash() {
     assert_eq!(options.publish, Some(42));
     assert_eq!(options.screens, ["welcome"]);
 }
+
+#[test]
+fn complete_migration_gallery_fits_the_pr_body_limit() {
+    let side = |label| Side {
+        label,
+        id: "abcdef0".into(),
+        dir: PathBuf::from(label),
+    };
+    let results: Vec<_> = SCREENS
+        .iter()
+        .map(|screen| Comparison {
+            screen,
+            state: State::Changed,
+            zoom: None,
+        })
+        .collect();
+    let markdown = render(
+        &results,
+        &side("before"),
+        &side("after"),
+        "origin/main",
+        &Urls::Remote {
+            prefix: format!(
+                "https://raw.githubusercontent.com/0x63616c/quantum/{}/pr-99999/{}",
+                "a".repeat(40),
+                "b".repeat(40),
+            ),
+        },
+    );
+    // Reserve room for the issue link, summary, validation and owner handoff.
+    assert!(markdown.chars().count() + 4096 < 65_536);
+    assert_eq!(markdown.matches("<img ").count(), SCREENS.len() * 2);
+    for screen in SCREENS {
+        for side in ["before", "after"] {
+            assert!(markdown.contains(&format!("/{side}/{}.png", screen.name)));
+        }
+    }
+}
