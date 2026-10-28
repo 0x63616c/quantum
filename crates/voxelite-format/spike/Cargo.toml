@@ -1,0 +1,30 @@
+[package]
+name = "payload-spike"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+# Deliberately isolated: experimental dependencies never enter product builds or
+# the root lockfile. Run with --manifest-path crates/voxelite-format/spike/Cargo.toml.
+[workspace]
+
+[dependencies]
+rkyv = { version = "=0.8.18", default-features = false, features = ["std", "bytecheck", "little_endian", "unaligned", "pointer_width_32"] }
+rustix = { version = "=1.1.4", features = ["fs", "time"] }
+serde = "1.0"
+serde_json = "1.0"
+voxelite-core = { path = "../../voxelite-core" }
+voxelite-format = { path = ".." }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
