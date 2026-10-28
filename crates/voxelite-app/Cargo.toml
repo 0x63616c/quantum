@@ -24,6 +24,7 @@ name = "ascii_loading"
 required-features = ["native"]
 
 [dependencies]
+voxelite-crash.workspace = true
 futures-channel.workspace = true
 voxelite-mcp.workspace = true
 tempfile.workspace = true

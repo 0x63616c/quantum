@@ -297,6 +297,16 @@ const CORE_COMMANDS: &[CoreCommand] = &[
         None,
     ),
     (
+        "dev.voxelite.core.feedback",
+        "Send feedback…",
+        None,
+        None,
+        "comment",
+        "Help",
+        355,
+        None,
+    ),
+    (
         "dev.voxelite.core.help",
         "Keyboard & mouse guide",
         None,
