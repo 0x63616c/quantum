@@ -287,6 +287,11 @@ pub(crate) struct WelcomeView {
     error: Option<String>,
 }
 impl WelcomeView {
+    pub(crate) fn show_error(&mut self, error: Option<String>, cx: &mut Context<Self>) {
+        self.error = error;
+        cx.notify();
+    }
+
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
@@ -420,10 +425,9 @@ impl WelcomeView {
     fn load(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.busy = true;
         self.error = None;
-        let task = cx.background_executor().spawn(async move {
-            voxelite_format::session::DocumentSession::open(&path, voxelite_core::Limits::default())
-                .map_err(voxelite_app::editor::EditorError::from)
-        });
+        let task = cx
+            .background_executor()
+            .spawn(async move { Editor::load_session(&path) });
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
