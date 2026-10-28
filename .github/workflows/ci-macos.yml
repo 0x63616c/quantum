@@ -119,9 +119,9 @@ jobs:
           echo "CARGO_TARGET_DIR=$target_dir" >> "$GITHUB_ENV"
       # Formatting runs in CI Linux; the scripts job runs the Python checks.
       - name: Clippy
-        run: cargo clippy --workspace --locked -- -D warnings
+        run: cargo clippy --workspace --locked --features voxelite-app/test-support -- -D warnings
       - name: Test workspace
-        run: cargo test --workspace --locked --no-fail-fast
+        run: cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         run: scripts/package-macos.sh

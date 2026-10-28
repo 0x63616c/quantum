@@ -373,3 +373,11 @@ UI action glyphs are bundled Lucide SVGs with upstream ISC/Feather MIT notices i
 keyboard guide to its right. The viewport mouse/key legend has
 a full hover tooltip. Text fields support selection contraction/reversal,
 clipboard, IME range conversion, pointer selection and horizontal caret scrolling.
+
+### Native integration tests
+
+`cargo test -p voxelite-app --locked --features test-support` also exercises real
+GPUI key dispatch and settings/history shutdown using its deterministic test
+executor. CI enables this feature for workspace tests and Clippy. It is separate
+from `native` so production builds and `--no-default-features` model tests do not
+pull in GPUI's testing dependencies.

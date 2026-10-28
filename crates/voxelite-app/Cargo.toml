@@ -7,6 +7,8 @@ license.workspace = true
 
 [features]
 default = ["native"]
+# Deterministic GPUI integration tests; keep headless model tests GUI-free.
+test-support = ["native", "gpui/test-support"]
 native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple", "dep:async-lock"]
 
 [lib]
@@ -71,7 +73,6 @@ workspace = true
 features = ["gpu"]
 
 [dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
 voxelite-plugin-tools.workspace = true
 voxelite-plugin-exporters.workspace = true
 voxelite-plugin-shadows-lighting.workspace = true

@@ -1380,10 +1380,12 @@ mod tests {
     use super::{SearchResult, Section, SectionHistory, search_sections};
     use crate::actions::Op;
 
+    #[cfg(feature = "test-support")]
     fn init_writer(cx: &gpui::TestAppContext, path: std::path::PathBuf) {
         cx.update(|cx| super::init_at(None, Ok(Default::default()), path, cx));
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn show_at_launch_round_trips_through_the_background_writer(cx: &mut gpui::TestAppContext) {
         let dir = tempfile::tempdir().unwrap();
@@ -1405,6 +1407,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn rapid_changes_coalesce_into_the_latest_complete_snapshot(cx: &mut gpui::TestAppContext) {
         use std::sync::{Arc, Mutex};
@@ -1429,6 +1432,7 @@ mod tests {
         assert!(!snapshots[0].grid);
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn quit_drains_pending_settings_without_reentering_the_app(cx: &mut gpui::TestAppContext) {
         let dir = tempfile::tempdir().unwrap();
@@ -1445,6 +1449,7 @@ mod tests {
         assert!(!loaded.grid);
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn failed_write_restores_last_durable_toggle_and_can_retry(cx: &mut gpui::TestAppContext) {
         let dir = tempfile::tempdir().unwrap();

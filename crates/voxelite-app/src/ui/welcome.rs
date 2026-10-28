@@ -1332,6 +1332,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "test-support")]
     fn window_fixture(
         cx: &mut gpui::TestAppContext,
         count: usize,
@@ -1379,6 +1380,7 @@ mod tests {
         (window, dir)
     }
 
+    #[cfg(feature = "test-support")]
     fn keys(
         cx: &mut gpui::TestAppContext,
         handle: gpui::WindowHandle<super::WelcomeView>,
@@ -1403,6 +1405,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn shutdown_drains_ordered_history_writes_without_ui_callbacks(cx: &mut gpui::TestAppContext) {
         let (_handle, dir) = window_fixture(cx, 0);
@@ -1431,6 +1434,7 @@ mod tests {
         assert_eq!(projects[0].path, path.canonicalize().unwrap());
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn tab_cycles_sidebar_toggle_and_list_in_both_directions(cx: &mut gpui::TestAppContext) {
         let (handle, dir) = window_fixture(cx, 0);
@@ -1474,6 +1478,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn real_keys_cross_recents_and_samples_without_stealing_sidebar_activation(
         cx: &mut gpui::TestAppContext,
@@ -1522,6 +1527,7 @@ mod tests {
         cx.read(|cx| assert!(handle.read(cx).is_err()));
     }
 
+    #[cfg(feature = "test-support")]
     #[gpui::test]
     fn enter_on_a_removed_file_preserves_welcome_and_reports_the_error(
         cx: &mut gpui::TestAppContext,
