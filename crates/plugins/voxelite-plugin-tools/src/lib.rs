@@ -4,8 +4,7 @@ mod behavior;
 use behavior::BuiltinTool;
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Tool,
-    ToolContribution, Value, Version,
+    CommandContribution, Manifest, Plugin, Registrar, Tool, ToolContribution, Value,
 };
 
 /// Declarations and behavior for the standard editing tools.
@@ -20,16 +19,11 @@ impl Plugin for ToolsPlugin {
     }
 
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new("dev.voxelite.tools").unwrap(),
-            name_key: "plugins.tools.name".into(),
-            description_key: "plugins.tools.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            "dev.voxelite.tools",
+            "plugins.tools",
+            env!("CARGO_PKG_VERSION"),
+        )
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
@@ -126,8 +120,7 @@ impl Plugin for ToolsPlugin {
 mod tests {
     use super::*;
 
-    #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(ToolsPlugin));
-    }
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        ToolsPlugin
+    ));
 }

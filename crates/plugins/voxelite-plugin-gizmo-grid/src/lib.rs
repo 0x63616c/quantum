@@ -17,16 +17,7 @@ pub const GIZMO_OVERLAY: &str = "dev.voxelite.gizmo-grid.gizmo";
 pub struct GizmoGridPlugin;
 impl Plugin for GizmoGridPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.gizmo-grid.name".into(),
-            description_key: "plugins.gizmo-grid.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(PLUGIN_ID, "plugins.gizmo-grid", env!("CARGO_PKG_VERSION"))
     }
     fn contribute(&self, registrar: &mut Registrar) {
         registrar.command(CommandContribution {
