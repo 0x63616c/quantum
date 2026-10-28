@@ -13,6 +13,8 @@ pub struct Tab {
     theme: Theme,
     selected: bool,
     tab_index: isize,
+    design: bool,
+    state: crate::ControlState,
 }
 impl Tab {
     /// Construct a tab. The selected underline does not participate in layout.
@@ -23,6 +25,8 @@ impl Tab {
             theme,
             selected: false,
             tab_index: 0,
+            design: false,
+            state: crate::ControlState::Rest,
         }
     }
     /// Mark the currently visible panel.
@@ -46,6 +50,9 @@ impl Tab {
     }
     /// Build the accessible tab; attach the panel-selection callback to this element.
     pub fn build(self) -> Stateful<Div> {
+        if self.design {
+            return self.build_design();
+        }
         let t = self.theme;
         row()
             .id(self.id)
@@ -162,6 +169,97 @@ impl SegmentedControl {
     }
 }
 
+/// Audit name for the shared tab strip.
+pub type Tabs = TabBar;
+impl Tab {
+    /// Token-only underline tab. Legacy `new` remains frozen until #134.
+    pub fn design(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
+        Self {
+            design: true,
+            ..Self::new(id, label, theme)
+        }
+    }
+    /// Controlled visual state; selection remains independent.
+    pub fn state(mut self, state: crate::ControlState) -> Self {
+        self.state = state;
+        self
+    }
+    fn build_design(self) -> Stateful<Div> {
+        use crate::{ButtonStyle, ColorToken as C, Space, tokens::state};
+        Button::design(self.id, self.label, self.theme)
+            .style(ButtonStyle::Ghost)
+            .state(self.state)
+            .selected(self.selected)
+            .tab_index(self.tab_index)
+            .build()
+            .relative()
+            .role(Role::Tab)
+            .when(self.selected, |d| {
+                d.child(
+                    div()
+                        .absolute()
+                        .bottom(px(Space::S0.px()))
+                        .left(px(Space::S1.px()))
+                        .right(px(Space::S1.px()))
+                        .h(px(state::INDICATOR))
+                        .bg(self.theme.color(C::AccentText)),
+                )
+            })
+    }
+}
+impl TabBar {
+    /// Token-only tab strip. Place outside the scrolling body to keep it sticky.
+    pub fn design(id: impl Into<ElementId>, theme: Theme) -> Stateful<Div> {
+        use crate::{ColorToken as C, Space};
+        row()
+            .id(id)
+            .role(Role::TabList)
+            .flex_shrink_0()
+            .gap(px(Space::S2.px()))
+            .border_b_1()
+            .border_color(theme.color(C::BorderSubtle))
+    }
+}
+impl Segment {
+    /// New fill-indicator choice; legacy `new` keeps its previous typography.
+    pub fn design(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
+        Self {
+            button: Button::design(id, label, theme)
+                .style(crate::ButtonStyle::Ghost)
+                .on_surface(crate::ColorToken::Raised),
+        }
+    }
+    /// Shared design-system height.
+    pub fn height(mut self, height: crate::ControlHeight) -> Self {
+        self.button = self.button.height(height);
+        self
+    }
+    /// Controlled preview state.
+    pub fn state(mut self, state: crate::ControlState) -> Self {
+        self.button = self.button.state(state);
+        self
+    }
+    /// Guarded activation callback.
+    pub fn on_click(
+        mut self,
+        listener: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.button = self.button.on_click(listener);
+        self
+    }
+}
+impl SegmentedControl {
+    /// New grouped choices; the selected segment supplies the fill, with no underline.
+    pub fn design(theme: Theme) -> Div {
+        use crate::{ColorToken as C, Radius, Space, presentation};
+        presentation::surface(theme, C::Raised, Radius::Sm)
+            .flex()
+            .items_center()
+            .p(px(Space::S1.px()))
+            .gap(px(Space::S1.px()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Tab;
@@ -170,6 +268,24 @@ mod tests {
         tokens::{metrics, space},
     };
     use gpui::{Position, Styled, px};
+    #[test]
+    fn design_tabs_and_segments_share_selection_fill_and_height() {
+        use crate::{ColorToken, Segment};
+        let mut tab = Tab::design("tab", "Tab", Theme::Dark)
+            .selected(true)
+            .build();
+        let mut segment = Segment::design("segment", "Segment", Theme::Dark)
+            .selected(true)
+            .build();
+        assert_eq!(tab.style().size.height, Some(px(28.).into()));
+        assert_eq!(segment.style().size.height, tab.style().size.height);
+        assert_eq!(segment.style().background, tab.style().background);
+        assert_eq!(
+            tab.style().background,
+            Some(Theme::Dark.color(ColorToken::Accent).opacity(0.16).into())
+        );
+        assert_eq!(segment.style().border_widths.bottom, None);
+    }
     #[test]
     fn underline_is_inset_and_does_not_participate_in_layout() {
         let mut line = Tab::underline(Theme::Dark);
