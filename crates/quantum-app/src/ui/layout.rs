@@ -6,7 +6,13 @@ use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
 
 impl Render for EditorView {
+    #[cfg_attr(
+        feature = "profiling",
+        tracing::instrument(name = "editor.frame", skip_all)
+    )]
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(feature = "profiling")]
+        tracing::event!(tracing::Level::INFO, tracy.frame_mark = true);
         self.prepare_frame(window, cx);
         let modal = self.palettes.open
             || self.save_flow.dialog_open()
