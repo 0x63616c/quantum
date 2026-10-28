@@ -552,12 +552,19 @@ impl EditorView {
         cx: &Context<Self>,
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
+        self.styled_control(id, name, text, ButtonStyle::Ghost, cx, callback)
+    }
+    pub(super) fn styled_control(
+        &self,
+        id: impl Into<ElementId>,
+        name: &'static str,
+        text: impl Into<SharedString>,
+        style: ButtonStyle,
+        cx: &Context<Self>,
+        callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) -> Stateful<Div> {
         let t = self.theme;
-        let mut button = Button::new(id, text, t).variant(if name == "send" {
-            ButtonVariant::Primary
-        } else {
-            ButtonVariant::Ghost
-        });
+        let mut button = Button::new(id, text, t).legacy_style(style);
         if !name.is_empty() {
             button = button.icon(name);
         }

@@ -9,6 +9,10 @@ use gpui::{prelude::*, *};
 pub struct Panel {
     theme: Theme,
     header: Option<SharedString>,
+    design: bool,
+    actions: Option<AnyElement>,
+    body: Option<AnyElement>,
+    footer: Option<AnyElement>,
 }
 impl Panel {
     /// A bordered, padded panel on the canvas background.
@@ -16,6 +20,10 @@ impl Panel {
         Self {
             theme,
             header: None,
+            design: false,
+            actions: None,
+            body: None,
+            footer: None,
         }
     }
     /// Add a title row before the panel's content.
@@ -25,6 +33,9 @@ impl Panel {
     }
     /// Build a panel; append content with `child`/`children`.
     pub fn build(self) -> Div {
+        if self.design {
+            return self.build_design();
+        }
         Self::section(self.theme)
             .p(px(metrics::PANEL_PADDING))
             .border_1()
@@ -138,6 +149,79 @@ impl Popover {
     }
 }
 
+impl Panel {
+    /// Design-system panel with 16px padding and header/body/footer slots.
+    pub fn design(theme: Theme) -> Self {
+        Self {
+            design: true,
+            ..Self::new(theme)
+        }
+    }
+    /// Trailing header actions; pair with `header`.
+    pub fn actions(mut self, actions: impl IntoElement) -> Self {
+        self.actions = Some(actions.into_any_element());
+        self
+    }
+    /// Independently scrollable body. Give the panel a constrained height to scroll.
+    pub fn body(mut self, id: impl Into<ElementId>, body: impl IntoElement) -> Self {
+        use crate::Space;
+        self.body = Some(
+            div()
+                .id(id)
+                .flex_1()
+                .min_h(px(Space::S0.px()))
+                // Reserve room for the 3px outer focus extent inside GPUI's rectangular
+                // scroll mask, without changing the panel's 16px content gutter.
+                .m(px(-Space::S2.px()))
+                .p(px(Space::S2.px()))
+                .overflow_y_scroll()
+                .child(body)
+                .into_any_element(),
+        );
+        self
+    }
+    /// Optional fixed footer content.
+    pub fn footer(mut self, footer: impl IntoElement) -> Self {
+        self.footer = Some(footer.into_any_element());
+        self
+    }
+    fn build_design(self) -> Div {
+        use crate::{ColorToken as C, Radius, Space, TextSize, presentation};
+        let t = self.theme;
+        presentation::surface(t, C::Surface, Radius::Md)
+            .flex()
+            .flex_col()
+            .min_h(px(Space::S0.px()))
+            .p(px(Space::S5.px()))
+            .gap(px(Space::S5.px()))
+            .when_some(self.header, |d, title| {
+                d.child(
+                    row()
+                        .gap(px(Space::S3.px()))
+                        .child(
+                            TextSize::Title
+                                .apply(presentation::ellipsis(title))
+                                .flex_1(),
+                        )
+                        .when_some(self.actions, |d, actions| {
+                            d.child(div().flex_shrink_0().child(actions))
+                        }),
+                )
+            })
+            .children(self.body)
+            .when_some(self.footer, |d, footer| {
+                d.child(
+                    div()
+                        .flex_shrink_0()
+                        .pt(px(Space::S4.px()))
+                        .border_t_1()
+                        .border_color(t.color(C::BorderSubtle))
+                        .child(footer),
+                )
+            })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Popover;
@@ -146,6 +230,22 @@ mod tests {
         tokens::{metrics, radius, space},
     };
     use gpui::{Styled, px};
+    #[test]
+    fn design_panel_has_sixteen_pixel_padding_and_scroll_slot() {
+        use crate::{ColorToken, Panel};
+        let mut panel = Panel::design(Theme::Dark)
+            .header("Title")
+            .body("scroll", gpui::div())
+            .footer(gpui::div())
+            .build();
+        assert_eq!(panel.style().padding.top, Some(px(16.).into()));
+        assert_eq!(panel.style().padding.left, Some(px(16.).into()));
+        assert_eq!(panel.style().corner_radii.top_left, Some(px(10.).into()));
+        assert_eq!(
+            panel.style().background,
+            Some(Theme::Dark.color(ColorToken::Surface).into())
+        );
+    }
     #[test]
     fn floating_surface_and_flush_child_have_concentric_corners() {
         let mut outer = Popover::new(Theme::Dark).build();
