@@ -105,7 +105,7 @@ impl EditorView {
             .gap(px(Space::S2.px()))
             .child(
                 div()
-                    .font_weight(FontWeight::SEMIBOLD)
+                    .font_weight(type_size::SEMIBOLD)
                     .text_style(TextSize::Title)
                     .mr(px(Space::S5.px()))
                     .child("Quantum"),
@@ -191,7 +191,7 @@ impl EditorView {
                         row()
                             .gap(px(Space::S2.px()))
                             .text_style(TextSize::Title)
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .font_weight(type_size::SEMIBOLD)
                             .child(
                                 div()
                                     .min_w(px(Space::S0.px()))
@@ -204,7 +204,7 @@ impl EditorView {
                                     div()
                                         .flex_shrink_0()
                                         .text_style(TextSize::Body)
-                                        .font_weight(FontWeight::NORMAL)
+                                        .font_weight(type_size::NORMAL)
                                         .text_color(t.color(ColorToken::TextSecondary))
                                         .child("— Edited"),
                                 )

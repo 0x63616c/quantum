@@ -1,4 +1,4 @@
-//! Action controls. Legacy constructors preserve #134 screen pixels.
+//! Action controls with shared design-system state and geometry.
 use crate::tokens::{self, ControlSize, Theme, metrics, radius, space, type_size};
 use crate::{icon, row};
 use gpui::{prelude::*, *};
@@ -7,7 +7,7 @@ pub use design::{ButtonStyle, ControlState};
 
 type ClickListener = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 
-/// Legacy button hierarchy; migrate to `ButtonStyle` in #134.
+/// Compatibility action hierarchy; new composition uses `ButtonStyle`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ButtonVariant {
     /// Strong primary action.

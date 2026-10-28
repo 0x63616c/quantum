@@ -63,7 +63,7 @@ impl EditorView {
                         )
                         .child(
                             div()
-                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_weight(type_size::SEMIBOLD)
                                 .child(self.palette_name()),
                         )
                         .child(

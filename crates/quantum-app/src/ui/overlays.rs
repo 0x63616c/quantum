@@ -228,7 +228,7 @@ impl EditorView {
                             .bg(color(t, circle.fill))
                             .text_color(color(t, circle.text))
                             .text_style(TextSize::Small)
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .font_weight(type_size::SEMIBOLD)
                             .children(circle.label)
                             .when(circle.highlighted, |d| d.shadow(focus_ring(t)))
                     }))

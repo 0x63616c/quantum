@@ -105,7 +105,7 @@ impl EditorView {
                         div()
                             .text_ellipsis()
                             .overflow_hidden()
-                            .font_weight(FontWeight::MEDIUM)
+                            .font_weight(type_size::MEDIUM)
                             .child(entry.label.clone()),
                     )
                     .child(

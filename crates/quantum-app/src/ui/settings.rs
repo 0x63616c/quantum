@@ -15,6 +15,7 @@ use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
 use quantum_ui::tokens::metrics;
+use quantum_ui::tokens::type_size;
 use quantum_ui::{
     Button, Card, FormRow, IconButton, Panel, SidebarItem, SidebarSection, Slider, SliderRange,
     Toggle,
@@ -416,7 +417,7 @@ impl SettingsView {
                         .p(px(Space::S5.px()))
                         .child(
                             div()
-                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_weight(type_size::SEMIBOLD)
                                 .mb(px(Space::S5.px()))
                                 .child("Window appearance"),
                         )
@@ -457,7 +458,7 @@ impl SettingsView {
                                             div()
                                                 .mt(px(Space::S3.px()))
                                                 .text_center()
-                                                .font_weight(FontWeight::SEMIBOLD)
+                                                .font_weight(type_size::SEMIBOLD)
                                                 .text_color(if selected {
                                                     t.color(ColorToken::Accent)
                                                 } else {
@@ -868,7 +869,7 @@ impl Render for SettingsView {
                         div()
                             .min_w(px(Space::S0.px()))
                             .text_style(TextSize::Title)
-                            .font_weight(FontWeight::BOLD)
+                            .font_weight(type_size::BOLD)
                             .child("Quantum Settings"),
                     )
                     .child(div().flex_1())
@@ -962,7 +963,7 @@ impl Render for SettingsView {
                                         div()
                                             .mb(px(Space::S6.px()))
                                             .text_style(TextSize::Display)
-                                            .font_weight(FontWeight::BOLD)
+                                            .font_weight(type_size::BOLD)
                                             .child(section.title()),
                                     )
                                     .child(self.content(section, t, cx)),

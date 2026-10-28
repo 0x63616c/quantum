@@ -140,11 +140,11 @@ impl EditorView {
             .child(div().text_style(TextSize::Small).text_color(t.color(ColorToken::TextSecondary)).child("Uses the bundled MCP server, or quantum-mcp on PATH for source builds. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
             .into_any_element()
     }
-    pub(super) fn agent_feed(&self, compact: bool, cx: &Context<Self>) -> Div {
+    pub(super) fn agent_feed(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let paused = self.agent.session.as_ref().is_some_and(|s| s.paused);
         if self.agent.events.is_empty() {
-            return self.agent_invitation(compact, cx);
+            return self.agent_invitation(cx);
         }
         Panel::section(t)
             .flex_1()
@@ -206,7 +206,7 @@ impl EditorView {
                                             .min_w(px(Space::S0.px()))
                                             .text_ellipsis()
                                             .overflow_hidden()
-                                            .font_weight(FontWeight::MEDIUM)
+                                            .font_weight(type_size::MEDIUM)
                                             .child(
                                                 e.label
                                                     .trim_start_matches("quantum_")
@@ -266,7 +266,7 @@ impl EditorView {
             )
             .when_some(self.agent.capture.as_ref(), |d, capture| {
                 d.child(row().justify_between()
-                    .child(div().font_weight(FontWeight::MEDIUM).child("Captured views"))
+                    .child(div().font_weight(type_size::MEDIUM).child("Captured views"))
                     .child(mono(format!("r{:03}", capture.revision)).text_color(t.color(ColorToken::TextSecondary))))
                 .child(row().gap(px(Space::S3.px())).children(capture.views.iter().enumerate().map(|(i, (name, view, image))| {
                     let view = *view;
@@ -416,7 +416,7 @@ fn preset(name: &str) -> Option<PresetView> {
 }
 
 impl EditorView {
-    fn agent_invitation(&self, compact: bool, cx: &Context<Self>) -> Div {
+    fn agent_invitation(&self, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let connected = self.agent.clients > 0;
         let has_history = self.editor.engine.history().next().is_some();

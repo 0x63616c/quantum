@@ -10,6 +10,7 @@ use quantum_ui::ColorToken;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::type_size;
 
 pub(super) fn keyboard_guide(theme: Theme) -> Div {
     let columns = keyboard_guide_sections(ShortcutPlatform::current());
@@ -29,7 +30,7 @@ pub(super) fn keyboard_guide(theme: Theme) -> Div {
                             div()
                                 .mb(px(Space::S3.px()))
                                 .text_style(TextSize::Small)
-                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_weight(type_size::SEMIBOLD)
                                 .text_color(theme.color(ColorToken::TextSecondary))
                                 .child(section.title),
                         )

@@ -82,6 +82,9 @@ impl EditorView {
                     .child(self.layer_lock(i, id, locked, cx)),
             )
             .build()
+            .when(!visible, |d| {
+                d.text_color(t.color(ColorToken::TextSecondary))
+            })
             .when(compact, |d| d.py(px(Space::S0.px())))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.editor.layer = id;
@@ -133,6 +136,7 @@ impl EditorView {
             if locked { "Unlock layer" } else { "Lock layer" },
             t,
         )
+        .selected(locked)
         .height(quantum_ui::ControlHeight::Dense)
         .build()
         .anchored_hint(

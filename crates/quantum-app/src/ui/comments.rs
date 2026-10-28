@@ -363,7 +363,7 @@ impl EditorView {
                                                 })
                                                 .text_color(t.color(ColorToken::TextSecondary)),
                                             )
-                                            .child(div().font_weight(FontWeight::MEDIUM).child(
+                                            .child(div().font_weight(type_size::MEDIUM).child(
                                                 if m.origin == Origin::Human {
                                                     "Human"
                                                 } else {
@@ -471,7 +471,7 @@ impl EditorView {
                         icon(if c.resolved { "check" } else { "comment" })
                             .text_color(t.color(ColorToken::TextSecondary)),
                     )
-                    .child(div().font_weight(FontWeight::MEDIUM).child(
+                    .child(div().font_weight(type_size::MEDIUM).child(
                         if first.origin == Origin::Human {
                             "Human"
                         } else {

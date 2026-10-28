@@ -100,7 +100,7 @@ impl EditorView {
                     .child(
                         div()
                             .text_style(TextSize::Heading)
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .font_weight(type_size::SEMIBOLD)
                             .child(format!(
                                 "Do you want to save the changes you made to “{}”?",
                                 self.editor.snapshot().name
@@ -181,7 +181,7 @@ impl EditorView {
                             .child(
                                 div()
                                     .text_style(TextSize::Heading)
-                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .font_weight(type_size::SEMIBOLD)
                                     .child(title),
                             )
                             .child(
@@ -382,7 +382,7 @@ impl EditorView {
                 .mb(px(Space::S3.px()))
                 .child(
                     div()
-                        .font_weight(FontWeight::MEDIUM)
+                        .font_weight(type_size::MEDIUM)
                         .child(choice.name.clone()),
                 )
                 .when(i == self.palette_index(), |d| {

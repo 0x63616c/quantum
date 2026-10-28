@@ -8,6 +8,7 @@ use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
 use quantum_ui::tokens::metrics;
+use quantum_ui::tokens::type_size;
 
 #[derive(Clone, IntoElement)]
 struct Keycap {
@@ -55,7 +56,7 @@ impl RenderOnce for Keycap {
             .h(line_height)
             .font(font)
             .text_size(font_size)
-            .font_weight(FontWeight::NORMAL)
+            .font_weight(type_size::NORMAL)
             .line_height(line_height)
             .role(Role::Label)
             .aria_label(label);

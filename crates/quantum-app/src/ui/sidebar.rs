@@ -17,7 +17,7 @@ impl EditorView {
                     .child(match self.panel {
                         SidebarTab::Comments => self.comments_panel(cx),
                         SidebarTab::History => self.timeline_panel(cx),
-                        SidebarTab::Session => self.agent_feed(compact, cx),
+                        SidebarTab::Session => self.agent_feed(cx),
                     })
                     .when(self.panel == SidebarTab::Session, |d| {
                         d.child(self.layers_panel(compact || self.agent.capture.is_some(), cx))
