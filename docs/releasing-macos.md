@@ -581,17 +581,3 @@ gh secret set HOMEBREW_TAP_DEPLOY_KEY -R 0x63616c/quantum < key
 Remove the old deploy key after verifying the replacement. GitHub SSH host keys
 are pinned in `packaging/homebrew/github_known_hosts` from GitHub's published
 `https://api.github.com/meta` SSH keys; review changes against that source.
-
-### Homebrew
-
-```sh
-brew install --cask 0x63616c/tap/quantum
-```
-
-Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle;
-the cask sets `auto_updates true`, so `brew upgrade` skips it. Run
-`brew upgrade --cask --greedy quantum` to reinstall the latest release through
-Homebrew. Its recorded version can lag after an in-app update; this is harmless.
-
-Uninstall with `brew uninstall --cask quantum`. For full cleanup, use
-`brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
