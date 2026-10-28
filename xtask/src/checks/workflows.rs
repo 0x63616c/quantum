@@ -213,6 +213,12 @@ mod protection_tests {
             serde_json::from_str(include_str!("../../../.github/rulesets/protect-main.json"))
                 .unwrap();
         assert_eq!(payload["bypass_actors"], serde_json::json!([]));
+        assert_eq!(payload["enforcement"], "active");
+        assert_eq!(payload["target"], "branch");
+        assert_eq!(
+            payload["conditions"]["ref_name"],
+            serde_json::json!({"include": ["~DEFAULT_BRANCH"], "exclude": []})
+        );
         let rules = payload["rules"].as_array().unwrap();
         for kind in ["deletion", "non_fast_forward", "pull_request"] {
             assert!(rules.iter().any(|rule| rule["type"] == kind));
@@ -224,6 +230,23 @@ mod protection_tests {
         assert_eq!(
             checks["parameters"]["strict_required_status_checks_policy"],
             true
+        );
+        let required = checks["parameters"]["required_status_checks"]
+            .as_array()
+            .unwrap();
+        let mut contexts: Vec<_> = required
+            .iter()
+            .map(|check| check["context"].as_str().unwrap())
+            .collect();
+        contexts.sort_unstable();
+        assert_eq!(
+            contexts,
+            [
+                "Conventional Commit title",
+                "Linked issue",
+                "linux",
+                "macos"
+            ]
         );
         let mut actual = Vec::new();
         for source in [

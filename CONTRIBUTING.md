@@ -121,6 +121,9 @@ A ticket is done only when all of these hold:
 Never call work done from memory. Re-read the ticket's checklist against the merged
 diff first.
 
+Before coding, run `cargo xtask graphify` to refresh the local code graph; see
+[AGENTS.md](AGENTS.md#local-code-graph) for the navigation workflow.
+
 ## Main branch protection
 
 The reviewed ruleset payload is [protect-main.json](.github/rulesets/protect-main.json).
