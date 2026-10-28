@@ -193,13 +193,12 @@ paths = [
 reason = "Redirect old pages while serving the old updater endpoint directly; both hostnames stay attached."
 
 [compatibility.repository_transition]
-current = ["0x63616c/voxelite"]
+current = ["0x63616c/voxelite/releases/download/"]
 stable = true
 paths = [
-  ".github/workflows/deploy-site.yml",
   "xtask/src/macos/mod.rs",
 ]
-reason = "Accept the current and future owner slugs until #91; the historical download prefix remains valid for immutable signed feeds thereafter."
+reason = "Signed appcasts published before the repository rename (#91) keep their immutable download URLs; GitHub redirects them."
 
 [compatibility.release_history]
 current = ["Voxelite"]
