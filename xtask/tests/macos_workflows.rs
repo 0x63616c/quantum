@@ -54,7 +54,10 @@ fn fixture() -> tempfile::TempDir {
     let temp = tempfile::tempdir().unwrap();
     fs::create_dir(temp.path().join("tools")).unwrap();
     for name in ["gh", "cargo", "secret-echo", "pipe-parent", "pipe-leaf"] {
-        fs::copy(tool().join("tool"), temp.path().join("tools").join(name)).unwrap();
+        // Link the completed immutable binary. Copying executables while other
+        // test threads fork can leave a writable fd inherited by an unrelated
+        // child until exec, causing Linux ETXTBSY in this fixture's spawn.
+        fs::hard_link(tool().join("tool"), temp.path().join("tools").join(name)).unwrap();
     }
     temp
 }
@@ -382,31 +385,57 @@ fn check_descendant_interruption(parent_exits: bool) {
     let root = fixture();
     let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let runner = SystemRunner::default().with_interruption(flag.clone());
-    let ready = root.path().join("ready");
-    let signal_ready = ready.clone();
-    let interrupt = std::thread::spawn(move || {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        while !signal_ready.exists() {
-            assert!(
-                std::time::Instant::now() < deadline,
-                "fixture did not start"
-            );
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-        flag.store(143, std::sync::atomic::Ordering::SeqCst);
-        std::time::Instant::now()
-    });
+    use std::{io::Read, os::unix::net::UnixListener, sync::mpsc, time::Duration};
+
+    let socket = root.path().join("ready.sock");
+    let listener = UnixListener::bind(&socket).unwrap();
+    listener.set_nonblocking(true).unwrap();
     let mut command =
-        xtask::cmd::Command::new(root.path().join("tools/pipe-parent")).env("PIPE_READY", ready);
+        xtask::cmd::Command::new(root.path().join("tools/pipe-parent")).env("PIPE_READY", socket);
     if parent_exits {
         command = command.env("PIPE_PARENT_EXITS", "1");
     } else {
         command = command.env_remove("PIPE_PARENT_EXITS");
     }
-    let error = command.output(&runner).unwrap_err();
-    let requested = interrupt.join().unwrap();
+    let (send, receive) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        send.send(command.output(&runner)).unwrap();
+    });
+    // Readiness comes from the leaf, after it has inherited both output pipes.
+    // Check early runner failures too, rather than hiding them behind a timeout.
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    let (mut ready, _) = loop {
+        match listener.accept() {
+            Ok(connection) => break connection,
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(error) => panic!("fixture readiness socket: {error}"),
+        }
+        if let Ok(result) = receive.try_recv() {
+            worker.join().unwrap();
+            panic!("fixture exited before readiness: {result:?}");
+        }
+        if std::time::Instant::now() >= deadline {
+            flag.store(143, std::sync::atomic::Ordering::SeqCst);
+            panic!("fixture did not signal readiness within safety deadline");
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    ready
+        .set_read_timeout(Some(Duration::from_secs(60)))
+        .unwrap();
+    let mut signal = [0];
+    ready.read_exact(&mut signal).unwrap();
+    assert_eq!(signal, [1]);
+    flag.store(143, std::sync::atomic::Ordering::SeqCst);
+    // The leaf waits for this socket to close, not a sleep. Keep it open until
+    // cancellation returns: killing only the parent cannot release its pipes.
+    let result = receive.recv_timeout(Duration::from_secs(10));
+    drop(ready); // Also releases the leaf if a broken runner fails the assertion.
+    let error = result
+        .expect("process-group cancellation blocked on a descendant")
+        .unwrap_err();
+    worker.join().unwrap();
     assert!(error.to_string().contains("143"));
-    assert!(requested.elapsed() < std::time::Duration::from_secs(2));
 }
 
 #[test]
