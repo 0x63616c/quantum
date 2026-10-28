@@ -3,7 +3,7 @@ use super::Section;
 
 /// Browser-style history: selecting a new section after going back drops the forward branch.
 pub(super) struct SectionHistory {
-    pub(super) entries: Vec<Section>,
+    entries: Vec<Section>,
     cursor: usize,
 }
 impl SectionHistory {
@@ -38,5 +38,54 @@ impl SectionHistory {
         if self.can_forward() {
             self.cursor += 1;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn history_moves_back_and_forward_and_stops_at_boundaries() {
+        let mut history = SectionHistory::new(Section::General);
+        assert!(!history.can_back());
+        assert!(!history.can_forward());
+        history.back();
+        history.forward();
+        assert_eq!(history.current(), Section::General);
+        history.visit(Section::Appearance);
+        history.visit(Section::Viewport);
+        history.back();
+        assert_eq!(history.current(), Section::Appearance);
+        assert!(history.can_back());
+        assert!(history.can_forward());
+        history.back();
+        history.back();
+        assert_eq!(history.current(), Section::General);
+        history.forward();
+        history.forward();
+        history.forward();
+        assert_eq!(history.current(), Section::Viewport);
+        assert!(!history.can_forward());
+    }
+
+    #[test]
+    fn history_preserves_forward_on_reselection_and_truncates_on_new_navigation() {
+        let mut history = SectionHistory::new(Section::General);
+        history.visit(Section::Appearance);
+        history.visit(Section::Viewport);
+        history.back();
+        history.visit(Section::Appearance);
+        assert!(history.can_forward());
+        assert_eq!(history.entries.len(), 3);
+        history.visit(Section::Agent);
+        assert!(!history.can_forward());
+        assert_eq!(
+            history.entries,
+            vec![Section::General, Section::Appearance, Section::Agent]
+        );
+        history.visit(Section::Agent);
+        history.back();
+        assert_eq!(history.current(), Section::Appearance);
     }
 }

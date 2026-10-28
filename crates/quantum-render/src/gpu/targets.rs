@@ -1,5 +1,5 @@
 //! GPU render targets, attachments and pipeline construction.
-use super::*;
+use super::{SAMPLES, Target, Targets};
 
 pub(super) fn texture_entry(
     binding: u32,
@@ -152,7 +152,7 @@ pub(super) fn color_attachment<'a>(
         depth_slice: None,
     }
 }
-pub(super) fn store_op(discard: bool) -> wgpu::StoreOp {
+fn store_op(discard: bool) -> wgpu::StoreOp {
     if discard {
         wgpu::StoreOp::Discard
     } else {
