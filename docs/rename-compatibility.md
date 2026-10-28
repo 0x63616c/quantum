@@ -100,6 +100,9 @@ canonical paths with HTTP 308. `site/vercel.json` and its regression test retain
 this exception. No separate legacy feed or release channel is needed.
 
 New releases use the Quantum repository and Quantum.dmg / Quantum.html names.
+The repository rename (#91) is complete: workflow guards and release-fetch
+commands accept only `0x63616c/quantum`. GitHub redirects historical repository
+URLs; no published release was changed.
 Validation still accepts historical GitHub URLs and Voxelite.dmg / Voxelite.html
 names without editing signed XML, release notes, tags or published assets.
 

@@ -40,9 +40,7 @@ pub const REPOSITORY: &str = "0x63616c/quantum";
 /// Stable download URL prefix; preserve published asset names.
 pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
 
-// Retained only for validating immutable signed release URLs.
-#[cfg(test)]
-pub(crate) const LEGACY_REPOSITORY: &str = "0x63616c/voxelite";
+// Retained for immutable signed feeds published before the repository rename.
 pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
 
 fn release_repository(environment: &Environment) -> Result<&str> {

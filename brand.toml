@@ -164,7 +164,7 @@ reason = "Keep the legacy updater endpoint directly serving the same signed feed
 generated_paths = ["vercel.json"]
 
 [compatibility.release_urls]
-current = ["0x63616c/voxelite"]
+current = ["0x63616c/voxelite/releases/download/"]
 stable = true
 paths = [
   "xtask/src/macos/mod.rs",
