@@ -102,7 +102,8 @@ Linux runner. Main pushes run workspace Clippy and tests without building a DMG.
 Nightly and manual runs on `main` also build and upload the ad-hoc DMG with the
 full `release` profile. Pull requests still build it when they change packaging
 inputs (`packaging/`, `scripts/*macos*`, Cargo manifests, the toolchain or the macOS workflows). Rendering checks need the
-`golden` label, which only the first Mac mini runner carries. The runner needs that Xcode installation and its Metal
+`golden` label, which only the first Mac mini runner carries. Runner layout and the
+build caches are described in [CI runners](ci-runners.md). The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
 the v4 checkout and artifact actions, pinned to commit SHAs in the

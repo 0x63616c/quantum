@@ -24,6 +24,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 
 | Owner | Boundary |
 | --- | --- |
+| `voxelite-crash` | Own opt-in crash/feedback data, redaction, local panic reports and relay request preparation. No other workspace crate, UI or network client dependency. |
 | `voxelite-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
 | `voxelite-format` → `voxelite-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
 | `voxelite-mesh` → `voxelite-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |
@@ -347,6 +348,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging script tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. Main pushes run Clippy and workspace tests without a DMG. Nightly and manual main runs also build and upload the full release-profile ad-hoc DMG; PRs that touch packaging inputs still build it. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
+
+- Root `Cargo.toml` and `Cargo.lock` changes do not trigger **Rendering checks**.
+  A nightly **Rendering checks** run on `main` covers dependency bumps; dispatch
+  `visual` on the PR when a render dependency changes. Only `xtask/src/main.rs`, the
+  visual/bench launcher, is included from `xtask/` in the rendering path filter.
 
 - Respect owner-only, same-repository guards on self-hosted macOS jobs. Fork PRs
   do not run them; a skipped job is not verification. Arrange trusted verification

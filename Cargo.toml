@@ -30,6 +30,7 @@ voxelite-plugin-mirror = { path = "crates/plugins/voxelite-plugin-mirror" }
 voxelite-plugin-palette = { path = "crates/plugins/voxelite-plugin-palette" }
 voxelite-plugin-shadows-lighting = { path = "crates/plugins/voxelite-plugin-shadows-lighting" }
 voxelite-plugin-tools = { path = "crates/plugins/voxelite-plugin-tools" }
+voxelite-crash = { path = "crates/voxelite-crash" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 semver = "1.0"
@@ -37,6 +38,7 @@ thiserror = "2.0"
 uuid = { version = "1.18", features = ["serde", "v4"] }
 sha2 = "0.10"
 proptest = "1.9"
+divan = "0.1.21"
 png = "0.18"
 glam = "0.30"
 base64 = "0.22"
@@ -46,6 +48,8 @@ objc2 = "0.6.5"
 tempfile = "3"
 insta = { version = "1.49", default-features = false, features = ["json"] }
 schemars = "1.2"
+regex = "1"
+url = "2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

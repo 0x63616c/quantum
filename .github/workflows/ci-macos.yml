@@ -126,6 +126,24 @@ jobs:
           fi
           mkdir -p "$target_dir"
           echo "CARGO_TARGET_DIR=$target_dir" >> "$GITHUB_ENV"
+      - name: Use the shared sccache server
+        # One sccache server (launchd agent dev.voxelite.sccache, port 4227) serves both
+        # Mac mini runners, so a crate compiled by one runner is a cache hit on the other.
+        # See docs/ci-runners.md. Without the server the build just runs uncached.
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v sccache >/dev/null && nc -z -w 2 127.0.0.1 4227; then
+            {
+              echo "RUSTC_WRAPPER=$(command -v sccache)"
+              echo 'SCCACHE_SERVER_PORT=4227'
+              # sccache cannot cache incrementally compiled crates.
+              echo 'CARGO_INCREMENTAL=0'
+            } >> "$GITHUB_ENV"
+            echo 'sccache enabled.'
+          else
+            echo '::notice::Shared sccache server is not running; building without it.'
+          fi
       # Formatting runs in CI Linux; the scripts job runs the Python checks.
       - name: Clippy
         run: cargo clippy --workspace --locked -- -D warnings
@@ -134,6 +152,9 @@ jobs:
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         run: scripts/package-macos.sh
+      - name: sccache stats
+        if: always() && env.RUSTC_WRAPPER != ''
+        run: sccache --show-stats || true
       - name: Upload unsigned DMG
         if: needs.changes.outputs.package == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
