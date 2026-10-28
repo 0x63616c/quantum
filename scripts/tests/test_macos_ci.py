@@ -31,6 +31,41 @@ class MacosCiTests(unittest.TestCase):
             env={**os.environ, **env}, capture_output=True, text=True, check=True,
         )
 
+    def test_rust_package_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'output'
+            for event in ('push', 'pull_request', 'schedule', 'workflow_dispatch'):
+                with self.subTest(event=event):
+                    output.write_text('')
+                    self.run_step('Select Rust packages', GITHUB_EVENT_NAME=event,
+                                  GITHUB_OUTPUT=str(output))
+                    packages = output.read_text().strip().removeprefix('packages=')
+                    if event in ('schedule', 'workflow_dispatch'):
+                        self.assertEqual(packages, '--workspace')
+                    else:
+                        self.assertEqual(packages.split(), [
+                            '-p', 'voxelite-app', '-p', 'voxelite-ui',
+                            '-p', 'voxelite-render', '-p', 'voxelite-mcp',
+                            '-p', 'voxelite-bench',
+                        ])
+        workflow = WORKFLOW.read_text()
+        self.assertIn('cargo clippy ${{ steps.rust-packages.outputs.packages }} '
+                      '--all-targets --locked --features voxelite-app/test-support -- -D warnings', workflow)
+        self.assertIn('cargo nextest run ${{ steps.rust-packages.outputs.packages }} '
+                      '--locked --features voxelite-app/test-support --profile ci', workflow)
+        self.assertIn('cargo test --doc ${{ steps.rust-packages.outputs.packages }} '
+                      '--locked --features voxelite-app/test-support', workflow)
+
+    def test_release_requires_full_checks_before_building(self):
+        workflow = (WORKFLOW.parent / 'release-macos.yml').read_text()
+        build = workflow.index('      - name: Build app without signing credentials')
+        for command in (
+            'cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings',
+            'cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast',
+        ):
+            self.assertLess(workflow.index(command), build)
+        self.assertNotIn('continue-on-error:', workflow)
+
     def test_package_routing(self):
         cases = [
             ('push', 'refs/heads/main', '', 'false'),
