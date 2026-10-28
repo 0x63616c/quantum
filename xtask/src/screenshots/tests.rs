@@ -171,7 +171,7 @@ fn unchanged_screens_have_no_published_images_or_image_links() {
     assert!(asset_files(&results, &base, &head).is_empty());
     let md = render(&results, &base, &head, "main", &Urls::Local);
     assert!(md.contains("No visible change on the selected screens."));
-    assert!(md.contains("<details><summary>Unchanged screens (83)</summary>"));
+    assert!(md.contains("<details><summary>Unchanged screens (86)</summary>"));
     assert!(!md.contains(".png"));
     assert!(!md.contains("| Before | After |"));
 }
@@ -277,7 +277,7 @@ fn screen_names_are_unique_and_state_screens_have_matching_themes() {
 #[test]
 fn established_screens_keep_their_original_capture_contract() {
     let expected = [
-        ("welcome", "Quantum", (1024, 704), "--theme dark"),
+        ("welcome", "Quantum", (760, 620), "--theme dark"),
         (
             "editor-dark",
             "Autumn Workshop",

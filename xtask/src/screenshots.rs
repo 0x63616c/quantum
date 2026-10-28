@@ -36,7 +36,7 @@ macro_rules! screens {
                 name: "welcome",
                 caption: "Welcome window (no recent projects)",
                 title: "Quantum",
-                size: (1024, 704),
+                size: (760, 620),
                 args: "--theme dark",
             },
             Screen {
@@ -54,6 +54,30 @@ macro_rules! screens {
                 title: "Autumn Workshop",
                 size: (1440, 900),
                 args: "--example --theme light",
+            },
+            Screen {
+                key: false,
+                name: "welcome-light",
+                caption: "Welcome window, light theme (no recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme light",
+            },
+            Screen {
+                key: false,
+                name: "welcome-recents-dark",
+                caption: "Welcome window, dark theme (five recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme dark",
+            },
+            Screen {
+                key: false,
+                name: "welcome-recents-light",
+                caption: "Welcome window, light theme (five recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme light",
             },
             $($(
                 Screen {
@@ -201,16 +225,7 @@ pub fn run(args: &[String]) -> Result<()> {
     }
     fs::create_dir_all(out.join("bin")).map_err(|e| e.to_string())?;
     let spec = out.join("screens.tsv");
-    let mut spec_text = String::new();
-    for s in &screens {
-        let _ = writeln!(
-            spec_text,
-            "{}\t{}\t{}\t{}\t{}",
-            s.name, s.title, s.size.0, s.size.1, s.args
-        );
-    }
-    fs::write(&spec, spec_text).map_err(|e| e.to_string())?;
-
+    write_spec(&spec, &screens)?;
     let base_ref = match options.base.clone() {
         Some(base) => base,
         None => git(&root, &["merge-base", "HEAD", &format!("{remote}/main")])?,
@@ -254,10 +269,15 @@ pub fn run(args: &[String]) -> Result<()> {
             )
         }
     };
+    prepare_fixtures(&root, &out, &screens)?;
     let script = root.join("scripts/capture-pr-screens.sh");
     for (side, bin) in [(&base, &base_bin), (&head, &head_bin)] {
         eprintln!("capturing {} ({})", side.label, side.id);
-        status(Command::new(&script).arg(bin).arg(&side.dir).arg(&spec))?;
+        let sh = xshell::Shell::new().map_err(|error| error.to_string())?;
+        let dir = &side.dir;
+        xtask::cmd::Command::from(xshell::cmd!(sh, "{script} {bin} {dir} {spec}"))
+            .run(&xtask::cmd::SystemRunner::default())
+            .map_err(|error| error.to_string())?;
     }
     let results: Vec<Comparison> = screens
         .iter()
@@ -869,3 +889,31 @@ fn status(command: &mut Command) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+fn prepare_fixtures(root: &Path, out: &Path, screens: &[&Screen]) -> Result<()> {
+    if screens
+        .iter()
+        .any(|screen| screen.name.starts_with("welcome-recents-"))
+    {
+        xtask::screenshot_fixtures::prepare_welcome(
+            root,
+            &out.join("home"),
+            &out.join("welcome-data"),
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+fn write_spec(spec: &Path, screens: &[&Screen]) -> Result<()> {
+    let mut spec_text = String::new();
+    for s in screens {
+        let _ = writeln!(
+            spec_text,
+            "{}\t{}\t{}\t{}\t{}",
+            s.name, s.title, s.size.0, s.size.1, s.args
+        );
+    }
+    fs::write(spec, spec_text).map_err(|e| e.to_string())?;
+    Ok(())
+}

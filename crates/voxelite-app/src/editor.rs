@@ -442,6 +442,11 @@ impl std::ops::DerefMut for Editor {
         &mut self.session
     }
 }
+// Use a single static allocation across the example entry point and launcher.
+// Repeating include_bytes! embeds another 2.75 MB copy in native debug builds.
+pub(crate) static AUTUMN_PROJECT_BYTES: &[u8] =
+    include_bytes!("../../../examples/autumn-workshop.voxl");
+
 impl Editor {
     /// Open a validated portable project, preserving unknown optional metadata.
     pub fn new(project: Project, path: Option<PathBuf>) -> EditorResult<Self> {
@@ -485,12 +490,7 @@ impl Editor {
     }
     /// Load the bundled diorama, independent of the current working directory.
     pub fn example() -> EditorResult<Self> {
-        Self::new(
-            voxelite_format::read(
-                include_bytes!("../../../examples/autumn-workshop.voxl").as_slice(),
-            )?,
-            None,
-        )
+        Self::new(voxelite_format::read(AUTUMN_PROJECT_BYTES)?, None)
     }
     /// Create a clean 32-cube project.
     pub fn blank() -> EditorResult<Self> {
