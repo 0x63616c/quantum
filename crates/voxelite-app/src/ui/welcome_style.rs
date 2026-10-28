@@ -90,3 +90,44 @@ pub(super) fn thumbnail(
             )
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Theme;
+    use gpui::{Hsla, Rgba};
+
+    fn luminance(color: Hsla) -> f32 {
+        let color = Rgba::from(color);
+        let linear = |value: f32| {
+            if value <= 0.04045 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
+    }
+
+    #[test]
+    fn secondary_text_meets_wcag_aa_on_every_welcome_surface() {
+        for theme in [Theme::Dark, Theme::Light] {
+            for (foreground, background) in [
+                (theme.muted(), theme.background()),
+                (theme.muted(), theme.hover()),
+                (theme.muted(), theme.selected()),
+                (
+                    theme.accent().blend(theme.text().opacity(0.30)),
+                    theme.selected(),
+                ),
+            ] {
+                let a = luminance(foreground);
+                let b = luminance(background);
+                let contrast = (a.max(b) + 0.05) / (a.min(b) + 0.05);
+                assert!(
+                    contrast >= 4.5,
+                    "{theme:?}: secondary text contrast {contrast}"
+                );
+            }
+        }
+    }
+}
