@@ -31,7 +31,6 @@ const ROOT_ENTRIES: &[&str] = &[
     "skills",
     "spec",
     "vendor",
-    "web",
     "xtask",
 ];
 const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024;

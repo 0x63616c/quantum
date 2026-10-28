@@ -64,3 +64,5 @@ independent of hosted services. Extend built-ins through the existing portable
 API without weakening engine or persistence guarantees. Deferred systems require
 their own architecture and verification decisions before being advertised as
 implemented features.
+
+Update (2026-10-27): the browser/wasm build was removed; Quantum is macOS-only.

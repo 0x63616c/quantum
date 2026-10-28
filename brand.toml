@@ -58,7 +58,7 @@ github_repo_url = { current = "https://github.com/0x63616c/voxelite", stable = t
 # crates/voxelite-app/src/{attachment,local_settings}.rs. The desktop uses this
 # XDG layout on macOS too; there is currently no Application Support directory.
 # settings.json, palettes.json, recents.json, thumbnails and session-<pid>.sock
-# live under the data directory. Browser storage keys use the same relative paths.
+# live under the data directory.
 documents_directory = { current = "~/Documents/Voxelite", stable = true }
 data_directory_name = { current = "voxelite", stable = true }
 xdg_data_directory = { current = "$XDG_DATA_HOME/voxelite", stable = true }

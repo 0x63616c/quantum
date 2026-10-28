@@ -51,36 +51,6 @@ impl Plugin for ExportersPlugin {
                 export: true,
             });
         }
-        // Keep the existing browser command IDs and presentation order.
-        #[cfg(target_family = "wasm")]
-        for (id, label, order) in [
-            ("dev.voxelite.core.export_glb", "Export GLB…", 40),
-            ("dev.voxelite.core.export_png", "Export PNG…", 50),
-        ] {
-            registrar.command(voxelite_plugin_api::CommandContribution {
-                id: id.into(),
-                label_key: label.into(),
-                args_schema: voxelite_plugin_api::Value::Object(
-                    [
-                        ("type".into(), "object".into()),
-                        (
-                            "properties".into(),
-                            voxelite_plugin_api::Value::Object(Default::default()),
-                        ),
-                        ("additionalProperties".into(), false.into()),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-                default_keybinding: None,
-                context: None,
-                icon: Some("download".into()),
-                menu: Some("File".into()),
-                order,
-                application_section: None,
-                agent_visible: false,
-            });
-        }
     }
 
     fn exporter(&self, id: &str) -> Option<ExportCallback> {
