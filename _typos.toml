@@ -1,6 +1,7 @@
 [files]
+# Git metadata is generated binary data, never source or documentation.
 # Third-party sources and license texts must retain upstream bytes.
-extend-exclude = ["vendor/**", "crates/quantum-app/assets/licenses/**"]
+extend-exclude = [".git/**", "vendor/**", "crates/quantum-app/assets/licenses/**"]
 
 [default.extend-words]
 # Native project extension.
