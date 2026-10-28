@@ -21,6 +21,7 @@ pub mod reduce_motion;
 pub mod samples;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;
+pub mod save_picker;
 pub mod thumbnails;
 
 #[cfg(test)]

@@ -1,8 +1,7 @@
 //! Built-in core command declarations; execution remains in the app.
 
 use voxelite_plugin_api::{
-    API_VERSION, ApplicationMenuSection, CommandContribution, Manifest, Plugin, PluginId,
-    Registrar, Value, Version,
+    ApplicationMenuSection, CommandContribution, Manifest, Plugin, Registrar, Value,
 };
 
 /// Metadata for the built-in core commands.
@@ -11,14 +10,12 @@ pub struct CorePlugin;
 impl Plugin for CorePlugin {
     fn manifest(&self) -> Manifest {
         Manifest {
-            id: PluginId::new("dev.voxelite.core").unwrap(),
-            name_key: "plugins.core.name".into(),
-            description_key: "plugins.core.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
             can_disable: false,
+            ..Manifest::builtin(
+                "dev.voxelite.core",
+                "plugins.core",
+                env!("CARGO_PKG_VERSION"),
+            )
         }
     }
 
@@ -352,9 +349,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(CorePlugin));
+    fn core_manifest_policy_and_keys() {
+        let manifest = CorePlugin.manifest();
+        assert!(!manifest.can_disable);
+        assert_eq!(manifest.name_key, "plugins.core.name");
+        assert_eq!(manifest.description_key, "plugins.core.description");
     }
+
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        CorePlugin
+    ));
 
     #[test]
     fn welcome_commands_are_declared_without_gpui() {

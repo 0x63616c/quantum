@@ -6,6 +6,10 @@
 
 Commands cover explicit writes, erase, capped six-connected fill, mirrors, solid/hollow boxes, ellipsoids, cylinders, supercover lines, copy/move transforms, palette/layer operations, comments and named versions. Batch errors include the zero-based failing command index. Work estimator version 1 charges candidate visits and mirror candidates before deduplication. Region erase and transform scan stored source cells. Fill charges all distinct visited cells, including boundary cells of other colors.
 
+Layers and comments use typed generational slot-map keys with separate presentation order. UUIDs remain the portable identities in commands and files; runtime keys are never serialized. UUID lookup is a derived index invalidated by mutable access, including changes to public ID fields. Arena equality compares ordered content, independently of allocation history. Keys are local to their owning arena and its snapshot lineage, not interchangeable across documents.
+
+History entries likewise live in a typed slot-map arena; undo and redo retain ordered keys while a UUID index serves transport-facing operations. Eviction and discarded redo branches remove both the entries and their UUID mappings.
+
 History uses reversible immutable before/after states with shared chunk Arcs. Admission conservatively charges complete before/after content (including version snapshots), even where allocations are shared. This is intentionally stricter than physical allocation accounting; large documents can hit the history budget early. Entries are evicted whole and `initial_retained()` exposes the boundary. A single over-budget entry rejects. Checkpoints reference retained cursors. Versions are independent portable snapshots. Preview never mutates the cursor; revert checks affected fields and preserves unrelated cell changes. Structural layer, palette and comment changes use field-level conflict detection and may conservatively reject when later edits touched the same collection.
 
 Palette sources, retrieved 2026-10-25:

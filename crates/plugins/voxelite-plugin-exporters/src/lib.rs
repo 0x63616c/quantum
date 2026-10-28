@@ -1,7 +1,7 @@
 //! Built-in byte-stable GLB and PNG exporters, with no filesystem capabilities.
 use voxelite_plugin_api::{
-    API_VERSION, ExportCallback, ExportCx, ExportResult, FormatContent, FormatContribution,
-    Manifest, Plugin, PluginId, Registrar, Version,
+    ExportCallback, ExportCx, ExportResult, FormatContent, FormatContribution, Manifest, Plugin,
+    Registrar,
 };
 
 pub mod encoding;
@@ -23,16 +23,7 @@ pub struct ExportersPlugin;
 
 impl Plugin for ExportersPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.exporters.name".into(),
-            description_key: "plugins.exporters.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(PLUGIN_ID, "plugins.exporters", env!("CARGO_PKG_VERSION"))
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
@@ -80,10 +71,9 @@ mod tests {
     use voxelite_plugin_api::ExportImage;
     use voxelite_plugin_host::{Host, SnapshotExport};
 
-    #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(ExportersPlugin));
-    }
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        ExportersPlugin
+    ));
 
     #[test]
     fn registered_exports_match_pre_migration_bytes_and_disable_cleanly() {

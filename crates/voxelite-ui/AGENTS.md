@@ -81,6 +81,7 @@ Use the public re-exports in `src/lib.rs`; icon assets remain in the app.
 - `Kbd`: keycap, shaped-glyph `frame`, and settings shortcut `well`.
 - `tooltip`: compact `Popover` chrome. Native timing/placement belongs to GPUI/app.
 - `row`, `mono`, `icon`: alignment, fixed-advance text, and asset glyph helpers.
+- `Spinner`: fixed-width braille loading indicator using GPUI animation and reduced motion.
 - `AsciiSkeleton`: stable keyed ID, paragraph `lines`/GPUI `widths`, block `rows`,
   `variant` (dither/scan/braille/terminal), `seed`, `animate`, `reduced_motion`.
 - `AsciiReveal`: real text and accessible label, decode/dither/terminal/blueprint
