@@ -128,7 +128,7 @@ otherwise it falls back to `cargo test --workspace --locked` (including doctests
 The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
 CI snapshot verification; insta inherits that variable under nextest too.
 
-`cargo xtask validate` runs the registered gates: tidy, plugin-deps, brand,
+`cargo xtask validate` runs the registered gates: tidy, workflows, plugin-deps, brand,
 docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
 machete. Missing tools skip with a reason; use `--strict` to fail instead.
 Use `cargo xtask check --list` to list checks,
@@ -156,6 +156,7 @@ cargo test --doc -p xtask --locked
 | --- | --- |
 | All registered Rust validation gates | `cargo xtask validate --strict` |
 | List / run named checks | `cargo xtask check --list` / `cargo xtask check tidy fmt` |
+| Preview release preparation / tagging (offline default) | `cargo xtask release patch` / `cargo xtask release tag` |
 | Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
 | Start native editor | `cargo run -p voxelite-app --bin voxelite` |
 | Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
@@ -376,10 +377,12 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. The ad-hoc DMG builds on `main` and on PRs that touch packaging inputs. Formatting runs in CI Linux. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. Main pushes run Clippy and workspace tests without a DMG. Nightly and manual main runs also build and upload the full release-profile ad-hoc DMG; PRs that touch packaging inputs still build it. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
+- Set `CARGO_BUILD_JOBS: 4` in every self-hosted macOS job env. Two runners
+  share one 8 GB Mac mini; this limits CPU and memory contention and swap.
 - Root `Cargo.toml` and `Cargo.lock` changes do not trigger **Rendering checks**.
   A nightly **Rendering checks** run on `main` covers dependency bumps; dispatch
   `visual` on the PR when a render dependency changes. Only `xtask/src/main.rs`, the
@@ -399,9 +402,10 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 ## Releases
 
-- Do not tag casually. Use a focused `chore(release): prepare vX.Y.Z` PR for version,
+- Do not tag casually. Preview with `cargo xtask release patch`; explicit `--execute`
+  prepares a local `chore(release): vX.Y.Z` PR commit for version,
   lockfile and affected metadata, then a separately authorized stable
-  `vMAJOR.MINOR.PATCH` tag matching the app version.
+  `vMAJOR.MINOR.PATCH` tag matching the app version (`cargo xtask release tag --execute`).
 - Follow [docs/releasing-macos.md](docs/releasing-macos.md) and
   [Release macOS](.github/workflows/release-macos.yml). Validate real signing,
   notarization, installation and updating on macOS; mocked tests are insufficient.

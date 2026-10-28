@@ -262,3 +262,17 @@ fn real_offline_cargo_refreshes_workspace_member_versions() {
     assert!(lockfile.contains("name = \"external\"\nversion = \"9.8.7\""));
     assert!(!lockfile.contains("1.2.3"));
 }
+
+#[test]
+fn diff_includes_lockfile_members_and_preserves_external_versions() {
+    let (_directory, workspace, runner) = fixture();
+    let plan = Plan::prepare(&workspace, &runner, "patch").unwrap();
+    let diff = plan.diff();
+    assert!(diff.contains(
+        "--- a/Cargo.toml\n+++ b/Cargo.toml\n-version = \"1.2.3\"\n+version = \"1.2.4\""
+    ));
+    let lock = diff.split("+++ b/Cargo.lock\n").nth(1).unwrap();
+    assert_eq!(lock.matches("+version = \"1.2.4\"").count(), 2);
+    assert!(!lock.contains("9.8.7"));
+    assert_originals(&plan);
+}

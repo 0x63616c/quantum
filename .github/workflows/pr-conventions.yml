@@ -4,8 +4,7 @@ on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
-permissions:
-  pull-requests: read
+permissions: {}
 
 concurrency:
   group: pr-conventions-${{ github.event.pull_request.number }}
@@ -13,6 +12,8 @@ concurrency:
 
 jobs:
   title:
+    permissions:
+      pull-requests: read
     name: Conventional Commit title
     runs-on: ubuntu-24.04
     timeout-minutes: 5

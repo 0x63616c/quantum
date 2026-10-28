@@ -57,7 +57,7 @@ jobs:
         run: cargo xtask check tidy
 
       - name: Check repository consistency
-        run: cargo xtask check plugin-deps brand docs-links docs-assets
+        run: cargo xtask check workflows plugin-deps brand docs-links docs-assets
 
       - name: Install dependency checks
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32

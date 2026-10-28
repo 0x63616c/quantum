@@ -71,10 +71,23 @@ and light themes). It is generated, never pasted by hand:
 ```sh
 cargo xtask screenshots              # local preview in target/pr-screenshots/
 cargo xtask screenshots --publish 123  # fill the Screenshots section of PR #123
+cargo xtask screenshots --screen 'settings-*' # local preview of just Settings
 ```
 
-The **PR screenshots** CI job runs the publish step for PRs touching UI paths, and
-non-UI PRs get no Screenshots section. Details, adding screens and troubleshooting:
+The default captures only `welcome`, `editor-dark` and `editor-light`. Migration
+PRs add the surfaces they change with one plain, column-zero line in the PR body,
+outside the generated Screenshots section: `Screens: panels-* settings-general-*`.
+Exact names and trailing `*` prefixes work; unmatched selectors fail. Both CI and
+local `--publish` add those matches to the key set. Explicit `--screen` options
+select only their matches; quote patterns in shell commands.
+
+The **PR screenshots** CI job runs the publish step for PRs touching UI paths.
+After editing the `Screens:` line, push or use `workflow_dispatch`; body edits
+alone do not trigger it. Dispatch accepts an optional `screens` field to replace
+the body's extra selectors for that run (blank uses the body). Unchanged screens
+appear as a collapsed text list; their PNGs stay in local/CI artifacts and are
+never pushed to `pr-assets`. Non-UI PRs get no Screenshots section.
+Details, adding screens and troubleshooting:
 [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
 ## 5. One focus per PR
@@ -114,3 +127,30 @@ fail tests. Locally, run the relevant tests with `INSTA_UPDATE=new`, then use
 `cargo insta review` to inspect and accept intentional changes. Commit reviewed
 `.snap` files alongside the tests; never commit `.snap.new` or `.pending-snap`
 files. Use `INSTA_UPDATE=no` to verify the accepted snapshots without updating them.
+
+## Workflow security and secret scanning
+
+Every PR and push to main runs gitleaks 8.30.1 on complete reachable Git history
+in a GitHub-hosted Linux job. The release archive is verified against its pinned
+SHA-256 before execution; no gitleaks license or write token is required. To
+reproduce with that version installed:
+
+```sh
+gitleaks git --redact --log-opts=--all .
+cargo xtask check workflows
+```
+
+If a scan finds a credential, revoke or rotate it first; deleting the current
+file does not remove it from history. Keep secret values out of issues and logs.
+For a confirmed false positive, add a narrowly scoped, documented exception in
+`.gitleaks.toml` that extends the default rules, then rerun the full-history scan.
+Prefer an exact fingerprint or specific path/rule combination over disabling
+a rule globally. Review exceptions like code; do not baseline real credentials.
+
+Pin every remote workflow `uses:` reference to a full 40-character commit SHA,
+with an exact `# vX.Y.Z` comment. Resolve annotated tags to their commit before
+pinning. Dependabot checks the GitHub Actions ecosystem weekly; review both the
+SHA and its version comment when updating. Keep explicit workflow-level
+`permissions: {}` or `contents: read`, and grant additional permissions only
+to the job that needs them. Site publishing writes the site-dist branch through
+the contents permission; it uses Vercel credentials rather than Pages or OIDC grants.

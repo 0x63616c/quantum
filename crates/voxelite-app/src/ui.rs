@@ -8,6 +8,7 @@ mod command_palette;
 mod comments;
 mod history;
 mod keyboard_guide;
+pub(crate) mod launch;
 mod viewport;
 use keyboard_guide::keyboard_guide;
 mod debug_overlay;
@@ -67,6 +68,7 @@ fn check_for_updates() {
 }
 
 pub struct EditorView {
+    capture_state: Option<launch::LaunchState>,
     palettes: palettes::PaletteManager,
     discussion: comments::Discussion,
     panel: SidebarTab,
@@ -262,6 +264,7 @@ impl EditorView {
         #[cfg(target_os = "macos")]
         Self::monitor_gpu(cx);
         Self {
+            capture_state: None,
             agent,
             palettes,
             discussion: comments::Discussion::new(window, cx),
@@ -1951,7 +1954,9 @@ impl EditorView {
                                             voxelite_app::reduce_motion::prefers_reduced_motion();
                                         d.child(
                                             voxelite_ui::Spinner::new("save-picker-spinner", t)
-                                                .reduced_motion(reduced),
+                                                .reduced_motion(
+                                                    reduced || self.capture_state.is_some(),
+                                                ),
                                         )
                                     })
                                     .child(self.status.clone()),

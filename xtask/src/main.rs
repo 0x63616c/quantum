@@ -22,6 +22,7 @@ Checks:
   tidy          Check tracked root entries, file sizes and junk files
 
 Maintenance:
+  release       Plan a release (dry run by default)
   bump-version  Update the stable workspace version and current references
   version       Print the app version or check a release tag
   macos         Package, sign, and prepare release feeds and notes
@@ -73,6 +74,17 @@ enum Task {
         /// major, minor, patch or an explicit stable X.Y.Z
         version: String,
         /// Print planned changes without writing files or updating Cargo.lock
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Prepare a release PR or tag its merged commit (dry run by default)
+    Release {
+        /// X.Y.Z, patch, minor, major, or tag
+        version: String,
+        /// Perform mutations; tag additionally pushes the annotated tag
+        #[arg(long, conflicts_with = "dry_run")]
+        execute: bool,
+        /// Explicitly select the default read-only preview
         #[arg(long)]
         dry_run: bool,
     },
@@ -179,6 +191,19 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
         Some(Task::Check(Check { names, strict, .. })) => return checks(&names, &[], strict),
         Some(Task::Validate(Validate { only, skip, strict })) => {
             return checks(&only, &skip, strict);
+        }
+        Some(Task::Release {
+            version, execute, ..
+        }) => {
+            println!(
+                "{}",
+                xtask::release::run(
+                    &Workspace::discover()?,
+                    &SystemRunner::default(),
+                    &version,
+                    execute
+                )?
+            );
         }
         Some(Task::BumpVersion { version, dry_run }) => {
             let workspace = Workspace::discover()?;

@@ -201,6 +201,15 @@ pub(crate) fn open_editor(editor: Editor, cx: &mut App) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Apply a launch-only screenshot fixture to the editor just opened by main.
+pub(crate) fn show_capture(state: super::launch::LaunchState, cx: &mut App) -> anyhow::Result<()> {
+    let handle = cx
+        .global::<Launcher>()
+        .editor
+        .ok_or_else(|| anyhow::anyhow!("capture requires an editor window"))?;
+    handle.update(cx, |view, window, cx| view.show_capture(state, window, cx))?
+}
+
 pub(super) fn project_ready(cx: &mut App) {
     // Opening a window renders immediately; defer updates of the originating view.
     cx.defer(|cx| {
