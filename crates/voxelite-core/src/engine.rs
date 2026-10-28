@@ -101,7 +101,7 @@ pub struct HistoryEntry {
 pub struct Limits {
     /// Maximum candidate cells across all subcommands.
     pub work_units: usize,
-    /// Retained history capacity; 32 MiB is suitable for web hosts.
+    /// Retained history capacity in bytes.
     pub history_bytes: usize,
 }
 impl Default for Limits {
