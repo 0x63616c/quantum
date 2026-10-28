@@ -115,14 +115,19 @@ impl EditorView {
             LaunchState::Palette => self.invoke(Op::ShowPalette, window, cx),
             LaunchState::History | LaunchState::HistoryPreview => {
                 self.editor.add_layer()?;
-                self.editor.save_version("Workshop study".into())?;
+                let version = self.editor.save_version("Workshop study".into())?;
                 self.panel = SidebarTab::History;
                 if state == LaunchState::HistoryPreview {
-                    self.editor.preview_history(None)?;
+                    // Preserve the model and window title while showing read-only controls.
+                    self.editor.preview_version(version)?;
                 }
                 self.request_render(cx);
             }
-            LaunchState::CommentsEmpty => self.panel = SidebarTab::Comments,
+            LaunchState::CommentsEmpty => {
+                // The example has an open review note but no resolved threads.
+                self.editor.comments_action(CommentsAction::Filter(1))?;
+                self.panel = SidebarTab::Comments;
+            }
             LaunchState::Comments | LaunchState::CommentThread | LaunchState::CommentDraft => {
                 self.panel = SidebarTab::Comments;
                 self.editor
@@ -138,7 +143,27 @@ impl EditorView {
                 self.request_render(cx);
             }
             LaunchState::AgentActivity => {
-                // A rejected request is a real feed state with no invented document edits.
+                // Reuse a real committed example entry so the expanded Revert control
+                // points to an actual transaction. The second event exercises failure UI.
+                let entry = self
+                    .editor
+                    .engine
+                    .history()
+                    .next_back()
+                    .ok_or_else(|| anyhow::anyhow!("agent capture requires example history"))?;
+                self.agent
+                    .events
+                    .push_back(voxelite_mcp::attached::SessionEvent {
+                        tool: "voxelite_apply_commands".into(),
+                        label: entry.label.clone(),
+                        success: true,
+                        revision: entry.result_revision,
+                        entry: Some(entry.id),
+                        changes: entry.changes.clone(),
+                        error: None,
+                        inspection: None,
+                        views: Vec::new(),
+                    });
                 self.agent
                     .events
                     .push_back(voxelite_mcp::attached::SessionEvent {
@@ -155,6 +180,12 @@ impl EditorView {
                         views: Vec::new(),
                     });
                 self.agent.expanded = Some(0);
+                self.capture_agent_views(
+                    Arc::new(self.editor.snapshot().clone()),
+                    ["iso", "front", "right"].map(str::to_owned).into(),
+                    self.editor.engine.revision(),
+                    cx,
+                );
             }
             LaunchState::ConnectAgent => self.invoke(Op::Agent, window, cx),
             LaunchState::About => self.invoke(Op::About, window, cx),
@@ -196,7 +227,14 @@ impl EditorView {
                 self.invoke(Op::ManagePalettes, window, cx);
                 self.capture_palette_delete();
             }
-            LaunchState::Debug => self.preferences.show_debug_overlay = true,
+            LaunchState::Debug => {
+                // Appearance notifications resync from this global. Keep the override
+                // in memory so they cannot dismiss the fixture or persist a preference.
+                cx.global_mut::<settings::SettingsState>()
+                    .values
+                    .show_debug_overlay = true;
+                self.sync_preferences(window, cx);
+            }
             LaunchState::Settings(section) => self.open_settings(section, window, cx),
         }
         cx.notify();
@@ -207,6 +245,16 @@ impl EditorView {
 #[cfg(test)]
 mod tests {
     use super::{LaunchState, MENUS, Section};
+
+    #[test]
+    fn empty_comments_fixture_has_no_resolved_threads() {
+        let mut editor = super::Editor::example().unwrap();
+        editor
+            .comments_action(super::CommentsAction::Filter(1))
+            .unwrap();
+        assert!(editor.comments_view().unwrap().comments.is_empty());
+        assert!(!editor.engine.is_dirty());
+    }
 
     #[test]
     fn capture_states_cover_registered_menus_and_settings() {

@@ -85,7 +85,7 @@ const SCREENS: &[Screen] = screens![
         ("panels-palette", "Focused palette sidebar"),
         ("panels-history", "History and named versions"),
         ("panels-history-preview", "History preview and restore controls"),
-        ("panels-comments-empty", "Empty comments panel"),
+        ("panels-comments-empty", "Empty resolved comments"),
         ("panels-comments", "Comments and model pins"),
         ("panels-comment-thread", "Comment thread"),
         ("panels-comment-draft", "New comment composer"),

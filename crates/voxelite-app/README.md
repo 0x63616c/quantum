@@ -59,10 +59,11 @@ an editor overlay, not a separate window.
 
 History fixtures add an empty layer and a named version through the editor;
 preview uses an immutable snapshot. Comments use the normal plugin transactions.
-The agent feed contains a fixed rejected request; the palette deletion fixture
-copies a palette in memory. No project is saved by these launch fixtures. The
+The empty comments state selects the example’s empty Resolved filter. The agent
+feed reuses a committed example entry, adds a fixed rejected request and renders
+three inspection thumbnails; the palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
 save-waiting fixture holds the app-owned waiting/cancel surface with a static
-spinner, without opening a desktop portal. Debug capture omits live frame cadence.
+spinner, without opening a desktop portal. Capture states omit live frame cadence in the status bar and debug overlay.
 
 Native file pickers, macOS menus, Sparkle dialogs, the macOS eyedropper and hover
 tooltip timing/placement still need platform/manual checks. The Linux captures

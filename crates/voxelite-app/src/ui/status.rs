@@ -96,7 +96,11 @@ impl EditorView {
             .child(slot(" · ", selection.1.to_string(), count_cells));
         let zoom = self.zoom_reference_span / self.viewport.display_camera().span * 100.0;
         let renderer = self.viewport.frame_meter().renderer().label();
-        let average = self.viewport.frame_meter().average();
+        let average = if self.capture_state.is_some() {
+            None
+        } else {
+            self.viewport.frame_meter().average()
+        };
         let performance = row().id("status-performance").flex_shrink_0()
             .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above)
             .text_color(if self.viewport.rendering() { t.accent() } else { t.muted() })
