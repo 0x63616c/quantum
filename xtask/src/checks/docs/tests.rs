@@ -28,7 +28,7 @@ fn local_urls_preserve_paths_and_decode_without_form_encoding() {
         ("/absolute/file", "/absolute/file"),
         ("a%23b%3Fc.svg", "a#b?c.svg"),
         ("a%ZZ.png", "a%ZZ.png"),
-        ("caf%C3%A9.md", "café.md"),
+        ("%C3%A9.md", "é.md"),
         ("invalid%FF.md", "invalid�.md"),
         ("dir/a:b.md", "dir/a:b.md"),
         ("///absolute/file", "/absolute/file"),
@@ -48,31 +48,74 @@ fn local_urls_preserve_paths_and_decode_without_form_encoding() {
 }
 
 #[test]
-fn links_resolve_from_each_document_and_require_links() {
+fn links_resolve_valid_files_directories_and_reference_links() {
     let (_temp, workspace) = fixture();
+    write(workspace.root(), "crates/core/src/command/mod.rs", "");
     write(workspace.root(), "docs/a b.md", "");
     write(
         workspace.root(),
         "docs/glossary.md",
-        "[file](a%20b.md#part) [anchor](#part) [web](https://example.com) [query](?q)",
+        "[command](../crates/core/src/command/mod.rs) [file](a%20b.md#part) \
+         [anchor](#part) [web](https://example.com) [query](?q) \
+         [directory](../crates/core/) [reference][file]\n\n[file]: a%20b.md \"title\"\n\n\
+         `[example](missing.rs)`\n\n```md\n[example](missing.rs)\n```",
+    );
+    let runner = RecordingRunner::stdout(b"docs/glossary.md\0docs/a b.md\0");
+    assert!(check_links(&workspace, &runner).unwrap().is_empty());
+}
+
+#[test]
+fn missing_source_file_fails_the_check_and_reports_document_and_target() {
+    let (_temp, workspace) = fixture();
+    write(
+        workspace.root(),
+        "docs/glossary.md",
+        "[command](../crates/core/src/command.rs)",
+    );
+    let runner = RecordingRunner::stdout(b"docs/glossary.md\0");
+    assert_eq!(
+        check_links(&workspace, &runner).unwrap(),
+        ["docs/glossary.md: missing local link target: ../crates/core/src/command.rs"]
+    );
+    let runner = RecordingRunner::stdout(b"docs/glossary.md\0");
+    let context = Context {
+        workspace: &workspace,
+        runner: &runner,
+        strict: false,
+    };
+    assert!(matches!(links(&context), Outcome::Fail(_)));
+}
+
+#[test]
+fn scan_covers_all_tracked_docs_and_skips_untracked_generated_documents() {
+    let (_temp, workspace) = fixture();
+    for document in ["docs/adr/0001-first.md", "docs/nested/guide.md"] {
+        write(
+            workspace.root(),
+            document,
+            "[missing][target]\n\n[target]: missing.rs",
+        );
+    }
+    write(
+        workspace.root(),
+        "docs/generated.md",
+        "[missing](missing.rs)",
     );
     write(
         workspace.root(),
-        "docs/adr/0003-product-direction.md",
-        "[file](../a%20b.md)",
+        "site/generated.md",
+        "[missing](missing.rs)",
     );
-    assert!(check_links(&workspace).unwrap().is_empty());
-    write(
-        workspace.root(),
-        "docs/adr/0003-product-direction.md",
-        "[missing](a%20b.md)",
+    let runner = RecordingRunner::stdout(
+        b"docs/adr/0001-first.md\0docs/nested/guide.md\0site/generated.md\0",
     );
     assert_eq!(
-        check_links(&workspace).unwrap(),
-        ["docs/adr/0003-product-direction.md: missing local link target: a%20b.md"]
+        check_links(&workspace, &runner).unwrap(),
+        [
+            "docs/adr/0001-first.md: missing local link target: missing.rs",
+            "docs/nested/guide.md: missing local link target: missing.rs",
+        ]
     );
-    write(workspace.root(), "docs/glossary.md", "No links.");
-    assert_eq!(check_links(&workspace).unwrap().len(), 2);
 }
 
 #[test]

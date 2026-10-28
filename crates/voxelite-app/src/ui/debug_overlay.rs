@@ -25,7 +25,11 @@ impl EditorView {
             .children(
                 voxelite_app::debug_overlay::lines(
                     meter.renderer(),
-                    meter.average(),
+                    if self.capture_state.is_some() {
+                        None
+                    } else {
+                        meter.average()
+                    },
                     self.viewport.frame_stats(),
                 )
                 .into_iter()

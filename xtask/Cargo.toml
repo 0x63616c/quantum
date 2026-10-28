@@ -10,6 +10,7 @@ base64.workspace = true
 clap.workspace = true
 glob.workspace = true
 percent-encoding.workspace = true
+pulldown-cmark.workspace = true
 plist.workspace = true
 regex.workspace = true
 resvg.workspace = true
