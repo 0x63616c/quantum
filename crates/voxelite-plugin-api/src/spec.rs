@@ -21,6 +21,31 @@ pub struct Manifest {
     pub can_disable: bool,
 }
 
+impl Manifest {
+    /// Construct an enabled, disableable built-in using the current API contract.
+    ///
+    /// Supply a constant ID, localization key prefix and package version.
+    /// Required infrastructure may override `can_disable` on the returned value.
+    ///
+    /// # Panics
+    /// Panics with the plugin ID if the ID or semantic version is invalid.
+    pub fn builtin(id: &str, key_prefix: &str, version: &str) -> Self {
+        Self {
+            id: PluginId::new(id)
+                .unwrap_or_else(|error| panic!("invalid built-in plugin ID {id:?}: {error}")),
+            name_key: format!("{key_prefix}.name"),
+            description_key: format!("{key_prefix}.description"),
+            version: Version::parse(version).unwrap_or_else(|error| {
+                panic!("invalid version for built-in plugin {id:?}: {error}")
+            }),
+            api_version: crate::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        }
+    }
+}
+
 /// Placement within the native application's menu, independent of its usual menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ApplicationMenuSection {

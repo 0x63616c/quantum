@@ -6118,8 +6118,21 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "slotmap",
  "thiserror 2.0.21",
  "uuid",
+]
+
+[[package]]
+name = "voxelite-crash"
+version = "0.3.1"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "url",
 ]
 
 [[package]]
@@ -6281,6 +6294,7 @@ name = "voxelite-plugins-builtin"
 version = "0.3.1"
 dependencies = [
  "voxelite-plugin-agent",
+ "voxelite-plugin-api",
  "voxelite-plugin-comments",
  "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",
