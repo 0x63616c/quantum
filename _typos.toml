@@ -1,7 +1,17 @@
 [files]
 # Git metadata is generated binary data, never source or documentation.
 # Third-party sources and license texts must retain upstream bytes.
-extend-exclude = [".git/**", "vendor/**", "crates/quantum-app/assets/licenses/**"]
+# Vendored third-party impeccable files retain upstream spelling.
+extend-exclude = [
+    ".git/**",
+    "vendor/**",
+    "crates/quantum-app/assets/licenses/**",
+    ".agents/skills/impeccable/**",
+    ".claude/skills/impeccable/**",
+    ".claude/agents/impeccable-*",
+    ".cursor/skills/impeccable/**",
+    ".cursor/agents/impeccable-*",
+]
 
 [default.extend-words]
 # Native project extension.

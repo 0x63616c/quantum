@@ -95,6 +95,17 @@ never pushed to `pr-assets`. Non-UI PRs get no Screenshots section.
 Details, adding screens and troubleshooting:
 [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
+### Design review (impeccable)
+
+Agents and Codex jobs run `/impeccable critique` then `/impeccable polish` before
+opening site, GPUI or future SwiftUI UI PRs. Use the locally served site per
+[site/README.md](site/README.md), or native PR screenshots from
+`cargo xtask screenshots`; reviewers critique the Before | After images.
+[DESIGN.md](DESIGN.md) and [ART-CHECKLIST.md](design/ART-CHECKLIST.md) override
+skill defaults. Follow [AGENTS.md](AGENTS.md#design-review-impeccable) for the
+project-only impeccable **4.8.0** install/update command, telemetry opt-outs and
+fallback cache. Keep upstream files verbatim; hooks need Calum's approval.
+
 ## 5. One focus per PR
 
 One issue, one concern, one PR. Split drive-by fixes into their own issue. Do not

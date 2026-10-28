@@ -13,6 +13,9 @@ use crate::workspace::tracked_paths;
 const ROOT_ENTRIES: &[&str] = &[
     ".agents",
     ".cargo",
+    ".claude",
+    ".cursor",
+    ".impeccable",
     ".config",
     ".gitattributes",
     ".github",
@@ -20,6 +23,8 @@ const ROOT_ENTRIES: &[&str] = &[
     "_typos.toml",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "DESIGN.md",
+    "PRODUCT.md",
     "CHANGELOG.md",
     "Cargo.lock",
     "Cargo.toml",
