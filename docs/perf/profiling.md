@@ -52,6 +52,18 @@ cargo test --locked -p quantum-render --features profiling
 cargo clippy --locked -p quantum-app --features profiling --all-targets -- -D warnings
 ```
 
+With a Metal adapter (or Mesa lavapipe and `--features profiling,headless-vulkan`
+on Linux), also run the GPU tracing regression:
+
+```sh
+cargo test --locked -p quantum-render --features profiling,gpu profiling_gpu_zones -- --ignored
+```
+
+It checks cold and cached frame pixels, incremental mesh and GPU zones, balanced
+span exits after each future poll, and early/nested errors. CI runs it on Linux
+lavapipe and native macOS Metal. The default-dependency test also rejects
+accidentally enabled `profiling` features in the app, renderer and mesher.
+
 The first tree must contain no `tracing-tracy`, `tracy-client`,
 `tracy-client-sys` or `tracing-subscriber`. GPUI already uses `tracing` independently.
 All Quantum span attributes and the subscriber startup are compiled out when

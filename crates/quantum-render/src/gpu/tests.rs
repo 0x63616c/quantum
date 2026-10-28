@@ -1,5 +1,9 @@
 //! GPU resource limit contracts.
 use super::*;
+
+#[cfg(feature = "profiling")]
+mod profiling;
+
 #[test]
 fn occupancy_respects_both_buffer_and_binding_limits() {
     let maximum = Occupancy::new(quantum_core::Region::new([0; 3], [256; 3]).unwrap()).unwrap();

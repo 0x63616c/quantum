@@ -67,7 +67,7 @@ fn normal_workspace_dependencies_preserve_renderer_boundary() {
 }
 
 #[test]
-fn default_app_excludes_profiling_runtime_dependencies() {
+fn default_builds_exclude_profiling_features_and_runtime_dependencies() {
     let output = Command::new(env!("CARGO"))
         .args([
             "tree",
@@ -75,31 +75,38 @@ fn default_app_excludes_profiling_runtime_dependencies() {
             "--offline",
             "-p",
             "quantum-app",
+            "-p",
+            "quantum-render",
+            "-p",
+            "quantum-mesh",
             "--edges",
             "normal",
             "--prefix",
             "none",
+            "--format",
+            "{p}|{f}",
         ])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .output()
-        .expect("inspect default app dependency tree");
+        .expect("inspect default dependency trees");
     assert!(
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
     let tree = String::from_utf8(output.stdout).unwrap();
-    for dependency in [
-        "tracing-tracy",
-        "tracy-client",
-        "tracy-client-sys",
-        "tracing-subscriber",
-    ] {
-        assert!(
-            !tree
-                .lines()
-                .any(|line| line.split_whitespace().next() == Some(dependency)),
-            "default app unexpectedly links {dependency}",
-        );
+    for line in tree.lines().filter(|line| !line.is_empty()) {
+        let (package, features) = line.split_once('|').expect("package and feature list");
+        let name = package.split_whitespace().next().unwrap();
+        match name {
+            "quantum-app" | "quantum-render" | "quantum-mesh" => assert!(
+                !features.split(',').any(|feature| feature == "profiling"),
+                "default build unexpectedly enables {name}/profiling",
+            ),
+            "tracing-tracy" | "tracy-client" | "tracy-client-sys" | "tracing-subscriber" => {
+                panic!("default build unexpectedly links {name}");
+            }
+            _ => {}
+        }
     }
 }

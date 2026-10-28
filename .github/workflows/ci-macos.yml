@@ -167,7 +167,7 @@ jobs:
       - name: Clippy
         run: |
           cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
-          cargo check -p quantum-app --bin quantum --locked --features profiling
+          cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling -- -D warnings
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
@@ -175,6 +175,9 @@ jobs:
 
       - name: Test Rust packages
         run: cargo nextest run ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support --profile ci
+
+      - name: Test opt-in profiling on Metal
+        run: cargo nextest run -p quantum-render --lib --locked --features profiling,gpu --profile ci --run-ignored only -E 'test(profiling_gpu_zones)'
 
       - name: Test doctests
         if: ${{ !cancelled() }}
