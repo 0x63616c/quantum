@@ -1,0 +1,146 @@
+[
+  {
+    "route": "/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/download/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/download/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/getting-started/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/getting-started/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/mcp/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/mcp/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/skills/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/skills/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/format/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/format/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/plugins/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/docs/plugins/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/changelog/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/changelog/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/blog/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/blog/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/blog/2026-10-28-rename/",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/blog/2026-10-28-rename/",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/404.html",
+    "theme": "dark",
+    "widths": 1121,
+    "failures": []
+  },
+  {
+    "route": "/404.html",
+    "theme": "light",
+    "widths": 1121,
+    "failures": []
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "issue": 228,
+  "before": "58846f68a96e4b8983b436589e09bb85ee829182",
+  "after": "403a44b51cecae91a85dc4a886d727fd8cd0b9d5",
+  "capture_count": 32,
+  "themes": [
+    "dark",
+    "light"
+  ],
+  "review": "Every paired PNG opened and visually inspected; critique and polish used within the pinned brand and seven-finding scope."
+}

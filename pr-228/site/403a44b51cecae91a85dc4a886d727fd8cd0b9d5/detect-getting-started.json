@@ -1,0 +1,123 @@
+[
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~96 chars on 5 of 7 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(4)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~96 chars on 2 of 3 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(6)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~99 chars on 2 of 6 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(8)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~97 chars on 3 of 4 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(9)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~96 chars on 2 of 3 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(10)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~94 chars on 2 of 2 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(12)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~99 chars on 3 of 4 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(19)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~98 chars on 6 of 12 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(20)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~100 chars on 4 of 5 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(21)"
+  },
+  {
+    "antipattern": "line-length",
+    "name": "Line length too long",
+    "description": "Text lines wider than ~80 characters are hard to read. The eye loses its place tracking back to the start of the next line, so it is measured on the lines that rendered and charged when more than one of them runs long. Add a max-width (65ch to 75ch) to text containers.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "~100 chars on 7 of 9 rendered lines (aim for <80)",
+    "selector": "p:nth-of-type(22)"
+  },
+  {
+    "antipattern": "overused-font",
+    "name": "Overused font",
+    "description": "Inter, Roboto, Fraunces, Geist, Plus Jakarta Sans, and Space Grotesk are used on so many sites they no longer feel distinctive. Each new wave of AI-generated UIs converges on the same handful of faces. Choose a face that gives your interface personality.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "http://127.0.0.1:8095/docs/getting-started/",
+    "line": 0,
+    "snippet": "Primary font: geist (100% of text)",
+    "selector": "body"
+  }
+]

@@ -1,0 +1,211 @@
+{
+  "browser": "156.0.8078.4",
+  "captures": [
+    {
+      "name": "desktop-dark-viewport",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": true,
+      "pageHeight": 2949
+    },
+    {
+      "name": "desktop-light-viewport",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": true,
+      "pageHeight": 2949
+    },
+    {
+      "name": "mobile-dark-viewport",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "proof-before-dark",
+      "width": 390,
+      "element": ".edit-proof",
+      "state": "before"
+    },
+    {
+      "name": "proof-after-dark",
+      "width": 390,
+      "element": ".edit-proof",
+      "state": "after"
+    },
+    {
+      "name": "mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": true,
+      "pageHeight": 3520
+    },
+    {
+      "name": "mobile-light-viewport",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "proof-before-light",
+      "width": 390,
+      "element": ".edit-proof",
+      "state": "before"
+    },
+    {
+      "name": "proof-after-light",
+      "width": 390,
+      "element": ".edit-proof",
+      "state": "after"
+    },
+    {
+      "name": "mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": true,
+      "pageHeight": 3520
+    },
+    {
+      "name": "docs-desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "changelog-desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-2026-10-28-rename-desktop-dark",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "changelog-desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-2026-10-28-rename-desktop-light",
+      "width": 1440,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-dark-navigation",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-dark-sections",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "changelog-mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-2026-10-28-rename-mobile-dark",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-light-navigation",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "docs-mobile-light-sections",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "changelog-mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    },
+    {
+      "name": "blog-2026-10-28-rename-mobile-light",
+      "width": 390,
+      "height": 900,
+      "fullPage": false
+    }
+  ],
+  "checks": [
+    "Every page type and all docs routes fit 320–1440px, including 701/768px and both sides of header breakpoints; visible header controls stay in bounds with a full 44px theme target in both themes",
+    "Docs code stays at least 12px; MCP identifiers/status labels stay whole and narrow tables scroll; focused/hovered/pressed skip links and pressed navigation/buttons/summaries keep AA contrast",
+    "Generated section indexes match article headings; mobile docs menus support mutual exclusion, keyboard, Escape with focus restoration, outside dismissal and anchor focus; first mobile build example fits without scrolling",
+    "Documentation Copy code writes the complete example to clipboard",
+    "All doc Markdown aliases return identical content; keyboard copying preserves the complete page including schemas; writeText fallback works; simultaneous clipboard denial and delayed HTTP, network or content failures remain handled",
+    "View .md works with JavaScript disabled",
+    "Mobile comparison switches with keyboard, pointer and JavaScript disabled; no-JavaScript setup navigation",
+    "No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation"
+  ]
+}

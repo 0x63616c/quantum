@@ -1,0 +1,2491 @@
+{
+  "browser": "156.0.8078.4",
+  "captures": [
+    {
+      "side": "before",
+      "name": "home-header-320",
+      "theme": "dark",
+      "width": 320,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 149.109375,
+            "y": 14,
+            "width": 33,
+            "right": 182.109375
+          },
+          {
+            "label": "Download",
+            "x": 194.109375,
+            "y": 14,
+            "width": 65,
+            "right": 259.109375
+          },
+          {
+            "label": "Blog",
+            "x": 271.109375,
+            "y": 14,
+            "width": 30,
+            "right": 301.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 309.109375,
+            "y": 14,
+            "width": 44,
+            "right": 353.109375
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "home-header-768",
+      "theme": "dark",
+      "width": 768,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 24,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 150.109375
+          },
+          {
+            "label": "Docs",
+            "x": 182.109375,
+            "y": 18,
+            "width": 33,
+            "right": 215.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 247.109375,
+            "y": 18,
+            "width": 47,
+            "right": 294.109375
+          },
+          {
+            "label": "Download",
+            "x": 326.109375,
+            "y": 18,
+            "width": 65,
+            "right": 391.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 423.109375,
+            "y": 18,
+            "width": 70,
+            "right": 493.109375
+          },
+          {
+            "label": "Blog",
+            "x": 525.109375,
+            "y": 18,
+            "width": 30,
+            "right": 555.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 587.109375,
+            "y": 18,
+            "width": 44,
+            "right": 631.109375
+          },
+          {
+            "label": "Connect your agent",
+            "x": 639.109375,
+            "y": 18,
+            "width": 157,
+            "right": 796.109375
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "docs-menu-open-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": 14,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": 14,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": 14,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 326,
+            "y": 14,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "On this page",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 1,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "docs-menu-focus-next-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": 14,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": 14,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": 14,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 326,
+            "y": 14,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "Copy page as Markdown",
+        "focusVisible": true,
+        "focusHit": false,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 1,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "mcp-table-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": -6372,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": -6378,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": -6378,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": -6378,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 326,
+            "y": -6378,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 252,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 24,
+            "y": 227.5,
+            "width": 58.21875,
+            "right": 82.21875
+          },
+          {
+            "label": "Required",
+            "x": 82.21875,
+            "y": 227.5,
+            "width": 38.984375,
+            "right": 121.203125
+          },
+          {
+            "label": "Type / constraints",
+            "x": 121.203125,
+            "y": 227.5,
+            "width": 244.796875,
+            "right": 366
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "mcp-table-1440",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": -4521.796875,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "Overview",
+            "x": 262.109375,
+            "y": -4527,
+            "width": 61,
+            "right": 323.109375
+          },
+          {
+            "label": "Docs",
+            "x": 355.109375,
+            "y": -4527,
+            "width": 33,
+            "right": 388.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 420.109375,
+            "y": -4527,
+            "width": 47,
+            "right": 467.109375
+          },
+          {
+            "label": "Download",
+            "x": 499.109375,
+            "y": -4527,
+            "width": 65,
+            "right": 564.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 596.109375,
+            "y": -4527,
+            "width": 70,
+            "right": 666.109375
+          },
+          {
+            "label": "Blog",
+            "x": 698.109375,
+            "y": -4527,
+            "width": 30,
+            "right": 728.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 1324,
+            "y": -4527,
+            "width": 44,
+            "right": 1368
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 252,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 310,
+            "y": 178.78125,
+            "width": 102.21875,
+            "right": 412.21875
+          },
+          {
+            "label": "Required",
+            "x": 412.21875,
+            "y": 178.78125,
+            "width": 65.5625,
+            "right": 477.78125
+          },
+          {
+            "label": "Type / constraints",
+            "x": 477.78125,
+            "y": 178.78125,
+            "width": 552.21875,
+            "right": 1030
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "skip-hover-1440",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "For agents",
+            "x": 262.109375,
+            "y": 18,
+            "width": 68,
+            "right": 330.109375
+          },
+          {
+            "label": "The editor",
+            "x": 362.109375,
+            "y": 18,
+            "width": 64,
+            "right": 426.109375
+          },
+          {
+            "label": "Docs",
+            "x": 458.109375,
+            "y": 18,
+            "width": 33,
+            "right": 491.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 523.109375,
+            "y": 18,
+            "width": 47,
+            "right": 570.109375
+          },
+          {
+            "label": "Download",
+            "x": 602.109375,
+            "y": 18,
+            "width": 65,
+            "right": 667.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 699.109375,
+            "y": 18,
+            "width": 70,
+            "right": 769.109375
+          },
+          {
+            "label": "Blog",
+            "x": 801.109375,
+            "y": 18,
+            "width": 30,
+            "right": 831.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 1147,
+            "y": 18,
+            "width": 44,
+            "right": 1191
+          },
+          {
+            "label": "Connect your agent",
+            "x": 1211,
+            "y": 18,
+            "width": 157,
+            "right": 1368
+          }
+        ],
+        "focus": "Skip to content",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(147, 197, 253)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "download-footer-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/download/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": -353,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 208,
+            "y": -359,
+            "width": 33,
+            "right": 241
+          },
+          {
+            "label": "Download",
+            "x": 253,
+            "y": -359,
+            "width": 65,
+            "right": 318
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 326,
+            "y": -359,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumOverviewDocsPluginsChangelogBlogDownload\n\n  \n\n    Downlo",
+        "focusVisible": false,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/changelog/",
+          "/blog/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "home-header-320",
+      "theme": "light",
+      "width": 320,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 149.109375,
+            "y": 14,
+            "width": 33,
+            "right": 182.109375
+          },
+          {
+            "label": "Download",
+            "x": 194.109375,
+            "y": 14,
+            "width": 65,
+            "right": 259.109375
+          },
+          {
+            "label": "Blog",
+            "x": 271.109375,
+            "y": 14,
+            "width": 30,
+            "right": 301.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 309.109375,
+            "y": 14,
+            "width": 44,
+            "right": 353.109375
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "home-header-768",
+      "theme": "light",
+      "width": 768,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 24,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 150.109375
+          },
+          {
+            "label": "Docs",
+            "x": 182.109375,
+            "y": 18,
+            "width": 33,
+            "right": 215.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 247.109375,
+            "y": 18,
+            "width": 47,
+            "right": 294.109375
+          },
+          {
+            "label": "Download",
+            "x": 326.109375,
+            "y": 18,
+            "width": 65,
+            "right": 391.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 423.109375,
+            "y": 18,
+            "width": 70,
+            "right": 493.109375
+          },
+          {
+            "label": "Blog",
+            "x": 525.109375,
+            "y": 18,
+            "width": 30,
+            "right": 555.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 587.109375,
+            "y": 18,
+            "width": 44,
+            "right": 631.109375
+          },
+          {
+            "label": "Connect your agent",
+            "x": 639.109375,
+            "y": 18,
+            "width": 157,
+            "right": 796.109375
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "docs-menu-open-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": 14,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": 14,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": 14,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 326,
+            "y": 14,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "On this page",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 1,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "docs-menu-focus-next-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": 20,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": 14,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": 14,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": 14,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 326,
+            "y": 14,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "Copy page as Markdown",
+        "focusVisible": true,
+        "focusHit": false,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 1,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "mcp-table-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": -6372,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 166,
+            "y": -6378,
+            "width": 33,
+            "right": 199
+          },
+          {
+            "label": "Download",
+            "x": 211,
+            "y": -6378,
+            "width": 65,
+            "right": 276
+          },
+          {
+            "label": "Blog",
+            "x": 288,
+            "y": -6378,
+            "width": 30,
+            "right": 318
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 326,
+            "y": -6378,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 252,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 24,
+            "y": 227.5,
+            "width": 58.21875,
+            "right": 82.21875
+          },
+          {
+            "label": "Required",
+            "x": 82.21875,
+            "y": 227.5,
+            "width": 38.984375,
+            "right": 121.203125
+          },
+          {
+            "label": "Type / constraints",
+            "x": 121.203125,
+            "y": 227.5,
+            "width": 244.796875,
+            "right": 366
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "mcp-table-1440",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": -4521.796875,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "Overview",
+            "x": 262.109375,
+            "y": -4527,
+            "width": 61,
+            "right": 323.109375
+          },
+          {
+            "label": "Docs",
+            "x": 355.109375,
+            "y": -4527,
+            "width": 33,
+            "right": 388.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 420.109375,
+            "y": -4527,
+            "width": 47,
+            "right": 467.109375
+          },
+          {
+            "label": "Download",
+            "x": 499.109375,
+            "y": -4527,
+            "width": 65,
+            "right": 564.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 596.109375,
+            "y": -4527,
+            "width": 70,
+            "right": 666.109375
+          },
+          {
+            "label": "Blog",
+            "x": 698.109375,
+            "y": -4527,
+            "width": 30,
+            "right": 728.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 1324,
+            "y": -4527,
+            "width": 44,
+            "right": 1368
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 252,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 310,
+            "y": 178.78125,
+            "width": 102.21875,
+            "right": 412.21875
+          },
+          {
+            "label": "Required",
+            "x": 412.21875,
+            "y": 178.78125,
+            "width": 65.5625,
+            "right": 477.78125
+          },
+          {
+            "label": "Type / constraints",
+            "x": 477.78125,
+            "y": 178.78125,
+            "width": 552.21875,
+            "right": 1030
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "skip-hover-1440",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "For agents",
+            "x": 262.109375,
+            "y": 18,
+            "width": 68,
+            "right": 330.109375
+          },
+          {
+            "label": "The editor",
+            "x": 362.109375,
+            "y": 18,
+            "width": 64,
+            "right": 426.109375
+          },
+          {
+            "label": "Docs",
+            "x": 458.109375,
+            "y": 18,
+            "width": 33,
+            "right": 491.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 523.109375,
+            "y": 18,
+            "width": 47,
+            "right": 570.109375
+          },
+          {
+            "label": "Download",
+            "x": 602.109375,
+            "y": 18,
+            "width": 65,
+            "right": 667.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 699.109375,
+            "y": 18,
+            "width": 70,
+            "right": 769.109375
+          },
+          {
+            "label": "Blog",
+            "x": 801.109375,
+            "y": 18,
+            "width": 30,
+            "right": 831.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 1147,
+            "y": 18,
+            "width": 44,
+            "right": 1191
+          },
+          {
+            "label": "Connect your agent",
+            "x": 1211,
+            "y": 18,
+            "width": 157,
+            "right": 1368
+          }
+        ],
+        "focus": "Skip to content",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(29, 78, 216)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "before",
+      "name": "download-footer-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/download/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 20,
+            "y": -353,
+            "width": 121.109375,
+            "right": 141.109375
+          },
+          {
+            "label": "Docs",
+            "x": 208,
+            "y": -359,
+            "width": 33,
+            "right": 241
+          },
+          {
+            "label": "Download",
+            "x": 253,
+            "y": -359,
+            "width": 65,
+            "right": 318
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 326,
+            "y": -359,
+            "width": 44,
+            "right": 370
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumOverviewDocsPluginsChangelogBlogDownload\n\n  \n\n    Downlo",
+        "focusVisible": false,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/changelog/",
+          "/blog/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "home-header-320",
+      "theme": "dark",
+      "width": 320,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 146,
+            "y": 14,
+            "width": 33,
+            "right": 179
+          },
+          {
+            "label": "Download",
+            "x": 187,
+            "y": 14,
+            "width": 65,
+            "right": 252
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 260,
+            "y": 14,
+            "width": 44,
+            "right": 304
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "home-header-768",
+      "theme": "dark",
+      "width": 768,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 24,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 150.109375
+          },
+          {
+            "label": "Docs",
+            "x": 182.109375,
+            "y": 18,
+            "width": 33,
+            "right": 215.109375
+          },
+          {
+            "label": "Download",
+            "x": 247.109375,
+            "y": 18,
+            "width": 65,
+            "right": 312.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 535,
+            "y": 18,
+            "width": 44,
+            "right": 579
+          },
+          {
+            "label": "Connect your agent",
+            "x": 587,
+            "y": 18,
+            "width": 157,
+            "right": 744
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "docs-menu-open-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": 14,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": 14,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 330,
+            "y": 14,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "On this page",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "docs-menu-focus-next-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": 14,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": 14,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 330,
+            "y": 14,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "Copy page as Markdown",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "mcp-table-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": -6372,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": -6378,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": -6378,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 330,
+            "y": -6378,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 24,
+            "y": 227.5,
+            "width": 135,
+            "right": 159
+          },
+          {
+            "label": "Required",
+            "x": 159,
+            "y": 227.5,
+            "width": 90,
+            "right": 249
+          },
+          {
+            "label": "Type / constraints",
+            "x": 249,
+            "y": 227.5,
+            "width": 216,
+            "right": 465
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "mcp-table-1440",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": -4521.796875,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "Overview",
+            "x": 262.109375,
+            "y": -4527,
+            "width": 61,
+            "right": 323.109375
+          },
+          {
+            "label": "Docs",
+            "x": 355.109375,
+            "y": -4527,
+            "width": 33,
+            "right": 388.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 420.109375,
+            "y": -4527,
+            "width": 47,
+            "right": 467.109375
+          },
+          {
+            "label": "Download",
+            "x": 499.109375,
+            "y": -4527,
+            "width": 65,
+            "right": 564.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 596.109375,
+            "y": -4527,
+            "width": 70,
+            "right": 666.109375
+          },
+          {
+            "label": "Blog",
+            "x": 698.109375,
+            "y": -4527,
+            "width": 30,
+            "right": 728.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 1324,
+            "y": -4527,
+            "width": 44,
+            "right": 1368
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 310,
+            "y": 178.78125,
+            "width": 143,
+            "right": 453
+          },
+          {
+            "label": "Required",
+            "x": 453,
+            "y": 178.78125,
+            "width": 90,
+            "right": 543
+          },
+          {
+            "label": "Type / constraints",
+            "x": 543,
+            "y": 178.78125,
+            "width": 487,
+            "right": 1030
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "skip-hover-1440",
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "For agents",
+            "x": 262.109375,
+            "y": 18,
+            "width": 68,
+            "right": 330.109375
+          },
+          {
+            "label": "The editor",
+            "x": 362.109375,
+            "y": 18,
+            "width": 64,
+            "right": 426.109375
+          },
+          {
+            "label": "Docs",
+            "x": 458.109375,
+            "y": 18,
+            "width": 33,
+            "right": 491.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 523.109375,
+            "y": 18,
+            "width": 47,
+            "right": 570.109375
+          },
+          {
+            "label": "Download",
+            "x": 602.109375,
+            "y": 18,
+            "width": 65,
+            "right": 667.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 699.109375,
+            "y": 18,
+            "width": 70,
+            "right": 769.109375
+          },
+          {
+            "label": "Blog",
+            "x": 801.109375,
+            "y": 18,
+            "width": 30,
+            "right": 831.109375
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 1147,
+            "y": 18,
+            "width": 44,
+            "right": 1191
+          },
+          {
+            "label": "Connect your agent",
+            "x": 1211,
+            "y": 18,
+            "width": 157,
+            "right": 1368
+          }
+        ],
+        "focus": "Skip to content",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "download-footer-390",
+      "theme": "dark",
+      "width": 390,
+      "height": 844,
+      "route": "/download/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": -353,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": -359,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": -359,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to light theme",
+            "x": 330,
+            "y": -359,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumOverviewDocsPluginsChangelogBlogDownload\n\n  \n\n    Downlo",
+        "focusVisible": false,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(250, 250, 250)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "home-header-320",
+      "theme": "light",
+      "width": 320,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 146,
+            "y": 14,
+            "width": 33,
+            "right": 179
+          },
+          {
+            "label": "Download",
+            "x": 187,
+            "y": 14,
+            "width": 65,
+            "right": 252
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 260,
+            "y": 14,
+            "width": 44,
+            "right": 304
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "home-header-768",
+      "theme": "light",
+      "width": 768,
+      "height": 844,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 24,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 150.109375
+          },
+          {
+            "label": "Docs",
+            "x": 182.109375,
+            "y": 18,
+            "width": 33,
+            "right": 215.109375
+          },
+          {
+            "label": "Download",
+            "x": 247.109375,
+            "y": 18,
+            "width": 65,
+            "right": 312.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 535,
+            "y": 18,
+            "width": 44,
+            "right": 579
+          },
+          {
+            "label": "Connect your agent",
+            "x": 587,
+            "y": 18,
+            "width": 157,
+            "right": 744
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumFor agentsThe editorDocsPluginsDownloadChangelogBlogConn",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "docs-menu-open-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": 14,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": 14,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 330,
+            "y": 14,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "On this page",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 1,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "docs-menu-focus-next-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/getting-started/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": 20,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": 14,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": 14,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 330,
+            "y": 14,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "Copy page as Markdown",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "mcp-table-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": -6372,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": -6378,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": -6378,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 330,
+            "y": -6378,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 24,
+            "y": 227.5,
+            "width": 135,
+            "right": 159
+          },
+          {
+            "label": "Required",
+            "x": 159,
+            "y": 227.5,
+            "width": 90,
+            "right": 249
+          },
+          {
+            "label": "Type / constraints",
+            "x": 249,
+            "y": 227.5,
+            "width": 216,
+            "right": 465
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "mcp-table-1440",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "route": "/docs/mcp/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": -4521.796875,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "Overview",
+            "x": 262.109375,
+            "y": -4527,
+            "width": 61,
+            "right": 323.109375
+          },
+          {
+            "label": "Docs",
+            "x": 355.109375,
+            "y": -4527,
+            "width": 33,
+            "right": 388.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 420.109375,
+            "y": -4527,
+            "width": 47,
+            "right": 467.109375
+          },
+          {
+            "label": "Download",
+            "x": 499.109375,
+            "y": -4527,
+            "width": 65,
+            "right": 564.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 596.109375,
+            "y": -4527,
+            "width": 70,
+            "right": 666.109375
+          },
+          {
+            "label": "Blog",
+            "x": 698.109375,
+            "y": -4527,
+            "width": 30,
+            "right": 728.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 1324,
+            "y": -4527,
+            "width": 44,
+            "right": 1368
+          }
+        ],
+        "focus": "\nSkip to contentQuantumOverviewDocsPluginsDownloadChangelogBlog\nBrowse docsDocum",
+        "focusVisible": false,
+        "focusHit": false,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [
+          {
+            "label": "Argument",
+            "x": 310,
+            "y": 178.78125,
+            "width": 143,
+            "right": 453
+          },
+          {
+            "label": "Required",
+            "x": 453,
+            "y": 178.78125,
+            "width": 90,
+            "right": 543
+          },
+          {
+            "label": "Type / constraints",
+            "x": 543,
+            "y": 178.78125,
+            "width": 487,
+            "right": 1030
+          }
+        ],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "skip-hover-1440",
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "route": "/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 72,
+            "y": 23.203125,
+            "width": 126.109375,
+            "right": 198.109375
+          },
+          {
+            "label": "For agents",
+            "x": 262.109375,
+            "y": 18,
+            "width": 68,
+            "right": 330.109375
+          },
+          {
+            "label": "The editor",
+            "x": 362.109375,
+            "y": 18,
+            "width": 64,
+            "right": 426.109375
+          },
+          {
+            "label": "Docs",
+            "x": 458.109375,
+            "y": 18,
+            "width": 33,
+            "right": 491.109375
+          },
+          {
+            "label": "Plugins",
+            "x": 523.109375,
+            "y": 18,
+            "width": 47,
+            "right": 570.109375
+          },
+          {
+            "label": "Download",
+            "x": 602.109375,
+            "y": 18,
+            "width": 65,
+            "right": 667.109375
+          },
+          {
+            "label": "Changelog",
+            "x": 699.109375,
+            "y": 18,
+            "width": 70,
+            "right": 769.109375
+          },
+          {
+            "label": "Blog",
+            "x": 801.109375,
+            "y": 18,
+            "width": 30,
+            "right": 831.109375
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 1147,
+            "y": 18,
+            "width": 44,
+            "right": 1191
+          },
+          {
+            "label": "Connect your agent",
+            "x": 1211,
+            "y": 18,
+            "width": 157,
+            "right": 1368
+          }
+        ],
+        "focus": "Skip to content",
+        "focusVisible": true,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    },
+    {
+      "side": "after",
+      "name": "download-footer-390",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "route": "/download/",
+      "metrics": {
+        "header": [
+          {
+            "label": "Quantum",
+            "x": 16,
+            "y": -353,
+            "width": 117.109375,
+            "right": 133.109375
+          },
+          {
+            "label": "Docs",
+            "x": 216,
+            "y": -359,
+            "width": 33,
+            "right": 249
+          },
+          {
+            "label": "Download",
+            "x": 257,
+            "y": -359,
+            "width": 65,
+            "right": 322
+          },
+          {
+            "label": "Switch to dark theme",
+            "x": 330,
+            "y": -359,
+            "width": 44,
+            "right": 374
+          }
+        ],
+        "focus": "\nSkip to content\nQuantumOverviewDocsPluginsChangelogBlogDownload\n\n  \n\n    Downlo",
+        "focusVisible": false,
+        "focusHit": true,
+        "openMenus": 0,
+        "skip": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(23, 23, 23)",
+          "opacity": "1"
+        },
+        "smallCode": 0,
+        "table": [],
+        "footer": [
+          "/changelog/",
+          "/blog/",
+          "/docs/skills/",
+          "/docs/plugins/",
+          "/assets/LICENSE",
+          "https://github.com/0x63616c/quantum"
+        ]
+      }
+    }
+  ]
+}
