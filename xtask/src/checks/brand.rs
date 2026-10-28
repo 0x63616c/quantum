@@ -172,7 +172,7 @@ impl Audit<'_> {
         );
         let hardcoded = regex::Regex::new(r#"app_id\s*:\s*Some\(\s*""#)
             .map_err(|error| Error::Invalid(error.to_string()))?;
-        for name in ["welcome", "settings"] {
+        for name in ["welcome", "settings/window"] {
             let path = format!("crates/quantum-app/src/ui/{name}.rs");
             let source = self.workspace.read(&path)?;
             self.require(
