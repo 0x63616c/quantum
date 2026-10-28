@@ -23,6 +23,8 @@
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments)};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
 <a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><img src="/assets/mark.svg" width="25" height="25" alt="">Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a><a href="/changelog/" aria-current="page">Changelog</a><a href="/blog/">Blog</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation"><a href="/docs/">Documentation</a><a href="/docs/getting-started/">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a></nav></details></div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">Quantum documentation</p><a href="/docs/">Documentation</a><a href="/docs/getting-started/">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a></nav><main class="docs-content" id="main"><h1>Changelog</h1><h2>[Unreleased]</h2>
+<h2>[0.4.0]</h2>
+<h3>Changed</h3>
 <ul>
 <li>Voxelite is now Quantum. Crates, commands, integrations, skills, downloads and
 the canonical website use the new name. On first launch, settings, palettes,
@@ -32,5 +34,100 @@ existing <code>.voxl</code> projects still open. New saves use the Quantum discr
 and need a current reader. Bundle-keyed macOS state migrates once; automatic
 updates retain a compatible archive layout while adopting the new bundle ID. See
 <a href="https://github.com/0x63616c/quantum/blob/main/docs/rename-compatibility.md">rename compatibility</a> for update details.</li>
+</ul>
+<h3>Added</h3>
+<ul>
+<li>add opt-in crash report and feedback previews (<a href="https://github.com/0x63616c/quantum/pull/207">#207</a>)</li>
+<li>preflight automated release credentials (<a href="https://github.com/0x63616c/quantum/pull/201">#201</a>)</li>
+<li>rebuild the Welcome window as concept A (split layout) (<a href="https://github.com/0x63616c/quantum/pull/151">#151</a>)</li>
+<li>use the ASCII shimmer for loading states (<a href="https://github.com/0x63616c/quantum/pull/152">#152</a>)</li>
+<li>add Quantize app icon (<a href="https://github.com/0x63616c/quantum/pull/185">#185</a>)</li>
+<li>add cargo xtask release with an offline dry-run default (<a href="https://github.com/0x63616c/quantum/pull/183">#183</a>)</li>
+<li>add the Quantum design system to quantum-ui (<a href="https://github.com/0x63616c/quantum/pull/177">#177</a>)</li>
+<li>add opt-in crash and feedback reporting core crate (<a href="https://github.com/0x63616c/quantum/pull/153">#153</a>)</li>
+<li>before/after UI screenshots in PR descriptions (<a href="https://github.com/0x63616c/quantum/pull/130">#130</a>)</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>validate tracked documentation links in the active worktree (<a href="https://github.com/0x63616c/quantum/pull/182">#182</a>)</li>
+<li>verify platform-specific brand storage paths (<a href="https://github.com/0x63616c/quantum/pull/184">#184</a>)</li>
+<li>write files atomically and store settings via JsonStore in the macOS settings dir (<a href="https://github.com/0x63616c/quantum/pull/155">#155</a>)</li>
+<li>show an error instead of quitting when a file can't be opened (<a href="https://github.com/0x63616c/quantum/pull/158">#158</a>)</li>
+<li>let Save As be cancelled instead of trapping the user (<a href="https://github.com/0x63616c/quantum/pull/159">#159</a>)</li>
+<li>never expose the session socket before it is 0600 (<a href="https://github.com/0x63616c/quantum/pull/59">#59</a>)</li>
+<li>use the bundle identifier as the window app_id (<a href="https://github.com/0x63616c/quantum/pull/60">#60</a>)</li>
+<li>step GPU supersampling down instead of dropping to CPU on large viewports (<a href="https://github.com/0x63616c/quantum/pull/58">#58</a>)</li>
+<li>describe non-voxel demo steps instead of +0 −0 (<a href="https://github.com/0x63616c/quantum/pull/63">#63</a>)</li>
+<li>root attached file tools at the project folder, not cwd (<a href="https://github.com/0x63616c/quantum/pull/61">#61</a>)</li>
+</ul>
+<h3>Performance</h3>
+<ul>
+<li>add opt-in Tracy frame and render tracing (<a href="https://github.com/0x63616c/quantum/pull/210">#210</a>)</li>
+<li>add divan benchmarks for greedy meshing and large scenes (<a href="https://github.com/0x63616c/quantum/pull/147">#147</a>)</li>
+<li>decode .voxl from a byte slice instead of a buffered reader (<a href="https://github.com/0x63616c/quantum/pull/128">#128</a>)</li>
+<li>re-record the M2 baseline on an idle runner (<a href="https://github.com/0x63616c/quantum/pull/78">#78</a>)</li>
+</ul>
+<h3>Refactored</h3>
+<ul>
+<li>migrate stable identifiers to Quantum (<a href="https://github.com/0x63616c/quantum/pull/218">#218</a>)</li>
+<li>split oversized app and GPU modules (<a href="https://github.com/0x63616c/quantum/pull/212">#212</a>)</li>
+<li>rename the app to Quantum (<a href="https://github.com/0x63616c/quantum/pull/208">#208</a>)</li>
+<li>enforce shared corner radius tokens (<a href="https://github.com/0x63616c/quantum/pull/202">#202</a>)</li>
+<li>split the editor shell into focused modules (<a href="https://github.com/0x63616c/quantum/pull/198">#198</a>)</li>
+<li>merge greedy meshers into quantum-mesh (<a href="https://github.com/0x63616c/quantum/pull/199">#199</a>)</li>
+<li>port macOS packaging, appcast and release scripts (<a href="https://github.com/0x63616c/quantum/pull/154">#154</a>)</li>
+<li>use slotmap typed IDs for layers, comments and history (<a href="https://github.com/0x63616c/quantum/pull/162">#162</a>)</li>
+<li>consolidate built-in manifests and conformance tests (<a href="https://github.com/0x63616c/quantum/pull/160">#160</a>)</li>
+<li>define each MCP tool once with typed arguments (<a href="https://github.com/0x63616c/quantum/pull/142">#142</a>)</li>
+<li>split command.rs and add undo/redo property tests (<a href="https://github.com/0x63616c/quantum/pull/118">#118</a>)</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>add pinned graphify code-graph refresh (<a href="https://github.com/0x63616c/quantum/pull/221">#221</a>)</li>
+<li>drop the pre-rename repository slug after renaming to quantum (<a href="https://github.com/0x63616c/quantum/pull/213">#213</a>)</li>
+<li>bump the github-actions group with 3 updates (<a href="https://github.com/0x63616c/quantum/pull/219">#219</a>)</li>
+<li>show current editor and Welcome goldens (<a href="https://github.com/0x63616c/quantum/pull/216">#216</a>)</li>
+<li>generate site, docs, changelog and blog naming from brand.toml (<a href="https://github.com/0x63616c/quantum/pull/211">#211</a>)</li>
+<li>typos and brand checks driven by brand.toml (<a href="https://github.com/0x63616c/quantum/pull/209">#209</a>)</li>
+<li>add headless GPUI goldens for key screens (<a href="https://github.com/0x63616c/quantum/pull/204">#204</a>)</li>
+<li>limit per-change Mac checks to macOS-specific crates (<a href="https://github.com/0x63616c/quantum/pull/175">#175</a>)</li>
+<li>bump the github-actions group with 4 updates (<a href="https://github.com/0x63616c/quantum/pull/197">#197</a>)</li>
+<li>add a cheaper ci-dist cargo profile for PR DMG builds (<a href="https://github.com/0x63616c/quantum/pull/174">#174</a>)</li>
+<li>align grouped Dependabot updates with PR conventions (<a href="https://github.com/0x63616c/quantum/pull/196">#196</a>)</li>
+<li>enforce strict lints, crate boundaries and a shrink-only styling baseline (<a href="https://github.com/0x63616c/quantum/pull/186">#186</a>)</li>
+<li>run workspace tests with cargo-nextest and keep doctests (<a href="https://github.com/0x63616c/quantum/pull/181">#181</a>)</li>
+<li>scan secrets with gitleaks, pin every action by SHA and minimise workflow permissions (<a href="https://github.com/0x63616c/quantum/pull/180">#180</a>)</li>
+<li>build the macOS DMG nightly instead of on every main push (<a href="https://github.com/0x63616c/quantum/pull/173">#173</a>)</li>
+<li>explain the CARGO_BUILD_JOBS limit on the Mac mini runners (<a href="https://github.com/0x63616c/quantum/pull/188">#188</a>)</li>
+<li>cap CARGO_BUILD_JOBS at 4 on the Mac mini jobs (<a href="https://github.com/0x63616c/quantum/pull/172">#172</a>)</li>
+<li>add launch capture states for every screen and Settings section (<a href="https://github.com/0x63616c/quantum/pull/187">#187</a>)</li>
+<li>add insta snapshots for exporters, site output and .voxl round trips (<a href="https://github.com/0x63616c/quantum/pull/164">#164</a>)</li>
+<li>run rendering visual checks on either Mac runner, golden only for benchmarks (<a href="https://github.com/0x63616c/quantum/pull/176">#176</a>)</li>
+<li>drop Cargo.toml, Cargo.lock and most of xtask from the rendering-checks paths (<a href="https://github.com/0x63616c/quantum/pull/171">#171</a>)</li>
+<li>share one sccache server between the Mac mini runners (<a href="https://github.com/0x63616c/quantum/pull/163">#163</a>)</li>
+<li>build the DMG only when packaging changes and move script tests off the Mac mini (<a href="https://github.com/0x63616c/quantum/pull/157">#157</a>)</li>
+<li>remove stale code, assets and docs left after the browser removal (<a href="https://github.com/0x63616c/quantum/pull/141">#141</a>)</li>
+<li>add model labels, dependency and disk conventions (<a href="https://github.com/0x63616c/quantum/pull/143">#143</a>)</li>
+<li>run rendering checks only on the golden runner (<a href="https://github.com/0x63616c/quantum/pull/77">#77</a>)</li>
+<li>add issue-first project conventions, templates and PR checks (<a href="https://github.com/0x63616c/quantum/pull/115">#115</a>)</li>
+<li>record decision to keep the Linux GUI build (<a href="https://github.com/0x63616c/quantum/pull/146">#146</a>)</li>
+<li>keep a warm per-runner cargo target dir and skip macOS build on docs-only PRs (<a href="https://github.com/0x63616c/quantum/pull/129">#129</a>)</li>
+<li>Remove the browser (wasm) editor: code, build, CI and site page (<a href="https://github.com/0x63616c/quantum/pull/116">#116</a>)</li>
+<li>Add AsciiSkeleton and AsciiReveal to quantum-ui (port of ascii-reveal) (<a href="https://github.com/0x63616c/quantum/pull/117">#117</a>)</li>
+<li>Docs: remove mentions of the browser editor; Quantum is macOS-only (<a href="https://github.com/0x63616c/quantum/pull/75">#75</a>)</li>
+<li>Drop the browser editor line from macOS release notes (<a href="https://github.com/0x63616c/quantum/pull/74">#74</a>)</li>
+<li>Hoist shared dependencies into workspace.dependencies (<a href="https://github.com/0x63616c/quantum/pull/72">#72</a>)</li>
+<li>Display the website and browser editor as Quantum (<a href="https://github.com/0x63616c/quantum/pull/73">#73</a>)</li>
+<li>Move exact shadows and lighting into a render-pass plugin (<a href="https://github.com/0x63616c/quantum/pull/34">#34</a>)</li>
+<li>Display the app as Quantum (<a href="https://github.com/0x63616c/quantum/pull/71">#71</a>)</li>
+<li>Keep concrete plugins out of the quantum-mcp library (<a href="https://github.com/0x63616c/quantum/pull/69">#69</a>)</li>
+<li>Add brand.toml: inventory of brand-bearing identifiers before the Quantum rename (<a href="https://github.com/0x63616c/quantum/pull/70">#70</a>)</li>
+<li>Fold quantum-export into plugin-exporters; keep plugin-api renderer-free (<a href="https://github.com/0x63616c/quantum/pull/66">#66</a>)</li>
+<li>Add Linux CI with cargo-deny, cargo-machete and xtask tidy (<a href="https://github.com/0x63616c/quantum/pull/65">#65</a>)</li>
+<li>Build the site from the committed MCP tool catalog (drop quantum-site → quantum-mcp) (<a href="https://github.com/0x63616c/quantum/pull/68">#68</a>)</li>
+<li>Move design/ and screenshots/ out of the repository (<a href="https://github.com/0x63616c/quantum/pull/67">#67</a>)</li>
+<li>Debug overlay: FPS, frame timing, chunk, draw and memory stats (off by default) (<a href="https://github.com/0x63616c/quantum/pull/56">#56</a>)</li>
+<li>Stop committing generated site output (<a href="https://github.com/0x63616c/quantum/pull/64">#64</a>)</li>
+<li>remove stale planning and review notes from the repo root (<a href="https://github.com/0x63616c/quantum/pull/62">#62</a>)</li>
 </ul>
 <div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main></div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/changelog/">Changelog</a><a href="/blog/">Blog</a><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a><a class="github-link" href="https://github.com/0x63616c/quantum"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a></nav></footer></body></html>
