@@ -120,7 +120,7 @@ cargo test -p xtask --locked checks::plugin_deps
 
 ## Build, test and lint
 
-`cargo xtask validate` runs the registered gates: tidy, plugin-deps, brand,
+`cargo xtask validate` runs the registered gates: tidy, workflows, plugin-deps, brand,
 docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
 machete. Missing tools skip with a reason; use `--strict` to fail instead.
 Use `cargo xtask check --list` to list checks,

@@ -26,6 +26,10 @@ remain separate.
 
 The repository checks run in-process from `src/checks/`:
 
+- `workflows`: parse every workflow YAML file, require explicit top-level
+  permissions and full commit SHAs for action/reusable workflow references. Local
+  actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
+  and in `validate`.
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
   metadata offline first and retries online if that command fails. Preserves the
