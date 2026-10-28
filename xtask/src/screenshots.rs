@@ -137,6 +137,10 @@ pub(super) const SCREENS: &[Screen] = screens![
         ("dialogs-palette-delete", "Delete custom palette confirmation"),
         ("overlays-debug", "Debug overlay"),
     ],
+    "^Quantum Feedback$", (880, 760) => [
+        ("dialogs-feedback", "Feedback preview and consent"),
+        ("dialogs-crash-report", "Next-launch crash report preview"),
+    ],
     "^Quantum Settings$", (880, 640) => [
         ("settings-general", "Settings: General"),
         ("settings-appearance", "Settings: Appearance"),

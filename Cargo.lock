@@ -6291,6 +6291,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "voxelite-core",
+ "voxelite-crash",
  "voxelite-format",
  "voxelite-mcp",
  "voxelite-plugin-api",

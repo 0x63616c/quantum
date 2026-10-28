@@ -551,6 +551,7 @@ impl WelcomeView {
             cx.global_mut::<Launcher>().editor = None;
         }
         match op {
+            Op::Feedback => super::feedback::show_deferred(cx),
             Op::New => self.finish(Editor::blank(), cx),
             Op::Open => {
                 if let Some(path) = path {
