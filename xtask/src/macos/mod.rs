@@ -39,13 +39,12 @@ pub const REPOSITORY: &str = "0x63616c/quantum";
 /// Stable download URL prefix; preserve published asset names.
 pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
 
-// Retained for immutable signed feeds and the transition before issue #91.
-pub(crate) const LEGACY_REPOSITORY: &str = "0x63616c/voxelite";
+// Retained for immutable signed feeds published before the repository rename.
 pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
 
 fn release_repository(environment: &Environment) -> Result<&str> {
     let repository = environment.or("GITHUB_REPOSITORY", REPOSITORY);
-    if matches!(repository, REPOSITORY | LEGACY_REPOSITORY) {
+    if repository == REPOSITORY {
         Ok(repository)
     } else {
         Err(invalid("Invalid GitHub repository"))

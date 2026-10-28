@@ -78,7 +78,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == '0x63616c/voxelite' || github.repository == '0x63616c/quantum') && github.actor == '0x63616c'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == '0x63616c/quantum' && github.actor == '0x63616c'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
