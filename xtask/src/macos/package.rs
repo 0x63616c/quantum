@@ -164,32 +164,13 @@ fn build<'a, 'b>(
             &app.join("Contents/Info.plist"),
         )?;
     }
-    let iconset = work.path().join("Voxelite.iconset");
+    context.plan("copy the reproducible Quantize icon from packaging/macos/Voxelite.icns");
     if !dry {
-        mkdir(&iconset)?;
+        copy(
+            &context.path("packaging/macos/Voxelite.icns"),
+            &app.join("Contents/Resources/Voxelite.icns"),
+        )?;
     }
-    for size in [16, 32, 128, 256, 512] {
-        for (pixels, suffix) in [(size, ""), (size * 2, "@2x")] {
-            context
-                .command("sips")
-                .args([
-                    "-z",
-                    &pixels.to_string(),
-                    &pixels.to_string(),
-                    "packaging/macos/icon-1024.png",
-                    "--out",
-                ])
-                .arg(iconset.join(format!("icon_{size}x{size}{suffix}.png")))
-                .output(context.runner)?;
-        }
-    }
-    context
-        .command("iconutil")
-        .args(["-c", "icns"])
-        .arg(&iconset)
-        .arg("-o")
-        .arg(app.join("Contents/Resources/Voxelite.icns"))
-        .run(context.runner)?;
     let archive = work.path().join("Sparkle.tar.xz");
     context.command("curl").args(["--fail", "--location", "--retry", "3", "--proto", "=https", "--tlsv1.2"])
         .arg(format!("https://github.com/sparkle-project/Sparkle/releases/download/{SPARKLE_VERSION}/Sparkle-{SPARKLE_VERSION}.tar.xz"))

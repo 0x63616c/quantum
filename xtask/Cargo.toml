@@ -12,6 +12,7 @@ glob.workspace = true
 percent-encoding.workspace = true
 plist.workspace = true
 regex.workspace = true
+resvg.workspace = true
 roxmltree.workspace = true
 semver.workspace = true
 serde.workspace = true

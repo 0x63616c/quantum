@@ -32,6 +32,13 @@ const SCREENS: &[Screen] = &[
         args: "--theme dark",
     },
     Screen {
+        name: "welcome-light",
+        caption: "Welcome window, light theme (no recent projects)",
+        title: "Quantum",
+        size: (1024, 704),
+        args: "--theme light",
+    },
+    Screen {
         name: "editor-dark",
         caption: "Editor, dark theme (Autumn Workshop example)",
         title: "Autumn Workshop",
@@ -58,7 +65,7 @@ const CHANGED_FRACTION: f64 = 0.0005;
 pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen NAME ...] [--out DIR] [--publish PR] [--remote NAME]
   --base     before ref (default: merge-base of HEAD and <remote>/main)
   --head     after ref (default: the current working tree, uncommitted changes included)
-  --screen   limit to these screens (welcome, editor-dark, editor-light); default all
+  --screen   limit to these screens (welcome, welcome-light, editor-dark, editor-light); default all
   --out      output directory (default: target/pr-screenshots)
   --publish  push PNGs to the pr-assets branch and fill the PR's Screenshots section
   --remote   git remote for the base default and publishing (default: origin, else the only remote)

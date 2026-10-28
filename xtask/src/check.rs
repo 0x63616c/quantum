@@ -114,6 +114,7 @@ pub static CHECKS: &[Check] = &[
         "Offline stable feed validation (empty initial feed allowed)",
         appcast_check,
     ),
+    Check::new("icons", "Reproducible Quantize brand assets", icons_check),
     Check::cargo("fmt", "Rust formatting", &["fmt", "--all", "--", "--check"]),
     Check::cargo(
         "clippy",
@@ -145,6 +146,13 @@ fn appcast_check(context: &Context<'_>) -> Outcome {
     match crate::macos::validate(&context.workspace.path("site/appcast.xml"), true, None) {
         Ok(_) => Outcome::Pass,
         Err(error) => Outcome::Fail(vec![format!("Invalid appcast: {error}")]),
+    }
+}
+
+fn icons_check(context: &Context<'_>) -> Outcome {
+    match crate::icons::generate(context.workspace, true, None) {
+        Ok(()) => Outcome::Pass,
+        Err(error) => Outcome::Fail(vec![error.to_string()]),
     }
 }
 

@@ -13,6 +13,8 @@ cargo xtask bump-version patch --dry-run
 cargo xtask version --check-tag v0.3.1
 cargo xtask macos package --dry-run
 cargo xtask macos check-appcast site/appcast.xml --allow-empty
+cargo xtask icons
+cargo xtask icons --check
 cargo xtask bench --help
 ```
 
@@ -38,6 +40,8 @@ The repository checks run in-process from `src/checks/`:
 - `docs-assets`: local image links in the root guides, docs and crate READMEs;
   images must exist outside `screenshots/`. Checks Git ignores captures while
   keeping `docs/images/*.png` available.
+- `icons`: exact regeneration of the Quantize SVG derivatives, including PNGs,
+  ICNS, site marks and the design preview. See [artwork notes](../packaging/macos/ARTWORK.md).
 
 Run their fixture and parsing tests with `cargo test -p xtask --locked checks::`.
 Tests inject the shared command runner for Cargo metadata and Git ignore output;

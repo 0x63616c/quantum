@@ -7508,6 +7508,7 @@ dependencies = [
  "percent-encoding",
  "plist",
  "regex",
+ "resvg",
  "roxmltree 0.21.2",
  "rustix",
  "semver",
