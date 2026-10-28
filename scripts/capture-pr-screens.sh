@@ -67,8 +67,11 @@ while IFS=$'\t' read -r name title width height args; do
   fi
   xdotool windowmove "$window" 0 0 windowsize "$window" "$width" "$height" || true
   xdotool mousemove 0 9999
-  # Let the CPU renderer finish full-quality frames and any entrance animation.
-  sleep "${PR_SHOTS_SETTLE:-6}"
+  # Welcome renders up to nine previews serially on the CPU. Give those jobs
+  # time to finish as well as the editor's full-quality frame and animations.
+  settle=6
+  [[ "$name" == welcome* ]] && settle=15
+  sleep "${PR_SHOTS_SETTLE:-$settle}"
   import -window "$window" "$PR_SHOTS_OUT/$name.png"
   echo "captured $name"
   kill "$app_pid" 2>/dev/null || true

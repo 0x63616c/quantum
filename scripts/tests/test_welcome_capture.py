@@ -32,7 +32,7 @@ class WelcomeCaptureTests(unittest.TestCase):
                 folders = []
                 for project in history["projects"]:
                     path = Path(project["path"])
-                    folders.append(str(path.parent.relative_to(capture_home)))
+                    folders.append(str(path.parent.relative_to(capture_home.resolve())))
                     self.assertEqual(int(path.stat().st_mtime), project["modified"]["secs_since_epoch"])
                     source = "Autumn Workshop" if project["name"] == "Workshop Study" else project["name"]
                     source = ROOT / "examples" / (source.lower().replace(" ", "-") + ".voxl")
