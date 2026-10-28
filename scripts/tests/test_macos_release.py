@@ -40,13 +40,17 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("          fetch-depth: 0", WORKFLOW.read_text())
 
     def test_self_hosted_guards_and_pins(self):
-        guard = ("    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || "
+        guard = ("github.actor == '0x63616c' && (github.event_name != 'pull_request' || "
                  "github.event.pull_request.head.repo.full_name == github.repository)")
         for path in (ROOT / ".github/workflows").glob("*.yml"):
             workflow = path.read_text()
             self.assertNotIn("pull_request_target:", workflow)
             if "self-hosted" in workflow:
-                self.assertIn(guard, workflow.splitlines())
+                # The owner guard must be a top-level conjunct of a job-level `if:`.
+                self.assertTrue(any(
+                    line == "    if: " + guard
+                    or (line.startswith("    if: ") and line.endswith(" && " + guard))
+                    for line in workflow.splitlines()), path.name)
             for line in workflow.splitlines():
                 if "uses: actions/" in line:
                     self.assertRegex(line, r"uses: actions/[a-z-]+@[0-9a-f]{40}(?: |$)")
