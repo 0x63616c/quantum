@@ -113,6 +113,21 @@ impl SaveFlow {
         self.open_path = None;
     }
 
+    fn restore_picker_status(&mut self, status: &mut HintText, error: &mut bool) {
+        if let Some(previous) = self.before_picker.take() {
+            (*status, *error) = previous;
+        }
+    }
+
+    fn cancel_picker(&mut self, status: &mut HintText, error: &mut bool) -> bool {
+        if !self.picker.waiting() {
+            return false;
+        }
+        self.cancel_save();
+        self.restore_picker_status(status, error);
+        true
+    }
+
     // Saving ends the dialog gate separately and consumes the continuation
     // on failure.
     pub(super) fn complete_save(&mut self, success: bool) -> Option<Op> {
@@ -375,12 +390,11 @@ impl EditorView {
             let result = receiver.await;
             #[cfg(not(target_os = "macos"))]
             let result = result.map(|result| {
-                result.map(|path| path.filter(|path| !path.as_os_str().is_empty()).map(|mut path| {
+                result.map(|path| path.map(|path| {
                     let format = SaveFormat::from_extension(
                         &formats,
                         path.extension().and_then(|ext| ext.to_str()).unwrap_or_default(),
                     );
-                    if path.extension().is_none() { path.set_extension(format.extension()); }
                     (path, format)
                 }))
             });
@@ -388,9 +402,17 @@ impl EditorView {
                 if !this.save_flow.picker.complete(request) {
                     return;
                 }
-                this.restore_picker_status();
+                this.save_flow.restore_picker_status(&mut this.status, &mut this.error);
                 match result {
                     Ok(Ok(Some((path, format)))) if !path.as_os_str().is_empty() => {
+                        #[cfg(not(target_os = "macos"))]
+                        let path = {
+                            let mut path = path;
+                            if path.extension().is_none() {
+                                path.set_extension(format.extension());
+                            }
+                            path
+                        };
                         match format {
                             SaveFormat::Project => this.write_project(path, cx),
                             SaveFormat::Export(format) => this.write_export(path, format, cx),
@@ -411,17 +433,11 @@ impl EditorView {
             });
         }).detach();
     }
-    fn restore_picker_status(&mut self) {
-        if let Some((status, error)) = self.save_flow.before_picker.take() {
-            self.status = status;
-            self.error = error;
-        }
-    }
-
     pub(super) fn cancel_save_picker(&mut self, cx: &mut Context<Self>) {
-        if self.save_flow.picker.waiting() {
-            self.save_flow.cancel_save();
-            self.restore_picker_status();
+        if self
+            .save_flow
+            .cancel_picker(&mut self.status, &mut self.error)
+        {
             cx.notify();
         }
     }
@@ -556,7 +572,14 @@ mod tests {
             flow.resolve(SaveChoice::Save);
             flow.begin_dialog();
             let request = flow.picker.begin();
-            flow.cancel_save();
+            let mut status = "Waiting for file dialog…".into();
+            let mut error = false;
+            flow.before_picker = Some(("Previous status".into(), true));
+            assert!(flow.cancel_picker(&mut status, &mut error));
+            assert_eq!(status.plain_text(), Some("Previous status"));
+            assert!(error);
+            assert!(flow.before_picker.is_none());
+            assert!(!flow.cancel_picker(&mut status, &mut error));
             assert!(!flow.picker.complete(request));
             assert!(!flow.dialog_open());
             assert!(!flow.needs_confirmation());

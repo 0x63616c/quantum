@@ -139,6 +139,14 @@ impl From<String> for HintText {
 }
 
 impl HintText {
+    #[cfg(test)]
+    pub(super) fn plain_text(&self) -> Option<&str> {
+        match self.0.as_slice() {
+            [HintPart::Text(text)] => Some(text.as_ref()),
+            _ => None,
+        }
+    }
+
     pub(super) fn text(mut self, text: impl Into<SharedString>) -> Self {
         self.0.push(HintPart::Text(text.into()));
         self

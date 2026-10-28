@@ -1865,7 +1865,14 @@ impl EditorView {
                     .child(
                         self.floating()
                             .p(px(space::XXL))
-                            .child(self.status.clone())
+                            .child(
+                                row()
+                                    .gap(px(space::SM))
+                                    .when(self.save_flow.picker.waiting(), |d| {
+                                        d.child(voxelite_ui::Spinner::new("save-picker-spinner", t))
+                                    })
+                                    .child(self.status.clone()),
+                            )
                             .when(self.save_flow.picker.waiting(), |d| {
                                 d.child(
                                     row().mt(px(space::XL)).child(
