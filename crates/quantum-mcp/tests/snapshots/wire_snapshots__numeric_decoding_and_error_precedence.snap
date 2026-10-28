@@ -1,0 +1,889 @@
+---
+source: crates/quantum-mcp/tests/wire_snapshots.rs
+expression: results
+---
+[
+  {
+    "tool": "voxels_set",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/at\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/at"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"layer_not_found\",\"message\":\"no layer named Absent\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "layer_not_found",
+          "message": "no layer named Absent",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"slot must be 0..256 or a unique swatch name\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "slot must be 0..256 or a unique swatch name",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/plane2\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/plane2"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_set",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_box",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/region\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/region"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_box",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_batch",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/operations/0/at\",\"command_index\":0}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/operations/0/at",
+          "command_index": 0
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_batch",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "layers_add",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected usize\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/index\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected usize",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/index"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "layers_add",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "palette_set_slot",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `2.0`, expected u16\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/slot\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `2.0`, expected u16",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/slot"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "palette_set_slot",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "palette_set_slot",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected u8\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/rgba\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected u8",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/rgba"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "palette_set_slot",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "comments_add",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/anchor\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/anchor"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "comments_add",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_fill",
+    "revision": "0",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected usize\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/cap\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected usize",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/cap"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_fill",
+    "revision": "1",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"revision_conflict\",\"message\":\"expected revision 1, current 0\",\"retryable\":false,\"recovery\":\"Read current document and history state, rebase the intended change, then use a fresh operation_id.\",\"current_revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "revision_conflict",
+          "message": "expected revision 1, current 0",
+          "retryable": false,
+          "recovery": "Read current document and history state, rebase the intended change, then use a fresh operation_id.",
+          "current_revision": "0"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_get",
+    "model_id": "00000000-0000-0000-0000-000000000001",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `0.0`, expected i32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/positions\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `0.0`, expected i32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/positions"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "voxels_get",
+    "model_id": "00000000-0000-0000-0000-000000000000",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"model_not_found\",\"message\":\"model is not open in this session\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "model_not_found",
+          "message": "model is not open in this session",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "query",
+    "model_id": "00000000-0000-0000-0000-000000000001",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":true,\"data\":{\"bounds\":{\"min\":[-32,0,-32],\"max\":[32,64,32]},\"region\":{\"min\":[-32,0,-32],\"max\":[32,64,32]},\"occupied_bounds\":null,\"voxel_count\":0,\"view\":\"layers\",\"slots\":{},\"model_id\":\"00000000-0000-0000-0000-000000000001\",\"revision\":\"0\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": true,
+        "data": {
+          "bounds": {
+            "min": [
+              -32,
+              0,
+              -32
+            ],
+            "max": [
+              32,
+              64,
+              32
+            ]
+          },
+          "region": {
+            "min": [
+              -32,
+              0,
+              -32
+            ],
+            "max": [
+              32,
+              64,
+              32
+            ]
+          },
+          "occupied_bounds": null,
+          "voxel_count": 0,
+          "view": "layers",
+          "slots": {},
+          "model_id": "00000000-0000-0000-0000-000000000001",
+          "revision": "0"
+        }
+      },
+      "isError": false
+    }
+  },
+  {
+    "tool": "query",
+    "model_id": "00000000-0000-0000-0000-000000000000",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"model_not_found\",\"message\":\"model is not open in this session\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "model_not_found",
+          "message": "model is not open in this session",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "query",
+    "model_id": "00000000-0000-0000-0000-000000000001",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected usize\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/limit\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected usize",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/limit"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "query",
+    "model_id": "00000000-0000-0000-0000-000000000000",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"model_not_found\",\"message\":\"model is not open in this session\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "model_not_found",
+          "message": "model is not open in this session",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "render",
+    "model_id": "00000000-0000-0000-0000-000000000001",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected u32\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/width\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected u32",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/width"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "render",
+    "model_id": "00000000-0000-0000-0000-000000000000",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"model_not_found\",\"message\":\"model is not open in this session\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "model_not_found",
+          "message": "model is not open in this session",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "comments_list",
+    "model_id": "00000000-0000-0000-0000-000000000001",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"invalid_argument\",\"message\":\"invalid type: floating point `1.0`, expected usize\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\",\"path\":\"/offset\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "invalid_argument",
+          "message": "invalid type: floating point `1.0`, expected usize",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.",
+          "path": "/offset"
+        }
+      },
+      "isError": true
+    }
+  },
+  {
+    "tool": "comments_list",
+    "model_id": "00000000-0000-0000-0000-000000000000",
+    "result": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"api_version\":\"voxelite.v1\",\"session_id\":\"<session>\",\"epoch\":\"<epoch>\",\"ok\":false,\"error\":{\"code\":\"model_not_found\",\"message\":\"model is not open in this session\",\"retryable\":false,\"recovery\":\"Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id.\"}}"
+        }
+      ],
+      "structuredContent": {
+        "api_version": "voxelite.v1",
+        "session_id": "<session>",
+        "epoch": "<epoch>",
+        "ok": false,
+        "error": {
+          "code": "model_not_found",
+          "message": "model is not open in this session",
+          "retryable": false,
+          "recovery": "Inspect quantum_document_info and the tool schema, correct the request, then use a new operation_id."
+        }
+      },
+      "isError": true
+    }
+  }
+]

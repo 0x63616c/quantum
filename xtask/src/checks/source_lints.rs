@@ -46,6 +46,7 @@ pub(crate) fn run(context: &Context<'_>) -> Outcome {
                 .to_str()
                 .ok_or_else(|| Error::Invalid("LINT_BASE_REF must be UTF-8".into()))?;
             if let Some(previous) = previous_baseline(context, reference)? {
+                let previous = follow_renames(context, reference, previous)?;
                 errors.extend(no_growth(&baseline, &previous));
             }
         }
@@ -79,6 +80,46 @@ fn previous_baseline(context: &Context<'_>, reference: &str) -> Result<Option<Co
             context: object,
             source,
         })
+}
+
+// A path move retains its existing budget; Git must recognize a real rename.
+// Rule/function keys and counts remain unchanged, so moves cannot grow debt.
+fn follow_renames(context: &Context<'_>, reference: &str, previous: Counts) -> Result<Counts> {
+    let sh = xshell::Shell::new().map_err(|error| Error::Invalid(error.to_string()))?;
+    let command = crate::cmd::Command::from(xshell::cmd!(
+        sh,
+        "git diff --name-status -z --find-renames --diff-filter=R {reference} --"
+    ))
+    .current_dir(context.workspace.root());
+    remap_counts(previous, &command.read(context.runner)?)
+}
+
+fn remap_counts(previous: Counts, diff: &str) -> Result<Counts> {
+    let mut renames = BTreeMap::new();
+    let mut fields = diff.split_terminator('\0');
+    while let Some(status) = fields.next() {
+        let (Some(old), Some(new)) = (fields.next(), fields.next()) else {
+            return Err(Error::Invalid("Incomplete Git rename record".into()));
+        };
+        if !status
+            .strip_prefix('R')
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+        {
+            return Err(Error::Invalid("Expected a Git rename record".into()));
+        }
+        renames.insert(old, new);
+    }
+    let mut mapped = Counts::new();
+    for (key, count) in previous {
+        let key = match key.split_once(':') {
+            Some((path, rule)) if renames.contains_key(path) => format!("{}:{rule}", renames[path]),
+            _ => key,
+        };
+        if mapped.insert(key, count).is_some() {
+            return Err(Error::Invalid("Rename merges distinct lint budgets".into()));
+        }
+    }
+    Ok(mapped)
 }
 
 fn no_growth(current: &Counts, previous: &Counts) -> Vec<String> {
@@ -124,14 +165,14 @@ fn inspect(path: &str, source: &str, counts: &mut Counts) -> Result<()> {
         path,
         counts,
         scope: Vec::new(),
-        app: path.starts_with("crates/voxelite-app/src/"),
+        app: path.starts_with("crates/quantum-app/src/"),
     };
     if visitor.app {
         visitor.styles(syntax.to_token_stream());
     }
     if path.starts_with("crates/")
-        && path != "crates/voxelite-ui/src/tokens.rs"
-        && !path.starts_with("crates/voxelite-ui/src/tokens/")
+        && path != "crates/quantum-ui/src/tokens.rs"
+        && !path.starts_with("crates/quantum-ui/src/tokens/")
     {
         visitor.radii(syntax.to_token_stream());
     }
@@ -372,9 +413,23 @@ mod tests {
     use super::*;
     fn scan(source: &str) -> Counts {
         let mut counts = Counts::new();
-        inspect("crates/voxelite-app/src/ui.rs", source, &mut counts).unwrap();
+        inspect("crates/quantum-app/src/ui.rs", source, &mut counts).unwrap();
         counts
     }
+    #[test]
+    fn real_renames_preserve_budgets_without_allowing_new_or_larger_debt() {
+        let previous = Counts::from([("old.rs:raw-px".into(), 3)]);
+        let renamed = remap_counts(previous.clone(), "R095\0old.rs\0new.rs\0").unwrap();
+        assert!(no_growth(&Counts::from([("new.rs:raw-px".into(), 3)]), &renamed).is_empty());
+        assert!(!no_growth(&Counts::from([("new.rs:raw-px".into(), 4)]), &renamed).is_empty());
+        assert!(!no_growth(&Counts::from([("new.rs:raw-color".into(), 1)]), &renamed).is_empty());
+        assert!(!no_growth(&Counts::from([("new.rs:raw-px".into(), 3)]), &previous).is_empty());
+        assert!(remap_counts(previous.clone(), "R100\0old.rs\0").is_err());
+        assert!(remap_counts(previous, "A\0old.rs\0new.rs\0").is_err());
+        let collision = Counts::from([("old.rs:raw-px".into(), 3), ("new.rs:raw-px".into(), 2)]);
+        assert!(remap_counts(collision, "R100\0old.rs\0new.rs\0").is_err());
+    }
+
     #[test]
     fn corner_radii_require_tokens_in_app_shared_controls_and_macros() {
         let source = r#"fn view() {
@@ -388,17 +443,17 @@ mod tests {
             div().rounded(px(radius::concentric(radius::XL, metrics::EDGE)));
         }"#;
         for path in [
-            "crates/voxelite-app/src/ui.rs",
-            "crates/voxelite-ui/src/components.rs",
-            "crates/voxelite-ui/examples/ui_kit/sections.rs",
+            "crates/quantum-app/src/ui.rs",
+            "crates/quantum-ui/src/components.rs",
+            "crates/quantum-ui/examples/ui_kit/sections.rs",
         ] {
             let mut counts = Counts::new();
             inspect(path, source, &mut counts).unwrap();
             assert_eq!(counts[&format!("{path}:raw-radius")], 6);
         }
         for path in [
-            "crates/voxelite-ui/src/tokens.rs",
-            "crates/voxelite-ui/src/tokens/legacy.rs",
+            "crates/quantum-ui/src/tokens.rs",
+            "crates/quantum-ui/src/tokens/legacy.rs",
         ] {
             let mut counts = Counts::new();
             inspect(path, source, &mut counts).unwrap();
@@ -483,12 +538,12 @@ mod tests {
             r#"fn ui(id: &str) { /* px(3) */ let _ = "rgb(0xff)"; px(2.0); gpui::px(-3.0); px(metrics::WIDTH); rgb(0xff00ff); rgba(color); hsla(0., 1., 1., 1.); match id { "save" | "open" => (), _ => () }; if id == "quit" {} }"#,
         );
         assert_eq!(counts.values().sum::<usize>(), 7);
-        assert_eq!(counts["crates/voxelite-app/src/ui.rs:raw-px"], 2);
-        assert_eq!(counts["crates/voxelite-app/src/ui.rs:raw-color"], 2);
-        assert_eq!(counts["crates/voxelite-app/src/ui.rs:string-dispatch"], 3);
+        assert_eq!(counts["crates/quantum-app/src/ui.rs:raw-px"], 2);
+        assert_eq!(counts["crates/quantum-app/src/ui.rs:raw-color"], 2);
+        assert_eq!(counts["crates/quantum-app/src/ui.rs:string-dispatch"], 3);
         let mut shared = Counts::new();
         inspect(
-            "crates/voxelite-ui/src/tokens.rs",
+            "crates/quantum-ui/src/tokens.rs",
             "fn tokens() { px(2.0); }",
             &mut shared,
         )

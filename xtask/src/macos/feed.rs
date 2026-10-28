@@ -1,5 +1,5 @@
 //! Structural feed validation; cryptographic verification belongs to Sparkle.
-use super::{DOWNLOAD, files, invalid, read, stable_version};
+use super::{DOWNLOAD, LEGACY_DOWNLOAD, files, invalid, read, stable_version};
 use crate::{Error, Result};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use roxmltree::{Document, Node};
@@ -138,24 +138,7 @@ pub fn validate(
         {
             return Err(invalid("Expected exactly one full-update enclosure"));
         }
-        let prefix = format!("{DOWNLOAD}v{version}/");
-        let dmg_url = format!("{prefix}Voxelite.dmg");
-        let notes_url = format!("{prefix}Voxelite.html");
-        let enclosure = child(item, None, "enclosure")
-            .filter(|n| n.attribute("url") == Some(dmg_url.as_str()))
-            .ok_or_else(|| invalid("Enclosure must reference this version's GitHub release DMG"))?;
-        let notes = child(item, Some(SPARKLE), "releaseNotesLink")
-            .filter(|n| n.text() == Some(notes_url.as_str()))
-            .ok_or_else(|| invalid("Missing or incorrect GitHub release-notes link"))?;
-        let dmg_length = signature_and_length(enclosure)?;
-        let notes_length = signature_and_length(notes)?;
-        for (url, length) in [(dmg_url, dmg_length), (notes_url, notes_length)] {
-            if sizes.is_some_and(|sizes| sizes.get(&url) != Some(&length)) {
-                return Err(invalid(
-                    "Appcast asset length does not match the release asset",
-                ));
-            }
-        }
+        let (dmg_length, notes_length) = validate_assets(item, &version, sizes)?;
         if last.as_ref().is_some_and(|last| last <= &parsed) {
             return Err(invalid(
                 "Appcast versions must be unique and ordered newest first",
@@ -177,12 +160,55 @@ pub fn validate(
     Ok(updates)
 }
 
+// GitHub redirects old repository URLs after the rename. Compare size metadata
+// using the canonical prefix, while retaining every signed XML byte unchanged.
+pub(super) fn canonical_asset_url(url: &str) -> String {
+    url.strip_prefix(LEGACY_DOWNLOAD)
+        .map_or_else(|| url.to_owned(), |tail| format!("{DOWNLOAD}{tail}"))
+}
+
+fn valid_asset_url(url: &str, version: &str, extension: &str) -> bool {
+    [DOWNLOAD, LEGACY_DOWNLOAD].into_iter().any(|prefix| {
+        ["Quantum", "Voxelite"]
+            .into_iter()
+            .any(|name| url == format!("{prefix}v{version}/{name}.{extension}"))
+    })
+}
+
+fn validate_assets(
+    item: Node<'_, '_>,
+    version: &str,
+    sizes: Option<&BTreeMap<String, u64>>,
+) -> Result<(u64, u64)> {
+    let enclosure =
+        child(item, None, "enclosure").ok_or_else(|| invalid("Missing release enclosure"))?;
+    let notes = child(item, Some(SPARKLE), "releaseNotesLink")
+        .ok_or_else(|| invalid("Missing release-notes link"))?;
+    let dmg_url = enclosure.attribute("url").unwrap_or_default();
+    let notes_url = notes.text().unwrap_or_default();
+    if !valid_asset_url(dmg_url, version, "dmg") || !valid_asset_url(notes_url, version, "html") {
+        return Err(invalid(
+            "Assets must reference this version's GitHub release",
+        ));
+    }
+    let dmg_length = signature_and_length(enclosure)?;
+    let notes_length = signature_and_length(notes)?;
+    for (url, length) in [(dmg_url, dmg_length), (notes_url, notes_length)] {
+        if sizes.is_some_and(|sizes| sizes.get(&canonical_asset_url(url)) != Some(&length)) {
+            return Err(invalid(
+                "Appcast asset length does not match the release asset",
+            ));
+        }
+    }
+    Ok((dmg_length, notes_length))
+}
+
 /// Check the newest update against the bundle and local assets, and require all
 /// historical item content to survive unchanged (namespace prefix/spacing aside).
 pub fn validate_release(path: &Path, dist: &Path, previous: &Path) -> Result<()> {
     let items = validate(path, false, None)?;
     let old_items = validate(previous, true, None)?;
-    let info = files::read_plist(&dist.join("Voxelite.app/Contents/Info.plist"))?;
+    let info = files::read_plist(&dist.join("Quantum.app/Contents/Info.plist"))?;
     let newest = &items[0];
     for (actual, key, message) in [
         (
@@ -205,10 +231,10 @@ pub fn validate_release(path: &Path, dist: &Path, previous: &Path) -> Result<()>
             return Err(invalid(message));
         }
     }
-    if newest.dmg_length != files::file_size(&dist.join("Voxelite.dmg"))? {
+    if newest.dmg_length != files::file_size(&dist.join("Quantum.dmg"))? {
         return Err(invalid("Appcast DMG length does not match"));
     }
-    if newest.notes_length != files::file_size(&dist.join("Voxelite.html"))? {
+    if newest.notes_length != files::file_size(&dist.join("Quantum.html"))? {
         return Err(invalid("Appcast release-notes length does not match"));
     }
     if items[1..] != old_items {

@@ -1,0 +1,24 @@
+[package]
+name = "quantum-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Benchmark-only admission of render-only scenes above the production voxel limit.
+large-scenes = ["quantum-core/unbounded-voxels"]
+
+[dependencies]
+quantum-core.workspace = true
+quantum-format.workspace = true
+quantum-render = { workspace = true, features = ["gpu"] }
+serde.workspace = true
+serde_json.workspace = true
+png.workspace = true
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+quantum-render = { workspace = true, features = ["headless-vulkan"] }
+
+[lints]
+workspace = true

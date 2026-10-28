@@ -3,9 +3,9 @@
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>Quantum</string>
   <key>CFBundleDisplayName</key><string>Quantum</string>
-  <key>CFBundleExecutable</key><string>Voxelite</string>
+  <key>CFBundleExecutable</key><string>Quantum</string>
   <key>CFBundleIdentifier</key><string>co.worldwidewebb.voxelite</string>
-  <key>CFBundleIconFile</key><string>Voxelite</string>
+  <key>CFBundleIconFile</key><string>Quantum</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>@VERSION@</string>
   <key>CFBundleVersion</key><string>@VERSION@</string>

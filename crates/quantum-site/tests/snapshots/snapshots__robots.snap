@@ -1,0 +1,11 @@
+---
+source: crates/quantum-site/tests/snapshots.rs
+expression: text
+---
+User-agent: *
+Allow: /
+
+Sitemap: https://quantum.worldwidewebb.co/sitemap.xml
+
+# Markdown documentation: https://quantum.worldwidewebb.co/llms.txt
+# Complete documentation: https://quantum.worldwidewebb.co/llms-full.txt

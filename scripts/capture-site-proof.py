@@ -10,7 +10,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'screenshots/site/proof'
 OUTPUT.mkdir(parents=True, exist_ok=True)
-process = subprocess.Popen([str(ROOT / 'target/debug/voxelite-mcp'), '--root', str(ROOT)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+process = subprocess.Popen([str(ROOT / 'target/debug/quantum-mcp'), '--root', str(ROOT)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 sequence = 0
 
 def rpc(method, params):
@@ -25,7 +25,7 @@ def rpc(method, params):
             return result['result']
 
 def call(name, args):
-    result = rpc('tools/call', dict(name='voxelite_' + name, arguments=args))
+    result = rpc('tools/call', dict(name='quantum_' + name, arguments=args))
     assert not result.get('isError'), result
     return result
 
@@ -38,7 +38,7 @@ try:
     fixture = json.loads((ROOT / 'examples/autumn-workshop.voxl').read_text())
     layer = fixture['layers'][-1]['id']
     camera = dict(eye=[26, 22, 35], target=[12.5, 8, 17.5], up=[0, 1, 0], projection='orthographic', ortho_height=9)
-    evidence = dict(source='examples/autumn-workshop.voxl', operation=dict(tool='voxelite_voxels_box', region=dict(min=[11,8,17], max=[14,9,18]), slot=21), source_sha256=hashlib.sha256((ROOT / 'examples/autumn-workshop.voxl').read_bytes()).hexdigest(), camera=camera, captures=[])
+    evidence = dict(source='examples/autumn-workshop.voxl', operation=dict(tool='quantum_voxels_box', region=dict(min=[11,8,17], max=[14,9,18]), slot=21), source_sha256=hashlib.sha256((ROOT / 'examples/autumn-workshop.voxl').read_bytes()).hexdigest(), camera=camera, captures=[])
     for state in ['before', 'after']:
         revision = call('document_info', dict(model_id=model))['structuredContent']['data']['revision']
         if state == 'after':

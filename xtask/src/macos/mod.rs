@@ -34,10 +34,23 @@ pub const SECRETS: &[&str] = &[
     "APPLE_API_ISSUER_ID",
     "SPARKLE_ED_PRIVATE_KEY",
 ];
-/// The only repository permitted in the stable update feed.
-pub const REPOSITORY: &str = "0x63616c/voxelite";
+/// Canonical repository for new stable update URLs.
+pub const REPOSITORY: &str = "0x63616c/quantum";
 /// Stable download URL prefix; preserve published asset names.
-pub const DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
+pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
+
+// Retained for immutable signed feeds and the transition before issue #91.
+pub(crate) const LEGACY_REPOSITORY: &str = "0x63616c/voxelite";
+pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
+
+fn release_repository(environment: &Environment) -> Result<&str> {
+    let repository = environment.or("GITHUB_REPOSITORY", REPOSITORY);
+    if matches!(repository, REPOSITORY | LEGACY_REPOSITORY) {
+        Ok(repository)
+    } else {
+        Err(invalid("Invalid GitHub repository"))
+    }
+}
 
 /// Explicit configuration, without global environment mutation or secret Debug output.
 #[derive(Default)]
@@ -158,10 +171,10 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
             context: "cargo metadata".into(),
             source,
         })?;
-    let version = metadata.package_version("voxelite-app")?.to_string();
+    let version = metadata.package_version("quantum-app")?.to_string();
     if tag.is_some_and(|tag| tag != format!("v{version}")) {
         return Err(Error::Invalid(
-            "Release tag must match the voxelite-app Cargo version.".into(),
+            "Release tag must match the quantum-app Cargo version.".into(),
         ));
     }
     Ok(version)
@@ -170,7 +183,7 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
 /// Grouped CLI for release preparation; none of these commands publish assets.
 #[derive(Subcommand)]
 pub enum Task {
-    /// Build, sign, optionally notarize, and create dist/Voxelite.dmg
+    /// Build, sign, optionally notarize, and create dist/Quantum.dmg
     Package {
         /// Use existing executables from the configured packaging profile
         #[arg(long)]

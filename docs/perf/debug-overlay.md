@@ -42,7 +42,7 @@ readbacks. Enabled diagnostics add measurement/readback overhead; they do not
 change shaders, render targets, resolution, AA, AO or shadows.
 
 Pure formatting and preference tests run with
-`cargo test -p voxelite-app --no-default-features --lib --locked`.
+`cargo test -p quantum-app --no-default-features --lib --locked`.
 The opt-in `runtime_diagnostics_release_resources_and_preserve_pixels` renderer
 test checks repeated toggles, resource release, cache reuse and exact RGBA equality;
 on Linux run it with `--features headless-vulkan -- --ignored`.

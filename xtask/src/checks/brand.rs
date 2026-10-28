@@ -156,7 +156,7 @@ impl Audit<'_> {
 
     fn windows(&mut self) -> Result<()> {
         self.capture(
-            "crates/voxelite-app/src/lib.rs",
+            "crates/quantum-app/src/lib.rs",
             r#"pub\s+const\s+APP_ID\s*:\s*&str\s*=\s*"([^"]+)""#,
             &self.identifier("window_app_id")?,
         )?;
@@ -168,10 +168,10 @@ impl Audit<'_> {
         let hardcoded = regex::Regex::new(r#"app_id\s*:\s*Some\(\s*""#)
             .map_err(|error| Error::Invalid(error.to_string()))?;
         for name in ["welcome", "settings"] {
-            let path = format!("crates/voxelite-app/src/ui/{name}.rs");
+            let path = format!("crates/quantum-app/src/ui/{name}.rs");
             let source = self.workspace.read(&path)?;
             self.require(
-                source.contains("app_id: Some(voxelite_app::APP_ID.into())"),
+                source.contains("app_id: Some(quantum_app::APP_ID.into())"),
                 format!("{path}: expected shared window APP_ID"),
             );
             self.require(
@@ -207,13 +207,13 @@ impl Audit<'_> {
                 ),
             );
         }
-        let app: PackageManifest = read_toml(self.workspace, "crates/voxelite-app/Cargo.toml")?;
+        let app: PackageManifest = read_toml(self.workspace, "crates/quantum-app/Cargo.toml")?;
         let binary = self.identifier("app_binary")?;
         self.require(
             app.bin.iter().any(|bin| bin.name == binary),
-            format!("crates/voxelite-app/Cargo.toml: missing binary {binary:?}"),
+            format!("crates/quantum-app/Cargo.toml: missing binary {binary:?}"),
         );
-        let mcp: PackageManifest = read_toml(self.workspace, "crates/voxelite-mcp/Cargo.toml")?;
+        let mcp: PackageManifest = read_toml(self.workspace, "crates/quantum-mcp/Cargo.toml")?;
         self.equal(
             "MCP package name",
             mcp.package.name,
@@ -221,9 +221,9 @@ impl Audit<'_> {
         );
         self.require(
             self.workspace
-                .path("crates/voxelite-mcp/src/main.rs")
+                .path("crates/quantum-mcp/src/main.rs")
                 .is_file(),
-            "crates/voxelite-mcp/src/main.rs: missing MCP binary entry point",
+            "crates/quantum-mcp/src/main.rs: missing MCP binary entry point",
         );
         Ok(())
     }
@@ -247,7 +247,7 @@ impl Audit<'_> {
             ),
         ] {
             self.capture(
-                &format!("crates/voxelite-mcp/src/{path}.rs"),
+                &format!("crates/quantum-mcp/src/{path}.rs"),
                 pattern,
                 &self.identifier(name)?,
             )?;
@@ -258,12 +258,12 @@ impl Audit<'_> {
     fn site(&mut self) -> Result<()> {
         let domain = self.identifier("site_domain")?;
         self.capture(
-            "crates/voxelite-site/src/main.rs",
+            "crates/quantum-site/src/main.rs",
             r#"const\s+SITE_BASE_URL\s*:\s*&str\s*=\s*"([^"]+)""#,
             &format!("https://{domain}"),
         )?;
         self.capture(
-            "crates/voxelite-site/templates/github-link.html",
+            "crates/quantum-site/templates/github-link.html",
             r#"href="([^"]+)""#,
             &self.identifier("github_repo_url")?,
         )?;
@@ -304,12 +304,12 @@ impl Audit<'_> {
             ),
         ] {
             self.capture(
-                "crates/voxelite-format/src/lib.rs",
+                "crates/quantum-format/src/lib.rs",
                 pattern,
                 &self.identifier(name)?,
             )?;
         }
-        let path = "crates/voxelite-app/src/ui/save_flow/format.rs";
+        let path = "crates/quantum-app/src/ui/save_flow/format.rs";
         let labels = super::captures(
             &self.workspace.read(path)?,
             r#"Self::Project\s*=>\s*"([^"]+)""#,
@@ -327,12 +327,12 @@ impl Audit<'_> {
     }
 
     fn storage(&mut self) -> Result<()> {
-        let path = "crates/voxelite-app/src/local_settings.rs";
+        let path = "crates/quantum-app/src/local_settings.rs";
         let source = self.workspace.read(path)?;
         self.storage_source(&source)?;
         let documents = self.text("storage", "documents_directory")?;
         self.capture(
-            "crates/voxelite-app/src/attachment.rs",
+            "crates/quantum-app/src/attachment.rs",
             r#"home\.join\(\s*"([^"]+)"\s*\)"#,
             documents.strip_prefix("~/").unwrap_or(&documents),
         )?;

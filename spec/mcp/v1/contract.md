@@ -4,18 +4,18 @@ The implemented catalog is [tools.json](tools.json): 38 sorted tools, descriptio
 strict JSON Schema 2020-12 inputs, output envelopes, and annotations. The MCP
 crate owns this committed catalog; the site reads it without linking the server.
 Regenerate with
-`UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
-The test compares exact bytes against `VoxeliteServer::tools()`, using pretty JSON,
+`UPDATE_TOOLS_JSON=1 cargo test -p quantum-mcp --locked --test tools_catalog`.
+The test compares exact bytes against `QuantumServer::tools()`, using pretty JSON,
 stable tool/key order and a trailing newline. Its `serde_json/preserve_order`
 dev-dependency keeps the site's existing key order in standalone and workspace
 test runs. Commit the refreshed catalog; the snapshot test must pass without the
 update flag. Breaking changes require a new API major. Application
 version, MCP protocol version, and `.voxl` version evolve independently.
 
-This contract describes the standalone **MCP stage** for `voxelite-mcp`.
+This contract describes the standalone **MCP stage** for `quantum-mcp`.
 See [product direction](../../../docs/adr/0003-product-direction.md) for the broader
 scope. Tool names follow the stage's document/voxels/layers naming and have the
-`voxelite_` prefix. The response
+`quantum_` prefix. The response
 API version is `voxelite.v1`. It builds on core, format, render, the portable plugin
 API/host, built-in plugins and rmcp. Built-in exporters own GLB/PNG encoding;
 render feedback uses `png` directly. There is no GUI, HTTP listener, live editor attachment, plugin runtime,
@@ -161,3 +161,11 @@ against concurrent hostile filesystem changes. Hash-check/rename has the usual
 external-writer race; no multi-process filesystem lease is implemented. Do not run
 two editing authorities writing the same file. No mutation is called journaled:
 explicit save is required for persistence across process exit.
+
+## Product rename compatibility
+
+Quantum advertises server name `quantum` and discovers tools under `quantum_`.
+The response `api_version` remains `voxelite.v1` for external schema validators;
+it identifies the unchanged envelope contract, not the product display name.
+This value is output-only: no tool input or initialization parameter consumes it.
+Clients rediscover renamed tools through `tools/list`.

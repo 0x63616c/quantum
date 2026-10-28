@@ -1,9 +1,9 @@
 //! Signed update feeds: download history separately from signing, validate it,
 //! and preserve generated XML/HTML bytes unchanged when publishing local files.
 use super::{
-    Context, DOWNLOAD, REPOSITORY, copy, feed,
+    Context, DOWNLOAD, copy, feed,
     files::{self, WorkDir},
-    invalid, mkdir, read, stable_tag, stable_version, write,
+    invalid, mkdir, read, release_repository, stable_tag, stable_version, write,
 };
 use crate::{Error, Result};
 use serde::Deserialize;
@@ -27,10 +27,11 @@ struct Release {
 /// validation failures never fall back to an empty feed or overwrite destination.
 #[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn fetch(context: &Context<'_>, destination: &Path) -> Result<()> {
+    let repository = release_repository(context.environment)?;
     let output = context
         .command("gh")
         .args(["api", "--paginate", "--slurp"])
-        .arg(format!("repos/{REPOSITORY}/releases?per_page=100"))
+        .arg(format!("repos/{repository}/releases?per_page=100"))
         .output(context.runner)?;
     let pages: Vec<Vec<Release>> =
         serde_json::from_slice(&output.stdout).map_err(|source| Error::Json {
@@ -44,14 +45,17 @@ pub fn fetch(context: &Context<'_>, destination: &Path) -> Result<()> {
             continue;
         }
         for asset in &release.assets {
-            sizes.insert(asset.browser_download_url.clone(), asset.size);
+            sizes.insert(
+                feed::canonical_asset_url(&asset.browser_download_url),
+                asset.size,
+            );
         }
         if release.assets.iter().any(|a| a.name == "appcast.xml") {
             releases.push((stable_version(&release.tag_name[1..])?, release.tag_name));
         }
     }
     let data = if let Some((_, tag)) = releases.into_iter().max() {
-        let work = WorkDir::new(context, "voxelite-feed-")?;
+        let work = WorkDir::new(context, "quantum-feed-")?;
         context
             .command("gh")
             .args([
@@ -59,7 +63,7 @@ pub fn fetch(context: &Context<'_>, destination: &Path) -> Result<()> {
                 "download",
                 &tag,
                 "--repo",
-                REPOSITORY,
+                repository,
                 "--pattern",
                 "appcast.xml",
                 "--dir",
@@ -141,7 +145,7 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
     }
     if !dry
         && !context
-            .path("dist/Voxelite.app/Contents/Frameworks/Sparkle.framework")
+            .path("dist/Quantum.app/Contents/Frameworks/Sparkle.framework")
             .is_dir()
     {
         return Err(invalid("The release must embed Sparkle."));
@@ -150,17 +154,15 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
     if tag.is_empty() {
         return Err(invalid("TAG: Set TAG to the GitHub release tag"));
     }
-    if env.or("GITHUB_REPOSITORY", REPOSITORY) != REPOSITORY {
-        return Err(invalid("Invalid GitHub repository"));
-    }
+    release_repository(env)?;
     if !stable_tag(tag) {
         return Err(invalid("Invalid release tag"));
     }
     let prefix = format!("{DOWNLOAD}{tag}/");
-    let work = WorkDir::new(context, "voxelite-appcast.")?;
+    let work = WorkDir::new(context, "quantum-appcast.")?;
     context.plan("require dist/.notarized, embedded Sparkle, matching bundle version, and a valid older dist/previous-appcast.xml");
     if !dry {
-        let info = files::read_plist(&context.path("dist/Voxelite.app/Contents/Info.plist"))?;
+        let info = files::read_plist(&context.path("dist/Quantum.app/Contents/Info.plist"))?;
         let version = files::plist_string(&info, "CFBundleVersion")?;
         if tag != format!("v{version}") {
             return Err(invalid(
@@ -176,31 +178,31 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
             ));
         }
     }
-    context.plan("verify dist/Voxelite.dmg against dist/Voxelite.dmg.sha256");
+    context.plan("verify dist/Quantum.dmg against dist/Quantum.dmg.sha256");
     if !dry {
-        let checksum = String::from_utf8(read(&context.path("dist/Voxelite.dmg.sha256"))?)
+        let checksum = String::from_utf8(read(&context.path("dist/Quantum.dmg.sha256"))?)
             .map_err(|_| invalid("Invalid DMG checksum file"))?;
         let expected = format!(
-            "{}  Voxelite.dmg\n",
-            files::sha256(&context.path("dist/Voxelite.dmg"))?
+            "{}  Quantum.dmg\n",
+            files::sha256(&context.path("dist/Quantum.dmg"))?
         );
         if checksum != expected {
-            return Err(invalid("Voxelite.dmg: SHA-256 checksum did not match"));
+            return Err(invalid("Quantum.dmg: SHA-256 checksum did not match"));
         }
     }
     context
         .command("xcrun")
-        .args(["stapler", "validate", "dist/Voxelite.dmg"])
+        .args(["stapler", "validate", "dist/Quantum.dmg"])
         .run(context.runner)?;
     let archives = work.path().join("archives");
     let output = work.path().join("appcast.xml");
-    let notes = archives.join("Voxelite.html");
-    context.plan("copy final DMG and previous feed into private workspace; HTML-escape dist/RELEASE_NOTES.md to archives/Voxelite.html");
+    let notes = archives.join("Quantum.html");
+    context.plan("copy final DMG and previous feed into private workspace; HTML-escape dist/RELEASE_NOTES.md to archives/Quantum.html");
     if !dry {
         mkdir(&archives)?;
         copy(
-            &context.path("dist/Voxelite.dmg"),
-            &archives.join("Voxelite.dmg"),
+            &context.path("dist/Quantum.dmg"),
+            &archives.join("Quantum.dmg"),
         )?;
         copy(&context.path("dist/previous-appcast.xml"), &output)?;
         let markdown = String::from_utf8(read(&context.path("dist/RELEASE_NOTES.md"))?)
@@ -222,7 +224,7 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
             "--release-notes-url-prefix",
             &prefix,
             "--link",
-            "https://voxelite.worldwidewebb.co",
+            "https://quantum.worldwidewebb.co",
             "-o",
         ])
         .arg(&output)
@@ -239,9 +241,9 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
         .map_err(|_| {
             invalid("Appcast signature verification failed; raw key diagnostics suppressed.")
         })?;
-    context.plan("copy signed Voxelite.html to dist; validate every feed item, local asset length, bundle metadata and preserved history");
+    context.plan("copy signed Quantum.html to dist; validate every feed item, local asset length, bundle metadata and preserved history");
     if !dry {
-        copy(&notes, &context.path("dist/Voxelite.html"))?;
+        copy(&notes, &context.path("dist/Quantum.html"))?;
         super::check_appcast(
             &output,
             false,
@@ -253,7 +255,7 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
     if !dry {
         mkdir(&context.path("site"))?;
         copy(&output, &context.path("site/appcast.xml"))?;
-        for path in ["site/appcast.xml", "dist/Voxelite.html"] {
+        for path in ["site/appcast.xml", "dist/Quantum.html"] {
             files::public_permissions(&context.path(path))?;
         }
     }

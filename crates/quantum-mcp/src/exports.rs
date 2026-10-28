@@ -1,0 +1,94 @@
+//! Resolve wire export requests against the enabled host registry.
+use crate::error::{Failure, Result};
+use quantum_plugin_api::{ExportCx, ExportImage, ExportResult, FormatContent, Snapshot};
+use quantum_plugin_host::{Host, SnapshotExport};
+use quantum_render::RenderOptions;
+
+fn render_view(options: &RenderOptions) -> impl Fn(&Snapshot) -> ExportResult<ExportImage> + '_ {
+    move |snapshot| {
+        let image = quantum_render::render(snapshot, options)?;
+        Ok(ExportImage {
+            width: image.width,
+            height: image.height,
+            rgba: image.rgba,
+        })
+    }
+}
+
+pub(crate) fn extensions(host: &Host) -> Vec<String> {
+    std::iter::once("voxl".into())
+        .chain(
+            host.registry()
+                .formats()
+                .filter(|(_, f)| f.export)
+                .flat_map(|(_, f)| f.extensions.clone()),
+        )
+        .collect()
+}
+
+pub(crate) fn format(host: &Host, extension: &str) -> Result<String> {
+    host.registry()
+        .formats()
+        .find(|(_, f)| f.export && f.extensions.iter().any(|ext| ext == extension))
+        .map(|(_, f)| f.id.clone())
+        .ok_or_else(|| Failure::new("export_unavailable", "Export format is unavailable"))
+}
+
+pub(crate) fn encode(host: &mut Host, format: &str, cx: &dyn ExportCx) -> Result<Vec<u8>> {
+    host.dispatch_export(format, cx)
+        .map_err(|e| Failure::new("export_failed", e.to_string()))?
+        .ok_or_else(|| Failure::new("export_unavailable", "Export format is unavailable"))
+}
+
+pub(crate) fn snapshot(host: &mut Host, extension: &str, snapshot: &Snapshot) -> Result<Vec<u8>> {
+    let format = format(host, extension)?;
+    let options = quantum_render::RenderOptions {
+        passes: host.render_plan(),
+        ..Default::default()
+    };
+    encode(
+        host,
+        &format,
+        &SnapshotExport {
+            snapshot,
+            render_view: &render_view(&options),
+        },
+    )
+}
+
+pub(crate) fn tools(host: &Host) -> Vec<rmcp::model::Tool> {
+    crate::catalog::CATALOG
+        .iter()
+        .filter(|spec| {
+            if let Some(ext) = spec.tool.name.strip_prefix("quantum_export_") {
+                format(host, ext).is_ok()
+            } else if spec.tool.name == "quantum_palette_export" {
+                host.registry()
+                    .formats()
+                    .any(|(_, f)| f.export && f.content == FormatContent::Palette)
+            } else if spec.tool.name.starts_with("quantum_palette_") {
+                crate::palettes::enabled(host)
+            } else if spec.tool.name.starts_with("quantum_comments_") {
+                crate::comments::enabled(host)
+            } else {
+                true
+            }
+        })
+        .map(|spec| spec.tool.clone())
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_host_preserves_the_full_catalog_and_format_order() {
+        let host = quantum_plugins_builtin::mcp_host();
+        assert_eq!(tools(&host), crate::QuantumServer::tools());
+        assert_eq!(
+            extensions(&host),
+            ["voxl", "glb", "png", "hex", "gpl", "pal"]
+        );
+    }
+}

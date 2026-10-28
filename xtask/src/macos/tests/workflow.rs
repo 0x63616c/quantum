@@ -112,9 +112,9 @@ fn stable_tags_automatically_package_and_publish_all_update_assets() {
         end += scripts[end..].find(operation).unwrap() + operation.len();
     }
     for asset in [
-        "dist/Voxelite.dmg",
-        "dist/Voxelite.dmg.sha256",
-        "dist/Voxelite.html",
+        "dist/Quantum.dmg",
+        "dist/Quantum.dmg.sha256",
+        "dist/Quantum.html",
         "site/appcast.xml",
     ] {
         assert!(scripts.contains(asset));

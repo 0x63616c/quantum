@@ -1,4 +1,4 @@
-# Voxelite website
+# Quantum website
 
 A static marketing site and Rust-generated documentation. No cookies,
 remote fonts, or runtime framework. Every page loads Vercel Web Analytics and
@@ -18,25 +18,25 @@ Nothing in these scripts deploys or pushes. `site/vercel.json` is published at
 the root of `site-dist` and adds immutable font cache headers and permanent
 redirects from retired editor URLs to the download page.
 
-Edit page markup in `crates/voxelite-site/templates/`, shared
+Edit page markup in `crates/quantum-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
 skills in the repository's `skills/` directory. Edit metadata in
-`crates/voxelite-site/src/`.
+`crates/quantum-site/src/`.
 The Quantize header mark and SVG/PNG favicons come from `cargo xtask icons`;
 edit the [SVG masters](../packaging/macos/ARTWORK.md) and regenerate rather than
 changing those derivatives.
 
-The generator uses `https://voxelite.worldwidewebb.co` for canonical URLs, social
+The generator uses `https://quantum.worldwidewebb.co` for canonical URLs, social
 previews, structured data and crawl files. `sitemap.xml` lists the homepage,
 download page and docs; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
-`voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
+`quantum-site` Rust crate wraps documentation and generates all 38 MCP references
 from the committed [tool catalog](../spec/mcp/v1/tools.json), without linking the
-MCP server. The MCP crate checks that catalog against `VoxeliteServer::tools()`.
+MCP server. The MCP crate checks that catalog against `QuantumServer::tools()`.
 After changing tool metadata or schemas, refresh it with:
 
 ```sh
-UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog
+UPDATE_TOOLS_JSON=1 cargo test -p quantum-mcp --locked --test tools_catalog
 ```
 
 Commit the refreshed catalog; do not edit generated `docs/` or schema copies.
@@ -45,14 +45,14 @@ Commit the sources, not the built site. CI builds the site on every PR and push
 to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
 `index.html`, `404.html`, `download/`, `docs/`, `docs.md`, `llms*.txt`,
 `sitemap.xml`, `robots.txt`, `assets/mcp-tools.json`, `assets/integrations/`,
-`assets/skills/` and `assets/voxelite-skills.zip`. Keep `content/`, this
+`assets/skills/` and `assets/quantum-skills.zip`. Keep `content/`, this
 README, `vercel.json`, `appcast.xml` and the remaining assets
 (styles, scripts, fonts, images, badges, licenses and sample project) tracked:
 the site build does not recreate them. The appcast is also a generator input.
 
 The MCP and skills pages share `templates/install.html`. All MCP deeplinks,
 commands and downloadable examples come from one server configuration in
-`src/install.rs`: the Mac bundle's `Contents/MacOS/voxelite-mcp` executable.
+`src/install.rs`: the Mac bundle's `Contents/MacOS/quantum-mcp` executable.
 Cursor and VS Code use `${workspaceFolder}`; Claude/Codex CLI commands use
 `"$PWD"` and must run from the project directory. The same build refreshes
 the tracked root `integrations/` (including its README from
@@ -94,7 +94,7 @@ Generator tests build into temporary directories and do not require a site build
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo test --locked -p voxelite-site
+cargo test --locked -p quantum-site
 ```
 
 After `scripts/build-site.sh`, verify the complete local site:
@@ -129,7 +129,7 @@ for capture so lazy loading cannot leave incomplete screenshots.
 
 `python3 scripts/capture-site-proof.py` records a new real MCP edit and produces
 the matched-camera detail comparison, with SHA-256 provenance. Build
-`voxelite-mcp` first. It reads the sample and edits an in-memory document; the
+`quantum-mcp` first. It reads the sample and edits an in-memory document; the
 source model remains intact. The original native-session hero and newly recorded
 headless comparison are different sessions and have distinct revision labels.
 
@@ -147,7 +147,7 @@ the highest numeric stable release containing an appcast, validates its asset
 URLs and sizes, and runs the local site checks. Confirmed absence of a release
 feed uses the empty checked-in RSS; API/download/validation failures stop the
 deployment. Pull requests only build and verify. Production publishes from
-`main` only when triggered by `0x63616c` in `0x63616c/voxelite`. A manual run
+`main` only when triggered by `0x63616c` in `0x63616c/quantum`. A manual run
 on `main` retries a failed post-release deployment without replacing any assets.
 
 The workflow publishes the built files at the root of `site-dist`, excluding this
