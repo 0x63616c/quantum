@@ -19,6 +19,17 @@ technical conventions.
 - Put the issue in a milestone and on the board. Board status follows the work:
   Backlog → Next → In progress → In review → Done (or Later).
 
+Every open issue carries exactly one model label:
+
+- `model:sol`: everyday work: CI config, lint setup, small fixes, straightforward
+  refactors and docs. Run `codex exec -m gpt-6.1-sol`.
+- `model:astra`: hard work: UI/design-heavy tasks, complex refactors, spikes and
+  ports of someone else's code. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
+
+In the issue body's `## Dependencies` section, put one `Blocked by #N` line per
+blocker between `<!-- deps:start -->` and `<!-- deps:end -->` markers. Keep
+`status:blocked` while any blocker is open; remove it when the last one closes.
+
 ## 2. Branches
 
 Name branches `<type>/<issue#>-<slug>`, for example `refactor/84-split-ui-rs` or
