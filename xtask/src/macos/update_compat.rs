@@ -56,6 +56,27 @@ mod tests {
         fixture.runner.set("capture_stage", "yes");
         fixture.package(false).unwrap();
         let root = fixture.path("captured-stage");
+        // Match the extractor/generator constraints, not just SUInstaller's
+        // recursive search: hidden roots are discarded; multiple root apps fail.
+        let compatibility_root = Path::new(COMPATIBILITY_APP).components().next().unwrap();
+        assert!(
+            !compatibility_root
+                .as_os_str()
+                .to_string_lossy()
+                .starts_with('.')
+        );
+        assert_eq!(
+            std::fs::read_dir(&root)
+                .unwrap()
+                .filter(|entry| entry
+                    .as_ref()
+                    .unwrap()
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "app"))
+                .count(),
+            1
+        );
         let canonical = root.join("Quantum.app/Contents/Info.plist");
         let compatibility = root.join(COMPATIBILITY_APP).join("Contents/Info.plist");
         assert_eq!(
