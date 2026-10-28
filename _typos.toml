@@ -1,0 +1,13 @@
+[files]
+# Third-party sources and license texts must retain upstream bytes.
+extend-exclude = ["vendor/**", "crates/quantum-app/assets/licenses/**"]
+
+[default.extend-words]
+# Native project extension.
+voxl = "voxl"
+# typos splits the plural PNGs into PN + Gs.
+PN = "PN"
+# Integer y coordinate paired with ix in raster sampling.
+iy = "iy"
+# Shader level-of-detail abbreviation.
+LOD = "LOD"

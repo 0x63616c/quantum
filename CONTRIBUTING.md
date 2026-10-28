@@ -159,3 +159,12 @@ SHA and its version comment when updating. Keep explicit workflow-level
 `permissions: {}` or `contents: read`, and grant additional permissions only
 to the job that needs them. Site publishing writes the site-dist branch through
 the contents permission; it uses Vercel credentials rather than Pages or OIDC grants.
+
+Run `cargo xtask check brand typos` before submitting changes (install the pinned
+spelling checker with `cargo install typos-cli --version 1.51.1 --locked`). The
+brand check scans tracked text and paths, including binary filenames. Add legacy
+exceptions only in `brand.toml` under `compatibility`: list specific files, the
+smallest required literals, and a compatibility reason. Every listed file and literal
+must still match or the check fails as stale; remove them when retiring
+compatibility. Fix spelling errors; reserve `_typos.toml`
+word entries for justified domain terms and exclusions for upstream/generated assets.
