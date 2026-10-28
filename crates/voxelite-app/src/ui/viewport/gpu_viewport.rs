@@ -167,10 +167,13 @@ impl EditorView {
                         })?;
                     renderer = Some(voxelite_render::gpu::Worker::new(registry_id)?);
                 }
-                renderer.as_mut().unwrap().set_diagnostics(diagnostics);
-                renderer
-                    .as_mut()
-                    .unwrap()
+                let worker = renderer.as_mut().ok_or_else(|| {
+                    voxelite_render::RenderError::Invalid(
+                        "GPU worker initialization missing".into(),
+                    )
+                })?;
+                worker.set_diagnostics(diagnostics);
+                worker
                     .render(
                         snapshot,
                         bounds,

@@ -10,6 +10,8 @@ fn selection_validates_names_and_preserves_order() {
     assert_eq!(
         names(select(CHECKS, &[], &[]).unwrap()),
         [
+            "boundaries",
+            "source-lints",
             "tidy",
             "workflows",
             "plugin-deps",
@@ -31,6 +33,8 @@ fn selection_validates_names_and_preserves_order() {
     assert_eq!(
         names(select(CHECKS, &[], &["test".into()]).unwrap()),
         [
+            "boundaries",
+            "source-lints",
             "tidy",
             "workflows",
             "plugin-deps",
@@ -257,4 +261,20 @@ fn report_continues_after_failure_and_counts_skips_separately() {
 
 fn by_name(name: &str) -> &'static Check {
     CHECKS.iter().find(|check| check.name == name).unwrap()
+}
+
+#[test]
+fn lint_selection_covers_all_policies_without_duplicate_clippy() {
+    let names = LINT_CHECKS
+        .iter()
+        .map(|name| (*name).into())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        select(CHECKS, &names, &[])
+            .unwrap()
+            .iter()
+            .map(|c| c.name)
+            .collect::<Vec<_>>(),
+        LINT_CHECKS
+    );
 }

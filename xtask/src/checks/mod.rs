@@ -1,9 +1,11 @@
 //! Repository consistency rules, separate from command selection and reporting.
 
+pub(crate) mod boundaries;
 pub(crate) mod brand;
 pub(crate) mod docs;
 pub(crate) mod plugin_deps;
 pub(crate) mod workflows;
+pub(crate) mod source_lints;
 
 use std::path::PathBuf;
 

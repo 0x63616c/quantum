@@ -24,6 +24,7 @@ const ROOT_ENTRIES: &[&str] = &[
     "README.md",
     "bench",
     "brand.toml",
+    "clippy.toml",
     "crates",
     "deny.toml",
     "design",

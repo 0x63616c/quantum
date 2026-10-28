@@ -17,6 +17,7 @@ const HELP: &str = "{about}
 Usage: {usage}
 
 Checks:
+  lint          Run Clippy, boundaries and source ratchets
   validate      Run all registered checks
   check         Run named checks, or --list
   tidy          Check tracked root entries, file sizes and junk files
@@ -49,6 +50,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Task {
+    /// Run Clippy, dependency boundaries and source budget ratchets
+    Lint,
     /// Run all registered checks (use --strict in CI)
     Validate(Validate),
     /// Run named checks or list the registry
@@ -153,6 +156,7 @@ fn parse_cli(args: impl IntoIterator<Item = OsString>) -> Result<Cli, clap::Erro
     Ok(cli)
 }
 
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
     match cli.command {
         None | Some(Task::Help) => {
@@ -189,6 +193,16 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
             }
         }
         Some(Task::Check(Check { names, strict, .. })) => return checks(&names, &[], strict),
+        Some(Task::Lint) => {
+            return checks(
+                &check::LINT_CHECKS
+                    .iter()
+                    .map(|name| (*name).into())
+                    .collect::<Vec<_>>(),
+                &[],
+                true,
+            );
+        }
         Some(Task::Validate(Validate { only, skip, strict })) => {
             return checks(&only, &skip, strict);
         }
