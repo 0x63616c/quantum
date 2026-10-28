@@ -108,11 +108,21 @@ fn save_rejects_external_changes_and_deletion_without_losing_edits() {
     external.apply_at([4, 5, 6]).unwrap();
     external.save(&path).unwrap();
     let outside_bytes = std::fs::read(&path).unwrap();
-    assert!(e.save(&path).is_err());
+    assert!(matches!(
+        e.save(&path),
+        Err(EditorError::Session(
+            quantum_format::session::SessionError::ExternalChange
+        ))
+    ));
     assert_eq!(std::fs::read(&path).unwrap(), outside_bytes);
     assert!(e.engine.is_dirty());
     std::fs::remove_file(&path).unwrap();
-    assert!(e.save(&path).is_err());
+    assert!(matches!(
+        e.save(&path),
+        Err(EditorError::Session(
+            quantum_format::session::SessionError::ExternalChange
+        ))
+    ));
     assert!(!path.exists());
     e.save(&dir.path().join("recovered.voxl")).unwrap();
     assert!(!e.engine.is_dirty());
