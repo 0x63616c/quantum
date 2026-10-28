@@ -85,8 +85,8 @@ impl Workspace {
     /// List tracked UTF-8 paths without splitting whitespace or walking build outputs.
     /// Git may run during dry runs because the index is only read.
     pub fn tracked_files(&self, runner: &dyn Runner) -> Result<Vec<String>> {
-        let command = Command::new("git")
-            .args(["ls-files", "-z"])
+        let sh = xshell::Shell::new().map_err(|error| Error::Invalid(error.to_string()))?;
+        let command = Command::from(xshell::cmd!(sh, "git ls-files -z"))
             .current_dir(&self.root)
             .allow_in_dry_run();
         // Keep the standalone tidy command's established Git diagnostics.

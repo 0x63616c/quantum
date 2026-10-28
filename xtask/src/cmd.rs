@@ -235,6 +235,27 @@ impl Command {
     }
 }
 
+/// Import an xshell argument vector, working directory and environment overrides.
+/// Build with `cmd!(sh, "git status")`, then apply this runner's secret and
+/// execution policies. xshell execution flags and stdin are not imported; use
+/// this type's methods for those policies. Do not use xshell's `env_clear`.
+impl From<xshell::Cmd<'_>> for Command {
+    fn from(command: xshell::Cmd<'_>) -> Self {
+        let command = process::Command::from(command);
+        let mut result = Self::new(command.get_program()).args(command.get_args());
+        if let Some(directory) = command.get_current_dir() {
+            result = result.current_dir(directory);
+        }
+        for (key, value) in command.get_envs() {
+            result = match value {
+                Some(value) => result.env(key, value),
+                None => result.env_remove(key),
+            };
+        }
+        result
+    }
+}
+
 fn quote(value: &OsStr) -> String {
     let value = value.to_string_lossy();
     if !value.is_empty()
@@ -426,18 +447,43 @@ impl Runner for SystemRunner {
                 ..Output::default()
             });
         }
-        let mut child = process::Command::new(command.program());
-        child.args(command.arguments());
+        let shell = xshell::Shell::new().map_err(io::Error::other)?;
         if let Some(directory) = command.directory() {
-            child.current_dir(directory);
+            shell.change_dir(directory);
         }
+        let mut invocation = shell
+            .cmd(Path::new(command.program()))
+            .args(command.arguments());
         for (key, value) in command.environment() {
-            if let Some(value) = value {
-                child.env(key, value);
-            } else {
-                child.env_remove(key);
-            }
+            invocation = match value {
+                Some(value) => invocation.env(key, value),
+                None => invocation.env_remove(key),
+            };
         }
+        // Keep status/error policy here: xshell must not print raw commands or
+        // retain secret argv in its own diagnostics. Our wrapper redacts errors.
+        let invocation = invocation.quiet().secret().ignore_status();
+        if self.interruption.is_none() && command.input.is_none() {
+            return if capture {
+                let output = invocation.output().map_err(io::Error::other)?;
+                Ok(Output {
+                    status: output.status.into(),
+                    stdout: output.stdout,
+                    stderr: output.stderr,
+                })
+            } else {
+                // xshell::run discards the raw status and closes stdin. Preserve
+                // inherited stdin and status() policy via its std adapter.
+                let status = process::Command::from(invocation).status()?;
+                Ok(Output {
+                    status: status.into(),
+                    ..Output::default()
+                })
+            };
+        }
+        // xshell cannot expose a child/process group for cancellation, or feed
+        // stdin while continuing to observe cancellation after the leader exits.
+        let mut child = process::Command::from(invocation);
         if capture {
             child
                 .stdout(process::Stdio::piped())

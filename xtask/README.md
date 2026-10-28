@@ -52,7 +52,7 @@ and build metadata; an equal version does nothing. It never tags or publishes.
 
 The library provides these public modules:
 
-- `cmd`: argument-vector command builder, redacted diagnostics and an injectable
+- `cmd`: xshell-backed argument-vector commands, redacted diagnostics and an injectable
   `Runner`. `run` inherits stdio, `output` captures bytes, `read` returns trimmed
   UTF-8, and `status` leaves exit-code policy to the caller.
 - `workspace`: checked root, common paths, tracked filenames and package versions
@@ -72,7 +72,23 @@ execution order, with cheap checks first. Add unit tests beside the module.
 
 Add a command to the clap-derived `Task` enum and its dispatch in `main.rs`, and
 include it in the grouped help template. Keep its work in a library module.
-Use `workspace.cargo()` or `cmd::Command` instead of constructing shell strings.
+Use `workspace.cargo()` for Cargo and `Command::from(cmd!(sh, "git status"))`
+for ordinary command vectors (`use xshell::{cmd, Shell}`). Interpolation preserves
+argument boundaries without invoking a shell. `Context::script(cmd!(sh, "git ..."))`
+also applies release credential removal and the repository working directory.
+Use `Command::new` for dynamic programs and append credentials with `secret_arg`
+or `secret_env`. Keep execution through `Runner`, including in simple scripts.
+
+The xshell adapter imports argv, cwd and environment overrides only. Apply stdin,
+secrecy, dry-run and execution policy on `Command` after conversion; do not pass
+xshell execution flags or `env_clear` to the adapter. `SystemRunner` uses xshell's
+quiet, secret, ignore-status capture, then applies our exit policy and bounded,
+redacted errors. Inherited stdio/status uses xshell's `std::process::Command`
+adapter because xshell's `run` discards the exit status and closes stdin.
+Interruptible and piped-input commands use that same adapter with our process
+supervisor: xshell exposes neither a child handle nor process-group cancellation,
+and cannot observe interruption while descendants retain output pipes. These
+paths share the same injectable `Runner` and diagnostics.
 
 `SystemRunner::dry_run()` prints suppressed commands and returns success with
 empty output. `with_dry_run_output` supplies another fake result. Read-only

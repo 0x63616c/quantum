@@ -95,6 +95,10 @@ impl Context<'_> {
     pub fn command(&self, program: impl AsRef<std::ffi::OsStr>) -> Command {
         clean(Command::new(program).current_dir(self.root))
     }
+    /// Apply release environment and directory policy to an xshell command vector.
+    pub fn script(&self, command: xshell::Cmd<'_>) -> Command {
+        clean(Command::from(command).current_dir(self.root))
+    }
     pub(crate) fn private(&self, operation: &str, command: Command) -> Result<()> {
         command.output(self.runner).map(|_| ()).map_err(|_| Error::Invalid(format!(
             "{operation} failed; raw signing diagnostics suppressed. Reproduce locally to inspect them."

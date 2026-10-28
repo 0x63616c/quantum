@@ -150,3 +150,47 @@ fn dry_runs_do_not_spawn_and_allow_read_only_opt_out() {
     assert_eq!(Command::new("not-run").read(&runner).unwrap(), "planned");
     assert!(!SystemRunner::default().is_dry_run());
 }
+
+#[test]
+fn xshell_vectors_remain_injectable_and_preserve_context() {
+    let sh = xshell::Shell::new().unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    sh.change_dir(directory.path());
+    sh.set_var("VISIBLE", "shell value");
+    let literal = "a b; $(literal)";
+    let command =
+        Command::from(xshell::cmd!(sh, "git status -- {literal}")).secret_env("TOKEN", "private");
+    assert_eq!(command.program(), "git");
+    assert_eq!(
+        command.arguments().collect::<Vec<_>>(),
+        ["status", "--", literal]
+    );
+    assert_eq!(command.directory(), Some(directory.path()));
+    assert!(
+        command
+            .environment()
+            .any(|(key, value)| key == "VISIBLE" && value == Some(OsStr::new("shell value")))
+    );
+    let runner = RecordingRunner::stdout(b"fixture output");
+    assert_eq!(command.read(&runner).unwrap(), "fixture output");
+    assert_eq!(runner.commands.borrow().len(), 1);
+    assert!(!format!("{command:?}").contains("private"));
+}
+
+#[cfg(unix)]
+#[test]
+fn xshell_execution_preserves_raw_status_bytes_and_redacted_errors() {
+    let sh = xshell::Shell::new().unwrap();
+    let script = r#"printf "\377"; printf %s "$1" >&2; exit 17"#;
+    let command = Command::from(xshell::cmd!(sh, "sh -c {script} fixture"));
+    let command = command.secret_arg("private\ncredential");
+    let runner = SystemRunner::default();
+    let output = runner.execute(&command, true).unwrap();
+    assert_eq!(output.status.code(), Some(17));
+    assert_eq!(output.stdout, [255]);
+    let error = command.output(&runner).unwrap_err();
+    assert!(error.to_string().contains("[REDACTED]"));
+    assert!(!format!("{error:?}").contains("credential"));
+    let command = Command::from(xshell::cmd!(sh, "sh -c 'exit 17'"));
+    assert_eq!(command.status(&runner).unwrap().code(), Some(17));
+}

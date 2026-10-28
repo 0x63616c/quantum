@@ -9,14 +9,17 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
     if !stable_tag(tag) {
         return Err(invalid("TAG must be a stable release version"));
     }
+    let sh = xshell::Shell::new().map_err(|error| invalid(&error.to_string()))?;
     let release = format!("refs/tags/{tag}");
+    let commit = format!("{release}^{{commit}}");
     context
-        .command("git")
-        .args(["rev-parse", "--verify", &format!("{release}^{{commit}}")])
+        .script(xshell::cmd!(sh, "git rev-parse --verify {commit}"))
         .read(context.runner)?;
     let tags = context
-        .command("git")
-        .args(["tag", "--merged", &release, "--no-contains", &release])
+        .script(xshell::cmd!(
+            sh,
+            "git tag --merged {release} --no-contains {release}"
+        ))
         .read(context.runner)?;
     let matches: Vec<_> = tags
         .lines()
@@ -28,10 +31,10 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
     } else {
         Some(
             context
-                .command("git")
-                .args(["describe", "--tags", "--abbrev=0"])
-                .args(matches)
-                .arg(&release)
+                .script(xshell::cmd!(
+                    sh,
+                    "git describe --tags --abbrev=0 {matches...} {release}"
+                ))
                 .read(context.runner)?,
         )
     };
@@ -40,16 +43,10 @@ pub fn generate(context: &Context<'_>) -> Result<()> {
         |tag| format!("refs/tags/{tag}..{release}"),
     );
     let changes = context
-        .command("git")
-        .args([
-            "log",
-            "--no-merges",
-            "--no-show-signature",
-            "--no-color",
-            "--pretty=- %s (%h)",
-            &range,
-            "--",
-        ])
+        .script(xshell::cmd!(
+            sh,
+            "git log --no-merges --no-show-signature --no-color '--pretty=- %s (%h)' {range} --"
+        ))
         .read(context.runner)?;
     let template = if context.path("dist/.notarized").is_file() {
         "RELEASE_NOTES.md"
