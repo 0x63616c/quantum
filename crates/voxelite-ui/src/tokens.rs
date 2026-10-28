@@ -14,10 +14,6 @@ impl Theme {
     pub fn app_scrim(self) -> Hsla {
         gpui::rgba(0x00000070).into()
     }
-    /// Existing browser settings backdrop.
-    pub fn settings_scrim(self) -> Hsla {
-        gpui::rgba(0x00000060).into()
-    }
     /// Appearance-preview artwork, separate from live UI surfaces.
     pub fn preview_background(self) -> Hsla {
         self.pair(0x303030, 0xfafafa)
@@ -264,6 +260,12 @@ pub mod radius {
 }
 /// Font families, type scale and weights.
 pub mod type_size {
+    /// ASCII skeleton paragraph line height, matching upstream's 1.3em.
+    pub const ASCII_LINE_EM: f32 = 1.3;
+    /// Dither skeleton glyph tracking, matching upstream's -.02em.
+    pub const ASCII_DITHER_TRACKING_EM: f32 = -0.02;
+    /// Paragraph skeleton row gap, matching upstream's .55em.
+    pub const ASCII_GAP_EM: f32 = 0.55;
     /// Axis badge inside a rail button.
     pub const BADGE: f32 = 9.;
     /// Document title in the toolbar.
@@ -440,8 +442,6 @@ pub mod metrics {
     pub const APPEARANCE_BODY_HEIGHT: f32 = 70.;
     /// Native agent connection popover width.
     pub const AGENT_POPOVER_WIDTH: f32 = 460.;
-    /// Browser agent popover width.
-    pub const WEB_AGENT_POPOVER_WIDTH: f32 = 420.;
     /// Agent popover top anchor.
     pub const AGENT_POPOVER_TOP: f32 = 100.;
     /// Recent history height below agent invitation.

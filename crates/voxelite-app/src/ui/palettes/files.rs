@@ -1,7 +1,6 @@
 //! Bounded host file I/O; the palette plugin owns parsing and serialization.
 use super::*;
 use voxelite_app::editor::EditorError;
-#[cfg(not(target_family = "wasm"))]
 use voxelite_app::local_settings::data_dir;
 
 const MAX_IMPORT: usize = 64 * 1024;
@@ -52,7 +51,6 @@ impl EditorView {
             .export
             .map(|export| export.text.into_bytes())
     }
-    #[cfg(not(target_family = "wasm"))]
     fn palette_file(&mut self, export: Option<String>, cx: &mut Context<Self>) {
         if !self.flush_palette_fields(cx) {
             return;
@@ -109,7 +107,6 @@ impl EditorView {
         })
         .detach();
     }
-    #[cfg(not(target_family = "wasm"))]
     pub(super) fn palette_drop_file(&mut self, paths: &ExternalPaths, cx: &mut Context<Self>) {
         if self.save_flow.dialog_open() || !self.flush_palette_fields(cx) {
             return;
@@ -145,47 +142,7 @@ impl EditorView {
         }
         cx.notify();
     }
-    #[cfg(target_family = "wasm")]
-    fn palette_file(&mut self, export: Option<String>, cx: &mut Context<Self>) {
-        if !self.flush_palette_fields(cx) {
-            return;
-        }
-        if let Some(format) = export {
-            if let Some(bytes) = self.palette_export_bytes(format.clone(), cx) {
-                let result =
-                    crate::web::download(&format!("palette.{format}"), "text/plain", &bytes)
-                        .map(|_| None);
-                self.finish_palette_import(result, cx);
-            }
-            return;
-        }
-        let upload = match crate::web::upload(".hex,.gpl,.pal", MAX_IMPORT) {
-            Ok(upload) => upload,
-            Err(error) => {
-                self.finish_palette_import(Err(error), cx);
-                return;
-            }
-        };
-        self.save_flow.begin_dialog();
-        cx.spawn(async move |this, cx| {
-            let result = upload.await.and_then(|selection| {
-                selection
-                    .map(|(name, bytes)| {
-                        String::from_utf8(bytes)
-                            .map(|text| import_action(&name, text))
-                            .map_err(|error| EditorError::Gesture(error.to_string()))
-                    })
-                    .transpose()
-            });
-            let _ = this.update(cx, |this, cx| {
-                this.save_flow.finish_dialog();
-                this.finish_palette_import(result, cx);
-            });
-        })
-        .detach();
-    }
 }
-#[cfg(not(target_family = "wasm"))]
 fn read_import(path: &std::path::Path) -> EditorResult<PaletteAction> {
     use std::io::Read;
     let file = std::fs::File::open(path)?;

@@ -88,7 +88,7 @@ Viewport and navigation controls:
 | Choose a preset palette | Palette menu, then Up/Down and Enter |
 | Unsaved-changes prompt | Tab or Left/Right, Enter to confirm, Escape to cancel |
 
-Apple shortcuts apply on native macOS and in browsers on Mac, iPhone and iPad.
+Apple shortcuts apply on macOS.
 
 Box uses two clicked corners and commits one solid integer box. The first click
 is only a preview. Place targets the adjacent face or the bottom work plane.
@@ -130,9 +130,8 @@ and file modification time. Saves update the preview; missing/stale previews are
 rendered lazily in the background while Welcome shows a placeholder. Preview
 failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
 `--example` opens the bundled Autumn Workshop with no write destination, including
-in the existing editor capture scripts. The browser editor still starts with
-Autumn Workshop, and `--viewport-png` without
-a path still renders that bundled example without opening a window.
+in the existing editor capture scripts. `--viewport-png` without a path still
+renders that bundled example without opening a window.
 
 File menus use GPUI's native path prompts (the XDG desktop portal on Linux).
 The CLI path is also supported. Saved files preserve optional forward metadata,
@@ -169,12 +168,12 @@ button indicator. Clean projects have no status subtitle.
 Appearance lives in Settings, with Light, Dark and System choices. System follows
 live OS appearance changes. Preferences (appearance, grid, antialiasing,
 navigation hints and render statistics) persist in `settings.json` alongside the
-existing palette library, or in origin-local storage on the web. `VOXELITE_DATA_DIR`
+existing palette library. `VOXELITE_DATA_DIR`
 can isolate desktop preferences. `--theme dark|light` overrides startup appearance
 for reproducible captures.
 
 Settings opens in a separate desktop window; repeated requests focus that window.
-The web edition uses the same view in an in-page modal. The titlebar capsule
+The titlebar capsule
 toggles the inset sidebar and navigates section history. Search lists matching
 sections and individual settings; selecting a setting opens its parent section.
 Appearance offers System, Light and Dark window previews. Settings controls support Tab/Shift-Tab and Enter/Space, and changes apply to the editor
@@ -186,7 +185,7 @@ or persistent voxel-selection tool yet. Packaged macOS builds with Sparkle suppo
 Check for Updates from the Quantum menu and Settings → Updates. Builds without
 the bundled updater disable the menu action and explain availability in Settings.
 The transparent native titlebar places real traffic lights in the top toolbar.
-Linux and web retain their in-window menus.
+Linux development builds retain their in-window menus.
 
 The bottom bar shows hovered voxel coordinates, active layer/tool, zoom relative
 to the last fitted view, model bounds and viewport performance. Selection size
@@ -250,8 +249,8 @@ PNGs. Dialog errors appear in the status bar and preserve the current project.
 `gpui-unofficial` and `gpui-platform-gpui-unofficial` are pinned to **1.25.3**, with
 the full resolved dependency graph in `Cargo.lock`. These are the Apache-2.0
 [GPUI Archipelago registry distribution](https://github.com/gpui-archipelago/gpui-unofficial)
-of Zed's GPUI family. Native platform features are X11, Wayland and font-kit;
-the browser build uses the same editor through `gpui_web`. Geist and Geist Mono
+of Zed's GPUI family. Linux development builds use X11, Wayland and font-kit.
+Geist and Geist Mono
 are copied into the crate with their OFL notices. The default example is embedded
 at compile time.
 

@@ -33,18 +33,11 @@ macro_rules! operations {
 operations! {
     New => "dev.voxelite.core.new",
     Open => "dev.voxelite.core.open",
-    #[cfg(not(target_family = "wasm"))]
     OpenRecent => "dev.voxelite.core.open_recent",
-    #[cfg(not(target_family = "wasm"))]
     ClearRecents => "dev.voxelite.core.clear_recents",
-    #[cfg(not(target_family = "wasm"))]
     Welcome => "dev.voxelite.core.welcome",
     Save => "dev.voxelite.core.save",
     SaveAs => "dev.voxelite.core.save_as",
-    #[cfg(target_family = "wasm")]
-    ExportGlb => "dev.voxelite.core.export_glb",
-    #[cfg(target_family = "wasm")]
-    ExportPng => "dev.voxelite.core.export_png",
     Quit => "dev.voxelite.core.quit",
     Undo => "dev.voxelite.core.undo",
     Redo => "dev.voxelite.core.redo",
@@ -86,7 +79,6 @@ operations! {
 }
 
 /// A native recent-menu item carries its path, never an unstable list index.
-#[cfg(not(target_family = "wasm"))]
 #[derive(Clone, Debug, PartialEq, Eq, Action)]
 #[action(no_json)]
 pub struct OpenRecentProject {
@@ -125,11 +117,9 @@ impl ShellCommands {
 
     fn available_on(&self, op: Op, platform: ShortcutPlatform) -> bool {
         match op {
-            Op::Quit | Op::Minimize | Op::ZoomWindow | Op::FullScreen => {
-                !cfg!(target_family = "wasm")
-            }
+            Op::Quit | Op::Minimize | Op::ZoomWindow | Op::FullScreen => true,
             _ if self.command(op).menu.as_deref() == Some("Quantum") => {
-                !cfg!(target_family = "wasm") && platform == ShortcutPlatform::Apple
+                platform == ShortcutPlatform::Apple
             }
             _ => true,
         }
@@ -290,9 +280,6 @@ impl Op {
 
     /// Enabled commands return Ok; disabled commands carry their presentation reason.
     pub fn availability(self, context: CommandContext) -> Result<(), &'static str> {
-        if self == Self::FullScreen && cfg!(target_family = "wasm") {
-            return Err("Full screen is managed by your browser");
-        }
         let state = match context {
             CommandContext::Editor(state) => state,
             CommandContext::Settings { updates_available } => {
@@ -300,7 +287,6 @@ impl Op {
                     Self::CheckUpdates if !updates_available => {
                         Err("Updates are unavailable in this build.")
                     }
-                    #[cfg(not(target_family = "wasm"))]
                     Self::Welcome => Ok(()),
                     Self::About
                     | Self::Settings
@@ -366,7 +352,7 @@ impl Op {
     }
 }
 
-/// In-window menus use the same placement on every host, including Apple browsers.
+/// In-window menus use the same placement on every host.
 pub static MENUS: LazyLock<Vec<(&str, Vec<Op>)>> = LazyLock::new(|| SHELL.menu_groups());
 
 /// Live items for an in-window menu; disabled plugins contribute no entries.
@@ -566,7 +552,6 @@ impl ShellCommands {
                 .filter(|op| command_menu(self.command(*op), apple) == name)
                 .map(item)
                 .collect();
-            #[cfg(not(target_family = "wasm"))]
             if name == "File" {
                 items.retain(|item| {
                     !matches!(item, MenuItem::Action { action, .. }
@@ -641,7 +626,7 @@ impl ShellCommands {
     }
 }
 
-#[cfg(all(test, not(target_family = "wasm")))]
+#[cfg(test)]
 mod snapshot;
 
 #[cfg(test)]
@@ -671,11 +656,6 @@ mod tests {
         for (owner, command) in commands {
             let op = Op::from_command_id(&command.id).expect("command must have a dispatch Op");
             assert_eq!(op.command_id(), command.id);
-            #[cfg(target_family = "wasm")]
-            if matches!(op, Op::ExportGlb | Op::ExportPng) {
-                assert_eq!(owner.as_str(), "dev.voxelite.exporters");
-                continue;
-            }
             if op == Op::Grid {
                 // Ownership moved; the persisted shell identity did not.
                 assert_eq!(owner.as_str(), "dev.voxelite.gizmo-grid");
@@ -774,7 +754,6 @@ mod tests {
                             .copied()
                             .into_iter()
                             .collect::<Vec<_>>(),
-                        #[cfg(not(target_family = "wasm"))]
                         MenuItem::Submenu(menu) if menu.name == Op::OpenRecent.label() => {
                             let mut ops = vec![Op::OpenRecent];
                             ops.extend(menu.items.iter().filter_map(|item| match item {
@@ -842,7 +821,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn welcome_and_recent_commands_share_the_registry() {
         let menus = menus_for_platform(true, |_| false, |_| true);
         let file = menus.iter().find(|m| m.name == "File").unwrap();
@@ -965,7 +943,6 @@ mod tests {
         }
     }
 
-    #[cfg(not(target_family = "wasm"))]
     fn readme_shortcuts() -> String {
         use std::fmt::Write;
         let mut table = String::from("| Action | Apple | Windows / Linux |\n| --- | --- | --- |\n");
@@ -989,7 +966,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn readme_shortcuts_match_registry() {
         const START: &str = "<!-- BEGIN GENERATED COMMAND SHORTCUTS -->\n";
         const END: &str = "<!-- END GENERATED COMMAND SHORTCUTS -->";
@@ -1106,7 +1082,6 @@ mod tests {
     #[test]
     fn settings_availability_keeps_editor_commands_disabled() {
         let available = [
-            #[cfg(not(target_family = "wasm"))]
             Op::Welcome,
             Op::About,
             Op::Settings,
@@ -1205,11 +1180,7 @@ mod tests {
         }
         assert_eq!(
             search_on("updates", false, ShortcutPlatform::Apple),
-            if cfg!(target_family = "wasm") {
-                vec![]
-            } else {
-                vec![Op::CheckUpdates]
-            }
+            vec![Op::CheckUpdates]
         );
         assert!(search_on("updates", false, ShortcutPlatform::WindowsLinux).is_empty());
     }
@@ -1247,16 +1218,9 @@ mod tests {
                 "enter full",
                 "exit full",
             ] {
-                assert_eq!(
-                    search_on(query, false, platform),
-                    if cfg!(target_family = "wasm") {
-                        vec![]
-                    } else {
-                        vec![Op::FullScreen]
-                    }
-                );
+                assert_eq!(search_on(query, false, platform), vec![Op::FullScreen]);
             }
-            if !cfg!(target_family = "wasm") {
+            {
                 let binding = Op::FullScreen.binding(platform).unwrap();
                 assert_eq!(
                     binding.keystrokes(),
@@ -1271,7 +1235,7 @@ mod tests {
                 .find(|menu| menu.name.as_ref() == "View")
                 .unwrap();
             assert_eq!(view.items.iter().filter(|item| matches!(item, MenuItem::Action { name, action, .. }
-                if action.as_any().downcast_ref::<Op>() == Some(&Op::FullScreen) && name.as_ref() == Op::FullScreen.display_label(fullscreen))).count(), usize::from(!cfg!(target_family = "wasm")));
+                if action.as_any().downcast_ref::<Op>() == Some(&Op::FullScreen) && name.as_ref() == Op::FullScreen.display_label(fullscreen))).count(), 1);
         }
     }
 
@@ -1298,7 +1262,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn mac_menus_preserve_editor_commands_and_system_entries() {
         let menus = menus_for_platform(true, |op| op == Op::Grid, |op| op != Op::Undo);
         assert_eq!(
@@ -1323,7 +1286,6 @@ mod tests {
         assert!(menus[0].items.iter().any(|item| matches!(item, MenuItem::SystemMenu(menu) if menu.menu_type == gpui::SystemMenuType::Services)));
         let items: Vec<_> = menus.iter().flat_map(|menu| &menu.items).collect();
         for op in shortcut_sheet(ShortcutPlatform::Apple) {
-            #[cfg(not(target_family = "wasm"))]
             if matches!(op, Op::OpenRecent | Op::ClearRecents) {
                 // Nested placement is asserted by welcome_and_recent_commands_share_the_registry.
                 continue;
@@ -1413,7 +1375,6 @@ mod tests {
                         Some(
                             Op::Settings | Op::Quit | Op::Hide | Op::HideOthers | Op::FullScreen,
                         ) => true,
-                        #[cfg(not(target_family = "wasm"))]
                         Some(Op::Welcome) => true,
                         Some(_) => context == "Editor",
                         None => context == "TextField",

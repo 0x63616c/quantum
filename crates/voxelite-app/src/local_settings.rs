@@ -16,19 +16,12 @@ pub fn data_dir() -> PathBuf {
         })
 }
 /// Replace a local settings file atomically.
-#[cfg(not(target_family = "wasm"))]
 pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
     crate::persistence::write_local(path, bytes)
-}
-/// Persist browser settings in origin-local storage.
-#[cfg(all(feature = "web", target_family = "wasm"))]
-pub fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
-    crate::web::store(&path.to_string_lossy(), bytes)
 }
 
 /// Read bounded settings bytes, or `None` if no settings have been saved.
 pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
-    #[cfg(not(target_family = "wasm"))]
     let bytes = {
         if !path.exists() {
             return Ok(None);
@@ -38,8 +31,6 @@ pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
         }
         Some(std::fs::read(path)?)
     };
-    #[cfg(target_family = "wasm")]
-    let bytes = crate::web::load(&path.to_string_lossy())?;
     if bytes.as_ref().is_some_and(|b| b.len() > 4 * 1024 * 1024) {
         return Err(EditorError::Gesture("Settings file too large".into()));
     }

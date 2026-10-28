@@ -4,9 +4,8 @@ mod playback_tests;
 
 use crate::editor::{Editor, EditorError, EditorResult};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use voxelite_core::*;
-use web_time::Instant;
 
 /// Default playback cadence: four retained history states per second.
 pub const HISTORY_STEP_INTERVAL: Duration = Duration::from_millis(250);
