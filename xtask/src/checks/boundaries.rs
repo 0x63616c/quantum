@@ -10,6 +10,7 @@ use crate::{
 
 #[derive(Deserialize)]
 struct Metadata {
+    workspace_members: BTreeSet<String>,
     packages: Vec<Package>,
     resolve: Resolve,
 }
@@ -66,7 +67,7 @@ fn violations(json: &str) -> Result<Vec<String>> {
         let package = metadata
             .packages
             .iter()
-            .find(|p| p.name == root)
+            .find(|p| p.name == root && metadata.workspace_members.contains(&p.id))
             .ok_or_else(|| Error::Invalid(format!("boundary metadata missing {root}")))?;
         let mut pending = vec![(package.id.as_str(), vec![root.to_owned()])];
         let mut visited = BTreeSet::new();
@@ -116,7 +117,7 @@ mod tests {
             packages.push(json!({"id":id,"name":name}));
             nodes.push(json!({"id":id,"dependencies":dependencies}));
         }
-        json!({"packages":packages,"resolve":{"nodes":nodes}}).to_string()
+        json!({"workspace_members":["core", "format", "mesh"],"packages":packages,"resolve":{"nodes":nodes}}).to_string()
     }
     #[test]
     fn runner_uses_locked_complete_metadata_and_propagates_bad_output() {
@@ -160,6 +161,20 @@ mod tests {
                 assert_eq!(violations(&value.to_string()).unwrap().len(), 3);
             }
         }
+    }
+    #[test]
+    fn workspace_identity_wins_over_same_named_registry_package() {
+        let mut value: serde_json::Value = serde_json::from_str(&fixture(&[
+            ("external-core", "voxelite-core", vec!["forbidden"]),
+            ("forbidden", "gpui-unofficial", vec![]),
+        ]))
+        .unwrap();
+        value["packages"].as_array_mut().unwrap().reverse();
+        assert!(violations(&value.to_string()).unwrap().is_empty());
+        value["resolve"]["nodes"][0]["dependencies"] = json!(["forbidden"]);
+        assert_eq!(violations(&value.to_string()).unwrap().len(), 3);
+        value["workspace_members"] = json!(["format", "mesh"]);
+        assert!(violations(&value.to_string()).is_err());
     }
     #[test]
     fn cycles_terminate_and_incomplete_metadata_fails() {
