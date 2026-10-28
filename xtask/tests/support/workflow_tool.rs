@@ -27,6 +27,12 @@ fn main() {
         ),
         "cargo" if args.iter().any(|a| a == "xtask") => {
             fs::create_dir_all("target/release").unwrap();
+            // The binary is already built; never open an executable for writing
+            // while parallel test threads may fork and inherit that descriptor.
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(env::var("REAL_XTASK").unwrap(), "target/release/xtask")
+                .unwrap();
+            #[cfg(not(unix))]
             fs::copy(env::var("REAL_XTASK").unwrap(), "target/release/xtask").unwrap();
         }
         "cargo" => {
@@ -52,8 +58,15 @@ fn main() {
             }
         }
         "pipe-leaf" => {
-            fs::write(env::var_os("PIPE_READY").unwrap(), "ready").unwrap();
-            std::thread::sleep(std::time::Duration::from_secs(3));
+            #[cfg(unix)]
+            {
+                use std::{io::Read, os::unix::net::UnixStream};
+                let mut ready = UnixStream::connect(env::var_os("PIPE_READY").unwrap()).unwrap();
+                ready.write_all(&[1]).unwrap();
+                // Only cancellation or test cleanup releases the inherited pipes.
+                let mut byte = [0];
+                assert_eq!(ready.read(&mut byte).unwrap(), 0);
+            }
         }
         "secret-echo" => {
             for name in [
