@@ -277,6 +277,19 @@ their stage-specific introduction predates the current shell and plugin work.
 
 ## Tests and checks
 
+Run `cargo xtask validate` for tidy, formatting, Clippy (all targets), workspace
+tests, dependency policy and unused dependencies. Missing tools are reported as
+skips; `--strict` makes them failures. Select checks with
+`cargo xtask check tidy fmt`, list them with `cargo xtask check --list`, or use
+`cargo xtask validate --skip test` / `--only tidy fmt`.
+
+`cargo xtask bump-version patch --dry-run` previews a stable version bump; omit
+`--dry-run` to update the workspace manifest, README, download template, MCP
+compatibility version and workspace lockfile entries. It also accepts `major`,
+`minor` or `X.Y.Z`. Historical releases and appcasts are left intact. This does
+not tag or publish a release. See [xtask/README.md](xtask/README.md) for the
+maintenance modules and how to add commands.
+
 The standard workspace test command is `cargo test --workspace`. The exact
 format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) are:
 
@@ -289,6 +302,7 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
 python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 ```
 
+Script and macOS checks remain separate from `validate`.
 The Python packaging tests mock macOS tools and run on Linux. Run all script
 tests with `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'`.
 Useful focused Rust checks include:

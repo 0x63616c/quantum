@@ -45,7 +45,7 @@ jobs:
         run: cargo test --workspace --locked
 
       - name: Check repository hygiene
-        run: cargo xtask tidy
+        run: cargo xtask check tidy
 
       - name: Install dependency checks
         uses: taiki-e/install-action@2cdf2d81f4edfc3b41d5ddf56083c70b48ac2475 # v2.62.35
