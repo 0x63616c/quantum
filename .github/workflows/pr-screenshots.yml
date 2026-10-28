@@ -23,9 +23,7 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write # push PNGs to the pr-assets branch
-  pull-requests: write # edit the PR description
+permissions: {}
 
 concurrency:
   group: pr-screenshots-${{ github.event.pull_request.number || inputs.pr }}
@@ -33,6 +31,9 @@ concurrency:
 
 jobs:
   screenshots:
+    permissions:
+      contents: write # push PNGs to the pr-assets branch
+      pull-requests: write # edit the PR description
     # Same-repository PRs only: fork PRs get a read-only token.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
