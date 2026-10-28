@@ -141,7 +141,9 @@ quit protect unsaved changes; the built-in example has no write destination
 until Save As. Failed saves retain the document and dirty state. Open and Save
 perform file work on a background executor while editor input is blocked.
 “Save & continue” completes the pending New/Open/Quit only after a successful
-save; cancellation or failure keeps the project open.
+save; cancellation or failure keeps the project open. While waiting for a Save As
+file dialog, Cancel or Escape returns to the editor without saving or continuing
+the pending command. Late responses from an abandoned picker are ignored.
 
 Ordinary Save checks the destination against the bytes last opened/saved and
 rejects external edits or deletion. Save As can replace an explicitly selected
