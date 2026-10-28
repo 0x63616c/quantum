@@ -3,11 +3,13 @@
 use std::{collections::BTreeSet, path::Path, process::Command};
 
 const ROOT_ENTRIES: &[&str] = &[
+    ".agents",
     ".cargo",
     ".gitattributes",
     ".github",
     ".gitignore",
     "AGENTS.md",
+    "CONTRIBUTING.md",
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",
