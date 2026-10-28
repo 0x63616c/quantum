@@ -100,8 +100,24 @@ All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
 GitHub-hosted macOS jobs. CI macOS runs its Python script tests on a GitHub-hosted
 Linux runner, and builds the ad-hoc DMG only on pushes to `main` and on pull
 requests that change packaging inputs (`packaging/`, `scripts/*macos*`, Cargo
-manifests, the toolchain or the macOS workflows). Rendering checks need the
-`golden` label, which only the first Mac mini runner carries. The runner needs that Xcode installation and its Metal
+manifests, the toolchain or the macOS workflows).
+
+Rendering checks currently default to the `golden` label, which only the first
+Mac mini runner carries. Before visual jobs can use either runner, run `visual`
+(which includes `--determinism`) on homelab-voxelite-2 against the same committed
+goldens that runner 1 passes, and link the passing run on #165. The owner can
+select a unique runner label through the `runner_label` dispatch input. Use a
+label actually assigned to that runner; a runner name alone is not a label.
+Keep personal information out of labels. The existing owner and fork guards
+also apply to this input.
+
+After that verification, remove the visual `golden` fallback and make the input
+default empty so PR, `visual` and `rebaseline-visual` jobs use
+`[self-hosted, macOS, ARM64, xcode]`. Re-verify any new runner against the current
+goldens with determinism before it takes visual jobs. `bench` and
+`bench-baseline` always require `golden`, regardless of the dispatch override.
+
+The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
 the v4 checkout and artifact actions, pinned to commit SHAs in the

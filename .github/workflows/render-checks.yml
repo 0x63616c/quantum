@@ -21,6 +21,10 @@ on:
         options: [visual, bench, rebaseline-visual, bench-baseline]
         default: visual
         required: true
+      runner_label:
+        description: 'Visual runner label (use a unique label to verify a runner)'
+        type: string
+        default: golden
       runs:
         description: Benchmark repetitions in one process
         type: string
@@ -39,11 +43,14 @@ concurrency:
 
 jobs:
   render:
-    # Only owner-triggered, same-repository code may use the golden machine.
+    # Only owner-triggered, same-repository code may use self-hosted runners.
     if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    # Goldens and timing baselines come from one runner. The Mac mini hosts two
-    # voxelite runners; only homelab-voxelite carries the golden label.
-    runs-on: [self-hosted, macOS, ARM64, xcode, golden]
+    # Benchmarks always require golden, even with a visual runner override.
+    # Keep visual jobs pinned until runner 2 passes visual --determinism against
+    # the same committed goldens as runner 1, with the run linked on #165.
+    # Then remove the visual golden fallback and make runner_label default empty.
+    # Re-verify each new runner before it takes normal visual jobs.
+    runs-on: [self-hosted, macOS, ARM64, xcode, "${{ (inputs.command == 'bench' || inputs.command == 'bench-baseline') && 'golden' || inputs.runner_label || 'golden' }}"]
     timeout-minutes: 60
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
