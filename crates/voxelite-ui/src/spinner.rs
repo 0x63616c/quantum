@@ -25,7 +25,7 @@ impl RenderOnce for Spinner {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
         const FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         div()
-            .w(px(metrics::ICON_CHECK))
+            .w(px(metrics::ICON_DENSE))
             .flex_none()
             .font_family(type_size::MONO)
             .text_size(px(type_size::BODY))
