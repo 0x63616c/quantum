@@ -130,24 +130,6 @@ impl From<voxelite_plugin_api::ExportError> for Failure {
     }
 }
 
-pub(crate) struct Args<'a>(pub &'a serde_json::Value);
-impl Args<'_> {
-    pub fn get<T: serde::de::DeserializeOwned>(&self, name: &str) -> Result<T> {
-        serde_json::from_value(self.0.get(name).cloned().unwrap_or(serde_json::Value::Null))
-            .map_err(|e| Failure::invalid(e.to_string()).at(format!("/{name}")))
-    }
-    pub fn optional<T: serde::de::DeserializeOwned>(&self, name: &str) -> Result<Option<T>> {
-        if self.0.get(name).is_none() {
-            Ok(None)
-        } else {
-            self.get(name).map(Some)
-        }
-    }
-    pub fn default<T: serde::de::DeserializeOwned>(&self, name: &str, value: T) -> Result<T> {
-        Ok(self.optional(name)?.unwrap_or(value))
-    }
-}
-
 fn bounded(mut value: String, max: usize) -> String {
     if value.len() > max {
         let mut end = max;
