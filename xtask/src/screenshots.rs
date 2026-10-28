@@ -320,6 +320,8 @@ impl State {
 struct Comparison<'a> {
     screen: &'a Screen,
     state: State,
+    /// Integer scale of the `<name>-zoom.png` crops of the changed area, when one was made.
+    zoom: Option<u32>,
 }
 
 fn compare<'a>(screen: &'a Screen, before: &Path, after: &Path) -> Comparison<'a> {
@@ -351,7 +353,71 @@ fn compare<'a>(screen: &'a Screen, before: &Path, after: &Path) -> Comparison<'a
             }
         }
     };
-    Comparison { screen, state }
+    let zoom = if state == State::Changed {
+        zoom_crops(
+            screen,
+            &a,
+            &b,
+            &before.join(format!("{}-zoom.png", screen.name)),
+            &after.join(format!("{}-zoom.png", screen.name)),
+        )
+    } else {
+        None
+    };
+    Comparison {
+        screen,
+        state,
+        zoom,
+    }
+}
+
+/// Rendered width the zoomed crop should fill (two of them side by side in the PR).
+const ZOOM_TARGET_WIDTH: u32 = 880;
+
+/// When the difference is confined to a small region, write matching crops of it from both
+/// sides, enlarged with nearest-neighbour scaling so small shifts are visible on the PR page.
+fn zoom_crops(screen: &Screen, a: &Path, b: &Path, out_a: &Path, out_b: &Path) -> Option<u32> {
+    // White where pixels differ (beyond the fuzz), black elsewhere; then its bounding box.
+    let mask = Command::new("sh")
+        .arg("-c")
+        .arg(r#"compare -fuzz 2% "$1" "$2" -compose src -highlight-color white -lowlight-color black png:- | convert png:- -bordercolor black -border 1 -trim -format '%w %h %X %Y' info:"#)
+        .arg("sh")
+        .arg(a)
+        .arg(b)
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&mask.stdout);
+    let nums: Vec<i64> = text
+        .split_whitespace()
+        .filter_map(|n| n.trim_start_matches('+').parse().ok())
+        .collect();
+    let [w, h, x, y] = nums[..] else { return None };
+    let (img_w, img_h) = (i64::from(screen.size.0), i64::from(screen.size.1));
+    // Undo the 1px border, pad generously for context, keep a readable minimum size.
+    let (x, y) = (x - 1, y - 1);
+    let pad = 48;
+    let cw = (w + 2 * pad).max(360).min(img_w);
+    let ch = (h + 2 * pad).max(160).min(img_h);
+    if cw * ch * 4 > img_w * img_h {
+        return None; // A large change reads fine in the full screenshots.
+    }
+    let cx = (x + w / 2 - cw / 2).clamp(0, img_w - cw);
+    let cy = (y + h / 2 - ch / 2).clamp(0, img_h - ch);
+    let scale = (i64::from(ZOOM_TARGET_WIDTH) / cw).clamp(1, 3) as u32;
+    for (src, dst) in [(a, out_a), (b, out_b)] {
+        let ok = Command::new("convert")
+            .arg(src)
+            .args(["-crop", &format!("{cw}x{ch}+{cx}+{cy}"), "+repage"])
+            .args(["-filter", "point", "-resize", &format!("{}%", scale * 100)])
+            .arg(dst)
+            .status()
+            .is_ok_and(|s| s.success());
+        if !ok {
+            return None;
+        }
+    }
+    Some(scale)
 }
 
 enum Urls {
@@ -360,18 +426,26 @@ enum Urls {
 }
 
 impl Urls {
-    fn image(&self, side: &Side, screen: &Screen) -> String {
+    fn image(&self, side: &Side, file: &str) -> String {
         match self {
-            Urls::Local => format!("{}/{}.png", side.label, screen.name),
-            Urls::Remote { prefix } => format!("{prefix}/{}/{}.png", side.label, screen.name),
+            Urls::Local => format!("{}/{file}.png", side.label),
+            Urls::Remote { prefix } => format!("{prefix}/{}/{file}.png", side.label),
         }
     }
 }
 
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
-    let url = urls.image(side, screen);
+    let url = urls.image(side, screen.name);
     format!(
         r#"<a href="{url}"><img src="{url}" width="{width}" alt="{} — {}"></a>"#,
+        screen.caption, side.label
+    )
+}
+
+fn zoom_img(urls: &Urls, side: &Side, screen: &Screen) -> String {
+    let url = urls.image(side, &format!("{}-zoom", screen.name));
+    format!(
+        r#"<a href="{url}"><img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change"></a>"#,
         screen.caption, side.label
     )
 }
@@ -425,6 +499,14 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
             cell(base, has_before),
             cell(head, has_after)
         );
+        if let Some(scale) = r.zoom {
+            let _ = writeln!(
+                md,
+                "| {}<br><sub>Changed area, {scale}× zoom</sub> | {}<br><sub>Changed area, {scale}× zoom</sub> |",
+                zoom_img(urls, base, s),
+                zoom_img(urls, head, s)
+            );
+        }
         let _ = writeln!(
             md,
             "\n<sub><code>voxelite {}</code> at {}×{}</sub>\n",
@@ -463,12 +545,15 @@ fn publish_assets(
 ) -> Result<String> {
     let mut blobs = Vec::new();
     for side in [base, head] {
-        for s in screens {
-            let file = side.dir.join(format!("{}.png", s.name));
+        for name in screens
+            .iter()
+            .flat_map(|s| [s.name.to_string(), format!("{}-zoom", s.name)])
+        {
+            let file = side.dir.join(format!("{name}.png"));
             if file.exists() {
                 let blob = git(root, &["hash-object", "-w", &file.to_string_lossy()])?;
                 blobs.push((
-                    format!("pr-{pr}/{}/{}/{}.png", head.id, side.label, s.name),
+                    format!("pr-{pr}/{}/{}/{name}.png", head.id, side.label),
                     blob,
                 ));
             }

@@ -56,7 +56,8 @@ CLI flag or fixture to the app rather than scripting clicks, so it stays determi
 1. Open the PR page (`gh pr view <N> --web`, or fetch it) and confirm every image
    loads, Before and After are the same size side by side, captions read clearly, and
    unchanged screens sit collapsed under **Unchanged screens**.
-2. Look at the images, not just the table. A screen marked *changed* that you did
+2. Look at the images, not just the table. Small changes get an extra row cropped
+   to the changed area and enlarged, so check that row too. A screen marked *changed* that you did
    not mean to change is a regression; fix it or explain it in **Changes**.
 3. Tick the UI checklist items only after doing the above.
 
