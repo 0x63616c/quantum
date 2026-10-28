@@ -136,6 +136,7 @@ pub struct EditorView {
     overlay_hover: Option<(String, u32)>,
     overlay_bounds: Rc<std::cell::RefCell<std::collections::BTreeMap<String, Bounds<Pixels>>>>,
     menu: Option<usize>,
+    menu_bounds: Rc<Cell<Bounds<Pixels>>>,
     menu_index: usize,
     commands: command_palette::CommandPalette,
     command_input: Entity<crate::text_field::TextField>,

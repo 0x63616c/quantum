@@ -4,6 +4,7 @@ use quantum_ui::ColorToken;
 use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::state;
 
 impl EditorView {
     pub(super) fn debug_overlay(&self) -> Div {
@@ -20,7 +21,10 @@ impl EditorView {
             .left(px(Space::S6.px()))
             .p(px(Space::S3.px()))
             .rounded(px(Radius::Xs.px()))
-            .bg(self.theme.color(ColorToken::Canvas).opacity(0.82))
+            .bg(self
+                .theme
+                .color(ColorToken::Canvas)
+                .opacity(state::DEBUG_OVERLAY))
             .text_color(self.theme.color(ColorToken::TextPrimary))
             .text_style(quantum_ui::TextSize::Mono)
             .children(

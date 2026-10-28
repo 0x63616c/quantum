@@ -14,7 +14,9 @@ use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::geometry;
 use quantum_ui::tokens::metrics;
+use quantum_ui::tokens::state;
 use quantum_ui::tokens::type_size;
 use quantum_ui::{
     Button, Card, FormRow, IconButton, Panel, SidebarItem, SidebarSection, Slider, SliderRange,
@@ -332,7 +334,7 @@ impl SettingsView {
                     .items_stretch()
                     .child(
                         div()
-                            .w(relative(0.28))
+                            .w(relative(geometry::PREVIEW_SIDEBAR_FRACTION))
                             .p(px(Space::S3.px()))
                             .bg(Theme::Dark.preview_chrome())
                             .children([1.0, 0.8, 0.6].map(|width| {
@@ -441,7 +443,7 @@ impl SettingsView {
                                         .min_w(px(Space::S0.px()))
                                         .p(px(Space::S3.px()))
                                         .rounded(px(Radius::Md.px()))
-                                        .when(selected, |d| d.bg(t.color(ColorToken::Accent).opacity(0.08)))
+                                        .when(selected, |d| d.bg(t.color(ColorToken::Accent).opacity(state::PREVIEW_SELECTED)))
                                         .cursor_pointer()
 
 
@@ -537,7 +539,7 @@ impl SettingsView {
                                 }),
                                 mono(format!("{:.2}", p.ambient_occlusion_strength.get())),
                             )
-                            .w(px(quantum_ui::tokens::geometry::SETTINGS_SLIDER)),
+                            .w(px(geometry::SETTINGS_SLIDER)),
                             t,
                         ),
                         self.form_row(
@@ -902,7 +904,7 @@ impl Render for SettingsView {
                                 .child(
                                     quantum_ui::FieldFrame::search_row(
                                         t,
-                                        self.search.read(cx).focused(window),
+                                        self.search.read(cx).focus_visible(window),
                                     )
                                     .flex_shrink_0()
                                     .mb(px(Space::S2.px()))

@@ -61,7 +61,9 @@ pub struct PlacedOverlay {
     child: AnyElement,
 }
 impl PlacedOverlay {
-    pub(crate) fn measured(
+    /// Position from bounds measured during the trigger's prepaint in the same frame.
+    /// The host writes the cell from a canvas attached to its trigger.
+    pub fn measured(
         trigger: std::rc::Rc<std::cell::Cell<Bounds<Pixels>>>,
         side: PopoverSide,
         child: impl IntoElement,

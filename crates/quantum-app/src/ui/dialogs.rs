@@ -5,6 +5,7 @@ use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::geometry;
 
 impl EditorView {
     pub(super) fn floating(&self) -> Stateful<Div> {
@@ -17,8 +18,8 @@ impl EditorView {
             .tab_stop(false)
             .occlude()
             .w(px(metrics::DIALOG_WIDTH))
-            .max_w(relative(0.95))
-            .max_h(relative(0.95))
+            .max_w(relative(geometry::DIALOG_MAX_FRACTION))
+            .max_h(relative(geometry::DIALOG_MAX_FRACTION))
             .flex()
             .flex_col()
             .text_color(self.theme.color(ColorToken::TextPrimary))
@@ -58,17 +59,10 @@ impl EditorView {
             return Some(self.palette_chooser(cx));
         }
         self.menu.map(|i| {
-            let left = 100.0
-                + MENUS
-                    .iter()
-                    .take(i)
-                    .map(|(n, _)| n.len() as f32 * 7.0 + 23.0)
-                    .sum::<f32>();
-            div()
-                .absolute()
-                .top(px(MENUBAR_HEIGHT))
-                .left(px(left))
-                .child(
+            quantum_ui::OverlayLayer::Popover
+                .defer(quantum_ui::PlacedOverlay::measured(
+                    self.menu_bounds.clone(),
+                    quantum_ui::PopoverSide::Below,
                     quantum_ui::Menu::canvas("application-menu", t, &self.modal_focus)
                         .w(px(metrics::APP_MENU_WIDTH))
                         .children(
@@ -79,7 +73,7 @@ impl EditorView {
                                     self.action_row(*op, j, j == self.menu_index, window, cx)
                                 }),
                         ),
-                )
+                ))
                 .into_any_element()
         })
     }
@@ -224,23 +218,24 @@ impl EditorView {
                     .flex()
                     .flex_col()
                     .child(
-                        quantum_ui::FieldFrame::search_row(t, true)
-                            .rounded(px(radius::concentric(
-                                Radius::Lg.px(),
-                                metrics::EDGE + Space::S3.px(),
-                            )))
-                            .h(px(metrics::COMMAND_SEARCH_HEIGHT))
-                            .flex_shrink_0()
-                            .child(icon("search").text_color(t.color(ColorToken::TextSecondary)))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w(px(Space::S0.px()))
-                                    .child(self.command_input.clone()),
-                            )
-                            .child(
-                                shortcut("escape").text_color(t.color(ColorToken::TextSecondary)),
-                            ),
+                        quantum_ui::FieldFrame::search_row(
+                            t,
+                            self.command_input.read(cx).focus_visible(window),
+                        )
+                        .rounded(px(radius::concentric(
+                            Radius::Lg.px(),
+                            metrics::EDGE + Space::S3.px(),
+                        )))
+                        .h(px(metrics::COMMAND_SEARCH_HEIGHT))
+                        .flex_shrink_0()
+                        .child(icon("search").text_color(t.color(ColorToken::TextSecondary)))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(Space::S0.px()))
+                                .child(self.command_input.clone()),
+                        )
+                        .child(shortcut("escape").text_color(t.color(ColorToken::TextSecondary))),
                     )
                     .child(
                         div()

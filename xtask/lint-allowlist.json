@@ -18,7 +18,7 @@
   "crates/quantum-app/src/ui/agent.rs:string-dispatch": 7,
   "crates/quantum-app/src/ui/capture.rs:string-dispatch": 1,
   "crates/quantum-app/src/ui/command_palette.rs:string-dispatch": 3,
-  "crates/quantum-app/src/ui/comments.rs:function-lines:impl  for EditorView::thread_panel": 147,
+  "crates/quantum-app/src/ui/comments.rs:function-lines:impl  for EditorView::thread_panel": 145,
   "crates/quantum-app/src/ui/history.rs:function-lines:impl  for EditorView::timeline_panel": 324,
   "crates/quantum-app/src/ui/launch.rs:function-lines:impl  for EditorView::show_capture": 109,
   "crates/quantum-app/src/ui/launch.rs:string-dispatch": 1,

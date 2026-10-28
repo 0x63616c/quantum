@@ -111,6 +111,8 @@ impl EditorView {
                     .child("Quantum"),
             )
             .children(MENUS.iter().enumerate().map(|(i, (name, _))| {
+                let anchor = self.menu_bounds.clone();
+                let selected = self.menu == Some(i);
                 Button::design(("menu", i), *name, t)
                     .style(ButtonStyle::Ghost)
                     .selected(self.menu == Some(i))
@@ -121,6 +123,19 @@ impl EditorView {
                         this.commands.close();
                         cx.notify();
                     }))
+                    .relative()
+                    .child(
+                        canvas(
+                            move |bounds, _, _| {
+                                if selected {
+                                    anchor.set(bounds);
+                                }
+                            },
+                            |_, _, _, _| {},
+                        )
+                        .absolute()
+                        .inset_0(),
+                    )
             }))
             .child(div().flex_1())
     }

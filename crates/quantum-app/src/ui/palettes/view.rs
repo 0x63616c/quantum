@@ -7,6 +7,7 @@ use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::geometry;
 use quantum_ui::{
     Badge, Card, ColorSquare, HueSlider, Menu, Segment, SegmentedControl, SidebarSection, Swatch,
 };
@@ -63,8 +64,8 @@ fn thumbnail(palette: &Palette, t: Theme) -> Div {
                                     bounds.top() + height * (i / columns) as f32,
                                 ),
                                 size(
-                                    width + px(quantum_ui::tokens::geometry::COLOR_CELL_OVERLAP),
-                                    height + px(quantum_ui::tokens::geometry::COLOR_CELL_OVERLAP),
+                                    width + px(geometry::COLOR_CELL_OVERLAP),
+                                    height + px(geometry::COLOR_CELL_OVERLAP),
                                 ),
                             ),
                             *color,
@@ -328,7 +329,7 @@ impl EditorView {
                     .left(px(col as f32 * (CELL + GAP) - GAP / 2. - 1.))
                     .top(px(row as f32 * (CELL + GAP) - 1.))
                     .w(px(Space::S1.px()))
-                    .h(px(CELL + 2.))
+                    .h(px(CELL + geometry::EDGE * 2.))
                     .bg(t.color(ColorToken::AccentText)),
             );
         }

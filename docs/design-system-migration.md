@@ -19,6 +19,11 @@ blue primary actions and selection indicators, 28 px default controls, consisten
 rounded corners, and the complete Geist/Geist Mono type scale. Settings rows have
 16 px side insets; slider and inactive switch tracks remain visible on raised cards.
 Numeric fields reserve border and caret clearance for a complete hex value.
+Menus anchor to measured trigger bounds and use their natural content height,
+so the final row is no longer clipped by an inherited dialog size limit.
+Search rows show the shared ring for keyboard focus. Tooltip decoration preserves
+absolute history-marker and comment-pin positions; inline shortcut prose retains
+its reading order. Comment submission inherits the blue primary action.
 
 Sidebar tabs remain outside scrolling panel content. The editor sidebar reserves
 space for layers and palette controls while the history list scrolls independently.

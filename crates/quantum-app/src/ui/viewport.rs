@@ -3,10 +3,11 @@
 //! EditorView supplies the document and GPUI task callbacks; only this module
 //! owns render state. Picking and playback use the same displayed-frame identity.
 use super::*;
+use geometry::VOXEL_OUTLINE;
 use quantum_app::frame_meter::{FrameMeter, RendererKind};
 use quantum_render::AmbientOcclusionStrength;
 use quantum_ui::ColorToken;
-use quantum_ui::tokens::geometry::VOXEL_OUTLINE;
+use quantum_ui::tokens::geometry;
 mod gpu_viewport;
 
 /// Image identity includes the editor incarnation, since reopening the same ID

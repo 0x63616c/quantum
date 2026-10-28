@@ -1,5 +1,4 @@
 //! Palette dialog controller. All color and library changes are host-admitted actions.
-use quantum_ui::ColorToken;
 #[cfg(target_os = "macos")]
 mod eyedropper;
 mod files;
@@ -580,8 +579,6 @@ impl EditorView {
         }
         button
             .build()
-            .border_1()
-            .border_color(t.color(ColorToken::BorderSubtle))
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus, cx);
                 callback(this, window, cx)

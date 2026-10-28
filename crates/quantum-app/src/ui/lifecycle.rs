@@ -86,6 +86,7 @@ impl EditorView {
             overlay_hover: None,
             overlay_bounds: Rc::default(),
             menu: None,
+            menu_bounds: Default::default(),
             menu_index: 0,
             commands: command_palette::CommandPalette::default(),
             command_input,

@@ -9,6 +9,8 @@ use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::geometry;
+use quantum_ui::tokens::state;
 use quantum_ui::{Kbd, row, tokens::type_size};
 
 pub(super) use quantum_ui::tokens::metrics::welcome::*;
@@ -70,7 +72,7 @@ pub(super) fn thumbnail(
         // The reference's quiet raised black is halfway between the base and hover.
         .bg(theme
             .color(ColorToken::Canvas)
-            .blend(theme.hover().opacity(0.5)))
+            .blend(theme.hover().opacity(state::THUMBNAIL_WASH)))
         .border_1()
         .border_color(theme.color(ColorToken::BorderSubtle))
         .when_some(path, |d, path| {
@@ -79,10 +81,10 @@ pub(super) fn thumbnail(
             d.child(
                 img(path.clone())
                     .absolute()
-                    .left(relative(-0.06))
-                    .top(px(-height * 0.06))
-                    .w(relative(1.12))
-                    .h(px(height * 1.12))
+                    .left(relative(-geometry::THUMBNAIL_OVERSCAN))
+                    .top(px(-height * geometry::THUMBNAIL_OVERSCAN))
+                    .w(relative(geometry::THUMBNAIL_SCALE))
+                    .h(px(height * geometry::THUMBNAIL_SCALE))
                     .object_fit(ObjectFit::Contain),
             )
         })

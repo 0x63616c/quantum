@@ -3,6 +3,8 @@
 use super::*;
 use quantum_ui::ColorToken;
 use quantum_ui::Space;
+use quantum_ui::tokens::geometry;
+use quantum_ui::tokens::state;
 use quantum_ui::{
     AsciiImageReveal, AsciiSkeleton,
     ascii_reveal::media::{MAX_MEDIA_EDGE, Media, MediaOptions},
@@ -153,7 +155,7 @@ pub(super) fn recent(path: &std::path::Path) -> anyhow::Result<PreparedPreview> 
         |theme| {
             theme
                 .color(ColorToken::Canvas)
-                .blend(theme.hover().opacity(0.5))
+                .blend(theme.hover().opacity(state::THUMBNAIL_WASH))
         },
     )
 }
@@ -179,10 +181,14 @@ pub(super) fn recent_element(
                     .child(
                         img(preview.image.clone())
                             .absolute()
-                            .left(relative(-0.06))
-                            .top(px(-metrics::welcome::THUMB_HEIGHT * 0.06))
-                            .w(relative(1.12))
-                            .h(px(metrics::welcome::THUMB_HEIGHT * 1.12))
+                            .left(relative(-geometry::THUMBNAIL_OVERSCAN))
+                            .top(px(
+                                -metrics::welcome::THUMB_HEIGHT * geometry::THUMBNAIL_OVERSCAN
+                            ))
+                            .w(relative(geometry::THUMBNAIL_SCALE))
+                            .h(px(
+                                metrics::welcome::THUMB_HEIGHT * geometry::THUMBNAIL_SCALE
+                            ))
                             .object_fit(ObjectFit::Contain),
                     ),
             )
@@ -315,7 +321,11 @@ mod tests {
             assert_eq!(media.size(), [60, 46]);
             let color: Rgba = theme
                 .color(ColorToken::Canvas)
-                .blend(theme.hover().opacity(0.5))
+                .blend(
+                    theme
+                        .hover()
+                        .opacity(quantum_ui::tokens::state::THUMBNAIL_WASH),
+                )
                 .into();
             assert_eq!(
                 media.options().background,

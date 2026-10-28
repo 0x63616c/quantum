@@ -408,9 +408,7 @@ impl EditorView {
                                 window.focus(&this.focus, cx);
                             },
                         )
-                        .justify_center()
-                        .bg(t.color(ColorToken::TextPrimary))
-                        .text_color(t.color(ColorToken::Canvas)),
+                        .justify_center(),
                     )
                 })
                 .when(preview, |d| {

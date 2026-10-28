@@ -33,8 +33,14 @@ struct TooltipRuntime {
     _subscription: Subscription,
 }
 
-fn position_trigger(trigger: Stateful<Div>, cover: bool) -> Stateful<Div> {
-    trigger.relative().when(cover, |d| d.absolute().inset_0())
+fn position_trigger(mut trigger: Stateful<Div>, cover: bool) -> Stateful<Div> {
+    if cover {
+        return trigger.absolute().inset_0();
+    }
+    if trigger.style().position.is_none() {
+        trigger = trigger.relative();
+    }
+    trigger
 }
 impl TooltipRuntime {
     fn dismiss(&mut self, cx: &mut Context<Self>) {
@@ -91,7 +97,7 @@ impl Tooltip {
         let id = Element::id(&trigger).unwrap_or_else(|| self.label.clone().into());
         let mut hint = self.attach(id, div().id("tooltip-hitbox").size_full());
         hint.cover = true;
-        trigger.relative().child(hint)
+        position_trigger(trigger, false).child(hint)
     }
     /// Build tooltip content for a static gallery or the delayed trigger.
     pub fn build(&self) -> Div {
@@ -228,6 +234,13 @@ mod tests {
         assert_eq!(overlay.style().inset.left, Some(px(0.).into()));
         let mut ordinary = position_trigger(div().id("ordinary"), false);
         assert_eq!(ordinary.style().position, Some(Position::Relative));
+        let mut marker = position_trigger(
+            div().id("marker").absolute().top(px(12.)).left(px(4.)),
+            false,
+        );
+        assert_eq!(marker.style().position, Some(Position::Absolute));
+        assert_eq!(marker.style().inset.top, Some(px(12.).into()));
+        assert_eq!(marker.style().inset.left, Some(px(4.).into()));
     }
     #[test]
     fn shortcut_uses_caption_type_and_tooltip_uses_small_type() {

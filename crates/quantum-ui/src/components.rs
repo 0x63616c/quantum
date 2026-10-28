@@ -101,9 +101,9 @@ impl FieldFrame {
                     .font_family(type_size::MONO)
             })
     }
-    /// A search field row with space for an icon, editor, and clear button.
-    pub fn search_row(theme: Theme, focused: bool) -> Div {
-        let _ = focused;
+    /// A search row with icon/editor space and the embedded editor’s keyboard focus ring.
+    /// Pass true only when that editor is focused and the last input was keyboard input.
+    pub fn search_row(theme: Theme, focus_visible: bool) -> Div {
         TextSize::Body
             .apply(row())
             .h(px(ControlHeight::Large.px()))
@@ -113,6 +113,9 @@ impl FieldFrame {
             .border_1()
             .border_color(theme.color(ColorToken::Border))
             .bg(theme.color(ColorToken::Raised))
+            .when(focus_visible, |d| {
+                d.shadow(crate::presentation::ring(theme, ColorToken::Surface))
+            })
     }
 }
 /// Selectable square color with an inset edge and optional read-only badge.

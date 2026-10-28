@@ -24,10 +24,15 @@ impl Menu {
     }
     /// Canvas menu with the editor's existing floating-panel dimensions and focus hooks.
     pub fn canvas(id: impl Into<ElementId>, theme: Theme, focus: &FocusHandle) -> Stateful<Div> {
-        crate::Dialog::panel(id, "Menu", theme, focus)
-            .role(Role::Menu)
-            .bg(theme.color(crate::ColorToken::Overlay))
+        Self::design(id, theme)
+            .aria_label("Menu")
+            .track_focus(focus)
+            .tab_group()
+            .tab_stop(false)
+            .flex()
+            .flex_col()
             .p(px(metrics::POPOVER_PADDING))
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }
     /// A menu surface; position it within a relative container or GPUI anchor.
     pub fn panel(id: impl Into<ElementId>, theme: Theme) -> Stateful<Div> {

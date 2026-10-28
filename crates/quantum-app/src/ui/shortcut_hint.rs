@@ -144,20 +144,32 @@ impl From<String> for HintText {
 
 impl HintText {
     pub(super) fn tooltip_parts(self) -> (String, Option<String>) {
+        let last = self.0.len().saturating_sub(1);
+        let separate_shortcut = matches!(self.0.last(), Some(HintPart::Key(_)))
+            && self.0[..last]
+                .iter()
+                .all(|part| matches!(part, HintPart::Text(_)));
         let mut label = String::new();
-        let mut keys = Vec::new();
-        for part in self.0 {
+        let mut shortcut = None;
+        for (index, part) in self.0.into_iter().enumerate() {
             match part {
                 HintPart::Text(text) => label.push_str(&text),
-                HintPart::Key(key) => keys.push(
-                    key.tokens
+                HintPart::Key(key) => {
+                    let text = key
+                        .tokens
                         .iter()
                         .map(ShortcutToken::text)
-                        .collect::<String>(),
-                ),
+                        .collect::<String>();
+                    if separate_shortcut && index == last {
+                        shortcut = Some(text);
+                    } else {
+                        // Inline keys are part of the sentence, not trailing action hints.
+                        label.push_str(&text);
+                    }
+                }
             }
         }
-        (label, (!keys.is_empty()).then(|| keys.join(" ")))
+        (label, shortcut)
     }
 
     pub(super) fn plain_text(&self) -> Option<&str> {
@@ -227,5 +239,36 @@ impl RenderOnce for HintText {
             }
         }
         result.child(line).into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::prelude::v1::test;
+
+    #[test]
+    fn tooltip_keeps_inline_keys_in_prose_and_one_action_hint_in_a_chip() {
+        let escape = Keycap::new("escape")
+            .tokens
+            .iter()
+            .map(ShortcutToken::text)
+            .collect::<String>();
+        assert_eq!(
+            HintText::from("Box. ")
+                .key("escape")
+                .text(" cancels.")
+                .tooltip_parts(),
+            (format!("Box. {escape} cancels."), None),
+        );
+        assert_eq!(
+            HintText::from("Place").action(Op::Place).tooltip_parts(),
+            ("Place".into(), Some("B".into()))
+        );
+        assert_eq!(
+            HintText::from("Ready").tooltip_parts(),
+            ("Ready".into(), None)
+        );
+        assert_eq!(HintText::default().tooltip_parts(), (String::new(), None));
     }
 }

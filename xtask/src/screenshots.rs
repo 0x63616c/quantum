@@ -632,7 +632,7 @@ impl Urls {
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
     let url = urls.image(side, screen.name);
     format!(
-        r#"<a href="{url}"><img src="{url}" width="{width}" alt="{} — {}"></a>"#,
+        r#"<img src="{url}" width="{width}" alt="{} — {}">"#,
         screen.caption, side.label
     )
 }
@@ -640,7 +640,7 @@ fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
 fn zoom_img(urls: &Urls, side: &Side, screen: &Screen) -> String {
     let url = urls.image(side, &format!("{}-zoom", screen.name));
     format!(
-        r#"<a href="{url}"><img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change"></a>"#,
+        r#"<img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change">"#,
         screen.caption, side.label
     )
 }

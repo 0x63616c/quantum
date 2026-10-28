@@ -5,6 +5,7 @@ use quantum_ui::Radius;
 use quantum_ui::Space;
 use quantum_ui::TextSize;
 use quantum_ui::TextStyle;
+use quantum_ui::tokens::state;
 
 impl EditorView {
     pub(super) fn active_palette(&self) -> Palette {
@@ -103,7 +104,11 @@ impl EditorView {
         div()
             .id("swatch-scroll")
             .track_focus(&self.palette_focus)
-            .focus(move |d| d.bg(t.color(ColorToken::AccentText).opacity(0.22)))
+            .focus(move |d| {
+                d.bg(t
+                    .color(ColorToken::AccentText)
+                    .opacity(state::PALETTE_FOCUS))
+            })
             .track_scroll(&self.swatch_scroll)
             .max_h(px(swatch_height))
             .overflow_y_scroll()
