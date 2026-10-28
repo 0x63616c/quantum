@@ -58,6 +58,52 @@ pub fn navigation_key(stroke: &Keystroke) -> Option<&str> {
     .then_some(stroke.key.as_str())
 }
 
+/// Keys routed by the editor after its existing modifier policy is applied.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum EditorKey {
+    Left,
+    Right,
+    Up,
+    Down,
+    PageUp,
+    PageDown,
+    Escape,
+    Tab,
+    Enter,
+    Space,
+    PreviousSwatch,
+    NextSwatch,
+    Other,
+}
+
+impl EditorKey {
+    /// Decode a raw key without filtering modifiers (the focused palette uses this).
+    pub(crate) fn from_key(key: &str) -> Self {
+        const KEYS: &[(&str, EditorKey)] = &[
+            ("left", EditorKey::Left),
+            ("right", EditorKey::Right),
+            ("up", EditorKey::Up),
+            ("down", EditorKey::Down),
+            ("pageup", EditorKey::PageUp),
+            ("pagedown", EditorKey::PageDown),
+            ("escape", EditorKey::Escape),
+            ("tab", EditorKey::Tab),
+            ("enter", EditorKey::Enter),
+            ("space", EditorKey::Space),
+            ("[", EditorKey::PreviousSwatch),
+            ("]", EditorKey::NextSwatch),
+        ];
+        KEYS.iter()
+            .find_map(|(name, key_kind)| (*name == key).then_some(*key_kind))
+            .unwrap_or(Self::Other)
+    }
+
+    /// Apply the same bare-key / Shift+Tab policy as the other shell adapters.
+    pub(crate) fn navigation(stroke: &Keystroke) -> Self {
+        Self::from_key(navigation_key(stroke).unwrap_or_default())
+    }
+}
+
 /// A semantic shortcut token. Symbols have both a vector asset and a text
 /// equivalent, so rendering never needs to reverse-parse a formatted label.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -391,6 +437,50 @@ mod tests {
                 "{binding}"
             );
         }
+    }
+
+    #[test]
+    fn editor_keys_preserve_raw_palette_and_modified_navigation_routing() {
+        for (key, expected) in [
+            ("left", EditorKey::Left),
+            ("right", EditorKey::Right),
+            ("up", EditorKey::Up),
+            ("down", EditorKey::Down),
+            ("pageup", EditorKey::PageUp),
+            ("pagedown", EditorKey::PageDown),
+            ("escape", EditorKey::Escape),
+            ("tab", EditorKey::Tab),
+            ("enter", EditorKey::Enter),
+            ("space", EditorKey::Space),
+            ("[", EditorKey::PreviousSwatch),
+            ("]", EditorKey::NextSwatch),
+            ("backspace", EditorKey::Other),
+            ("a", EditorKey::Other),
+        ] {
+            let stroke = Keystroke::parse(key).unwrap();
+            assert_eq!(EditorKey::navigation(&stroke), expected, "{key}");
+            for modifier in ["cmd", "ctrl", "alt", "shift", "fn"] {
+                let stroke = Keystroke::parse(&format!("{modifier}-{key}")).unwrap();
+                assert_eq!(
+                    EditorKey::from_key(&stroke.key),
+                    expected,
+                    "{modifier}-{key}"
+                );
+                let navigation =
+                    if stroke.modifiers == Modifiers::shift() && expected == EditorKey::Tab {
+                        EditorKey::Tab
+                    } else {
+                        EditorKey::Other
+                    };
+                assert_eq!(
+                    EditorKey::navigation(&stroke),
+                    navigation,
+                    "{modifier}-{key}"
+                );
+            }
+        }
+        assert_eq!(EditorKey::from_key(""), EditorKey::Other);
+        assert_eq!(EditorKey::from_key("unknown-key"), EditorKey::Other);
     }
 
     #[test]
