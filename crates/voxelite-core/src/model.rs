@@ -221,10 +221,10 @@ pub struct Snapshot {
     /// Stable document colors.
     pub palette: Palette,
     /// Layers in bottom-to-top order.
-    pub layers: Vec<Layer>,
+    pub layers: crate::Layers,
     /// Threads in stable UUID order.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub comments: Vec<Comment>,
+    #[serde(default, skip_serializing_if = "crate::Comments::is_empty")]
+    pub comments: crate::Comments,
     /// Preserved optional snapshot fields.
     #[serde(flatten)]
     pub extra: Extra,
@@ -233,14 +233,12 @@ impl Snapshot {
     /// Find a layer by stable ID.
     pub fn layer(&self, id: Uuid) -> Result<&Layer> {
         self.layers
-            .iter()
-            .find(|l| l.id == id)
+            .by_uuid(id)
             .ok_or_else(|| Error::NotFound(id.to_string()))
     }
     pub(crate) fn layer_mut(&mut self, id: Uuid) -> Result<&mut Layer> {
         self.layers
-            .iter_mut()
-            .find(|l| l.id == id)
+            .by_uuid_mut(id)
             .ok_or_else(|| Error::NotFound(id.to_string()))
     }
     /// Validate every model invariant, including hidden layers and orphan anchors.
@@ -275,7 +273,7 @@ impl Snapshot {
                 }
                 Ok(())
             };
-            if let Some(old) = previous.and_then(|p| p.layers.iter().find(|old| old.id == l.id)) {
+            if let Some(old) = previous.and_then(|p| p.layers.by_uuid(l.id)) {
                 let changed = l.voxels.changed_chunks(&old.voxels);
                 // Retain the full scan's iteration order, including which invalid
                 // voxel is reported first when multiple edited chunks are invalid.
@@ -446,8 +444,8 @@ impl Document {
                 name: "Untitled".into(),
                 bounds: Region::default(),
                 palette: Palette::default(),
-                layers: vec![Layer::new(layer_id, "Base")],
-                comments: vec![],
+                layers: vec![Layer::new(layer_id, "Base")].into(),
+                comments: Default::default(),
                 extra: Extra::new(),
             },
             versions: BTreeMap::new(),

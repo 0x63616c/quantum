@@ -1,5 +1,5 @@
 use super::*;
-use voxelite_plugin_host::{Host, conformance};
+use voxelite_plugin_host::Host;
 
 fn host() -> Host {
     Host::new(vec![Box::new(GizmoGridPlugin)])
@@ -24,9 +24,12 @@ fn dispatch(host: &mut Host, input: OverlayInput) -> OverlayOutcome {
         .unwrap()
 }
 
+voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+    GizmoGridPlugin
+));
+
 #[test]
-fn conforms_and_binds_both_passes_only_when_enabled() {
-    conformance::check(|| Box::new(GizmoGridPlugin));
+fn declares_plugin_specific_capabilities() {
     let mut host = host();
     for id in [GRID_OVERLAY, GIZMO_OVERLAY] {
         assert!(host.has_overlay(id).unwrap());

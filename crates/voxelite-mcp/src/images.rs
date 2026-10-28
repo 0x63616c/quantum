@@ -1,6 +1,8 @@
 //! Sequential CPU renders and bounded, labeled multi-angle PNG contact sheets.
 use crate::{
-    error::{Args, Failure, Result},
+    arguments::{arguments, schema},
+    catalog::*,
+    error::{Failure, Result},
     files,
 };
 use serde_json::{Value, json};
@@ -10,6 +12,43 @@ use voxelite_render::{
     AmbientOcclusionStrength, Camera, PresetView, Projection, RenderOptions, View,
 };
 
+arguments!(CameraInput {
+    req eye: [f64;3] => array(camera_number(),3,3),
+    req target: [f64;3] => array(camera_number(),3,3),
+    req up: [f64;3] => array(camera_number(),3,3),
+    req projection: String => choice(&["orthographic","perspective"]),
+    opt ortho_height: f64 => json!({"type":"number","exclusiveMinimum":0,"maximum":1e9}),
+    opt fov_y_degrees: f64 => json!({"type":"number","exclusiveMinimum":1,"exclusiveMaximum":179}),
+} where camera_constraints);
+fn camera_number() -> Value {
+    json!({"type":"number","minimum":-1e9,"maximum":1e9})
+}
+fn camera_constraints(s: &mut Value) {
+    s["oneOf"] = json!([
+        {"properties":{"projection":{"const":"orthographic"}},"required":["ortho_height"],"not":{"required":["fov_y_degrees"]}},
+        {"properties":{"projection":{"const":"perspective"}},"required":["fov_y_degrees"],"not":{"required":["ortho_height"]}}
+    ]);
+}
+arguments!(RenderInput {
+    opt views: Vec<String> => array(choice(&["iso","front","back","left","right","top"]),1,6),
+    opt camera: CameraInput => schema::<CameraInput>(),
+    opt width: u32 => integer(1,1024),
+    opt height: u32 => integer(1,1024),
+    opt perspective: bool => boolean(),
+    opt background: [u8;4] => array(integer(0,255),4,4),
+    opt ambient_occlusion_strength: AmbientOcclusionStrength => json!({"type":"number","minimum":0,"maximum":2,"default":1,"description":"Local voxel contact shading: 0 disables AO, 1 preserves the default look, 2 doubles darkening. Independent of viewport preferences."}),
+    opt image_mode: String => choice(&["contact_sheet","individual","both"]),
+});
+pub(crate) fn render_constraints(s: &mut Value) {
+    s["not"] = json!({"required":["camera"],"anyOf":[{"required":["views"]},{"required":["perspective"]}]});
+}
+pub(crate) fn png_constraints(s: &mut Value) {
+    render_constraints(s);
+    s["properties"]["image_mode"] = choice(&["contact_sheet", "individual"]);
+    s["if"] = json!({"properties":{"image_mode":{"const":"individual"}},"required":["image_mode"]});
+    s["then"] = json!({"anyOf":[{"required":["camera"]},{"required":["views"],"properties":{"views":{"maxItems":1}}}]});
+}
+
 pub(crate) struct Images {
     pub pngs: Vec<Vec<u8>>,
     pub metadata: Value,
@@ -17,7 +56,7 @@ pub(crate) struct Images {
 
 pub(crate) fn render(
     s: &Snapshot,
-    a: &Args<'_>,
+    a: &RenderInput,
     passes: &voxelite_render::RenderPlan,
 ) -> Result<Images> {
     render_with_encoder(s, a, passes, |width, height, rgba| {
@@ -55,7 +94,7 @@ fn png_rgba(width: u32, height: u32, rgba: &[u8]) -> ExportResult<Vec<u8>> {
 
 pub(crate) fn export(
     s: &Snapshot,
-    a: &Args<'_>,
+    a: &RenderInput,
     host: &mut voxelite_plugin_host::Host,
 ) -> Result<Images> {
     let format = crate::exports::format(host, "png")?;
@@ -95,37 +134,37 @@ impl voxelite_plugin_api::ExportCx for Pixels<'_> {
 
 fn render_with_encoder(
     s: &Snapshot,
-    a: &Args<'_>,
+    a: &RenderInput,
     passes: &voxelite_render::RenderPlan,
     mut encode: impl FnMut(u32, u32, &[u8]) -> Result<Vec<u8>>,
 ) -> Result<Images> {
-    let width: u32 = a.default("width", 512)?;
-    let height: u32 = a.default("height", 512)?;
-    let mode: String = a.default("image_mode", "contact_sheet".into())?;
-    let perspective = a.default("perspective", false)?;
-    let background = a.default("background", [0u8; 4])?;
-    let ambient_occlusion_strength: AmbientOcclusionStrength = a.default(
-        "ambient_occlusion_strength",
-        AmbientOcclusionStrength::default(),
-    )?;
-    let mut names: Vec<String> = a.default(
-        "views",
-        vec!["iso".into(), "front".into(), "right".into(), "back".into()],
-    )?;
-    let explicit = if let Some(c) = a.0.get("camera") {
-        if a.0.get("views").is_some() || a.0.get("perspective").is_some() {
+    let width: u32 = a.width.default(512)?;
+    let height: u32 = a.height.default(512)?;
+    let mode: String = a.image_mode.default("contact_sheet".into())?;
+    let perspective = a.perspective.default(false)?;
+    let background = a.background.default([0u8; 4])?;
+    let ambient_occlusion_strength: AmbientOcclusionStrength = a
+        .ambient_occlusion_strength
+        .default(AmbientOcclusionStrength::default())?;
+    let mut names: Vec<String> = a.views.default(vec![
+        "iso".into(),
+        "front".into(),
+        "right".into(),
+        "back".into(),
+    ])?;
+    let explicit = if let Some(c) = a.camera.optional()? {
+        if a.views.is_present() || a.perspective.is_present() {
             return Err(Failure::invalid(
                 "camera is mutually exclusive with views and perspective",
             ));
         }
-        let c = Args(c);
-        let projection: String = c.get("projection")?;
+        let projection: String = c.projection.get()?;
         let projection = match projection.as_str() {
-            "orthographic" if c.0.get("fov_y_degrees").is_none() => Projection::Orthographic {
-                height: c.get("ortho_height")?,
+            "orthographic" if !c.fov_y_degrees.is_present() => Projection::Orthographic {
+                height: c.ortho_height.get()?,
             },
-            "perspective" if c.0.get("ortho_height").is_none() => Projection::Perspective {
-                fov_y_degrees: c.get("fov_y_degrees")?,
+            "perspective" if !c.ortho_height.is_present() => Projection::Perspective {
+                fov_y_degrees: c.fov_y_degrees.get()?,
             },
             _ => {
                 return Err(Failure::invalid(
@@ -134,9 +173,9 @@ fn render_with_encoder(
             }
         };
         let camera = Camera {
-            eye: c.get("eye")?,
-            target: c.get("target")?,
-            up: c.get("up")?,
+            eye: c.eye.get()?,
+            target: c.target.get()?,
+            up: c.up.get()?,
             projection,
         };
         camera.validate()?;
@@ -343,19 +382,21 @@ mod tests {
         .unwrap();
         let args = json!({"width":80,"height":64,"views":["iso"]});
         let mut host = mcp_host();
-        let enabled = render(&snapshot, &Args(&args), &host.render_plan()).unwrap();
+        let enabled = render(&snapshot, &RenderInput::from(&args), &host.render_plan()).unwrap();
         host.disable(voxelite_plugin_shadows_lighting::PLUGIN_ID)
             .unwrap();
-        let disabled = render(&snapshot, &Args(&args), &host.render_plan()).unwrap();
+        let disabled = render(&snapshot, &RenderInput::from(&args), &host.render_plan()).unwrap();
         assert_ne!(disabled.pngs, enabled.pngs);
         assert_eq!(
-            export(&snapshot, &Args(&args), &mut host).unwrap().pngs,
+            export(&snapshot, &RenderInput::from(&args), &mut host)
+                .unwrap()
+                .pngs,
             disabled.pngs
         );
         host.enable(voxelite_plugin_shadows_lighting::PLUGIN_ID)
             .unwrap();
         assert_eq!(
-            render(&snapshot, &Args(&args), &host.render_plan())
+            render(&snapshot, &RenderInput::from(&args), &host.render_plan())
                 .unwrap()
                 .pngs,
             enabled.pngs
@@ -369,9 +410,14 @@ mod tests {
         ))
         .unwrap();
         let args = json!({"width":80,"height":64,"views":["iso","front"]});
-        let images = render(&snapshot, &Args(&args), &mcp_host().render_plan()).unwrap();
+        let images = render(
+            &snapshot,
+            &RenderInput::from(&args),
+            &mcp_host().render_plan(),
+        )
+        .unwrap();
         assert_eq!(images.pngs[0], include_bytes!("../tests/contact-sheet.png"));
-        let exported = export(&snapshot, &Args(&args), &mut mcp_host()).unwrap();
+        let exported = export(&snapshot, &RenderInput::from(&args), &mut mcp_host()).unwrap();
         assert_eq!(exported.pngs, images.pngs);
         assert_eq!(exported.metadata, images.metadata);
     }
@@ -384,26 +430,28 @@ mod tests {
         .unwrap();
         let mut args = json!({"width":80,"height":64,"views":["iso"],"image_mode":"individual"});
         let plan = mcp_host().render_plan();
-        let original = render(&snapshot, &Args(&args), &plan).unwrap();
+        let original = render(&snapshot, &RenderInput::from(&args), &plan).unwrap();
         args["ambient_occlusion_strength"] = json!(1);
         assert_eq!(
             original.pngs,
-            render(&snapshot, &Args(&args), &plan).unwrap().pngs
+            render(&snapshot, &RenderInput::from(&args), &plan)
+                .unwrap()
+                .pngs
         );
         for strength in [0.0, 0.5, 2.0] {
             args["ambient_occlusion_strength"] = json!(strength);
-            let rendered = render(&snapshot, &Args(&args), &plan).unwrap();
+            let rendered = render(&snapshot, &RenderInput::from(&args), &plan).unwrap();
             assert_ne!(original.pngs, rendered.pngs);
             assert_eq!(
                 rendered.pngs,
-                export(&snapshot, &Args(&args), &mut mcp_host())
+                export(&snapshot, &RenderInput::from(&args), &mut mcp_host())
                     .unwrap()
                     .pngs
             );
         }
         for value in [json!(-0.1), json!(2.1), json!(null), json!("1")] {
             args["ambient_occlusion_strength"] = value;
-            assert!(render(&snapshot, &Args(&args), &plan).is_err());
+            assert!(render(&snapshot, &RenderInput::from(&args), &plan).is_err());
         }
     }
 }

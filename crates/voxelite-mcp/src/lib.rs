@@ -3,6 +3,7 @@
 //! The server owns a bounded local editing session. Content edits go through the
 //! shared core engine with agent attribution. No display, GPU, or
 //! application runtime is needed. See `docs/mcp.md` for the wire contract.
+mod arguments;
 /// Local socket attachment to a running native editor.
 #[cfg(unix)]
 pub mod attached;
@@ -15,6 +16,7 @@ mod files;
 mod images;
 mod palettes;
 mod session;
+mod tools;
 mod transport;
 
 use rmcp::{ErrorData, RoleServer, ServerHandler, model::*, service::RequestContext};

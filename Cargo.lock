@@ -2808,6 +2808,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "insta"
+version = "1.49.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b67d3d2e287e4b86c10b3f3b641033d1f89b74bdb39d05f34952e2b9a6fe21cd"
+dependencies = [
+ "once_cell",
+ "serde",
+ "similar",
+ "tempfile",
+]
+
+[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5117,6 +5129,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
+name = "similar"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
+
+[[package]]
 name = "simplecss"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6007,6 +6025,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "slotmap",
  "thiserror 2.0.21",
  "uuid",
 ]
@@ -6029,10 +6048,12 @@ name = "voxelite-mcp"
 version = "0.3.1"
 dependencies = [
  "base64",
+ "insta",
  "jsonschema",
  "png 0.18.1",
  "rmcp",
  "rustix",
+ "schemars",
  "serde",
  "serde_json",
  "tempfile",
@@ -6168,6 +6189,7 @@ name = "voxelite-plugins-builtin"
 version = "0.3.1"
 dependencies = [
  "voxelite-plugin-agent",
+ "voxelite-plugin-api",
  "voxelite-plugin-comments",
  "voxelite-plugin-exporters",
  "voxelite-plugin-gizmo-grid",

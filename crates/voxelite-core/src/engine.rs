@@ -1,6 +1,9 @@
 use crate::*;
+use slotmap::{SlotMap, new_key_type};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
+
+new_key_type! { struct HistoryId; }
 
 #[cfg(test)]
 mod compare_tests;
@@ -95,6 +98,7 @@ pub struct HistoryEntry {
     before: Arc<Document>,
     after: Arc<Document>,
     bytes: usize,
+    applied: bool,
 }
 /// Budget limits independent of the hosting UI or transport.
 #[derive(Clone, Copy, Debug)]
@@ -130,8 +134,10 @@ pub struct Checkpoint {
 pub struct Engine {
     document: Arc<Document>,
     revision: u64,
-    undo: VecDeque<HistoryEntry>,
-    redo: Vec<HistoryEntry>,
+    undo: VecDeque<HistoryId>,
+    redo: Vec<HistoryId>,
+    entries: SlotMap<HistoryId, HistoryEntry>,
+    entry_ids: std::collections::HashMap<Uuid, HistoryId>,
     limits: Limits,
     history_bytes: usize,
     initial_retained: bool,
@@ -156,6 +162,8 @@ impl Engine {
             revision: 0,
             undo: VecDeque::new(),
             redo: vec![],
+            entries: SlotMap::with_key(),
+            entry_ids: Default::default(),
             limits,
             history_bytes: 0,
             initial_retained: true,
@@ -176,19 +184,22 @@ impl Engine {
     }
     /// Current top history ID, or None when the retained undo stack is empty.
     pub fn head(&self) -> Option<Uuid> {
-        self.undo.back().map(|e| e.id)
+        self.undo.back().map(|key| self.entries[*key].id)
     }
     /// Next redo entry ID.
     pub fn redo_head(&self) -> Option<Uuid> {
-        self.redo.last().map(|e| e.id)
+        self.redo.last().map(|key| self.entries[*key].id)
     }
     /// Applied entries in chronological order.
     pub fn history(&self) -> impl DoubleEndedIterator<Item = &HistoryEntry> {
-        self.undo.iter()
+        self.undo.iter().map(|key| &self.entries[*key])
     }
     /// All retained steps in chronological order, including undone steps.
     pub fn timeline(&self) -> impl DoubleEndedIterator<Item = &HistoryEntry> {
-        self.undo.iter().chain(self.redo.iter().rev())
+        self.undo
+            .iter()
+            .chain(self.redo.iter().rev())
+            .map(|key| &self.entries[*key])
     }
     /// Restore a retained preview as one new edit without moving the undo cursor backward.
     /// The caller must still be at the revision and head captured when previewing.
@@ -247,7 +258,7 @@ impl Engine {
         self.guard(tx.expected_revision)?;
         validate_name(&tx.label)?;
         validate_name(&tx.actor.tool)?;
-        if self.undo.iter().chain(&self.redo).any(|e| e.id == tx.id) {
+        if self.entry_ids.contains_key(&tx.id) {
             return Err(Error::Conflict("history entry ID already exists".into()));
         }
         let mut staged = (*self.document).clone();
@@ -330,10 +341,13 @@ impl Engine {
             .revision
             .checked_add(1)
             .ok_or_else(|| Error::Limit("revision overflow".into()))?;
-        self.history_bytes -= self.redo.iter().map(|e| e.bytes).sum::<usize>();
-        self.redo.clear();
+        for key in self.redo.drain(..) {
+            let entry = self.entries.remove(key).expect("retained redo key");
+            self.entry_ids.remove(&entry.id);
+            self.history_bytes -= entry.bytes;
+        }
         let after = Arc::new(staged);
-        self.undo.push_back(HistoryEntry {
+        let key = self.entries.insert(HistoryEntry {
             id,
             actor,
             label,
@@ -343,16 +357,21 @@ impl Engine {
             before: self.document.clone(),
             after: after.clone(),
             bytes,
+            applied: true,
         });
+        self.entry_ids.insert(id, key);
+        self.undo.push_back(key);
         self.history_bytes += bytes;
         self.document = after;
         self.revision = next;
         while self.history_bytes > self.limits.history_bytes {
-            let old = self.undo.pop_front().expect("entry admission checked");
+            let key = self.undo.pop_front().expect("entry admission checked");
+            let old = self.entries.remove(key).expect("retained undo key");
+            self.entry_ids.remove(&old.id);
             self.history_bytes -= old.bytes;
             self.initial_retained = false;
         }
-        let retained: BTreeSet<_> = self.undo.iter().map(|e| e.id).collect();
+        let retained: BTreeSet<_> = self.undo.iter().map(|key| self.entries[*key].id).collect();
         self.checkpoints.retain(|_, c| {
             c.head
                 .map_or(self.initial_retained, |id| retained.contains(&id))
@@ -369,11 +388,13 @@ impl Engine {
             .revision
             .checked_add(1)
             .ok_or_else(|| Error::Limit("revision overflow".into()))?;
-        let e = self.undo.pop_back().expect("head checked");
+        let key = self.undo.pop_back().expect("head checked");
+        let e = &mut self.entries[key];
+        e.applied = false;
         let mut changes = compare(&self.document.content, &e.before.content);
         changes.metadata_changed |= self.document.extensions != e.before.extensions;
         self.document = e.before.clone();
-        self.redo.push(e);
+        self.redo.push(key);
         self.revision = next;
         Ok(Receipt {
             revision: next,
@@ -392,11 +413,13 @@ impl Engine {
             .revision
             .checked_add(1)
             .ok_or_else(|| Error::Limit("revision overflow".into()))?;
-        let e = self.redo.pop().expect("head checked");
+        let key = self.redo.pop().expect("head checked");
+        let e = &mut self.entries[key];
+        e.applied = true;
         let mut changes = compare(&self.document.content, &e.after.content);
         changes.metadata_changed |= self.document.extensions != e.after.extensions;
         self.document = e.after.clone();
-        self.undo.push_back(e);
+        self.undo.push_back(key);
         self.revision = next;
         Ok(Receipt {
             revision: next,
@@ -409,21 +432,19 @@ impl Engine {
     pub fn preview(&self, entry: Option<Uuid>) -> Result<Arc<Document>> {
         if let Some(id) = entry {
             return self
-                .undo
-                .iter()
-                .chain(&self.redo)
-                .find(|e| e.id == id)
+                .entry_ids
+                .get(&id)
+                .and_then(|key| self.entries.get(*key))
                 .map(|e| e.after.clone())
                 .ok_or_else(|| Error::NotFound("history expired".into()));
         }
         if !self.initial_retained {
             return Err(Error::NotFound("initial history expired".into()));
         }
-        Ok(self
-            .undo
-            .front()
-            .or_else(|| self.redo.last())
-            .map_or_else(|| self.document.clone(), |e| e.before.clone()))
+        Ok(self.undo.front().or_else(|| self.redo.last()).map_or_else(
+            || self.document.clone(),
+            |key| self.entries[*key].before.clone(),
+        ))
     }
     /// Bookmark the current retained cursor; this does not change content/revision.
     pub fn checkpoint(&mut self, id: Uuid, name: String) -> Result<()> {
@@ -494,7 +515,7 @@ impl Engine {
         actor: Actor,
         label: String,
     ) -> Result<Receipt> {
-        if self.undo.iter().chain(&self.redo).any(|e| e.id == id) {
+        if self.entry_ids.contains_key(&id) {
             return Err(Error::Conflict("history entry ID exists".into()));
         }
         crate::command::validate_restore(&self.document.content, &staged.content)?;
@@ -532,9 +553,10 @@ impl Engine {
     ) -> Result<Receipt> {
         self.guard(revision)?;
         let e = self
-            .undo
-            .iter()
-            .find(|e| e.id == entry)
+            .entry_ids
+            .get(&entry)
+            .and_then(|key| self.entries.get(*key))
+            .filter(|entry| entry.applied)
             .ok_or_else(|| Error::NotFound("retained applied entry".into()))?;
         let mut staged = (*self.document).clone();
         revert_document(&mut staged, &e.before, &e.after)?;
@@ -635,8 +657,8 @@ pub fn compare(a: &Snapshot, b: &Snapshot) -> Changes {
     };
     let ids: BTreeSet<_> = a.layers.iter().chain(&b.layers).map(|l| l.id).collect();
     for id in ids {
-        let before = a.layers.iter().find(|l| l.id == id);
-        let after = b.layers.iter().find(|l| l.id == id);
+        let before = a.layers.by_uuid(id);
+        let after = b.layers.by_uuid(id);
         if before == after {
             continue;
         }
@@ -731,6 +753,61 @@ fn revert_document(current: &mut Document, before: &Document, after: &Document) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn rename(engine: &mut Engine, id: Uuid, name: &str) -> Result<Receipt> {
+        engine.execute(Transaction {
+            expected_revision: engine.revision(),
+            id,
+            actor: Actor::new(Origin::Human),
+            label: "Rename".into(),
+            command: Command::EditDocument {
+                name: Some(name.into()),
+                bounds: None,
+            },
+        })
+    }
+
+    #[test]
+    fn discarded_redo_keys_cannot_resolve_reused_slots() {
+        let mut engine = Engine::new(Document::default()).unwrap();
+        let first = Uuid::from_u128(1);
+        let second = Uuid::from_u128(2);
+        rename(&mut engine, first, "First").unwrap();
+        let stale = engine.entry_ids[&first];
+        engine.undo(engine.revision(), first).unwrap();
+        assert_eq!(engine.preview(Some(first)).unwrap().content.name, "First");
+        assert!(rename(&mut engine, first, "Duplicate").is_err());
+        assert!(
+            engine
+                .revert(engine.revision(), first, second, Actor::new(Origin::Human))
+                .is_err()
+        );
+        rename(&mut engine, second, "Second").unwrap();
+        assert!(engine.entries.get(stale).is_none());
+        assert!(engine.preview(Some(first)).is_err());
+        assert_eq!(engine.preview(Some(second)).unwrap().content.name, "Second");
+        assert_eq!(
+            engine.timeline().map(|e| e.id).collect::<Vec<_>>(),
+            vec![second]
+        );
+        // A discarded portable UUID is reusable, but receives a fresh generation.
+        rename(&mut engine, first, "Third").unwrap();
+        assert_ne!(engine.entry_ids[&first], stale);
+    }
+
+    #[test]
+    fn eviction_removes_uuid_mapping_and_invalidates_key() {
+        let mut engine = Engine::new(Document::default()).unwrap();
+        let first = Uuid::from_u128(1);
+        rename(&mut engine, first, "First").unwrap();
+        let stale = engine.entry_ids[&first];
+        engine.limits.history_bytes = engine.history_bytes();
+        rename(&mut engine, Uuid::from_u128(2), "Other").unwrap();
+        assert!(engine.entries.get(stale).is_none());
+        assert!(!engine.entry_ids.contains_key(&first));
+        assert!(engine.preview(Some(first)).is_err());
+        assert_eq!(engine.entries.len(), engine.timeline().count());
+    }
+
     #[test]
     fn revision_overflow_rejects_without_mutation() {
         let mut e = Engine::new(Document::default()).unwrap();
