@@ -3,8 +3,10 @@
 ## Revisions and method
 
 Issue #95 replaces per-sync scoped threads with a reusable private Rayon pool.
-Measured on 2026-10-28: main `7d4e750` versus candidate `67c88d5` (the main
-merge; subsequent changes only document these measurements). Main received the
+The original 2026-10-28 measurements below identify main `7d4e750` and
+candidate `67c88d5` by their historical, pre-#90-rewrite IDs. Those IDs are
+measurement labels only; no old commit was merged or pushed. The takeover
+uses the fresh rewritten history and confirms newly built binaries below. Main received the
 identical `chunks.rs` fixture, its Divan dev-dependency/bench declaration, and
 explicit test-module paths required when including the private production source.
 Its production meshing algorithm was unchanged.
@@ -157,3 +159,51 @@ passed all 15 gates, including all 904 workspace tests and doctests;
 headless UI snapshots and generated before/after screenshots passed on `67c88d5`.
 Welcome and both editor themes are byte-identical in before/after PNG captures.
 Native AppKit/Metal verification comes from CI, not these Linux CPU benchmarks.
+
+## Post-rewrite, current-main confirmation
+
+After merging rewritten `origin/main` `1d72fdc` into candidate `a1449c0`,
+rebuilt both revisions with the same fixture and settings above. Neither
+production meshing implementation changed in this merge. Main was prepared in
+a detached worktree from the fresh history; no pre-rewrite commit is reachable
+from the candidate. Immutable executable SHA-256 values:
+
+- Main: `f8ab17fef8087b8c2414786d5fe3815d036418f698578e16ab2fd282e42ee8b8`
+- Candidate: `10698045af519e3f6cf82cef57a1d692a6ac2bb8b67c23eb33fb37c22f87c65a`
+
+An initial two-pair diagnostic started at load 1.3–1.8, but other builds started
+during timing and large-case medians became unstable. The following complete
+ten-pair series alternates order, with 100 samples per fixture per run. No
+builds/tests from this task overlap timing. Other build activity is recorded;
+one-minute load spans 7.50–18.45. These are confirmation diagnostics under
+contention, not a replacement for the longer acceptance series above.
+Milliseconds: median (minimum–maximum) of ten run medians.
+
+| Fixture | Chunks | Main ms | Rayon ms | Change |
+| --- | ---: | ---: | ---: | ---: |
+| Solid | 1 | 0.897 (0.863–1.451; n=10) | 0.894 (0.865–1.409; n=10) | -0.3% |
+| Solid | 128 | 16.985 (11.560–31.120; n=10) | 16.440 (11.620–44.010; n=10) | -3.2% |
+| Solid | 3 | 2.356 (2.249–7.231; n=10) | 2.356 (2.245–6.285; n=10) | -0.0% |
+| Solid | 32 | 6.730 (3.556–13.150; n=10) | 5.934 (3.431–19.990; n=10) | -11.8% |
+| Solid | 4 | 1.845 (0.877–4.161; n=10) | 1.450 (0.840–6.252; n=10) | -21.5% |
+| Solid | 8 | 2.521 (1.625–5.672; n=10) | 2.526 (1.572–9.059; n=10) | +0.2% |
+| Sparse | 1 | 0.512 (0.486–0.603; n=10) | 0.518 (0.499–0.542; n=10) | +1.0% |
+| Sparse | 128 | 20.120 (14.130–44.060; n=10) | 19.055 (14.600–53.230; n=10) | -5.3% |
+| Sparse | 3 | 1.648 (1.595–1.727; n=10) | 1.681 (1.596–2.501; n=10) | +2.0% |
+| Sparse | 32 | 6.534 (4.414–12.760; n=10) | 4.999 (3.412–19.750; n=10) | -23.5% |
+| Sparse | 4 | 0.908 (0.647–4.040; n=10) | 1.180 (0.606–2.541; n=10) | +30.0% |
+| Sparse | 8 | 1.571 (1.314–5.111; n=10) | 1.458 (1.255–6.873; n=10) | -7.2% |
+
+Sparse 4's ratio of aggregate medians is +30.0%, but its median paired
+per-round change is +1.7%, with a paired bootstrap 95% interval of −19.5 to
++13.4% (10,000 resamples, seed 95). Timing spikes move between revisions; this
+series does not resolve a regression or a speedup for that fixture. The earlier
+twenty-pair interval and lower-load confirmation both favor Rayon. The unchanged
+serial cases remain within 2%; no threshold change is justified by this noisy
+confirmation. All slower medians are retained above.
+
+Fresh Linux validation after the merge: `cargo xtask validate --strict` passes
+16 gates (zero failures/skips), including 911 workspace tests and doctests;
+`cargo xtask lint` passes all three gates. The new spelling gate required
+excluding compressed `.git` metadata; authored source remains checked. A stale
+shared-target xtask library was rebuilt from this checkout before verification.

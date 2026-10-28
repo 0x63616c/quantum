@@ -1,6 +1,7 @@
 [files]
 # Third-party sources and license texts must retain upstream bytes.
-extend-exclude = ["vendor/**", "crates/quantum-app/assets/licenses/**"]
+# Git object bytes are compressed metadata, not authored source.
+extend-exclude = [".git/**", "vendor/**", "crates/quantum-app/assets/licenses/**"]
 
 [default.extend-words]
 # Native project extension.
