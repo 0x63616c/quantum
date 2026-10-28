@@ -19,6 +19,36 @@ fn golden_and_idempotence() {
     assert_eq!(from_bytes(GOLDEN).unwrap().document, p.document);
 }
 #[test]
+fn slice_and_reader_preserve_identical_projects() {
+    for bytes in [INPUT, GOLDEN] {
+        let slice = from_bytes(bytes).unwrap();
+        let reader = read(bytes).unwrap();
+        assert_eq!(slice.document, reader.document);
+        assert_eq!(slice.metadata(), reader.metadata());
+        assert_eq!(slice.to_bytes().unwrap(), reader.to_bytes().unwrap());
+    }
+}
+#[test]
+fn slice_and_reader_reject_the_same_invalid_inputs() {
+    let mut trailing = GOLDEN.to_vec();
+    trailing.extend_from_slice(b"true");
+    for bytes in [
+        b"{\"format\":\"voxelite\",\"format\":\"voxelite\"}".as_slice(),
+        b"{\"layers\":[{\"voxels\":[[0,0,0,1],[0,0,0,1]]}]}",
+        b"{\"layers\":[{\"voxels\":[[0,0,0,1,2]]}]}",
+        b"{\"x\":\"\\ud800\"}",
+        b"{\"x\":-0}",
+        b"{\"x\":1.0}",
+        b"{\"x\":1e999}",
+        b"\xff",
+        &trailing,
+        &GOLDEN[..GOLDEN.len() / 2],
+    ] {
+        assert!(from_bytes(bytes).is_err());
+        assert!(read(bytes).is_err());
+    }
+}
+#[test]
 fn unknown_fields_every_level_survive_and_minor_is_retained() {
     let mut v = input();
     v["version"]["minor"] = json!(8);
@@ -170,5 +200,7 @@ proptest! {
         e.execute(Transaction{expected_revision:0,id:Uuid::from_u128(3),actor:Actor::new(Origin::Human),label:"Generated".into(),command:Command::SetVoxels{layer:Uuid::from_u128(2),voxels:cells.into_iter().map(|(x,y,z)|Voxel{at:[x,y,z],slot:1}).collect(),mode:Mode::Place,mirror:Mirror::default()}}).unwrap();
         let p=Project::new(e.document().clone()).unwrap();let bytes=p.to_bytes().unwrap();let read=from_bytes(&bytes).unwrap();prop_assert_eq!(&read.document,&p.document);prop_assert_eq!(read.to_bytes().unwrap(),bytes);
     }
-    #[test]fn arbitrary_bytes_never_panic(bytes in prop::collection::vec(any::<u8>(),0..1024)){let _=from_bytes(&bytes);}
+    #[test]fn arbitrary_bytes_never_panic(bytes in prop::collection::vec(any::<u8>(),0..1024)){
+        prop_assert_eq!(from_bytes(&bytes).is_ok(),read(bytes.as_slice()).is_ok());
+    }
 }
