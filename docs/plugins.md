@@ -94,4 +94,4 @@ The harness checks declarations and exercises an enable/disable/enable cycle, in
 
 ## What is not supported yet
 
-There is no third-party plugin loading, dynamic library loading, WASM plugin runtime, scripting API or plugin marketplace. The Rust API is not a stable binary ABI. The browser editor is compiled to WebAssembly, but that does not make it a WASM plugin loader. Built-in plugins are developed and reviewed as part of this repository and linked at build time.
+There is no third-party plugin loading, dynamic library loading, scripting API or plugin marketplace. The Rust API is not a stable binary ABI. Built-in plugins are developed and reviewed as part of this repository and linked at build time.

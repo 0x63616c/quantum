@@ -5,9 +5,6 @@ Install Quantum. Connect your agent. Make your first model.
 - [Download for Mac](https://voxelite.worldwidewebb.co/download/)
 - [Connect MCP](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
 
-Just exploring? [Try the web editor](https://voxelite.worldwidewebb.co/app/) on desktop.\
-Keyboard & mouse required, 1024 × 640 minimum.
-
 ## Build from source
 
 Install Rust with rustup, then run from a repository checkout. The pinned toolchain is Rust 1.99.1.
@@ -37,22 +34,20 @@ cargo build --locked --release -p voxelite-mcp
 cargo test -p voxelite-app --no-default-features
 ```
 
-## Build the web editor and site
+## Build the website
 
 ```sh
 scripts/build-site.sh
 python3 -m http.server 8090 --directory site --bind 127.0.0.1
 ```
 
-Open `http://127.0.0.1:8090`; the editor lives at `/app/`. The script builds the shared GPUI app for wasm, generates these docs from Rust, and copies `web/dist/` to `site/app/`. It installs the wasm target and matching wasm-bindgen CLI if needed. For site-only iteration after a web build, use `scripts/build-site.sh --skip-web`.
-
-Use localhost or HTTPS for browser graphics. WebGPU is preferred and WebGL2 is the fallback. A query of `?backend=webgl` forces WebGL2. Save downloads a `.voxl`; download before reloading to preserve your edits. Browser MCP pairing and project recovery are not implemented.
+Open `http://127.0.0.1:8090`. The script generates the static website, documentation and downloadable agent instructions from repository sources.
 
 ## Make your first edit by hand
 
 The desktop welcome window shows recent projects with previews. Use Tab to focus Recent, then Up/Down and Enter to open a project. Window → Welcome reopens it; File → Open Recent offers the same history. Clear Recent Projects removes the list without deleting your files.
 
-1.  On desktop, choose New Project or Open… in the welcome window, or double-click a recent project. To explore Autumn Workshop, open `examples/autumn-workshop.voxl`; the browser editor opens it automatically. Right-drag to orbit; wheel to zoom; press F to frame.
+1.  On desktop, choose New Project or Open… in the welcome window, or double-click a recent project. To explore Autumn Workshop, open `examples/autumn-workshop.voxl`. Right-drag to orbit; wheel to zoom; press F to frame.
 2.  Select a visible, unlocked layer and a palette swatch. Press B to place on a face, E to erase, or P to paint.
 3.  Use Ctrl/Cmd + Z to undo. Ctrl/Cmd + K opens command search.
 4.  Choose File → Save As for your own `.voxl`. Export GLB or PNG through the File menu or command search.
@@ -73,7 +68,7 @@ The Mac app includes the MCP server. For source builds, build `voxelite-mcp` fir
 
 Use the MCP executable from the install guide, replacing its arguments with `["--connect", "/tmp/voxelite-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.
 
-Watch committed calls in Session, pause new writes, and undo or edit by hand. The attached catalog excludes document create/open/save: the native editor owns file lifecycle. Save through the app. Browser sessions cannot attach yet.
+Watch committed calls in Session, pause new writes, and undo or edit by hand. The attached catalog excludes document create/open/save: the native editor owns file lifecycle. Save through the app.
 
 ## Your first model through MCP
 
