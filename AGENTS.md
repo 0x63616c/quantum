@@ -177,6 +177,12 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
   and correctness evidence in the PR.
 - Use the independent GPU visual/performance harnesses. `xtask` runs in release
   with `--locked`; headless timings exclude NV12/IOSurface/GPUI presentation.
+- Rendering visual jobs run on either Mac mini runner; both were verified
+  bit-exact against the committed goldens with `--determinism` (#165). `bench`
+  and `bench-baseline` always require the `golden` runner. Before a new runner
+  takes visual jobs, give it a neutral label, add it to the `runner_label`
+  dispatch options and pass a `visual` run on it. Never put personal information
+  in runner labels.
 - Use [bench/pinned-machine.toml](bench/pinned-machine.toml)'s Apple M2 Metal owner
   for authoritative [goldens](bench/golden/apple-m2-metal/). Run
   `cargo xtask visual --determinism` at default tight tolerances. Driver tolerances

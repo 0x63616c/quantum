@@ -8,10 +8,12 @@ Quantum's macOS jobs run on self-hosted runners on one Mac mini (Apple M2, 8 cor
 | Runner | Labels | Runs |
 | --- | --- | --- |
 | `homelab-voxelite` | `self-hosted, macOS, ARM64, xcode, golden` | CI macOS, Release macOS, Rendering checks |
-| `homelab-voxelite-2` | `self-hosted, macOS, ARM64, xcode` | CI macOS, Release macOS |
+| `homelab-voxelite-2` | `self-hosted, macOS, ARM64, xcode, runner-2` | CI macOS, Release macOS, Rendering checks (visual) |
 
-- Rendering checks need the `golden` label, so goldens and timing baselines always come
-  from one runner.
+- Rendering visual checks run on either runner. Both are on the same machine, and
+  runner 2 matched the committed goldens bit-exact with `--determinism` (#165).
+  Benchmarks (`bench`, `bench-baseline`) need the `golden` label, so timing baselines
+  always come from one runner. The `runner_label` dispatch input re-checks one runner.
 - Each runner is its own install under `~/actions-runners/<owner>-voxelite[-2]`, with its
   own `_work` checkout and its own launchd service (`actions.runner.<owner>-voxelite.<name>`).
 - Release signing is serialized by the `release-macos` concurrency group, so two runners
@@ -23,7 +25,9 @@ Quantum's macOS jobs run on self-hosted runners on one Mac mini (Apple M2, 8 cor
 
 Add a runner with GitHub's runner package (Settings → Actions → Runners → New runner),
 install it next to the others, use a neutral name (`homelab-voxelite-N`, no personal
-details), give it the labels above without `golden`, and run `./svc.sh install && ./svc.sh start`.
+details), give it the labels above without `golden` plus a neutral `runner-N` label, and run
+`./svc.sh install && ./svc.sh start`. Add the label to the Rendering checks `runner_label`
+options and pass a `visual` dispatch on it before relying on it for visual checks.
 
 ## Build caches
 
