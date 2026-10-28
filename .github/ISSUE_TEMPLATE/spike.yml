@@ -1,0 +1,29 @@
+name: Spike
+description: "Time-boxed investigation that ends in a recommendation."
+title: "spike: "
+labels: ["type:spike"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why"
+      description: "The question to answer and the decision it unblocks."
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: "Plan"
+      description: "What to prototype or measure, and the time box."
+    validations:
+      required: false
+  - type: textarea
+    id: done
+    attributes:
+      label: "Done when"
+      description: "Observable outcomes. Each one is checked against the merged PR before closing."
+      value: |
+        - [ ] 
+        - [ ] Tests or evidence linked in the PR
+    validations:
+      required: true
