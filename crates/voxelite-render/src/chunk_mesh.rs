@@ -2,7 +2,7 @@
 use crate::{RenderError, RenderResult};
 use std::collections::{BTreeMap, BTreeSet};
 use voxelite_core::{Pos, Snapshot};
-use voxelite_mesh::{MAX_QUADS, Quad};
+use voxelite_mesh::{MAX_QUADS, Mesh, Quad};
 
 /// Vertex layout shared by the GPU backends. Color is linear RGB, AO is baked.
 #[repr(C)]
@@ -103,6 +103,14 @@ impl ChunkMeshes {
         // Apply in dirty-set order: even a transient budget overflow must fail
         // exactly where the serial mesher did, before any later chunk removals.
         for (at, mesh) in dirty.into_iter().zip(meshes) {
+            let mesh = match mesh {
+                Ok(mesh) => mesh,
+                Err(error) => {
+                    self.source = None;
+                    self.meshes.clear();
+                    return Err(error);
+                }
+            };
             quads = quads - self.meshes.get(&at).map_or(0, |m| m.vertices.len() / 6)
                 + mesh.vertices.len() / 6;
             if quads > MAX_QUADS {
@@ -184,7 +192,11 @@ impl LocalCells {
     clippy::expect_used,
     reason = "internal invariant: one worker per chunk"
 )]
-fn mesh_dirty(dirty: &[Pos], snapshot: &Snapshot, palette: &[Option<[f32; 3]>]) -> Vec<ChunkMesh> {
+fn mesh_dirty(
+    dirty: &[Pos],
+    snapshot: &Snapshot,
+    palette: &[Option<[f32; 3]>],
+) -> Vec<RenderResult<ChunkMesh>> {
     let mesh = |at| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
     // Small edits avoid thread startup.
     if dirty.len() >= 4 {
@@ -258,116 +270,122 @@ fn ambient(
     }
     occupied
 }
+fn face_mask(
+    at: Pos,
+    cells: &LocalCells,
+    axis: usize,
+    slice: i32,
+    positive: bool,
+) -> ([Face; 256], usize) {
+    let u = (axis + 1) % 3;
+    let v = (axis + 2) % 3;
+    let mut exposed_faces = 0;
+    let mut mask = [Face::default(); 256];
+    for y in 0..16 {
+        for x in 0..16 {
+            let mut p = at.map(|a| a * 16);
+            p[axis] += slice;
+            p[u] += x;
+            p[v] += y;
+            let slot = cells.get(p);
+            if slot == 0 {
+                continue;
+            }
+            let mut neighbor = p;
+            neighbor[axis] += if positive { 1 } else { -1 };
+            if cells.get(neighbor) != 0 {
+                continue;
+            }
+            let mut origin = p;
+            origin[axis] += i32::from(positive);
+            let quad = Quad {
+                origin,
+                size: [1, 1],
+                slot,
+                axis: axis as u8,
+                positive,
+            };
+            let center =
+                std::array::from_fn(|a| origin[a] as f32 + if a == axis { 0. } else { 0.5 });
+            mask[(y * 16 + x) as usize] = Face {
+                slot,
+                ao: quad
+                    .vertices()
+                    .map(|p| ambient(p, center, quad.normal(), axis, cells)),
+            };
+            exposed_faces += 1;
+        }
+    }
+    (mask, exposed_faces)
+}
+
 #[expect(
     clippy::expect_used,
     reason = "internal invariant: validated snapshot contains every meshed palette slot"
 )]
-fn mesh_chunk(at: Pos, cells: &LocalCells, palette: &[Option<[f32; 3]>]) -> ChunkMesh {
+fn emit_quad(mesh: &mut ChunkMesh, quad: Quad, face: Face, palette: &[Option<[f32; 3]>]) {
+    let color = palette[usize::from(face.slot)]
+        .as_ref()
+        .expect("validated snapshot contains every meshed palette slot");
+    let vertices = quad.vertices();
+    // Pick the less conspicuous diagonal through differing AO values.
+    let indices = if face.ao[0] as u16 + face.ao[2] as u16 > face.ao[1] as u16 + face.ao[3] as u16 {
+        [0, 1, 3, 1, 2, 3]
+    } else {
+        [0, 1, 2, 0, 2, 3]
+    };
+    for i in indices {
+        mesh.vertices.push(MeshVertex {
+            position: vertices[i],
+            normal: quad.normal(),
+            color_ao: [
+                color[0],
+                color[1],
+                color[2],
+                1. - f32::from(face.ao[i]) * 0.035,
+            ],
+        });
+    }
+}
+
+fn mesh_chunk(
+    at: Pos,
+    cells: &LocalCells,
+    palette: &[Option<[f32; 3]>],
+) -> RenderResult<ChunkMesh> {
     let mut mesh = ChunkMesh::default();
     for axis in 0..3 {
         let u = (axis + 1) % 3;
         let v = (axis + 2) % 3;
         for slice in 0..16 {
             for positive in [false, true] {
-                let mut mask = [Face::default(); 256];
-                for y in 0..16 {
-                    for x in 0..16 {
-                        let mut p = at.map(|a| a * 16);
-                        p[axis] += slice;
-                        p[u] += x;
-                        p[v] += y;
-                        let slot = cells.get(p);
-                        if slot == 0 {
-                            continue;
-                        }
-                        let mut neighbor = p;
-                        neighbor[axis] += if positive { 1 } else { -1 };
-                        if cells.get(neighbor) != 0 {
-                            continue;
-                        }
-                        let mut origin = p;
-                        origin[axis] += i32::from(positive);
-                        let quad = Quad {
-                            origin,
-                            size: [1, 1],
-                            slot,
-                            axis: axis as u8,
-                            positive,
-                        };
-                        let center = std::array::from_fn(|a| {
-                            origin[a] as f32 + if a == axis { 0. } else { 0.5 }
-                        });
-                        mask[(y * 16 + x) as usize] = Face {
-                            slot,
-                            ao: quad
-                                .vertices()
-                                .map(|p| ambient(p, center, quad.normal(), axis, cells)),
-                        };
-                        mesh.exposed_faces += 1;
-                    }
-                }
-                for y in 0..16 {
-                    for x in 0..16 {
-                        let face = mask[y * 16 + x];
-                        if face.slot == 0 {
-                            continue;
-                        }
-                        let flat = face.ao.iter().all(|a| *a == face.ao[0]);
-                        let mut w = 1;
-                        let mut h = 1;
-                        if flat {
-                            while x + w < 16 && mask[y * 16 + x + w] == face {
-                                w += 1;
-                            }
-                            while y + h < 16 && (0..w).all(|dx| mask[(y + h) * 16 + x + dx] == face)
-                            {
-                                h += 1;
-                            }
-                        }
-                        for dy in 0..h {
-                            mask[(y + dy) * 16 + x..(y + dy) * 16 + x + w].fill(Face::default());
-                        }
+                let (mut mask, exposed_faces) = face_mask(at, cells, axis, slice, positive);
+                mesh.exposed_faces += exposed_faces;
+                Mesh::greedy_rectangles(
+                    &mut mask,
+                    [16, 16],
+                    Face::default(),
+                    |face| face.ao.iter().all(|a| *a == face.ao[0]),
+                    |[x, y], size, face| {
                         let mut origin = at.map(|a| a * 16);
                         origin[axis] += slice + i32::from(positive);
-                        origin[u] += x as i32;
-                        origin[v] += y as i32;
+                        origin[u] += i32::from(x);
+                        origin[v] += i32::from(y);
                         let quad = Quad {
                             origin,
-                            size: [w as u16, h as u16],
+                            size,
                             slot: face.slot,
                             axis: axis as u8,
                             positive,
                         };
-                        let color = palette[usize::from(face.slot)]
-                            .as_ref()
-                            .expect("validated snapshot contains every meshed palette slot");
-                        let vertices = quad.vertices();
-                        // Pick the less conspicuous diagonal through differing AO values.
-                        let indices = if face.ao[0] as u16 + face.ao[2] as u16
-                            > face.ao[1] as u16 + face.ao[3] as u16
-                        {
-                            [0, 1, 3, 1, 2, 3]
-                        } else {
-                            [0, 1, 2, 0, 2, 3]
-                        };
-                        for i in indices {
-                            mesh.vertices.push(MeshVertex {
-                                position: vertices[i],
-                                normal: quad.normal(),
-                                color_ao: [
-                                    color[0],
-                                    color[1],
-                                    color[2],
-                                    1. - f32::from(face.ao[i]) * 0.035,
-                                ],
-                            });
-                        }
-                    }
-                }
+                        emit_quad(&mut mesh, quad, face, palette);
+                        Ok(())
+                    },
+                )?;
             }
         }
     }
-    mesh
+    Ok(mesh)
 }
 
 #[cfg(test)]
