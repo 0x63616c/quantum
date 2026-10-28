@@ -11,6 +11,7 @@ rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
+quantum-brand = { path = "crates/quantum-brand" }
 slotmap = "1.1.1"
 quantum-core = { path = "crates/quantum-core" }
 quantum-format = { path = "crates/quantum-format" }

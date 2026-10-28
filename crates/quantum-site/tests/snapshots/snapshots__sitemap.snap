@@ -6,6 +6,9 @@ expression: text
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://quantum.worldwidewebb.co/</loc></url>
   <url><loc>https://quantum.worldwidewebb.co/download/</loc></url>
+  <url><loc>https://quantum.worldwidewebb.co/changelog/</loc></url>
+  <url><loc>https://quantum.worldwidewebb.co/blog/</loc></url>
+  <url><loc>https://quantum.worldwidewebb.co/blog/2026-10-28-rename/</loc></url>
   <url><loc>https://quantum.worldwidewebb.co/docs/</loc></url>
   <url><loc>https://quantum.worldwidewebb.co/docs/getting-started/</loc></url>
   <url><loc>https://quantum.worldwidewebb.co/docs/mcp/</loc></url>

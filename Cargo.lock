@@ -4540,8 +4540,15 @@ checksum = "278e9268c93b9e498a2da46c34d90ba93a3255eb99009646398f34bc73ab36eb"
 dependencies = [
  "bitflags 2.13.2",
  "memchr",
+ "pulldown-cmark-escape",
  "unicase",
 ]
+
+[[package]]
+name = "pulldown-cmark-escape"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "pulp"
@@ -4635,6 +4642,14 @@ dependencies = [
  "quantum-render",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "quantum-brand"
+version = "0.3.1"
+dependencies = [
+ "serde",
+ "toml 1.1.8+spec-1.1.0",
 ]
 
 [[package]]
@@ -4872,6 +4887,8 @@ dependencies = [
  "htmd",
  "insta",
  "percent-encoding",
+ "pulldown-cmark",
+ "quantum-brand",
  "quantum-format",
  "same-file",
  "serde",
@@ -7673,6 +7690,7 @@ dependencies = [
  "png 0.18.1",
  "proc-macro2",
  "pulldown-cmark",
+ "quantum-brand",
  "quote",
  "regex",
  "resvg",
