@@ -230,4 +230,4 @@ reason = "Historical rename announcement title; current product copy is generate
 current = ["~/Library/Application Support/voxelite", "co.worldwidewebb.voxelite"]
 stable = true
 paths = ["packaging/homebrew/quantum.rb", "xtask/src/macos/tests/fixtures/homebrew.rb"]
-reason = "Explicit zap removes migrated legacy data and preferences under the stable Sparkle bundle ID; projects remain untouched."
+reason = "Explicit zap removes legacy data, preferences and caches left by Voxelite-era builds (old bundle ID and data directory); projects remain untouched."

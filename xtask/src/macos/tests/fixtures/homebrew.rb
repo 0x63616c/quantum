@@ -20,11 +20,21 @@ cask "quantum" do
   binary "#{appdir}/Quantum.app/Contents/MacOS/quantum-mcp"
 
   zap trash: [
+    "~/Library/Application Support/co.worldwidewebb.quantum",
+    "~/Library/Application Support/co.worldwidewebb.voxelite",
     "~/Library/Application Support/quantum",
     "~/Library/Application Support/voxelite",
+    "~/Library/Caches/co.worldwidewebb.quantum",
     "~/Library/Caches/co.worldwidewebb.voxelite",
+    "~/Library/Cookies/co.worldwidewebb.quantum.binarycookies",
+    "~/Library/Cookies/co.worldwidewebb.voxelite.binarycookies",
+    "~/Library/HTTPStorages/co.worldwidewebb.quantum",
     "~/Library/HTTPStorages/co.worldwidewebb.voxelite",
+    "~/Library/Preferences/co.worldwidewebb.quantum.plist",
     "~/Library/Preferences/co.worldwidewebb.voxelite.plist",
+    "~/Library/Saved Application State/co.worldwidewebb.quantum.savedState",
     "~/Library/Saved Application State/co.worldwidewebb.voxelite.savedState",
+    "~/Library/WebKit/co.worldwidewebb.quantum",
+    "~/Library/WebKit/co.worldwidewebb.voxelite",
   ]
 end
