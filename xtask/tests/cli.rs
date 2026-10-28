@@ -43,3 +43,39 @@ fn help_list_and_usage_errors() {
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("unknown check"));
 }
+
+#[test]
+fn plugin_check_keeps_exit_codes_and_diagnostic_streams() {
+    let binary = env!("CARGO_BIN_EXE_xtask");
+    let success = Command::new(binary)
+        .args(["check", "plugin-deps"])
+        .output()
+        .unwrap();
+    assert_eq!(success.status.code(), Some(0), "{success:?}");
+    assert!(
+        success
+            .stdout
+            .starts_with(b"Plugin dependency rule passed.\n")
+    );
+    assert!(success.stderr.is_empty());
+
+    // An explicit missing executable exercises the real CLI failure path without
+    // changing process-global environment, PATH, or any workspace manifest.
+    let temp = tempfile::tempdir().unwrap();
+    let failure = Command::new(binary)
+        .args(["check", "plugin-deps"])
+        .env("CARGO", temp.path().join("missing-cargo"))
+        .output()
+        .unwrap();
+    assert_eq!(failure.status.code(), Some(1));
+    assert!(
+        failure
+            .stderr
+            .starts_with(b"Could not read Cargo metadata:")
+    );
+    assert!(
+        String::from_utf8(failure.stdout)
+            .unwrap()
+            .contains("0 passed, 1 failed, 0 skipped")
+    );
+}

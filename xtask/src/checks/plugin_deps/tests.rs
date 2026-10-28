@@ -269,12 +269,19 @@ fn reports_declared_and_resolved_dependency_once() {
     assert_eq!(violations(&m).len(), 1);
 }
 
-fn run_check(runner: &RecordingRunner) -> Outcome {
-    run(&Context {
-        workspace: &Workspace::discover().unwrap(),
-        runner,
-        strict: false,
-    })
+fn run_check(runner: &RecordingRunner) -> (Outcome, Vec<u8>, Vec<u8>) {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let outcome = run_with_output(
+        &Context {
+            workspace: &Workspace::discover().unwrap(),
+            runner,
+            strict: false,
+        },
+        &mut stdout,
+        &mut stderr,
+    );
+    (outcome, stdout, stderr)
 }
 
 fn failed() -> Output {
@@ -295,7 +302,14 @@ fn offline_metadata_fallback_stays_locked() {
             ..Output::default()
         }),
     ]);
-    assert_eq!(run_check(&runner), Outcome::Pass);
+    assert_eq!(
+        run_check(&runner),
+        (
+            Outcome::Pass,
+            b"Plugin dependency rule passed.\n".to_vec(),
+            vec![]
+        )
+    );
     runner.assert_args(
         0,
         &["metadata", "--format-version", "1", "--locked", "--offline"],
@@ -316,26 +330,44 @@ fn fails_on_violations_without_retrying_successful_metadata() {
     let mut m = fixture();
     m["packages"][PLUGIN]["dependencies"] = json!([workspace_dependency(&m, CORE, json!({}))]);
     let runner = RecordingRunner::stdout(&serde_json::to_vec(&m).unwrap());
-    let Outcome::Fail(messages) = run_check(&runner) else {
-        panic!("expected failure")
-    };
+    let expected = "Plugin dependency rule failed:\ncrates/plugins/voxelite-plugin-example/Cargo.toml: normal dependency on voxelite-core; only voxelite-plugin-api is allowed outside dev-dependencies\n";
+    assert_eq!(
+        run_check(&runner),
+        (
+            Outcome::Fail(vec![expected.into()]),
+            vec![],
+            expected.as_bytes().to_vec()
+        )
+    );
     assert_eq!(runner.commands.borrow().len(), 1);
-    assert_eq!(messages[0], "Plugin dependency rule failed:");
-    assert!(messages[1].contains("normal dependency on voxelite-core"));
 }
 
 #[test]
 fn fails_when_both_metadata_attempts_fail() {
-    let runner = RecordingRunner::default();
-    runner
-        .results
-        .borrow_mut()
-        .extend([Ok(failed()), Ok(failed())]);
-    assert_eq!(
-        run_check(&runner),
-        Outcome::Fail(vec!["Cargo metadata failed\n".into()])
-    );
-    assert_eq!(runner.commands.borrow().len(), 2);
+    for diagnostic in [
+        "Cargo metadata failed\n",
+        "error:\n  detail\n\n",
+        "no newline",
+        "",
+    ] {
+        let runner = RecordingRunner::default();
+        runner.results.borrow_mut().extend([
+            Ok(failed()),
+            Ok(Output {
+                stderr: diagnostic.as_bytes().to_vec(),
+                ..failed()
+            }),
+        ]);
+        assert_eq!(
+            run_check(&runner),
+            (
+                Outcome::Fail(vec![diagnostic.into()]),
+                vec![],
+                diagnostic.as_bytes().to_vec()
+            )
+        );
+        assert_eq!(runner.commands.borrow().len(), 2);
+    }
 }
 
 #[test]
@@ -349,9 +381,36 @@ fn invalid_metadata_and_spawn_errors_are_not_retried() {
     ] {
         let runner = RecordingRunner::default();
         runner.results.borrow_mut().push_back(output);
+        let (outcome, stdout, stderr) = run_check(&runner);
         assert!(
-            matches!(run_check(&runner), Outcome::Fail(errors) if errors[0].starts_with("Could not read Cargo metadata:"))
+            matches!(outcome, Outcome::Fail(errors) if errors[0].starts_with("Could not read Cargo metadata:"))
         );
+        assert!(stdout.is_empty());
+        assert!(stderr.starts_with(b"Could not read Cargo metadata:"));
+        assert!(stderr.ends_with(b"\n"));
         assert_eq!(runner.commands.borrow().len(), 1);
+    }
+}
+
+#[test]
+fn output_errors_fail_without_panicking() {
+    let workspace = Workspace::discover().unwrap();
+    for metadata in [
+        serde_json::to_vec(&fixture()).unwrap(),
+        b"invalid json".to_vec(),
+    ] {
+        let runner = RecordingRunner::stdout(&metadata);
+        let outcome = run_with_output(
+            &Context {
+                workspace: &workspace,
+                runner: &runner,
+                strict: false,
+            },
+            &mut io::Cursor::new(&mut [][..]),
+            &mut io::Cursor::new(&mut [][..]),
+        );
+        assert!(
+            matches!(outcome, Outcome::Fail(errors) if errors[0].starts_with("Could not report plugin dependency rule:"))
+        );
     }
 }

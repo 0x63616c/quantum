@@ -25,7 +25,9 @@ The repository checks run in-process from `src/checks/`:
 
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
-  metadata offline first and retries online if that command fails.
+  metadata offline first and retries online if that command fails. Preserves the
+  success message on stdout and full failure diagnostics on stderr; the registry
+  adds its timed summary on stdout. Failures exit with status 1.
 - `brand`: `brand.toml` stability and consistency with packaging, package names,
   app IDs, MCP names, site metadata, project format, storage paths and skills.
 - `docs-links`: local links in the glossary and product direction, resolved
