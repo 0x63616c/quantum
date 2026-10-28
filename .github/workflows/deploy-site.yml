@@ -45,7 +45,7 @@ jobs:
       - name: Download signed release appcast or empty initial feed
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/fetch-macos-appcast.py site/appcast.xml
+        run: cargo xtask macos fetch-appcast site/appcast.xml
 
       - name: Build site
         run: scripts/build-site.sh
@@ -53,7 +53,7 @@ jobs:
       - name: Verify site
         run: |
           python3 scripts/check-site.py
-          python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
+          cargo xtask macos check-appcast site/appcast.xml --allow-empty
           test -s site/index.html
           test -s site/llms.txt
 
