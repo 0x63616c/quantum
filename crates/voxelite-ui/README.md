@@ -3,7 +3,7 @@
 `voxelite-ui` is the shell's shared GPUI presentation library. It depends only on
 GPUI for UI/runtime services (default features disabled) and the already locked
 `unicode-segmentation` crate for the pure editor. It has no app or domain
-dependencies. The application selects native or web platform support. Plugins
+dependencies. The application selects native platform support. Plugins
 must not depend on this crate.
 
 Use `tokens` for Theme colors, spacing, corner radii, Geist/Geist Mono typography,
@@ -72,10 +72,8 @@ read-only. OS file dialogs retain their platform-owned filename controls.
 bindings in the `TextField` context. Tests list every chord and its action, check
 GPUI parsing/context resolution, and exercise the pure commands. Here `⌫` means
 Backspace, `⌦` means forward Delete, and Option is Alt on other keyboards.
-The browser shell installs the table for its detected host OS before creating
-fields; macOS browsers use the macOS column.
 
-| Operation | macOS | Linux / Windows / web |
+| Operation | macOS | Linux / Windows |
 | --- | --- | --- |
 | Previous / next grapheme | ← / →; ⌃B / ⌃F | ← / → |
 | Extend by grapheme | ⇧← / ⇧→; ⇧⌃B / ⇧⌃F | ⇧← / ⇧→ |

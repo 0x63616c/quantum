@@ -8,11 +8,6 @@ The software rasterizer remains the export/thumbnail renderer and the automatic
 fallback. Its existing interactive resolution/refinement behavior is retained;
 GPU supersampling adapts to surface limits while MSAA, AO and shadows are retained.
 
-The separate browser canvas, wasm viewport dependencies, browser harness and
-GPUI web/wgpu patches have been removed. `crates/voxelite-app/src/web.rs` matches
-`public/main`; existing web application code is otherwise outside this change.
-No wasm build was attempted for this Mac-only scope.
-
 A dedicated owner thread performs adapter initialization, chunk meshing/AO,
 resource allocation, encoding, completion polling and GPU resource teardown.
 Camera-only requests reuse chunk geometry. The editor allows one outstanding
