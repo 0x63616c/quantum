@@ -97,7 +97,19 @@ Fork pull requests never schedule this self-hosted job. Do not change the event 
 All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
 `[self-hosted, macOS, ARM64, xcode]`, which select the self-hosted Apple Silicon runner, with
 `DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer`. There are no
-GitHub-hosted macOS jobs. The runner needs that Xcode installation and its Metal
+GitHub-hosted macOS jobs. CI macOS runs its Python script tests on a GitHub-hosted
+Linux runner, and builds the ad-hoc DMG only on pushes to `main` and on pull
+requests that change packaging inputs (`packaging/`, `scripts/*macos*`, Cargo
+manifests, the toolchain or the macOS workflows).
+
+Rendering visual runs (PRs, `visual`, `rebaseline-visual`) use either Mac mini
+runner. Both runners are on the same machine, and homelab-voxelite-2 rendered
+every still bit-exact against the committed goldens with `--determinism` before
+the pin was lifted (#165). `bench` and `bench-baseline` always use the runner with
+the `golden` label, so timing baselines come from one place. The owner-only
+`runner_label` dispatch input (`any`, `golden`, `runner-2`) re-checks one runner;
+verify any new runner this way before it takes visual jobs. Runner layout and the
+build caches are described in [CI runners](ci-runners.md). The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
 the v4 checkout and artifact actions, pinned to commit SHAs in the

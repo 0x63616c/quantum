@@ -17,5 +17,8 @@ voxelite-plugin-comments.workspace = true
 voxelite-plugin-agent.workspace = true
 voxelite-plugin-exporters.workspace = true
 
+[dev-dependencies]
+voxelite-plugin-api.workspace = true
+
 [lints]
 workspace = true

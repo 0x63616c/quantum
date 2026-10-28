@@ -17,6 +17,7 @@ serde_json = { workspace = true, features = ["preserve_order"] }
 url = "2"
 
 [dev-dependencies]
+insta.workspace = true
 tempfile.workspace = true
 
 [lints]

@@ -1,7 +1,9 @@
 # Voxelite native editor
 
 A Rust/GPUI desktop shell for the shared Voxelite engine. With no file argument,
-it opens the welcome window; a `.voxl` path opens directly in the editor. The
+it opens the welcome window; a `.voxl` path opens directly in the editor. An
+invalid or unreadable path opens Welcome with an inline error naming the file.
+Failed opens inside the app show an error and preserve the current document. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
 toolbar, a persistent left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
@@ -141,7 +143,9 @@ quit protect unsaved changes; the built-in example has no write destination
 until Save As. Failed saves retain the document and dirty state. Open and Save
 perform file work on a background executor while editor input is blocked.
 “Save & continue” completes the pending New/Open/Quit only after a successful
-save; cancellation or failure keeps the project open.
+save; cancellation or failure keeps the project open. While waiting for a Save As
+file dialog, Cancel or Escape returns to the editor without saving or continuing
+the pending command. Late responses from an abandoned picker are ignored.
 
 Ordinary Save checks the destination against the bytes last opened/saved and
 rejects external edits or deletion. Save As can replace an explicitly selected

@@ -16,8 +16,10 @@ __pycache__/
 /site/assets/integrations/
 /site/assets/skills/
 /site/assets/voxelite-skills.zip
-/site/assets/voxelite-source.tar.gz
 
 /dist/
 
 /screenshots/
+
+*.snap.new
+*.pending-snap

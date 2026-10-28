@@ -1,9 +1,8 @@
 //! Built-in centered mirroring of pending tool commands.
 
 use voxelite_plugin_api::{
-    API_VERSION, Command, CommandContribution, CommandTransform, CommandTransformContribution,
-    Manifest, Mirror, Plugin, PluginId, Registrar, SettingContribution, SettingKind, SettingValue,
-    TransformCx, Value, Version,
+    Command, CommandContribution, CommandTransform, CommandTransformContribution, Manifest, Mirror,
+    Plugin, Registrar, SettingContribution, SettingKind, SettingValue, TransformCx, Value,
 };
 
 /// Plugin-owned axis settings in X/Y/Z order. The host retains their transient values.
@@ -21,16 +20,11 @@ pub struct MirrorPlugin;
 
 impl Plugin for MirrorPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new("dev.voxelite.mirror").unwrap(),
-            name_key: "plugins.mirror.name".into(),
-            description_key: "plugins.mirror.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            "dev.voxelite.mirror",
+            "plugins.mirror",
+            env!("CARGO_PKG_VERSION"),
+        )
     }
 
     fn contribute(&self, registrar: &mut Registrar) {

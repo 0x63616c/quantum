@@ -112,14 +112,10 @@ fn main() -> anyhow::Result<()> {
         voxelite_format::storage::safe_write(path, bytes)?;
         return Ok(());
     }
-    let editor = if options.example {
-        Some(Editor::example()?)
+    let (editor, open_error) = if options.example {
+        (Some(Editor::example()?), None)
     } else {
-        options
-            .path
-            .as_ref()
-            .map(|path| Editor::open(path))
-            .transpose()?
+        voxelite_app::startup::open(options.path.as_deref())
     };
     gpui_platform::application()
         .with_assets(assets::Assets)
@@ -135,7 +131,10 @@ fn main() -> anyhow::Result<()> {
             let result = if let Some(editor) = editor {
                 ui::welcome::open_editor(editor, cx)
             } else {
-                ui::welcome::show(cx).map(|_| ())
+                ui::welcome::show(cx).and_then(|handle| {
+                    handle.update(cx, |view, _, cx| view.show_error(open_error, cx))?;
+                    Ok(())
+                })
             };
             if let Err(error) = result {
                 eprintln!("Cannot open Quantum: {error}");

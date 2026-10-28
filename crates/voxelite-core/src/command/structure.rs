@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 pub(super) fn layer_edit(s: &mut Snapshot, edit: &LayerEdit) -> Result<()> {
     match edit {
         LayerEdit::Create { id, name, index } => {
-            if s.layers.iter().any(|l| l.id == *id) || *index > s.layers.len() {
+            if s.layers.key(*id).is_some() || *index > s.layers.len() {
                 return Err(Error::Invalid("layer ID or index".into()));
             }
             s.layers.insert(*index, Layer::new(*id, name));
@@ -29,27 +29,22 @@ pub(super) fn layer_edit(s: &mut Snapshot, edit: &LayerEdit) -> Result<()> {
             }
         }
         LayerEdit::Duplicate { source, id, name } => {
-            if s.layers.iter().any(|l| l.id == *id) {
+            if s.layers.key(*id).is_some() {
                 return Err(Error::Conflict("layer ID exists".into()));
             }
             let mut l = s.layer(*source)?.clone();
             l.id = *id;
             l.name = name.clone();
             l.locked = false;
-            let index = s
-                .layers
-                .iter()
-                .position(|l| l.id == *source)
-                .expect("source exists");
-            s.layers.insert(index + 1, l);
+            let source = s.layers.key(*source).expect("source exists");
+            s.layers.insert_after(source, l).expect("source exists");
         }
         LayerEdit::Reorder(order) => {
             let old: BTreeSet<_> = s.layers.iter().map(|l| l.id).collect();
             if order.len() != old.len() || order.iter().copied().collect::<BTreeSet<_>>() != old {
                 return Err(Error::Invalid("layer order must be a permutation".into()));
             }
-            s.layers
-                .sort_by_key(|l| order.iter().position(|id| *id == l.id));
+            s.layers.reorder(order);
         }
         LayerEdit::Delete(id) => {
             if s.layer(*id)?.locked {
