@@ -131,4 +131,4 @@ pinning. Dependabot checks the GitHub Actions ecosystem weekly; review both the
 SHA and its version comment when updating. Keep explicit workflow-level
 `permissions: {}` or `contents: read`, and grant additional permissions only
 to the job that needs them. Site publishing writes the site-dist branch through
-the contents API; it uses Vercel credentials rather than Pages or OIDC grants.
+the contents permission; it uses Vercel credentials rather than Pages or OIDC grants.
