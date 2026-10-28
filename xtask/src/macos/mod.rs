@@ -48,6 +48,7 @@ impl Environment {
         let mut env = Self::default();
         for name in SECRETS.iter().copied().chain([
             "CARGO_TARGET_DIR",
+            "PACKAGE_CARGO_PROFILE",
             "VERSION",
             "MACOS_SIGNING_MODE",
             "SPARKLE_PUBLIC_ED_KEY",
@@ -171,7 +172,7 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
 pub enum Task {
     /// Build, sign, optionally notarize, and create dist/Voxelite.dmg
     Package {
-        /// Use existing target/release executables
+        /// Use existing executables from the configured packaging profile
         #[arg(long)]
         skip_build: bool,
         /// Print the full redacted plan without executing commands or writing files

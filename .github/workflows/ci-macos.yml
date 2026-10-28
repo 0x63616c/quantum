@@ -50,7 +50,7 @@ jobs:
           [[ -z "$files" ]] && code=true && package=true
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
-            # The release-profile DMG build takes ~6 min, so PRs only run it when
+            # PR smoke DMGs use ci-dist; PRs only run packaging when
             # packaging inputs change. Nightly and manual main runs also build it.
             case "$file" in
               packaging/*|xtask/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|crates/voxelite-app/Cargo.toml|.github/workflows/ci-macos.yml|.github/workflows/release-macos.yml) package=true ;;
@@ -166,6 +166,8 @@ jobs:
         run: cargo test --doc --workspace --locked
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
+        env:
+          PACKAGE_CARGO_PROFILE: ${{ github.event_name == 'pull_request' && 'ci-dist' || 'release' }}
         run: cargo xtask macos package
       - name: sccache stats
         if: always() && env.RUSTC_WRAPPER != ''
