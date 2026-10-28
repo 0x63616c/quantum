@@ -53,7 +53,7 @@ jobs:
             # PR smoke DMGs use ci-dist; PRs only run packaging when
             # packaging inputs change. Nightly and manual main runs also build it.
             case "$file" in
-              packaging/*|xtask/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|crates/voxelite-app/Cargo.toml|.github/workflows/ci-macos.yml|.github/workflows/release-macos.yml) package=true ;;
+              packaging/*|xtask/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|crates/quantum-app/Cargo.toml|.github/workflows/ci-macos.yml|.github/workflows/release-macos.yml) package=true ;;
             esac
             case "$file" in
               docs/*|design/*|.agents/*|.github/ISSUE_TEMPLATE/*|.github/pull_request_template.md) ;;
@@ -133,7 +133,7 @@ jobs:
           mkdir -p "$target_dir"
           echo "CARGO_TARGET_DIR=$target_dir" >> "$GITHUB_ENV"
       - name: Use the shared sccache server
-        # One sccache server (launchd agent dev.voxelite.sccache, port 4227) serves both
+        # One sccache server (launchd agent dev.quantum.sccache, port 4227) serves both
         # Mac mini runners, so a crate compiled by one runner is a cache hit on the other.
         # See docs/ci-runners.md. Without the server the build just runs uncached.
         shell: bash
@@ -159,24 +159,24 @@ jobs:
             schedule|workflow_dispatch) packages='--workspace' ;;
             *)
               # Add crates here when they gain macOS-specific code paths.
-              packages='-p voxelite-app -p voxelite-ui -p voxelite-render -p voxelite-mcp -p voxelite-bench'
+              packages='-p quantum-app -p quantum-ui -p quantum-render -p quantum-mcp -p quantum-bench'
               ;;
           esac
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
       # Linux checks the workspace; Mac change runs check platform-specific crates.
       - name: Clippy
-        run: cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features voxelite-app/test-support -- -D warnings
+        run: cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest@0.9.150
 
       - name: Test Rust packages
-        run: cargo nextest run ${{ steps.rust-packages.outputs.packages }} --locked --features voxelite-app/test-support --profile ci
+        run: cargo nextest run ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support --profile ci
 
       - name: Test doctests
         if: ${{ !cancelled() }}
-        run: cargo test --doc ${{ steps.rust-packages.outputs.packages }} --locked --features voxelite-app/test-support
+        run: cargo test --doc ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         env:
@@ -189,10 +189,10 @@ jobs:
         if: needs.changes.outputs.package == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: Voxelite-macos-arm64-unsigned
+          name: Quantum-macos-arm64-unsigned
           path: |
-            dist/Voxelite.dmg
-            dist/Voxelite.dmg.sha256
+            dist/Quantum.dmg
+            dist/Quantum.dmg.sha256
           if-no-files-found: error
           retention-days: 3
 

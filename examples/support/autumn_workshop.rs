@@ -1,7 +1,7 @@
 //! Original MIT-licensed Autumn Workshop, staged through real core edits.
+use quantum_core::*;
+use quantum_format::{BuildHistory, BuildStep, FormatResult, Project};
 use std::collections::BTreeMap;
-use voxelite_core::*;
-use voxelite_format::{BuildHistory, BuildStep, FormatResult, Project};
 
 fn id(n: u128) -> Uuid {
     Uuid::from_u128(0x5f26_1025_0000_4000_8000_0000_0000_0000 + n)

@@ -44,24 +44,24 @@ class MacosCiTests(unittest.TestCase):
                         self.assertEqual(packages, '--workspace')
                     else:
                         self.assertEqual(packages.split(), [
-                            '-p', 'voxelite-app', '-p', 'voxelite-ui',
-                            '-p', 'voxelite-render', '-p', 'voxelite-mcp',
-                            '-p', 'voxelite-bench',
+                            '-p', 'quantum-app', '-p', 'quantum-ui',
+                            '-p', 'quantum-render', '-p', 'quantum-mcp',
+                            '-p', 'quantum-bench',
                         ])
         workflow = WORKFLOW.read_text()
         self.assertIn('cargo clippy ${{ steps.rust-packages.outputs.packages }} '
-                      '--all-targets --locked --features voxelite-app/test-support -- -D warnings', workflow)
+                      '--all-targets --locked --features quantum-app/test-support -- -D warnings', workflow)
         self.assertIn('cargo nextest run ${{ steps.rust-packages.outputs.packages }} '
-                      '--locked --features voxelite-app/test-support --profile ci', workflow)
+                      '--locked --features quantum-app/test-support --profile ci', workflow)
         self.assertIn('cargo test --doc ${{ steps.rust-packages.outputs.packages }} '
-                      '--locked --features voxelite-app/test-support', workflow)
+                      '--locked --features quantum-app/test-support', workflow)
 
     def test_release_requires_full_checks_before_building(self):
         workflow = (WORKFLOW.parent / 'release-macos.yml').read_text()
         build = workflow.index('      - name: Build app without signing credentials')
         for command in (
-            'cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings',
-            'cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast',
+            'cargo clippy --workspace --all-targets --locked --features quantum-app/test-support -- -D warnings',
+            'cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast',
         ):
             self.assertLess(workflow.index(command), build)
         self.assertNotIn('continue-on-error:', workflow)
@@ -73,7 +73,7 @@ class MacosCiTests(unittest.TestCase):
             ('workflow_dispatch', 'refs/heads/main', '', 'true'),
             ('workflow_dispatch', 'refs/heads/topic', '', 'false'),
             ('pull_request', 'refs/pull/1/merge', 'packaging/macos/Info.plist', 'true'),
-            ('pull_request', 'refs/pull/1/merge', 'crates/voxelite-core/src/lib.rs', 'false'),
+            ('pull_request', 'refs/pull/1/merge', 'crates/quantum-core/src/lib.rs', 'false'),
         ]
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

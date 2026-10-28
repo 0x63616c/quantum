@@ -5,9 +5,9 @@ on:
     # Dependency bumps (Cargo.toml/Cargo.lock) don't trigger this; the nightly run on main
     # catches render changes from them. Dispatch visual by hand when a render dep changes.
     paths:
-      - 'crates/voxelite-render/**'
-      - 'crates/voxelite-core/**'
-      - 'crates/voxelite-bench/**'
+      - 'crates/quantum-render/**'
+      - 'crates/quantum-core/**'
+      - 'crates/quantum-bench/**'
       - 'xtask/src/main.rs'
       - 'bench/**'
       - 'examples/*.voxl'
@@ -49,7 +49,7 @@ jobs:
   render:
     # Only owner-triggered, same-repository code may use self-hosted runners.
     if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    # Both runners are on the same Mac mini. homelab-voxelite-2 passed visual --determinism
+    # Both runners are on the same Mac mini. homelab-quantum-2 passed visual --determinism
     # bit-exact against the committed goldens (run 40628010315, see #165), so visual jobs use
     # either runner. Timing baselines need one fixed machine, so benchmarks require golden.
     # Re-verify a new runner (give it a neutral label, add it to runner_label) before it

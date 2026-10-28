@@ -21,7 +21,7 @@ cargo xtask ui-snapshots --rebaseline --screen 'panels-palette-*'
 Selectors use the PR screenshots convention: exact names or one trailing `*`,
 repeatable, deduplicated in registry order. Unknown or unmatched selectors fail.
 No selector means all 26 key screens. Only explicit `--rebaseline` writes
-`crates/voxelite-app/tests/ui-goldens/*.png`, after all selected captures have
+`crates/quantum-app/tests/ui-goldens/*.png`, after all selected captures have
 succeeded and their set and dimensions have been validated. Review every changed
 PNG in both themes before committing it. Ordinary runs never write references.
 

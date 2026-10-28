@@ -6,7 +6,7 @@ Status: Accepted.
 
 ## Context
 
-[Issue #113](https://github.com/0x63616c/voxelite/issues/113) asks whether Linux
+[Issue #113](https://github.com/0x63616c/quantum/issues/113) asks whether Linux
 GUI builds justify their CI cost. The owner approved the recommendation to keep
 them. Quantum targets a native macOS product; retaining a Linux development build
 does not establish Linux release support.
@@ -20,7 +20,7 @@ it does not launch the editor or capture screenshots.
 
 The existing manual [native capture script](../../scripts/capture-native.sh)
 builds the app and MCP, opens real GPUI windows under Xvfb and captures both
-themes. Its [Linux setup](../../crates/voxelite-app/README.md#linux-dependencies-and-captures)
+themes. Its [Linux setup](../../crates/quantum-app/README.md#linux-dependencies-and-captures)
 documents the required dependencies. Automated Xvfb screenshot capture in CI
 is planned in issue #119 / PR #130, not part of the current CI Linux workflow.
 

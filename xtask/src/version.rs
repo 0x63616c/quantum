@@ -210,7 +210,7 @@ impl Plan {
         let paths = [
             "Cargo.toml",
             "README.md",
-            "crates/voxelite-site/templates/download.html",
+            "crates/quantum-site/templates/download.html",
             "spec/mcp/v1/compatibility.json",
             "Cargo.lock",
         ];
@@ -232,7 +232,7 @@ impl Plan {
         for (path, prefix, suffix) in [
             ("README.md", "The current workspace version is **", "**"),
             (
-                "crates/voxelite-site/templates/download.html",
+                "crates/quantum-site/templates/download.html",
                 "Version ",
                 " for macOS",
             ),

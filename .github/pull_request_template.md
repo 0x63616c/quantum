@@ -38,7 +38,7 @@ Closes #
 - [ ] Docs, schemas and fixtures updated where behavior changed
 - [ ] No secrets, personal data or machine-specific paths
 - [ ] UI only: Screenshots section generated and checked; design-reviewed
-- [ ] UI only: colors, spacing, radii and type come from `voxelite-ui` tokens
+- [ ] UI only: colors, spacing, radii and type come from `quantum-ui` tokens
 - [ ] UI only: unchanged screens show no unintended differences
 - [ ] UI only: before/after screenshots cover affected screens in both themes
 - [ ] UI only: focus, hover and pressed states reviewed

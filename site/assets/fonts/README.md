@@ -2,14 +2,14 @@
 
 Geist and Geist Mono retain the variable `wght` axis, 100–900. The site uses
 WOFF2 subsets; the native app keeps its separate TTF sources in
-`crates/voxelite-app/assets/fonts/`. Both OFL license files remain here.
+`crates/quantum-app/assets/fonts/`. Both OFL license files remain here.
 
 After regenerating the HTML, rebuild subsets with fontTools and Brotli:
 
 ```sh
-python3 -m venv /tmp/voxelite-fonts
-/tmp/voxelite-fonts/bin/pip install fonttools brotli
-/tmp/voxelite-fonts/bin/python scripts/build-site-fonts.py
+python3 -m venv /tmp/quantum-fonts
+/tmp/quantum-fonts/bin/pip install fonttools brotli
+/tmp/quantum-fonts/bin/python scripts/build-site-fonts.py
 ```
 
 The script keeps basic Latin/Latin-1 and the punctuation and symbols used in site
