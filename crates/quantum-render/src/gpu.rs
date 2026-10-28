@@ -8,10 +8,10 @@ use crate::shadow::{SHADOW_SIZE, ShadowCache, ShadowInput};
 use crate::{AmbientOcclusionStrength, Camera, Projection, RenderError, RenderResult};
 use glam::{Mat4, Vec3};
 use quantum_core::{Pos, Snapshot};
-use std::time::Instant;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
+    time::Instant,
 };
 
 mod targets;
@@ -19,8 +19,10 @@ use targets::{color_attachment, depth_attachment, pipeline, target, texture_entr
 
 mod diagnostics;
 mod headless;
+mod snapshot;
 mod stats;
 pub use headless::{AdapterInfo, Headless, HeadlessFrame, HeadlessOptions};
+use snapshot::{error, sync_snapshot};
 pub use stats::{FrameStats, GpuTimes, ShadowPath};
 use stats::{GpuTimer, elapsed_ms};
 pub use wgpu::Backends;
@@ -52,9 +54,7 @@ pub struct Style {
 }
 
 const SAMPLES: u32 = 4;
-fn error(e: impl std::fmt::Display) -> RenderError {
-    RenderError::Invalid(format!("GPU viewport: {e}"))
-}
+
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct Globals {
@@ -313,6 +313,10 @@ impl Viewport {
     #[expect(
         clippy::expect_used,
         reason = "internal invariant: fallback initialized before shadow-map rendering; internal invariant: occupancy upload initializes its bind group; internal invariant: render target initialized before encoding"
+    )]
+    #[cfg_attr(
+        feature = "profiling",
+        tracing::instrument(name = "render.gpu.encode", skip_all)
     )]
     async fn render(
         &mut self,
@@ -575,6 +579,10 @@ impl Viewport {
         clippy::expect_used,
         reason = "internal invariant: occupancy allocated before upload"
     )]
+    #[cfg_attr(
+        feature = "profiling",
+        tracing::instrument(name = "render.gpu.occupancy", skip_all)
+    )]
     async fn upload_occupancy(&mut self, occ: &mut Occupancy) -> RenderResult<()> {
         let bytes = std::mem::size_of_val(occ.words()) as u64;
         let limits = self.device.limits();
@@ -752,45 +760,5 @@ impl ShadowFallback {
     }
 }
 
-/// The worker and headless path must invalidate precisely the same caches.
-fn sync_snapshot(
-    occupancy: &mut OccupancyCache,
-    mesh: &mut ChunkMeshes,
-    snapshot: Option<Snapshot>,
-    mut stats: Option<&mut FrameStats>,
-) -> RenderResult<Vec<Pos>> {
-    let Some(snapshot) = snapshot else {
-        return Ok(Vec::new());
-    };
-    let started = stats.as_ref().map(|_| Instant::now());
-    occupancy.sync(&snapshot)?;
-    if let Some(stats) = stats.as_mut() {
-        stats.occupancy_sync_ms = elapsed_ms(started);
-    }
-    let started = stats.as_ref().map(|_| Instant::now());
-    let updates = mesh.sync_validated(&snapshot)?;
-    if let Some(stats) = stats {
-        stats.mesh_sync_ms = elapsed_ms(started);
-    }
-    Ok(updates)
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn occupancy_respects_both_buffer_and_binding_limits() {
-        let maximum = Occupancy::new(quantum_core::Region::new([0; 3], [256; 3]).unwrap()).unwrap();
-        let bytes = std::mem::size_of_val(maximum.words()) as u64;
-        let mut limits = wgpu::Limits::default();
-        assert!(occupancy_fits(bytes, &limits));
-        limits.max_buffer_size = bytes;
-        limits.max_storage_buffer_binding_size = bytes;
-        assert!(occupancy_fits(bytes, &limits));
-        limits.max_buffer_size = bytes - 1;
-        assert!(!occupancy_fits(bytes, &limits));
-        limits.max_buffer_size = bytes;
-        limits.max_storage_buffer_binding_size = bytes - 1;
-        assert!(!occupancy_fits(bytes, &limits));
-    }
-}
+mod tests;

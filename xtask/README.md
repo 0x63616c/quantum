@@ -31,6 +31,31 @@ otherwise it falls back to `cargo test --workspace --locked` (including doctests
 The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
 CI snapshot verification; insta inherits that variable under nextest too.
 
+## Local code graph
+
+Run `cargo xtask graphify` before starting a coding task. Install `uv` first;
+this maintenance command uses `uv tool run` with `graphifyy==0.9.97` in an isolated
+tool environment, checks the installed distribution version, and runs
+`graphify update .` at the repository root even when invoked from a subdirectory.
+Missing uv, a version mismatch or an update failure stops the command.
+
+From the repository root, use precise symbols or file paths to query the graph:
+
+```sh
+uvx --from graphifyy==0.9.97 graphify explain crates/quantum-mesh/src/lib.rs::greedy_mesh
+uvx --from graphifyy==0.9.97 graphify path \
+  crates/quantum-mesh/src/lib.rs::greedy_mesh \
+  crates/quantum-mesh/src/lib.rs::greedy_mesh_with_limit
+```
+
+`explain` lists a symbol and its neighbors; `path` finds connections between two
+symbols. Ambiguous names exit with code 3 and list candidates; use a qualified
+symbol or file path to disambiguate. Plain-English queries are noisy. Confirm
+findings in source. The refresh runs locally without an LLM and graphify has no
+telemetry. Generated graphs, reports and extraction caches stay in the ignored
+`graphify-out/`; uv keeps its tool environment in its own cache. Never commit
+these outputs. This is developer tooling, with no product runtime dependency.
+
 ## PR screenshots
 
 For the independent display-free regression gate, run `cargo xtask ui-snapshots`.

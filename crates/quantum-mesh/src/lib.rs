@@ -87,6 +87,10 @@ pub fn greedy_mesh(snapshot: &Snapshot) -> MeshResult<Mesh> {
     greedy_mesh_with_limit(snapshot, MAX_QUADS)
 }
 /// Mesh with an explicit cap, useful for host resource admission.
+#[cfg_attr(
+    feature = "profiling",
+    tracing::instrument(name = "mesh.greedy", skip_all)
+)]
 pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> MeshResult<Mesh> {
     snapshot.validate()?;
     if max_quads > MAX_QUADS {

@@ -29,7 +29,8 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             build-essential clang cmake pkg-config libssl-dev \
             libfontconfig-dev libfreetype-dev libvulkan-dev libwayland-dev \
-            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev rsync
+            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev rsync \
+            mesa-vulkan-drivers
 
       - name: Install pinned Rust toolchain
         run: rustup show
@@ -53,6 +54,15 @@ jobs:
 
       - name: Test workspace
         run: cargo nextest run --workspace --locked --features quantum-app/test-support --profile ci
+
+      - name: Check opt-in profiling
+        env:
+          XDG_RUNTIME_DIR: /tmp
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
+        run: |
+          cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling,quantum-render/headless-vulkan -- -D warnings
+          cargo nextest run -p quantum-render --locked --features profiling,headless-vulkan --profile ci
+          cargo nextest run -p quantum-render --lib --locked --features profiling,headless-vulkan --profile ci --run-ignored only -E 'test(profiling_gpu_zones)'
 
       - name: Test doctests (--workspace)
         if: ${{ !cancelled() }}
