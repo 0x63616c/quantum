@@ -5,7 +5,12 @@ use std::{
     time::Instant,
 };
 
-use crate::{Error, Result, cmd::Runner, tidy, workspace::Workspace};
+use crate::{
+    Error, Result,
+    cmd::{self, Runner},
+    tidy,
+    workspace::Workspace,
+};
 
 /// Result of one check. Skips are visible and do not count as passes.
 #[derive(Debug, Eq, PartialEq)]
@@ -137,21 +142,55 @@ fn run_cargo(context: &Context<'_>, args: &[&str]) -> Outcome {
         .lines()
         .any(|line| line.split_whitespace().next() == Some(tool))
     {
-        let installation = match *tool {
-            "fmt" => "rustup component add rustfmt".into(),
-            "clippy" => "rustup component add clippy".into(),
-            _ => format!("cargo install cargo-{tool}"),
-        };
-        let reason = format!("cargo {tool} is not installed; install it with `{installation}`");
-        return if context.strict {
-            Outcome::Fail(vec![reason])
-        } else {
-            Outcome::Skip(reason)
-        };
+        return missing_tool(context, tool);
+    }
+    // Cargo lists rustup proxies even when their component is absent from the
+    // selected toolchain. Probe those tools before running a workspace gate.
+    if matches!(*tool, "fmt" | "clippy") {
+        let probe = context
+            .workspace
+            .cargo()
+            .args([tool, "--version"])
+            .allow_in_dry_run()
+            .output(context.runner);
+        if let Err(error) = probe {
+            if let cmd::Error::Failed { stderr, .. } = &error {
+                let component = if *tool == "fmt" {
+                    "rustfmt"
+                } else {
+                    "clippy-driver"
+                };
+                if [format!("cargo-{tool}"), component.into()]
+                    .iter()
+                    .any(|name| {
+                        stderr.contains(&format!(
+                            "error: '{name}' is not installed for the toolchain '"
+                        ))
+                    })
+                {
+                    return missing_tool(context, tool);
+                }
+            }
+            return Outcome::Fail(vec![error.to_string()]);
+        }
     }
     match context.workspace.cargo().args(args).run(context.runner) {
         Ok(()) => Outcome::Pass,
         Err(error) => Outcome::Fail(vec![error.to_string()]),
+    }
+}
+
+fn missing_tool(context: &Context<'_>, tool: &str) -> Outcome {
+    let installation = match tool {
+        "fmt" => "rustup component add rustfmt".into(),
+        "clippy" => "rustup component add clippy".into(),
+        _ => format!("cargo install cargo-{tool}"),
+    };
+    let reason = format!("cargo {tool} is not installed; install it with `{installation}`");
+    if context.strict {
+        Outcome::Fail(vec![reason])
+    } else {
+        Outcome::Skip(reason)
     }
 }
 

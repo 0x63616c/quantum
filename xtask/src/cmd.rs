@@ -209,6 +209,9 @@ fn quote(value: &OsStr) -> String {
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Redact raw values first: diagnostic quoting escapes newlines, quotes
+        // and backslashes, which would prevent matching the original secret.
+        let quote = |value: &OsStr| quote(OsStr::new(&self.redact(&value.to_string_lossy())));
         let mut parts = Vec::new();
         if let Some(directory) = &self.directory {
             parts.push(format!("(in {})", quote(directory.as_os_str())));

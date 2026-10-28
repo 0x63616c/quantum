@@ -34,6 +34,21 @@ fn builder_preserves_arguments_environment_and_directory() {
 }
 
 #[test]
+fn diagnostics_redact_repeated_secrets_before_quoting() {
+    let secret = "private\n\"credential\"\\suffix";
+    let command = Command::new(format!("tool-{secret}"))
+        .secret_env("TOKEN", secret)
+        .env("COPY", secret)
+        .arg(format!("--token={secret}"))
+        .current_dir(format!("/tmp/{secret}"));
+    for rendered in [command.to_string(), format!("{command:?}")] {
+        assert!(!rendered.contains("private"), "{rendered}");
+        assert!(!rendered.contains("credential"), "{rendered}");
+        assert!(rendered.contains("[REDACTED]"));
+    }
+}
+
+#[test]
 fn capture_trim_and_exit_policy_are_explicit() {
     let command = Command::new("tool");
     let runner = RecordingRunner::stdout(b" \n answer\r\n");
