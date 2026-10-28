@@ -5,6 +5,8 @@ mod shortcuts;
 mod text_field;
 mod theme;
 mod ui;
+#[cfg(feature = "ui-snapshots")]
+mod ui_snapshots;
 #[cfg(target_os = "macos")]
 pub mod updater;
 use gpui::*;
@@ -104,6 +106,10 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
 #[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    #[cfg(feature = "ui-snapshots")]
+    if std::env::args().nth(1).as_deref() == Some("--ui-snapshot") {
+        return ui_snapshots::run();
+    }
     let options = options(std::env::args().skip(1))?;
     if let Some(path) = options.viewport_png {
         let editor = match options.path.as_ref() {

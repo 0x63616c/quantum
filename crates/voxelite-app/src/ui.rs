@@ -31,6 +31,8 @@ mod save_flow;
 mod settings;
 mod shortcut_hint;
 mod sidebar;
+#[cfg(feature = "ui-snapshots")]
+pub(crate) mod snapshots;
 mod status;
 mod tooltip;
 mod viewport;
