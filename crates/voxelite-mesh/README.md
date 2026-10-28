@@ -8,6 +8,16 @@ Public API: `Quad`, `Mesh`, `greedy_mesh`, `greedy_mesh_with_limit`, `MAX_QUADS`
 and `thiserror`. Error display strings retain the existing render wording for
 compatibility; `voxelite-render` aliases `MeshError` as `RenderError`.
 
+`Mesh::greedy_rectangles` is the shared, allocation-free face-mask merger. It
+visits rows then columns, growing equal face keys across columns before rows.
+Snapshot meshing supplies palette slots; the renderer supplies slot/AO keys and
+keeps nonuniform AO faces as unit rectangles. The renderer still owns padded
+composite sampling, AO, chunk invalidation, scheduling and vertex emission.
+Snapshot quads retain their axis/slice/sign/row/column order and admission limit;
+GPU chunks retain their existing order and AO-aware diagonals. Test-only
+`reference.rs` implementations independently check snapshot geometry and renderer
+vertex bits against the pre-refactor algorithms.
+
 ## CPU micro-benchmarks
 
 Run the production greedy mesher with Divan (no GPU required):

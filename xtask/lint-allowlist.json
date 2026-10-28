@@ -70,7 +70,6 @@
   "crates/voxelite-mcp/tests/attached.rs:function-lines:::live_socket_shares_history_conflicts_pause_and_receipts": 247,
   "crates/voxelite-mcp/tests/stdio.rs:function-lines:::workflow": 133,
   "crates/voxelite-plugin-host/src/conformance.rs:function-lines:::check": 225,
-  "crates/voxelite-render/src/chunk_mesh.rs:function-lines:::mesh_chunk": 107,
   "crates/voxelite-render/src/chunk_mesh/reference.rs:function-lines:::mesh_chunk": 102,
   "crates/voxelite-render/src/gpu.rs:file-lines": 1032,
   "crates/voxelite-render/src/gpu.rs:function-lines:impl  for Viewport::render": 255,
