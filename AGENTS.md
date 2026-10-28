@@ -153,7 +153,9 @@ Build ordinary xtask command vectors with `xshell::cmd!` and convert them to
 injectable `Runner`. Apply secret markers and execution policy after conversion;
 keep process-group cancellation in the shared runner.
 
-Run from the repository root. These are the general macOS CI checks:
+Run from the repository root. These are the general full-workspace checks. Mac
+nightly, manual and release runs check the workspace; PRs and main pushes check
+only macOS-specific crates:
 
 ```sh
 cargo fmt --all -- --check
@@ -390,7 +392,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and workspace tests on the Mac mini. Main pushes run Clippy and workspace tests without a DMG. Nightly and manual main runs also build and upload the full release-profile ad-hoc DMG; PRs that touch packaging inputs still build it. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and tests for macOS-specific crates on the Mac mini for PRs and main pushes. The package list is in the workflow’s Select Rust packages step; update it when a crate gains macOS-specific code. CI Linux checks the full workspace. Nightly and manual Mac runs check the full workspace; releases require full Mac Clippy and tests before packaging. Main pushes skip the DMG. Nightly and manual main runs also build and upload the full release-profile ad-hoc DMG; PRs that touch packaging inputs still build it. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
