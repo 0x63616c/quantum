@@ -12,6 +12,7 @@ glob.workspace = true
 percent-encoding.workspace = true
 pulldown-cmark.workspace = true
 plist.workspace = true
+png.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true
 regex.workspace = true

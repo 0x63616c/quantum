@@ -2408,6 +2408,7 @@ dependencies = [
  "gpui-macos-gpui-unofficial",
  "gpui-unofficial",
  "gpui-web-gpui-unofficial",
+ "gpui-wgpu-gpui-unofficial",
  "gpui-windows-gpui-unofficial",
 ]
 
@@ -2545,6 +2546,7 @@ dependencies = [
  "etagere",
  "gpui-unofficial",
  "gpui-util-gpui-unofficial",
+ "image",
  "itertools",
  "log",
  "parking_lot",
@@ -7667,6 +7669,7 @@ dependencies = [
  "glob",
  "percent-encoding",
  "plist",
+ "png 0.18.1",
  "proc-macro2",
  "pulldown-cmark",
  "quote",

@@ -33,6 +33,10 @@ CI snapshot verification; insta inherits that variable under nextest too.
 
 ## PR screenshots
 
+For the independent display-free regression gate, run `cargo xtask ui-snapshots`.
+Explicit `--rebaseline` updates reviewed references; `--screen 'settings-*'`
+filters the key set. See [UI snapshots](../docs/ui-snapshots.md).
+
 `cargo xtask screenshots` captures only the key set: `welcome`, `editor-dark` and
 `editor-light`. The other registered surfaces are opt-in, keeping routine CI time
 independent of the size of the capture catalog. Capture quality and sizes stay fixed.

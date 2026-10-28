@@ -40,3 +40,8 @@ Closes #
 - [ ] UI only: Screenshots section generated and checked; design-reviewed
 - [ ] UI only: colors, spacing, radii and type come from `voxelite-ui` tokens
 - [ ] UI only: unchanged screens show no unintended differences
+- [ ] UI only: before/after screenshots cover affected screens in both themes
+- [ ] UI only: focus, hover and pressed states reviewed
+- [ ] UI only: empty and loading states reviewed
+- [ ] UI only: text truncation and long labels reviewed
+- [ ] UI only: headless golden comparison passes; intentional rebaselines reviewed
