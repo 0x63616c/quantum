@@ -22,6 +22,9 @@ Quantum's macOS jobs run on self-hosted runners on one Mac mini (Apple M2, 8 cor
   head repository.
 - Two runners is the limit for this machine. It has 8 GB of RAM and also hosts runners
   for other repos, and two Rust builds at once already push it into swap.
+- Every self-hosted Mac job (CI macOS, Rendering checks, Release macOS) sets
+  `CARGO_BUILD_JOBS: 4`, so two concurrent builds share the 8 cores instead of each
+  starting 8 rustc processes and running out of memory. Add it to any new Mac job.
 
 Add a runner with GitHub's runner package (Settings → Actions → Runners → New runner),
 install it next to the others, use a neutral name (`homelab-voxelite-N`, no personal
