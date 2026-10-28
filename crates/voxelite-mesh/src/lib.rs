@@ -5,6 +5,8 @@
 use std::collections::{BTreeMap, HashMap};
 use voxelite_core::{Pos, Snapshot};
 
+mod rectangles;
+
 /// Maximum admitted greedy quads per mesh.
 pub const MAX_QUADS: usize = 1_500_000;
 /// Geometry or image admission/validation failure.
@@ -124,25 +126,12 @@ pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> MeshResu
                         mesh.exposed_faces += 1;
                     }
                 }
-                for y in 0..height {
-                    for x in 0..width {
-                        let slot = mask[y * width + x];
-                        if slot == 0 {
-                            continue;
-                        }
-                        let mut w = 1;
-                        while x + w < width && mask[y * width + x + w] == slot {
-                            w += 1;
-                        }
-                        let mut h = 1;
-                        while y + h < height
-                            && (0..w).all(|dx| mask[(y + h) * width + x + dx] == slot)
-                        {
-                            h += 1;
-                        }
-                        for dy in 0..h {
-                            mask[(y + dy) * width + x..(y + dy) * width + x + w].fill(0);
-                        }
+                Mesh::greedy_rectangles(
+                    &mut mask,
+                    [width as u16, height as u16],
+                    0,
+                    |_| true,
+                    |[x, y], size, slot| {
                         if mesh.quads.len() == max_quads {
                             return Err(MeshError::Limit(format!(
                                 "geometry exceeds {max_quads} greedy quads"
@@ -150,17 +139,18 @@ pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> MeshResu
                         }
                         let mut origin = [0; 3];
                         origin[axis] = slice + i32::from(positive);
-                        origin[u] = min_u + x as i32;
-                        origin[v] = min_v + y as i32;
+                        origin[u] = min_u + i32::from(x);
+                        origin[v] = min_v + i32::from(y);
                         mesh.quads.push(Quad {
                             origin,
-                            size: [w as u16, h as u16],
+                            size,
                             slot,
                             axis: axis as u8,
                             positive,
                         });
-                    }
-                }
+                        Ok(())
+                    },
+                )?;
             }
         }
     }
