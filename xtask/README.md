@@ -16,6 +16,14 @@ cargo xtask macos check-appcast site/appcast.xml --allow-empty
 cargo xtask bench --help
 ```
 
+CI runs `cargo nextest run --workspace --locked --profile ci`, followed by
+`cargo test --doc --workspace --locked` because nextest excludes doctests.
+Install the CI version locally with `cargo install cargo-nextest --version 0.9.150 --locked`.
+`cargo xtask validate` uses nextest when installed and always runs doctests;
+otherwise it falls back to `cargo test --workspace --locked` (including doctests).
+The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
+CI snapshot verification; insta inherits that variable under nextest too.
+
 `validate` runs every registered check in order and continues after failures.
 Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
 Rustfmt and Clippy are probed because Cargo also lists rustup proxies for

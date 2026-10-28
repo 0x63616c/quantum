@@ -117,7 +117,8 @@ workflows.
 
 CI checks formatting, runs the mocked packaging/release regression tests,
 runs `cargo clippy --workspace --locked -- -D warnings`,
-runs `cargo test --workspace --locked`, builds the release app, and packages a
+runs `cargo nextest run --workspace --locked --profile ci` and
+`cargo test --doc --workspace --locked`, builds the release app, and packages a
 DMG. Strict Clippy passed on Linux when this workflow was added; the first macOS
 run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
