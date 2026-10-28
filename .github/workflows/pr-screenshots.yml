@@ -1,0 +1,79 @@
+name: PR screenshots
+
+# Renders the key screens at the PR's merge-base and head, stores the PNGs on the
+# `pr-assets` branch and keeps the "Screenshots" section of the PR description current.
+# See .agents/skills/ui-pr-screenshots/SKILL.md.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'crates/voxelite-app/**'
+      - 'crates/voxelite-ui/**'
+      - 'crates/voxelite-render/**'
+      - 'crates/plugins/**'
+      - 'vendor/gpui-apple/**'
+      - 'Cargo.lock'
+      - 'scripts/capture-pr-screens.sh'
+      - 'xtask/src/screenshots.rs'
+      - '.github/workflows/pr-screenshots.yml'
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to (re)generate screenshots for
+        required: true
+        type: string
+
+permissions:
+  contents: write # push PNGs to the pr-assets branch
+  pull-requests: write # edit the PR description
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    # Same-repository PRs only: fork PRs get a read-only token.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number || inputs.pr }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || format('refs/pull/{0}/head', inputs.pr) }}
+
+      - name: Install build and capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            build-essential clang cmake pkg-config libssl-dev \
+            libfontconfig-dev libfreetype-dev libvulkan-dev libwayland-dev \
+            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            xvfb xauth xdotool imagemagick dbus dbus-x11 mesa-vulkan-drivers
+
+      - name: Install pinned Rust toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        with:
+          key: pr-screenshots
+
+      - name: Capture and publish before/after screenshots
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898333+github-actions[bot]@users.noreply.github.com'
+          base_ref="$(gh pr view "$PR" --json baseRefName -q .baseRefName)"
+          git fetch --quiet origin "$base_ref"
+          base="$(git merge-base HEAD FETCH_HEAD)"
+          cargo xtask screenshots --remote origin --base "$base" --head HEAD --publish "$PR"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: pr-screenshots
+          path: target/pr-screenshots/*/*.png
+          if-no-files-found: ignore

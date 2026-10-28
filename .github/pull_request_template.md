@@ -1,21 +1,34 @@
-<!-- Title: Conventional Commit, e.g. `fix(mcp): reject oversized frames`. See CONTRIBUTING.md. -->
+<!--
+Title: Conventional Commit, e.g. `fix(mcp): reject oversized frames`. See CONTRIBUTING.md.
+Keep the sections and their order. Write for someone who has not seen the issue.
+UI changes: don't paste screenshots by hand. Run `cargo xtask screenshots --publish <PR#>`
+(the "PR screenshots" CI job does it for UI paths) and it adds a "Screenshots" section
+with a Before | After table above "Testing". Non-UI PRs get no Screenshots section.
+-->
 
 Closes #
 
 ## Summary
 
-<!-- Problem, resulting behavior, and anything deliberately out of scope. -->
+<!-- Plain English, 1–3 sentences: what was wrong or missing, and what is true now. -->
 
-## Test evidence
+## Changes
 
-<!-- Commands run and results. Name platforms you could not test. -->
+<!-- Bullets, most important first. Call out anything deliberately out of scope. -->
 
-## Screenshots / numbers
+-
 
-<!-- UI: before and after (both themes where relevant). Perf: before and after numbers. Otherwise: n/a. -->
+## Testing
+
+<!-- Commands run and results. Name platforms you could not test. Perf: before/after numbers. -->
+
+-
 
 ## Checklist
 
 - [ ] One focus; linked issue's **Done when** items are all met
 - [ ] Docs, schemas and fixtures updated where behavior changed
 - [ ] No secrets, personal data or machine-specific paths
+- [ ] UI only: Screenshots section generated and checked; design-reviewed
+- [ ] UI only: colors, spacing, radii and type come from `voxelite-ui` tokens
+- [ ] UI only: unchanged screens show no unintended differences
