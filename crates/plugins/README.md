@@ -10,7 +10,10 @@ crate is allowed in normal or build dependencies, including optional, renamed an
 target-specific dependencies. In particular, plugins must not depend directly on
 `voxelite-core`; any shared core types must be exposed through the API crate.
 Dev-dependencies are exempt so plugin tests can use
-`voxelite_plugin_host::conformance::check`.
+`voxelite_plugin_host::plugin_conformance_test!`, which runs the host conformance
+harness. Use `Manifest::builtin` for enabled, disableable built-ins, supplying
+the stable ID, localization keys and package version. Required infrastructure
+can override `can_disable`; external templates retain explicit manifests.
 
 `voxelite-plugin-api` owns `ExportError`/`ExportResult` and the stable
 `ExportCallback`, `ExportImage` and `ExportCx` contracts. It exposes portable mesh

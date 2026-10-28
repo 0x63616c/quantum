@@ -21,6 +21,30 @@ pub struct Manifest {
     pub can_disable: bool,
 }
 
+impl Manifest {
+    /// Construct an enabled, disableable built-in using the current API contract.
+    ///
+    /// Callers supply their own package version and validated stable identity.
+    /// Required infrastructure may override `can_disable` on the returned value.
+    pub fn builtin(
+        id: PluginId,
+        name_key: impl Into<String>,
+        description_key: impl Into<String>,
+        version: Version,
+    ) -> Self {
+        Self {
+            id,
+            name_key: name_key.into(),
+            description_key: description_key.into(),
+            version,
+            api_version: crate::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        }
+    }
+}
+
 /// Placement within the native application's menu, independent of its usual menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ApplicationMenuSection {

@@ -1,7 +1,7 @@
 //! Built-in agent command declarations; execution remains in the app.
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
+    CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
 };
 
 /// Metadata for the built-in agent commands.
@@ -9,16 +9,12 @@ pub struct AgentPlugin;
 
 impl Plugin for AgentPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new("dev.voxelite.agent").unwrap(),
-            name_key: "plugins.agent.name".into(),
-            description_key: "plugins.agent.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PluginId::new("dev.voxelite.agent").unwrap(),
+            "plugins.agent.name",
+            "plugins.agent.description",
+            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
@@ -69,8 +65,27 @@ impl Plugin for AgentPlugin {
 mod tests {
     use super::*;
 
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        AgentPlugin
+    ));
+}
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
     #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(AgentPlugin));
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.agent").unwrap(),
+            name_key: "plugins.agent.name".into(),
+            description_key: "plugins.agent.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        };
+        assert_eq!(AgentPlugin.manifest(), expected);
     }
 }

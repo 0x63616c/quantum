@@ -11,16 +11,12 @@ pub struct ShadowsLightingPlugin;
 
 impl Plugin for ShadowsLightingPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.shadows-lighting.name".into(),
-            description_key: "plugins.shadows-lighting.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PluginId::new(PLUGIN_ID).unwrap(),
+            "plugins.shadows-lighting.name",
+            "plugins.shadows-lighting.description",
+            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
     }
     fn contribute(&self, registrar: &mut Registrar) {
         registrar.render_pass(RenderPassContribution {
@@ -41,3 +37,23 @@ impl RenderPass for ShadowsLightingPlugin {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
+    #[test]
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.shadows-lighting").unwrap(),
+            name_key: "plugins.shadows-lighting.name".into(),
+            description_key: "plugins.shadows-lighting.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        };
+        assert_eq!(ShadowsLightingPlugin.manifest(), expected);
+    }
+}

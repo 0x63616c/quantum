@@ -4,8 +4,8 @@ mod behavior;
 use behavior::BuiltinTool;
 
 use voxelite_plugin_api::{
-    API_VERSION, CommandContribution, Manifest, Plugin, PluginId, Registrar, Tool,
-    ToolContribution, Value, Version,
+    CommandContribution, Manifest, Plugin, PluginId, Registrar, Tool, ToolContribution, Value,
+    Version,
 };
 
 /// Declarations and behavior for the standard editing tools.
@@ -20,16 +20,12 @@ impl Plugin for ToolsPlugin {
     }
 
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new("dev.voxelite.tools").unwrap(),
-            name_key: "plugins.tools.name".into(),
-            description_key: "plugins.tools.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PluginId::new("dev.voxelite.tools").unwrap(),
+            "plugins.tools.name",
+            "plugins.tools.description",
+            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
     }
 
     fn contribute(&self, registrar: &mut Registrar) {
@@ -126,8 +122,27 @@ impl Plugin for ToolsPlugin {
 mod tests {
     use super::*;
 
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        ToolsPlugin
+    ));
+}
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
     #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(ToolsPlugin));
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.tools").unwrap(),
+            name_key: "plugins.tools.name".into(),
+            description_key: "plugins.tools.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        };
+        assert_eq!(ToolsPlugin.manifest(), expected);
     }
 }

@@ -1,10 +1,13 @@
 use super::*;
 use voxelite_plugin_api::{Mode, PaletteEdit, Region, Shape, Swatch, Uuid, Voxel};
-use voxelite_plugin_host::{Host, conformance};
+use voxelite_plugin_host::Host;
+
+voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+    MirrorPlugin
+));
 
 #[test]
-fn conforms_to_plugin_contract() {
-    conformance::check(|| Box::new(MirrorPlugin));
+fn declares_plugin_specific_capabilities() {
     let mut host = Host::new(vec![Box::new(MirrorPlugin)]);
     assert_eq!(host.registry().command_transforms().count(), 1);
     assert_eq!(host.registry().settings().count(), 3);

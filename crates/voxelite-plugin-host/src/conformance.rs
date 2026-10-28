@@ -267,3 +267,38 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
     host.deactivate(0).expect("final cleanup must succeed");
     assert!(host.registry().iter().next().is_none());
 }
+
+/// Generate a unit test using the host's full conformance harness.
+///
+/// Keep the host in plugin dev-dependencies and invoke this inside a test module.
+/// The factory expression must return a fresh boxed plugin.
+///
+/// ```
+/// use voxelite_plugin_api::{Manifest, Plugin, PluginId, Registrar, Version};
+///
+/// struct Example;
+/// impl Plugin for Example {
+///     fn manifest(&self) -> Manifest {
+///         Manifest::builtin(
+///             PluginId::new("dev.example.plugin").unwrap(),
+///             "example.name",
+///             "example.description",
+///             Version::new(1, 0, 0),
+///         )
+///     }
+///     fn contribute(&self, _: &mut Registrar) {}
+/// }
+/// voxelite_plugin_host::plugin_conformance_test!(
+///     conforms_to_plugin_contract,
+///     || Box::new(Example)
+/// );
+/// ```
+#[macro_export]
+macro_rules! plugin_conformance_test {
+    ($name:ident, $factory:expr $(,)?) => {
+        #[test]
+        fn $name() {
+            $crate::conformance::check($factory);
+        }
+    };
+}

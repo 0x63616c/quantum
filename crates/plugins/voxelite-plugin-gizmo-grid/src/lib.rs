@@ -17,16 +17,12 @@ pub const GIZMO_OVERLAY: &str = "dev.voxelite.gizmo-grid.gizmo";
 pub struct GizmoGridPlugin;
 impl Plugin for GizmoGridPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.gizmo-grid.name".into(),
-            description_key: "plugins.gizmo-grid.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PluginId::new(PLUGIN_ID).unwrap(),
+            "plugins.gizmo-grid.name",
+            "plugins.gizmo-grid.description",
+            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
     }
     fn contribute(&self, registrar: &mut Registrar) {
         registrar.command(CommandContribution {
@@ -95,3 +91,23 @@ impl Overlay for Grid {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
+    #[test]
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.gizmo-grid").unwrap(),
+            name_key: "plugins.gizmo-grid.name".into(),
+            description_key: "plugins.gizmo-grid.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        };
+        assert_eq!(GizmoGridPlugin.manifest(), expected);
+    }
+}

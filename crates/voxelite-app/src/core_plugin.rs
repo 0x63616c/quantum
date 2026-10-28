@@ -1,8 +1,8 @@
 //! Built-in core command declarations; execution remains in the app.
 
 use voxelite_plugin_api::{
-    API_VERSION, ApplicationMenuSection, CommandContribution, Manifest, Plugin, PluginId,
-    Registrar, Value, Version,
+    ApplicationMenuSection, CommandContribution, Manifest, Plugin, PluginId, Registrar, Value,
+    Version,
 };
 
 /// Metadata for the built-in core commands.
@@ -11,14 +11,13 @@ pub struct CorePlugin;
 impl Plugin for CorePlugin {
     fn manifest(&self) -> Manifest {
         Manifest {
-            id: PluginId::new("dev.voxelite.core").unwrap(),
-            name_key: "plugins.core.name".into(),
-            description_key: "plugins.core.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
             can_disable: false,
+            ..Manifest::builtin(
+                PluginId::new("dev.voxelite.core").unwrap(),
+                "plugins.core.name",
+                "plugins.core.description",
+                Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            )
         }
     }
 
@@ -341,10 +340,9 @@ pub fn app_host() -> voxelite_plugin_host::Host {
 mod tests {
     use super::*;
 
-    #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(CorePlugin));
-    }
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        CorePlugin
+    ));
 
     #[test]
     fn welcome_commands_are_declared_without_gpui() {
@@ -425,5 +423,25 @@ mod tests {
             host.disable("dev.voxelite.core"),
             Err(HostError::CannotDisable { .. })
         ));
+    }
+}
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
+    #[test]
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.core").unwrap(),
+            name_key: "plugins.core.name".into(),
+            description_key: "plugins.core.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: false,
+        };
+        assert_eq!(CorePlugin.manifest(), expected);
     }
 }

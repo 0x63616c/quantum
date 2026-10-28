@@ -19,16 +19,12 @@ pub struct CommentsPlugin;
 
 impl Plugin for CommentsPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.comments.name".into(),
-            description_key: "plugins.comments.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(
+            PluginId::new(PLUGIN_ID).unwrap(),
+            "plugins.comments.name",
+            "plugins.comments.description",
+            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        )
     }
 
     fn comments_panel(&self, id: &str) -> Option<&dyn CommentsPanel> {
@@ -82,14 +78,37 @@ impl Plugin for CommentsPlugin {
 mod tests {
     use super::*;
 
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        CommentsPlugin
+    ));
+
     #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(CommentsPlugin));
+    fn declares_plugin_specific_capabilities() {
         let mut host = voxelite_plugin_host::Host::new(vec![Box::new(CommentsPlugin)]);
         assert!(host.has_comments_panel(PANEL_ID).unwrap());
         assert!(host.has_tool(TOOL_ID).unwrap());
         assert!(host.has_overlay(PINS_ID).unwrap());
         // Comments remain core content; no extension namespace is introduced.
         assert_eq!(host.registry().data_sections().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod manifest_regression {
+    use super::*;
+
+    #[test]
+    fn manifest_matches_original_literal() {
+        let expected = Manifest {
+            id: PluginId::new("dev.voxelite.comments").unwrap(),
+            name_key: "plugins.comments.name".into(),
+            description_key: "plugins.comments.description".into(),
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            api_version: voxelite_plugin_api::API_VERSION,
+            builtin: true,
+            default_enabled: true,
+            can_disable: true,
+        };
+        assert_eq!(CommentsPlugin.manifest(), expected);
     }
 }
