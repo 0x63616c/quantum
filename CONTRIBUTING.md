@@ -163,7 +163,8 @@ the contents permission; it uses Vercel credentials rather than Pages or OIDC gr
 Run `cargo xtask check brand typos` before submitting changes (install the pinned
 spelling checker with `cargo install typos-cli --version 1.51.1 --locked`). The
 brand check scans tracked text and paths, including binary filenames. Add legacy
-exceptions only in `brand.toml` under `compatibility`: use a specific file, the
-smallest required literal, and a compatibility reason. Unused entries fail; remove
-them when retiring compatibility. Fix spelling errors; reserve `_typos.toml`
+exceptions only in `brand.toml` under `compatibility`: list specific files, the
+smallest required literals, and a compatibility reason. Every listed file and literal
+must still match or the check fails as stale; remove them when retiring
+compatibility. Fix spelling errors; reserve `_typos.toml`
 word entries for justified domain terms and exclusions for upstream/generated assets.

@@ -42,7 +42,8 @@ struct Rule {
     name: String,
     paths: Vec<glob::Pattern>,
     literals: Vec<String>,
-    used: bool,
+    used_paths: Vec<bool>,
+    used_literals: Vec<bool>,
 }
 
 struct Scanner {
@@ -69,9 +70,10 @@ impl Scanner {
                 .map_err(|error| Error::Invalid(format!("brand.toml: {name}: {error}")))?;
             rules.push(Rule {
                 name,
+                used_paths: vec![false; paths.len()],
+                used_literals: vec![false; entry.current.len()],
                 paths,
                 literals: entry.current,
-                used: false,
             });
         }
         Ok(Self {
@@ -86,15 +88,17 @@ impl Scanner {
         for hit in self.legacy.find_iter(text) {
             let mut allowed = false;
             for rule in &mut self.rules {
-                if !rule.paths.iter().any(|pattern| pattern.matches(path)) {
+                let Some(path_index) = rule.paths.iter().position(|pattern| pattern.matches(path))
+                else {
                     continue;
-                }
-                for literal in &rule.literals {
+                };
+                for (literal_index, literal) in rule.literals.iter().enumerate() {
                     // Only the actual legacy occurrence inside a permitted literal is exempt.
-                    if text.match_indices(literal).any(|(start, value)| {
+                    if text.match_indices(literal.as_str()).any(|(start, value)| {
                         start <= hit.start() && start + value.len() >= hit.end()
                     }) {
-                        rule.used = true;
+                        rule.used_paths[path_index] = true;
+                        rule.used_literals[literal_index] = true;
                         allowed = true;
                     }
                 }
@@ -118,12 +122,25 @@ impl Scanner {
     }
 
     fn finish(mut self) -> Vec<String> {
+        // Every listed path and literal must still be needed, so retired
+        // compatibility cannot linger inside an otherwise live group.
         for rule in self.rules {
-            if !rule.used {
-                self.errors.push(format!(
-                    "brand.toml: stale compatibility.{} (no legacy occurrence matched)",
-                    rule.name
-                ));
+            for (pattern, used) in rule.paths.iter().zip(&rule.used_paths) {
+                if !used {
+                    self.errors.push(format!(
+                        "brand.toml: stale compatibility.{} path {:?} (no legacy occurrence matched)",
+                        rule.name,
+                        pattern.as_str()
+                    ));
+                }
+            }
+            for (literal, used) in rule.literals.iter().zip(&rule.used_literals) {
+                if !used {
+                    self.errors.push(format!(
+                        "brand.toml: stale compatibility.{} literal {:?} (no legacy occurrence matched)",
+                        rule.name, literal
+                    ));
+                }
             }
         }
         self.errors
@@ -179,7 +196,29 @@ mod tests {
         let mut wrong = make();
         wrong.inspect("README.md", literal);
         let errors = wrong.finish();
-        assert_eq!(errors.len(), 2);
-        assert!(errors[1].contains("stale compatibility.format"));
+        assert_eq!(errors.len(), 3, "{errors:?}");
+        assert!(errors[0].starts_with("README.md:1:1:"));
+        assert!(errors[1].contains("stale compatibility.format path"));
+        assert!(errors[2].contains("stale compatibility.format literal"));
+    }
+
+    #[test]
+    fn unused_path_or_literal_inside_live_group_is_stale() {
+        let literal = concat!("voxe", "lite");
+        let mime = concat!("application/vnd.", "voxe", "lite.project+json");
+        let mut scanner = Scanner::new(BTreeMap::from([(
+            "format".into(),
+            Exception {
+                current: vec![literal.into(), mime.into()],
+                paths: vec!["schema.json".into(), "retired.json".into()],
+                reason: "Frozen format discriminator".into(),
+            },
+        )]))
+        .unwrap();
+        scanner.inspect("schema.json", literal);
+        let errors = scanner.finish();
+        assert_eq!(errors.len(), 2, "{errors:?}");
+        assert!(errors[0].contains("path \"retired.json\""));
+        assert!(errors[1].contains("literal"));
     }
 }

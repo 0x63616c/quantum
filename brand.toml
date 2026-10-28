@@ -76,69 +76,141 @@ readme_logo = { current = "site/assets/mark.svg", stable = false }
 bundle_icon_asset = { current = "packaging/macos/Quantum.icns", stable = false }
 app_icon = { current = "crates/quantum-app/assets/app-icon-256.png", stable = false }
 
-# Each exception permits one exact literal in one tracked file. Matching is case-sensitive.
-# The scanner rejects unused entries; remove them when compatibility code is retired.
+# Legacy-name exceptions for `cargo xtask check brand`. Each group lists the exact
+# case-sensitive literals it permits, the tracked files that may contain them, and why.
+# A legacy occurrence is allowed only inside one of the group's literals in one of its
+# files. Every listed file and literal must still match, so retired compatibility
+# fails as stale; delete it from here when the compatibility code is removed.
 [compatibility]
-inventory_0 = { current = ["voxelite"], stable = true, paths = ["brand.toml"], reason = "This explicit inventory records the retained legacy identifiers." }
-inventory_1 = { current = ["Voxelite"], stable = true, paths = ["brand.toml"], reason = "This explicit inventory records the retained legacy identifiers." }
-inventory_2 = { current = ["VOXELITE"], stable = true, paths = ["brand.toml"], reason = "This explicit inventory records the retained legacy identifiers." }
-bundle_3 = { current = ["co.worldwidewebb.voxelite"], stable = true, paths = ["crates/quantum-app/src/lib.rs"], reason = "Sparkle 2.10.1 discovers a renamed update through the unchanged bundle ID; window identity must match. See docs/rename-compatibility.md." }
-bundle_4 = { current = ["co.worldwidewebb.voxelite"], stable = true, paths = ["packaging/macos/Info.plist"], reason = "Sparkle 2.10.1 discovers a renamed update through the unchanged bundle ID; window identity must match. See docs/rename-compatibility.md." }
-format_5 = { current = ["voxelite"], stable = true, paths = ["bench/scenes/autumn-workshop.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_6 = { current = ["voxelite"], stable = true, paths = ["crates/quantum-format/src/lib.rs"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_7 = { current = ["application/vnd.voxelite.project+json"], stable = true, paths = ["crates/quantum-format/src/lib.rs"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_8 = { current = ["voxelite"], stable = true, paths = ["crates/quantum-format/tests/roundtrip.rs"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_9 = { current = ["voxelite"], stable = true, paths = ["crates/quantum-format/tests/snapshots/snapshots__populated_canonical_bytes.snap"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_10 = { current = ["voxelite"], stable = true, paths = ["examples/autumn-workshop.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_11 = { current = ["voxelite"], stable = true, paths = ["examples/cherry-blossom.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_12 = { current = ["voxelite"], stable = true, paths = ["examples/lighthouse.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_13 = { current = ["voxelite"], stable = true, paths = ["examples/snow-cabin.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_14 = { current = ["voxelite"], stable = true, paths = ["site/assets/minimal.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_15 = { current = ["voxelite"], stable = true, paths = ["site/content/format.html"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_16 = { current = ["application/vnd.voxelite.project+json"], stable = true, paths = ["site/content/format.html"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_17 = { current = ["voxelite"], stable = true, paths = ["spec/voxl/1.0/README.md"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_18 = { current = ["application/vnd.voxelite.project+json"], stable = true, paths = ["spec/voxl/1.0/README.md"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_19 = { current = ["voxelite"], stable = true, paths = ["spec/voxl/1.0/fixtures/populated.canonical.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_20 = { current = ["voxelite"], stable = true, paths = ["spec/voxl/1.0/fixtures/populated.input.voxl"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-format_21 = { current = ["voxelite"], stable = true, paths = ["spec/voxl/1.0/schema.json"], reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged." }
-mcp_22 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/src/catalog.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_23 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/src/lib.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_24 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/src/main.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_25 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/src/tools.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_26 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/tests/snapshots/wire_snapshots__argument_errors.snap"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_27 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/tests/snapshots/wire_snapshots__numeric_decoding_and_error_precedence.snap"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_28 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/tests/snapshots/wire_snapshots__representative_results.snap"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_29 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/tests/snapshots/wire_snapshots__tool_catalog.snap"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_30 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-mcp/tests/stdio.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_31 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-site/src/main.rs"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_32 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-site/templates/install.html"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_33 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-site/templates/integrations.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_34 = { current = ["voxelite.v1"], stable = true, paths = ["crates/quantum-site/tests/snapshots/snapshots__docs_overview.snap"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_35 = { current = ["voxelite.v1"], stable = true, paths = ["docs/mcp.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_36 = { current = ["voxelite.v1"], stable = true, paths = ["integrations/README.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_37 = { current = ["voxelite.v1"], stable = true, paths = ["site/content/getting-started.html"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_38 = { current = ["voxelite.v1"], stable = true, paths = ["site/content/mcp.html"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_39 = { current = ["voxelite.v1"], stable = true, paths = ["skills/README.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_40 = { current = ["voxelite.v1"], stable = true, paths = ["skills/quantum-palettes/SKILL.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_41 = { current = ["voxelite.v1"], stable = true, paths = ["skills/quantum-primitives/SKILL.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_42 = { current = ["voxelite.v1"], stable = true, paths = ["skills/quantum-render-review/SKILL.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_43 = { current = ["voxelite.v1"], stable = true, paths = ["skills/quantum-workflow/SKILL.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_44 = { current = ["voxelite.v1"], stable = true, paths = ["spec/mcp/v1/compatibility.json"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_45 = { current = ["voxelite.v1"], stable = true, paths = ["spec/mcp/v1/contract.md"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-mcp_46 = { current = ["voxelite.v1"], stable = true, paths = ["spec/mcp/v1/tools.json"], reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name." }
-storage_47 = { current = ["VOXELITE_DATA_DIR"], stable = true, paths = ["crates/quantum-app/src/local_settings.rs"], reason = "One-time legacy directory migration and deprecated explicit environment override, including regression tests." }
-storage_48 = { current = ["voxelite"], stable = true, paths = ["crates/quantum-app/src/local_settings/migration.rs"], reason = "One-time legacy directory migration and deprecated explicit environment override, including regression tests." }
-storage_49 = { current = ["voxelite"], stable = true, paths = ["crates/quantum-app/src/local_settings/migration/tests.rs"], reason = "One-time legacy directory migration and deprecated explicit environment override, including regression tests." }
-screenshot_baseline_50 = { current = ["VOXELITE_DATA_DIR"], stable = true, paths = ["scripts/capture-pr-screens.sh"], reason = "Isolate settings for pre-rename baseline binaries during before/after capture." }
-plugins_51 = { current = ["dev.voxelite."], stable = true, paths = ["crates/quantum-plugin-host/src/compatibility.rs"], reason = "Read-side aliases for persisted enabled declarations and setting keys, with regression tests." }
-plugins_52 = { current = ["dev.voxelite."], stable = true, paths = ["crates/quantum-plugin-host/src/tests/compatibility.rs"], reason = "Read-side aliases for persisted enabled declarations and setting keys, with regression tests." }
-old_host_53 = { current = ["voxelite.worldwidewebb.co"], stable = true, paths = ["scripts/tests/test_brand_redirects.py"], reason = "Redirect old pages while serving the old updater endpoint directly; both hostnames stay attached." }
-old_host_54 = { current = ["voxelite.worldwidewebb.co"], stable = true, paths = ["site/vercel.json"], reason = "Redirect old pages while serving the old updater endpoint directly; both hostnames stay attached." }
-repository_transition_55 = { current = ["0x63616c/voxelite"], stable = true, paths = [".github/workflows/deploy-site.yml"], reason = "Accept the current and future owner slugs until #91; the historical download prefix remains valid for immutable signed feeds thereafter." }
-repository_transition_56 = { current = ["0x63616c/voxelite"], stable = true, paths = ["xtask/src/macos/mod.rs"], reason = "Accept the current and future owner slugs until #91; the historical download prefix remains valid for immutable signed feeds thereafter." }
-release_history_57 = { current = ["Voxelite"], stable = true, paths = ["xtask/src/macos/feed.rs"], reason = "Validate already published DMG/HTML filenames without rewriting signed release history." }
-release_history_58 = { current = ["Voxelite"], stable = true, paths = ["xtask/src/macos/tests/appcast.rs"], reason = "Validate already published DMG/HTML filenames without rewriting signed release history." }
-explanation_59 = { current = ["Voxelite"], stable = true, paths = ["CHANGELOG.md"], reason = "User-facing rename history and precise documentation of the compatibility decisions." }
-explanation_60 = { current = ["Voxelite"], stable = true, paths = ["docs/rename-compatibility.md"], reason = "User-facing rename history and precise documentation of the compatibility decisions." }
-explanation_61 = { current = ["voxelite"], stable = true, paths = ["docs/rename-compatibility.md"], reason = "User-facing rename history and precise documentation of the compatibility decisions." }
-explanation_62 = { current = ["VOXELITE_DATA_DIR"], stable = true, paths = ["docs/rename-compatibility.md"], reason = "User-facing rename history and precise documentation of the compatibility decisions." }
+[compatibility.inventory]
+current = ["voxelite", "Voxelite", "VOXELITE"]
+stable = true
+paths = [
+  "brand.toml",
+]
+reason = "This explicit inventory records the retained legacy identifiers."
+
+[compatibility.bundle]
+current = ["co.worldwidewebb.voxelite"]
+stable = true
+paths = [
+  "crates/quantum-app/src/lib.rs",
+  "packaging/macos/Info.plist",
+]
+reason = "Sparkle 2.10.1 discovers a renamed update through the unchanged bundle ID; window identity must match. See docs/rename-compatibility.md."
+
+[compatibility.format]
+current = ["voxelite", "application/vnd.voxelite.project+json"]
+stable = true
+paths = [
+  "bench/scenes/autumn-workshop.voxl",
+  "crates/quantum-format/src/lib.rs",
+  "crates/quantum-format/tests/roundtrip.rs",
+  "crates/quantum-format/tests/snapshots/snapshots__populated_canonical_bytes.snap",
+  "examples/autumn-workshop.voxl",
+  "examples/cherry-blossom.voxl",
+  "examples/lighthouse.voxl",
+  "examples/snow-cabin.voxl",
+  "site/assets/minimal.voxl",
+  "site/content/format.html",
+  "spec/voxl/1.0/README.md",
+  "spec/voxl/1.0/fixtures/populated.canonical.voxl",
+  "spec/voxl/1.0/fixtures/populated.input.voxl",
+  "spec/voxl/1.0/schema.json",
+]
+reason = "Frozen v1 discriminator and MIME keep new projects readable by 0.3.x; fixture and benchmark project bytes stay unchanged."
+
+[compatibility.mcp]
+current = ["voxelite.v1"]
+stable = true
+paths = [
+  "crates/quantum-mcp/src/catalog.rs",
+  "crates/quantum-mcp/src/lib.rs",
+  "crates/quantum-mcp/src/main.rs",
+  "crates/quantum-mcp/src/tools.rs",
+  "crates/quantum-mcp/tests/snapshots/wire_snapshots__argument_errors.snap",
+  "crates/quantum-mcp/tests/snapshots/wire_snapshots__numeric_decoding_and_error_precedence.snap",
+  "crates/quantum-mcp/tests/snapshots/wire_snapshots__representative_results.snap",
+  "crates/quantum-mcp/tests/snapshots/wire_snapshots__tool_catalog.snap",
+  "crates/quantum-mcp/tests/stdio.rs",
+  "crates/quantum-site/src/main.rs",
+  "crates/quantum-site/templates/install.html",
+  "crates/quantum-site/templates/integrations.md",
+  "crates/quantum-site/tests/snapshots/snapshots__docs_overview.snap",
+  "docs/mcp.md",
+  "integrations/README.md",
+  "site/content/getting-started.html",
+  "site/content/mcp.html",
+  "skills/README.md",
+  "skills/quantum-palettes/SKILL.md",
+  "skills/quantum-primitives/SKILL.md",
+  "skills/quantum-render-review/SKILL.md",
+  "skills/quantum-workflow/SKILL.md",
+  "spec/mcp/v1/compatibility.json",
+  "spec/mcp/v1/contract.md",
+  "spec/mcp/v1/tools.json",
+]
+reason = "Frozen response-envelope API version for external validators; server and discovered tools use the new product name."
+
+[compatibility.storage]
+current = ["VOXELITE_DATA_DIR", "voxelite"]
+stable = true
+paths = [
+  "crates/quantum-app/src/local_settings.rs",
+  "crates/quantum-app/src/local_settings/migration.rs",
+  "crates/quantum-app/src/local_settings/migration/tests.rs",
+]
+reason = "One-time legacy directory migration and deprecated explicit environment override, including regression tests."
+
+[compatibility.screenshot_baseline]
+current = ["VOXELITE_DATA_DIR"]
+stable = true
+paths = [
+  "scripts/capture-pr-screens.sh",
+]
+reason = "Isolate settings for pre-rename baseline binaries during before/after capture."
+
+[compatibility.plugins]
+current = ["dev.voxelite."]
+stable = true
+paths = [
+  "crates/quantum-plugin-host/src/compatibility.rs",
+  "crates/quantum-plugin-host/src/tests/compatibility.rs",
+]
+reason = "Read-side aliases for persisted enabled declarations and setting keys, with regression tests."
+
+[compatibility.old_host]
+current = ["voxelite.worldwidewebb.co"]
+stable = true
+paths = [
+  "scripts/tests/test_brand_redirects.py",
+  "site/vercel.json",
+]
+reason = "Redirect old pages while serving the old updater endpoint directly; both hostnames stay attached."
+
+[compatibility.repository_transition]
+current = ["0x63616c/voxelite"]
+stable = true
+paths = [
+  ".github/workflows/deploy-site.yml",
+  "xtask/src/macos/mod.rs",
+]
+reason = "Accept the current and future owner slugs until #91; the historical download prefix remains valid for immutable signed feeds thereafter."
+
+[compatibility.release_history]
+current = ["Voxelite"]
+stable = true
+paths = [
+  "xtask/src/macos/feed.rs",
+  "xtask/src/macos/tests/appcast.rs",
+]
+reason = "Validate already published DMG/HTML filenames without rewriting signed release history."
+
+[compatibility.explanation]
+current = ["Voxelite", "voxelite", "VOXELITE_DATA_DIR"]
+stable = true
+paths = [
+  "CHANGELOG.md",
+  "docs/rename-compatibility.md",
+]
+reason = "User-facing rename history and precise documentation of the compatibility decisions."
