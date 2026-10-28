@@ -164,7 +164,11 @@ All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
 `[self-hosted, macOS, ARM64, xcode]`, which select the self-hosted Apple Silicon runner, with
 `DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer`. There are no
 GitHub-hosted macOS jobs. CI macOS runs its Python script tests on a GitHub-hosted
-Linux runner. Main pushes run workspace Clippy and tests without building a DMG.
+Linux runner. PRs and main pushes lint and test only crates with macOS-specific
+code: app, UI, render, MCP and bench. The package list lives in the workflow's
+`Select Rust packages` step; add a crate there when it gains macOS-specific code.
+CI Linux runs workspace Clippy with `--all-targets` and workspace tests on every
+PR and main push. Main pushes do not build a DMG.
 Nightly and manual runs on `main` also build and upload the ad-hoc DMG with the
 full `release` profile. Pull requests still build it when they change packaging
 inputs (`packaging/`, `xtask/`, Cargo manifests, the toolchain or the macOS workflows).
@@ -187,16 +191,18 @@ runners share one 8 GB Mac mini, so this cap limits CPU and memory contention
 and avoids heavy swap when both runners build at once. PR screenshots runs on
 Ubuntu and does not use this Mac limit.
 
-CI checks formatting, runs the mocked packaging/release regression tests,
-runs `cargo clippy --workspace --locked -- -D warnings`,
-runs `cargo nextest run --workspace --locked --profile ci` and
-`cargo test --doc --workspace --locked`, and, when selected above, builds the
-app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
+Nightly and manual Mac runs use `--workspace` for Clippy and tests instead of the
+change-run package list. Clippy uses `--all-targets --locked -- -D warnings`;
+CI tests use nextest with `--locked --profile ci`, followed by `cargo test --doc`;
+release tests use `cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast`. The release workflow also runs both full
+workspace checks on the Mac before building or packaging. Either failure blocks
+the release. CI Linux checks formatting, and the Linux scripts job runs the
+mocked packaging/release regression tests. When selected above, Mac CI builds
+the app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
 `release` with LTO disabled and 16 codegen units. Main, nightly, dispatch and
 release packaging keep `release`. `cargo xtask macos package` reads
 `PACKAGE_CARGO_PROFILE` (default `release`) when building and locating binaries,
-including with `--skip-build`, and respects `CARGO_TARGET_DIR`. Strict Clippy passed on Linux when this workflow
-was added; the first macOS run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
+including with `--skip-build`, and respects `CARGO_TARGET_DIR`. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
 No signing/notarization secrets are passed to CI. Its DMG and checksum artifacts
 expire after **3 days**. New push/PR runs cancel older change runs for the same
@@ -251,9 +257,12 @@ The packager:
 
 Without the certificate/password pair, the build succeeds with ad-hoc app signing
 and an unsigned DMG. With Developer ID but incomplete API credentials, it signs
-without notarizing. These local/CI modes print clear notices. The release workflow requires all five
-Apple secrets and appcast generation requires a notarized result and the Sparkle
-secret; an incomplete configuration cannot publish a release.
+without notarizing. These local/CI modes print clear notices. The release workflow
+checks all five Apple secrets and the Sparkle secret
+before checkout or building, reporting only a missing secret’s name. Credentials
+remain scoped to their individual steps; the build receives none. Appcast
+generation also requires a notarized result; an incomplete configuration cannot
+publish a release.
 Invalid credentials, rejected notarization, bad checksums, or failed signature
 verification fail the release; they do not silently fall back. Ad-hoc builds omit
 hardened runtime so they can load the ad-hoc Sparkle framework during development.
