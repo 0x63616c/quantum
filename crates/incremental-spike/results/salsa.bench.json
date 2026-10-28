@@ -1,0 +1,3648 @@
+{
+  "hardware": {
+    "platform": "Linux-6.12.94+-x86_64-with-glibc2.41",
+    "cpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           46 bits physical, 57 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  8\nOn-line CPU(s) list:                     0-7\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Xeon(R) Processor\nCPU family:                              6\nModel:                                   207\nThread(s) per core:                      1\nCore(s) per socket:                      8\nSocket(s):                               1\nStepping:                                2\nBogoMIPS:                                4800.00\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc pebs bts rep_good nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq dtes64 vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 wbnoinvd arat vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid bus_lock_detect cldemote movdiri movdir64b fsrm md_clear serialize tsxldtrk amx_bf16 avx512_fp16 amx_tile amx_int8 flush_l1d arch_capabilities\nVirtualization:                          VT-x\nHypervisor vendor:                       KVM\nVirtualization type:                     full\nL1d cache:                               384 KiB (8 instances)\nL1i cache:                               256 KiB (8 instances)\nL2 cache:                                16 MiB (8 instances)\nL3 cache:                                320 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-7\nVulnerability Gather data sampling:      Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Mitigation; TSX disabled\nVulnerability Vmscape:                   Not affected\n",
+    "rust": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "revision": "7d58723c3fca1b502b72c4d9838255533fbc24ff",
+    "initial_load": "3.39 3.49 5.60 1/1522 17",
+    "initial_memory": "MemTotal:       16386368 kB\nMemFree:         1174632 kB\nMemAvailable:    9910816 kB\nBuffers:          644660 kB\nCached:          7800292 kB\nSwapCached:            0 kB\nActive:          6371464 kB\nInactive:        7341664 kB\nActive(anon):       4432 kB\nInactive(anon):  5609108 kB\nActive(file):    6367032 kB\nInactive(file):  1732556 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:             68412 kB\nWriteback:             0 kB\nAnonPages:       5268328 kB\nMapped:           878168 kB\nShmem:            345408 kB\nKReclaimable:     974524 kB\nSlab:            1130324 kB\nSReclaimable:     974524 kB\nSUnreclaim:       155800 kB\nKernelStack:       24436 kB\nPageTables:       113188 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     8193184 kB\nCommitted_AS:   17644088 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       28276 kB\nVmallocChunk:          0 kB\nPercpu:             4032 kB\nAnonHugePages:      4096 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       18432 kB\nDirectMap2M:     3127296 kB\nDirectMap1G:    15728640 kB\n"
+  },
+  "results": [
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65504,
+        "peak_rss_kib": 68860,
+        "rss_kib": 68860
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21520,
+        "peak_rss_kib": 24392,
+        "rss_kib": 24392
+      },
+      "loadavg": "3.39 3.49 5.60 3/1523 26",
+      "max_us": 811.5699999999999,
+      "median_us": 698.54,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 680.0,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.1891,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        811.5699999999999,
+        754.868,
+        751.2009999999999,
+        680.0,
+        690.182,
+        706.1320000000001,
+        698.54,
+        684.264,
+        680.371
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65264,
+        "peak_rss_kib": 68556,
+        "rss_kib": 68556
+      },
+      "workload": "single",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 131372,
+        "peak_rss_kib": 134884,
+        "rss_kib": 134884
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21516,
+        "peak_rss_kib": 24332,
+        "rss_kib": 24332
+      },
+      "loadavg": "3.39 3.49 5.60 2/1524 35",
+      "max_us": 2471.7329999999997,
+      "median_us": 2336.527,
+      "mesh_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "min_us": 2233.991,
+      "mode": "salsa",
+      "padded_executions": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "plan_call_mean_ns": 37.5862,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        2471.7329999999997,
+        2327.373,
+        2459.101,
+        2286.366,
+        2252.1820000000002,
+        2233.991,
+        2386.836,
+        2355.767,
+        2336.527
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130876,
+        "peak_rss_kib": 134388,
+        "rss_kib": 134388
+      },
+      "workload": "single",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65528,
+        "peak_rss_kib": 68816,
+        "rss_kib": 68816
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21508,
+        "peak_rss_kib": 24416,
+        "rss_kib": 24416
+      },
+      "loadavg": "3.39 3.49 5.60 1/1524 88",
+      "max_us": 1127.812,
+      "median_us": 828.749,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 764.157,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.7972,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        856.552,
+        1127.812,
+        835.4200000000001,
+        949.5490000000001,
+        827.048,
+        806.898,
+        764.157,
+        828.749,
+        775.264
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65228,
+        "peak_rss_kib": 68452,
+        "rss_kib": 68452
+      },
+      "workload": "boundary",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 132136,
+        "peak_rss_kib": 135612,
+        "rss_kib": 135612
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21508,
+        "peak_rss_kib": 24352,
+        "rss_kib": 24352
+      },
+      "loadavg": "3.39 3.49 5.60 1/1524 97",
+      "max_us": 4071.0440000000003,
+      "median_us": 3808.362,
+      "mesh_executions": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "min_us": 3688.378,
+      "mode": "salsa",
+      "padded_executions": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "plan_call_mean_ns": 38.8862,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        3909.9230000000002,
+        4071.0440000000003,
+        3749.775,
+        3795.711,
+        3924.0350000000003,
+        3718.783,
+        3808.362,
+        4026.4360000000006,
+        3688.378
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130848,
+        "peak_rss_kib": 134260,
+        "rss_kib": 134260
+      },
+      "workload": "boundary",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 123508,
+        "peak_rss_kib": 138460,
+        "rss_kib": 126876
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24812,
+        "peak_rss_kib": 28096,
+        "rss_kib": 27672
+      },
+      "loadavg": "3.36 3.48 5.58 3/1582 194",
+      "max_us": 150171.758,
+      "median_us": 132102.799,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 129450.43000000001,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 35.7911,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        129450.43000000001,
+        133818.481,
+        131630.899,
+        132047.055,
+        132004.929,
+        132102.799,
+        135443.09,
+        150171.758,
+        134456.954
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 66732,
+        "peak_rss_kib": 70036,
+        "rss_kib": 70036
+      },
+      "workload": "bulk",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 221000,
+        "peak_rss_kib": 233496,
+        "rss_kib": 224424
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24812,
+        "peak_rss_kib": 28088,
+        "rss_kib": 27664
+      },
+      "loadavg": "3.36 3.48 5.58 3/1594 299",
+      "max_us": 73956.038,
+      "median_us": 59965.933,
+      "mesh_executions": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "min_us": 36976.231999999996,
+      "mode": "salsa",
+      "padded_executions": [
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896
+      ],
+      "plan_call_mean_ns": 37.794,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        67524.625,
+        59965.933,
+        49088.229999999996,
+        67351.743,
+        68304.032,
+        73956.038,
+        48010.130999999994,
+        36976.231999999996,
+        38265.41499999999
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 134232,
+        "peak_rss_kib": 137592,
+        "rss_kib": 137592
+      },
+      "workload": "bulk",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 63684,
+        "peak_rss_kib": 67436,
+        "rss_kib": 66924
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24164,
+        "rss_kib": 24164
+      },
+      "loadavg": "3.49 3.50 5.58 2/1582 396",
+      "max_us": 186114.487,
+      "median_us": 140940.766,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 133778.89,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.9829,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        144931.11000000002,
+        133871.488,
+        186114.487,
+        179139.63999999998,
+        139483.459,
+        133778.89,
+        140940.766,
+        147247.89299999998,
+        134569.992
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 64808,
+        "peak_rss_kib": 67984,
+        "rss_kib": 67984
+      },
+      "workload": "full",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 139196,
+        "peak_rss_kib": 154004,
+        "rss_kib": 142692
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24108,
+        "rss_kib": 24108
+      },
+      "loadavg": "4.09 3.63 5.61 1/1587 501",
+      "max_us": 191694.413,
+      "median_us": 162731.298,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 138131.549,
+      "mode": "salsa",
+      "padded_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "plan_call_mean_ns": 36.4253,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        154802.04,
+        151227.18399999998,
+        165468.846,
+        191694.413,
+        179510.086,
+        178367.311,
+        162731.298,
+        150053.67,
+        138131.549
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130932,
+        "peak_rss_kib": 134428,
+        "rss_kib": 134428
+      },
+      "workload": "full",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 131420,
+        "peak_rss_kib": 137116,
+        "rss_kib": 134652
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24356,
+        "rss_kib": 24356
+      },
+      "loadavg": "4.09 3.63 5.61 1/1587 598",
+      "max_us": 120326.56899999999,
+      "median_us": 118577.302,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 115879.94499999999,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 32.6084,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        119922.997,
+        117383.428,
+        118995.489,
+        118339.17300000001,
+        120326.56899999999,
+        117174.573,
+        118577.302,
+        119605.512,
+        115879.94499999999
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65012,
+        "peak_rss_kib": 68180,
+        "rss_kib": 68180
+      },
+      "workload": "palette",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 210240,
+        "peak_rss_kib": 214764,
+        "rss_kib": 213752
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24324,
+        "rss_kib": 24324
+      },
+      "loadavg": "4.49 3.72 5.63 2/1599 703",
+      "max_us": 148191.259,
+      "median_us": 132888.094,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 126481.63500000001,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 37.8627,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        132372.22,
+        132888.094,
+        133803.364,
+        139025.70799999998,
+        138973.122,
+        148191.259,
+        130657.86600000001,
+        132346.63799999998,
+        126481.63500000001
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130992,
+        "peak_rss_kib": 134376,
+        "rss_kib": 134376
+      },
+      "workload": "palette",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65240,
+        "peak_rss_kib": 68564,
+        "rss_kib": 68564
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24056,
+        "rss_kib": 24056
+      },
+      "loadavg": "4.49 3.72 5.63 13/1620 712",
+      "max_us": 109.268,
+      "median_us": 107.538,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 103.634,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.7165,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        109.268,
+        108.08,
+        108.50699999999999,
+        107.722,
+        106.91799999999999,
+        107.538,
+        103.884,
+        104.44,
+        103.634
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65140,
+        "peak_rss_kib": 68400,
+        "rss_kib": 68400
+      },
+      "workload": "noop",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 130868,
+        "peak_rss_kib": 134256,
+        "rss_kib": 134256
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24056,
+        "rss_kib": 24056
+      },
+      "loadavg": "4.49 3.72 5.63 5/1616 721",
+      "max_us": 107.212,
+      "median_us": 105.668,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 100.071,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 63.0874,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        106.702,
+        101.053,
+        105.44600000000001,
+        106.89200000000001,
+        107.212,
+        103.878,
+        105.668,
+        105.937,
+        100.071
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130856,
+        "peak_rss_kib": 134180,
+        "rss_kib": 134180
+      },
+      "workload": "noop",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65272,
+        "peak_rss_kib": 68548,
+        "rss_kib": 68548
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24132,
+        "rss_kib": 24132
+      },
+      "loadavg": "4.49 3.72 5.63 2/1605 730",
+      "max_us": 113.247,
+      "median_us": 101.00200000000001,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 98.108,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.5436,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        111.778,
+        113.247,
+        100.77300000000001,
+        98.108,
+        98.31700000000001,
+        98.62100000000001,
+        111.481,
+        101.00200000000001,
+        101.134
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65172,
+        "peak_rss_kib": 68384,
+        "rss_kib": 68384
+      },
+      "workload": "settings",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 130952,
+        "peak_rss_kib": 134360,
+        "rss_kib": 134360
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24072,
+        "rss_kib": 24072
+      },
+      "loadavg": "4.49 3.72 5.63 2/1597 739",
+      "max_us": 105.747,
+      "median_us": 103.90700000000001,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 100.03399999999999,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 16.1957,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        105.747,
+        100.727,
+        104.243,
+        100.03399999999999,
+        103.90700000000001,
+        104.31400000000001,
+        104.19,
+        103.763,
+        103.43299999999999
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130940,
+        "peak_rss_kib": 134220,
+        "rss_kib": 134220
+      },
+      "workload": "settings",
+      "repetition": 0
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 131296,
+        "peak_rss_kib": 134584,
+        "rss_kib": 134584
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21520,
+        "peak_rss_kib": 24364,
+        "rss_kib": 24364
+      },
+      "loadavg": "4.29 3.69 5.61 3/1567 748",
+      "max_us": 2534.788,
+      "median_us": 2311.107,
+      "mesh_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "min_us": 2284.835,
+      "mode": "salsa",
+      "padded_executions": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "plan_call_mean_ns": 39.3951,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        2534.788,
+        2454.529,
+        2474.718,
+        2288.609,
+        2311.107,
+        2292.026,
+        2375.739,
+        2284.835,
+        2303.258
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130848,
+        "peak_rss_kib": 134072,
+        "rss_kib": 134072
+      },
+      "workload": "single",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65528,
+        "peak_rss_kib": 68732,
+        "rss_kib": 68732
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21516,
+        "peak_rss_kib": 24284,
+        "rss_kib": 24284
+      },
+      "loadavg": "4.29 3.69 5.61 2/1577 757",
+      "max_us": 774.044,
+      "median_us": 696.199,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 684.8670000000001,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 32.2792,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        727.2869999999999,
+        691.021,
+        745.564,
+        774.044,
+        699.483,
+        691.006,
+        689.7080000000001,
+        696.199,
+        684.8670000000001
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65288,
+        "peak_rss_kib": 68428,
+        "rss_kib": 68428
+      },
+      "workload": "single",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 132072,
+        "peak_rss_kib": 135544,
+        "rss_kib": 135544
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21508,
+        "peak_rss_kib": 24368,
+        "rss_kib": 24368
+      },
+      "loadavg": "4.29 3.69 5.61 3/1586 766",
+      "max_us": 3986.2659999999996,
+      "median_us": 3669.77,
+      "mesh_executions": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "min_us": 3651.362,
+      "mode": "salsa",
+      "padded_executions": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "plan_call_mean_ns": 37.5478,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        3986.2659999999996,
+        3715.168,
+        3651.362,
+        3847.4109999999996,
+        3654.46,
+        3711.98,
+        3663.432,
+        3654.5660000000003,
+        3669.77
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130784,
+        "peak_rss_kib": 134192,
+        "rss_kib": 134192
+      },
+      "workload": "boundary",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65568,
+        "peak_rss_kib": 68852,
+        "rss_kib": 68852
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21508,
+        "peak_rss_kib": 24288,
+        "rss_kib": 24288
+      },
+      "loadavg": "4.29 3.69 5.61 1/1573 819",
+      "max_us": 1161.056,
+      "median_us": 1021.072,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 762.4319999999999,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 32.6754,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        1161.056,
+        905.869,
+        986.9830000000001,
+        1151.7649999999999,
+        1021.072,
+        762.4319999999999,
+        952.034,
+        1114.722,
+        1108.346
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65260,
+        "peak_rss_kib": 68480,
+        "rss_kib": 68480
+      },
+      "workload": "boundary",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 223564,
+        "peak_rss_kib": 231864,
+        "rss_kib": 226908
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24808,
+        "peak_rss_kib": 28140,
+        "rss_kib": 27652
+      },
+      "loadavg": "4.58 3.76 5.62 3/1579 924",
+      "max_us": 71336.697,
+      "median_us": 34252.512,
+      "mesh_executions": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "min_us": 33173.191,
+      "mode": "salsa",
+      "padded_executions": [
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896
+      ],
+      "plan_call_mean_ns": 37.5029,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        34985.18,
+        33648.352,
+        33538.682,
+        34252.512,
+        33173.191,
+        33375.969,
+        34609.719,
+        71336.697,
+        36877.39
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 134188,
+        "peak_rss_kib": 137468,
+        "rss_kib": 137468
+      },
+      "workload": "bulk",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 125380,
+        "peak_rss_kib": 144088,
+        "rss_kib": 128548
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24812,
+        "peak_rss_kib": 28152,
+        "rss_kib": 27664
+      },
+      "loadavg": "4.58 3.76 5.62 4/1587 1021",
+      "max_us": 140896.789,
+      "median_us": 138025.045,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 136004.414,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 34.3833,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        136004.414,
+        139778.75100000002,
+        137870.36,
+        137566.15899999999,
+        137977.26299999998,
+        139084.689,
+        140221.256,
+        140896.789,
+        138025.045
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 66736,
+        "peak_rss_kib": 69840,
+        "rss_kib": 69840
+      },
+      "workload": "bulk",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 144788,
+        "peak_rss_kib": 155568,
+        "rss_kib": 148280
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24032,
+        "rss_kib": 24032
+      },
+      "loadavg": "5.58 3.98 5.68 2/1584 1126",
+      "max_us": 193707.789,
+      "median_us": 156352.082,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 141334.99,
+      "mode": "salsa",
+      "padded_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "plan_call_mean_ns": 45.2056,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        189933.29,
+        193707.789,
+        170566.566,
+        170064.196,
+        156352.082,
+        143661.773,
+        150797.841,
+        149481.67,
+        141334.99
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130860,
+        "peak_rss_kib": 134224,
+        "rss_kib": 134224
+      },
+      "workload": "full",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 63596,
+        "peak_rss_kib": 67748,
+        "rss_kib": 66892
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24080,
+        "rss_kib": 24080
+      },
+      "loadavg": "5.58 3.98 5.68 2/1575 1223",
+      "max_us": 165162.478,
+      "median_us": 135951.385,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 131487.779,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.989,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        147263.818,
+        135635.967,
+        165162.478,
+        131741.50100000002,
+        136902.66700000002,
+        131487.779,
+        133085.74000000002,
+        135951.385,
+        136453.4
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65032,
+        "peak_rss_kib": 68264,
+        "rss_kib": 68264
+      },
+      "workload": "full",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 203008,
+        "peak_rss_kib": 206436,
+        "rss_kib": 206436
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24360,
+        "rss_kib": 24360
+      },
+      "loadavg": "5.45 3.98 5.67 3/1583 1328",
+      "max_us": 144119.66400000002,
+      "median_us": 131285.529,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 122674.162,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 39.5109,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        134699.948,
+        123837.89600000001,
+        133972.024,
+        129592.825,
+        131285.529,
+        132819.351,
+        122674.162,
+        144119.66400000002,
+        130528.202
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 131060,
+        "peak_rss_kib": 134424,
+        "rss_kib": 134424
+      },
+      "workload": "palette",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 121632,
+        "peak_rss_kib": 141540,
+        "rss_kib": 124788
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24344,
+        "rss_kib": 24344
+      },
+      "loadavg": "5.45 3.98 5.67 2/1568 1425",
+      "max_us": 144167.88199999998,
+      "median_us": 133751.78300000002,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 128337.977,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.5862,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        133751.78300000002,
+        144167.88199999998,
+        135897.076,
+        131316.195,
+        133616.664,
+        132575.277,
+        134606.595,
+        128337.977,
+        136011.912
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65188,
+        "peak_rss_kib": 68280,
+        "rss_kib": 68280
+      },
+      "workload": "palette",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 130984,
+        "peak_rss_kib": 134372,
+        "rss_kib": 134372
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24040,
+        "rss_kib": 24040
+      },
+      "loadavg": "5.18 3.95 5.65 2/1567 1434",
+      "max_us": 107.45,
+      "median_us": 103.42099999999999,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 99.526,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 36.6028,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        107.45,
+        104.45,
+        104.90700000000001,
+        102.13499999999999,
+        103.42099999999999,
+        99.82600000000001,
+        104.503,
+        99.56,
+        99.526
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130972,
+        "peak_rss_kib": 134296,
+        "rss_kib": 134296
+      },
+      "workload": "noop",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65100,
+        "peak_rss_kib": 68468,
+        "rss_kib": 68468
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24228,
+        "rss_kib": 24228
+      },
+      "loadavg": "5.18 3.95 5.65 2/1562 1443",
+      "max_us": 124.649,
+      "median_us": 100.053,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 99.083,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.5676,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        100.053,
+        101.368,
+        100.665,
+        99.606,
+        100.016,
+        99.72800000000001,
+        99.083,
+        124.649,
+        107.161
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65000,
+        "peak_rss_kib": 68304,
+        "rss_kib": 68304
+      },
+      "workload": "noop",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 130872,
+        "peak_rss_kib": 134356,
+        "rss_kib": 134356
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24220,
+        "rss_kib": 24220
+      },
+      "loadavg": "5.18 3.95 5.65 2/1563 1452",
+      "max_us": 107.464,
+      "median_us": 105.574,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 99.98700000000001,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 16.2169,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        106.45100000000001,
+        105.05199999999999,
+        105.795,
+        99.98700000000001,
+        102.01599999999999,
+        107.263,
+        105.574,
+        107.464,
+        103.167
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130860,
+        "peak_rss_kib": 134216,
+        "rss_kib": 134216
+      },
+      "workload": "settings",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65028,
+        "peak_rss_kib": 68240,
+        "rss_kib": 68240
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24140,
+        "rss_kib": 24140
+      },
+      "loadavg": "5.18 3.95 5.65 2/1553 1461",
+      "max_us": 105.585,
+      "median_us": 99.652,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 94.682,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.4469,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        101.402,
+        100.448,
+        99.652,
+        99.53999999999999,
+        99.37,
+        100.088,
+        99.515,
+        105.585,
+        94.682
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 64928,
+        "peak_rss_kib": 68076,
+        "rss_kib": 68076
+      },
+      "workload": "settings",
+      "repetition": 1
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65212,
+        "peak_rss_kib": 68568,
+        "rss_kib": 68568
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21516,
+        "peak_rss_kib": 24300,
+        "rss_kib": 24300
+      },
+      "loadavg": "5.18 3.95 5.65 2/1553 1470",
+      "max_us": 727.342,
+      "median_us": 684.266,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 678.102,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.7819,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        727.342,
+        701.283,
+        695.582,
+        683.1940000000001,
+        722.719,
+        681.938,
+        678.102,
+        684.266,
+        680.72
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 64972,
+        "peak_rss_kib": 68264,
+        "rss_kib": 68264
+      },
+      "workload": "single",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 131572,
+        "peak_rss_kib": 134812,
+        "rss_kib": 134812
+      },
+      "geometry_digest": "fca58b120f7b6d62",
+      "input_memory": {
+        "anonymous_kib": 21516,
+        "peak_rss_kib": 24320,
+        "rss_kib": 24320
+      },
+      "loadavg": "4.92 3.91 5.63 2/1557 1479",
+      "max_us": 2487.875,
+      "median_us": 2349.931,
+      "mesh_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "min_us": 2282.488,
+      "mode": "salsa",
+      "padded_executions": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "plan_call_mean_ns": 37.4099,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        2447.692,
+        2370.185,
+        2353.281,
+        2282.488,
+        2323.3210000000004,
+        2298.911,
+        2487.875,
+        2305.486,
+        2349.931
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 131072,
+        "peak_rss_kib": 134248,
+        "rss_kib": 134248
+      },
+      "workload": "single",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65104,
+        "peak_rss_kib": 68504,
+        "rss_kib": 68504
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21508,
+        "peak_rss_kib": 24340,
+        "rss_kib": 24340
+      },
+      "loadavg": "4.92 3.91 5.63 2/1555 1532",
+      "max_us": 1243.943,
+      "median_us": 921.0079999999999,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 769.349,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.9444,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        1061.504,
+        1243.943,
+        850.684,
+        769.349,
+        915.9730000000001,
+        1122.911,
+        900.427,
+        921.0079999999999,
+        1032.863
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 64880,
+        "peak_rss_kib": 68216,
+        "rss_kib": 68216
+      },
+      "workload": "boundary",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 132128,
+        "peak_rss_kib": 135616,
+        "rss_kib": 135616
+      },
+      "geometry_digest": "6bc0b560f46f6d50",
+      "input_memory": {
+        "anonymous_kib": 21512,
+        "peak_rss_kib": 24372,
+        "rss_kib": 24372
+      },
+      "loadavg": "4.92 3.91 5.63 2/1554 1541",
+      "max_us": 3955.493,
+      "median_us": 3847.7160000000003,
+      "mesh_executions": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "min_us": 3680.2610000000004,
+      "mode": "salsa",
+      "padded_executions": [
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "plan_call_mean_ns": 44.9839,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        3934.311,
+        3908.315,
+        3733.046,
+        3851.604,
+        3955.493,
+        3847.7160000000003,
+        3801.466,
+        3735.756,
+        3680.2610000000004
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130900,
+        "peak_rss_kib": 134324,
+        "rss_kib": 134324
+      },
+      "workload": "boundary",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 126104,
+        "peak_rss_kib": 139204,
+        "rss_kib": 129352
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24812,
+        "peak_rss_kib": 28044,
+        "rss_kib": 27620
+      },
+      "loadavg": "4.77 3.90 5.62 4/1576 1638",
+      "max_us": 149460.296,
+      "median_us": 138251.948,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 131119.625,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.4218,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        131119.625,
+        135425.86500000002,
+        138251.948,
+        135478.07,
+        141246.609,
+        132169.149,
+        144574.837,
+        145984.91199999998,
+        149460.296
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 66696,
+        "peak_rss_kib": 69880,
+        "rss_kib": 69880
+      },
+      "workload": "bulk",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 219352,
+        "peak_rss_kib": 229132,
+        "rss_kib": 222804
+      },
+      "geometry_digest": "397974c6e033c30e",
+      "input_memory": {
+        "anonymous_kib": 24812,
+        "peak_rss_kib": 28028,
+        "rss_kib": 27604
+      },
+      "loadavg": "4.77 3.90 5.62 12/1617 1743",
+      "max_us": 84528.36,
+      "median_us": 69125.696,
+      "mesh_executions": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "min_us": 64616.76099999999,
+      "mode": "salsa",
+      "padded_executions": [
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896,
+        896
+      ],
+      "plan_call_mean_ns": 36.5392,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        70689.229,
+        84528.36,
+        78679.792,
+        68949.254,
+        69125.696,
+        64914.058999999994,
+        64616.76099999999,
+        80903.209,
+        68364.356
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 134176,
+        "peak_rss_kib": 137564,
+        "rss_kib": 137564
+      },
+      "workload": "bulk",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 63820,
+        "peak_rss_kib": 67412,
+        "rss_kib": 67104
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 23996,
+        "rss_kib": 23996
+      },
+      "loadavg": "5.43 4.05 5.66 2/1579 1840",
+      "max_us": 220426.418,
+      "median_us": 184689.927,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 146006.538,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 30.5991,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        196653.11,
+        159368.87099999998,
+        146006.538,
+        162833.47,
+        197336.533,
+        220426.418,
+        184689.927,
+        201298.296,
+        147819.146
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 64900,
+        "peak_rss_kib": 68120,
+        "rss_kib": 68120
+      },
+      "workload": "full",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 142868,
+        "peak_rss_kib": 154768,
+        "rss_kib": 146256
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24052,
+        "rss_kib": 24052
+      },
+      "loadavg": "5.43 4.05 5.66 3/1564 1945",
+      "max_us": 157173.46300000002,
+      "median_us": 149894.07299999997,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 146472.414,
+      "mode": "salsa",
+      "padded_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "plan_call_mean_ns": 36.8774,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        150137.446,
+        157173.46300000002,
+        150089.69,
+        146472.414,
+        148021.932,
+        149961.84900000002,
+        146630.517,
+        149894.07299999997,
+        148770.702
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 131212,
+        "peak_rss_kib": 134536,
+        "rss_kib": 134536
+      },
+      "workload": "full",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288,
+        1288
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 124772,
+        "peak_rss_kib": 136580,
+        "rss_kib": 128084
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24316,
+        "rss_kib": 24316
+      },
+      "loadavg": "5.15 4.02 5.64 2/1565 2042",
+      "max_us": 143985.892,
+      "median_us": 137996.67099999997,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 131748.534,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 32.3786,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        143985.892,
+        139913.277,
+        142128.436,
+        137996.67099999997,
+        131748.534,
+        136091.392,
+        134792.81900000002,
+        138947.682,
+        135316.203
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65000,
+        "peak_rss_kib": 68248,
+        "rss_kib": 68248
+      },
+      "workload": "palette",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 204520,
+        "peak_rss_kib": 208024,
+        "rss_kib": 208024
+      },
+      "geometry_digest": "116cd3d997dccad6",
+      "input_memory": {
+        "anonymous_kib": 21504,
+        "peak_rss_kib": 24432,
+        "rss_kib": 24432
+      },
+      "loadavg": "5.15 4.02 5.64 2/1555 2147",
+      "max_us": 141437.94100000002,
+      "median_us": 133405.81900000002,
+      "mesh_executions": [
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688,
+        2688
+      ],
+      "min_us": 126405.18400000001,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 37.0063,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        136919.193,
+        140962.5,
+        141437.94100000002,
+        135903.269,
+        131259.805,
+        128649.199,
+        133405.81900000002,
+        126405.18400000001,
+        132284.732
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130940,
+        "peak_rss_kib": 134380,
+        "rss_kib": 134380
+      },
+      "workload": "palette",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65264,
+        "peak_rss_kib": 68576,
+        "rss_kib": 68576
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21304,
+        "peak_rss_kib": 24192,
+        "rss_kib": 24192
+      },
+      "loadavg": "4.90 3.98 5.62 2/1554 2156",
+      "max_us": 135.759,
+      "median_us": 114.13799999999999,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 100.27,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 33.3283,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        100.27,
+        122.83699999999999,
+        110.076,
+        111.673,
+        114.13799999999999,
+        113.99300000000001,
+        135.759,
+        128.292,
+        123.20000000000002
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65164,
+        "peak_rss_kib": 68412,
+        "rss_kib": 68412
+      },
+      "workload": "noop",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 130992,
+        "peak_rss_kib": 134480,
+        "rss_kib": 134480
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24080,
+        "rss_kib": 24080
+      },
+      "loadavg": "4.90 3.98 5.62 2/1554 2165",
+      "max_us": 105.73,
+      "median_us": 103.333,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 99.576,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 37.5538,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        105.408,
+        105.653,
+        99.576,
+        103.333,
+        103.171,
+        105.73,
+        102.188,
+        103.053,
+        103.337
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 130980,
+        "peak_rss_kib": 134404,
+        "rss_kib": 134404
+      },
+      "workload": "noop",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 65248,
+        "peak_rss_kib": 68524,
+        "rss_kib": 68524
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24116,
+        "rss_kib": 24116
+      },
+      "loadavg": "4.90 3.98 5.62 2/1540 2174",
+      "max_us": 131.936,
+      "median_us": 103.601,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 99.181,
+      "mode": "current",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 29.8012,
+      "plan_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "runs": 9,
+      "samples_us": [
+        116.741,
+        120.316,
+        131.936,
+        119.762,
+        103.601,
+        99.478,
+        100.23599999999999,
+        99.845,
+        99.181
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 65148,
+        "peak_rss_kib": 68360,
+        "rss_kib": 68360
+      },
+      "workload": "settings",
+      "repetition": 2
+    },
+    {
+      "available_workers": 8,
+      "chunks": 2688,
+      "current_buffer_updates": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposed_faces": 396160,
+      "final_memory": {
+        "anonymous_kib": 131112,
+        "peak_rss_kib": 134592,
+        "rss_kib": 134592
+      },
+      "geometry_digest": "7b7f6d0d14b1cb46",
+      "input_memory": {
+        "anonymous_kib": 21300,
+        "peak_rss_kib": 24016,
+        "rss_kib": 24016
+      },
+      "loadavg": "4.90 3.98 5.62 2/1540 2183",
+      "max_us": 116.78399999999999,
+      "median_us": 109.80300000000001,
+      "mesh_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "min_us": 101.91799999999999,
+      "mode": "salsa",
+      "padded_executions": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "plan_call_mean_ns": 19.8464,
+      "plan_executions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runs": 9,
+      "samples_us": [
+        115.911,
+        116.78399999999999,
+        115.11800000000001,
+        109.80300000000001,
+        111.277,
+        106.099,
+        105.366,
+        101.91799999999999,
+        107.604
+      ],
+      "size": 256,
+      "vertices": 999618,
+      "voxels": 9945088,
+      "warm_memory": {
+        "anonymous_kib": 131100,
+        "peak_rss_kib": 134516,
+        "rss_kib": 134516
+      },
+      "workload": "settings",
+      "repetition": 2
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "mode": "current",
+    "seconds": 11.99584688298637,
+    "binary_bytes": 1160168,
+    "target_bytes": 75346167,
+    "load_start": "2.74 3.52 5.35 2/1570 3",
+    "load_end": "3.23 3.59 5.35 1/1562 592"
+  },
+  {
+    "mode": "salsa",
+    "seconds": 14.910280673007946,
+    "binary_bytes": 1628704,
+    "target_bytes": 125839654,
+    "load_start": "3.23 3.59 5.35 1/1562 592",
+    "load_end": "3.55 3.64 5.34 2/1556 1508"
+  }
+]

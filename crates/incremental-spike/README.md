@@ -2,18 +2,17 @@
 
 Throwaway, unpublished comparison against Salsa **0.28.5**, the latest stable
 crates.io release checked on 2026-10-27. No product runtime depends on this crate.
-See `/workspace/vx-roadmap-jobs/salsa.summary.md` for measurements and the decision.
+See [RECOMMENDATION.md](RECOMMENDATION.md) for measurements and the decision.
 
 ## Run
 
 ```sh
-export CARGO_TARGET_DIR=/home/box/.cache/cargo-shared
 cargo test -p incremental-spike --locked
 cargo clippy -p incremental-spike --all-targets --locked -- -D warnings
 cargo build -p incremental-spike --release --features large-scenes --locked
 python3 -B crates/incremental-spike/run.py \
   --binary "$CARGO_TARGET_DIR/release/incremental-spike" \
-  --out /workspace/vx-roadmap-jobs/salsa.bench.json
+  --out results/salsa.bench.json
 "$CARGO_TARGET_DIR/release/incremental-spike" diff bulk 9 256
 ```
 
