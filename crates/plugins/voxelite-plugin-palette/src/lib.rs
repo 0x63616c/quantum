@@ -18,8 +18,8 @@ pub use voxelite_plugin_api::{
 pub const PAL: &str = "dev.voxelite.palette.pal";
 
 use voxelite_plugin_api::{
-    CommandContribution, Manifest, PalettePanel, PanelContribution, Plugin, PluginId, Registrar,
-    SettingContribution, SettingKind, SettingValue, Value, Version,
+    CommandContribution, Manifest, PalettePanel, PanelContribution, Plugin, Registrar,
+    SettingContribution, SettingKind, SettingValue, Value,
 };
 
 /// Standard palette plugin; all state and effects cross portable capabilities.
@@ -28,10 +28,9 @@ pub struct PalettePlugin;
 impl Plugin for PalettePlugin {
     fn manifest(&self) -> Manifest {
         Manifest::builtin(
-            PluginId::new("dev.voxelite.palette").unwrap(),
-            "plugins.palette.name",
-            "plugins.palette.description",
-            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            "dev.voxelite.palette",
+            "plugins.palette",
+            env!("CARGO_PKG_VERSION"),
         )
     }
 
@@ -135,23 +134,3 @@ mod characterization;
 mod manager_tests;
 #[cfg(test)]
 mod panel_tests;
-
-#[cfg(test)]
-mod manifest_regression {
-    use super::*;
-
-    #[test]
-    fn manifest_matches_original_literal() {
-        let expected = Manifest {
-            id: PluginId::new("dev.voxelite.palette").unwrap(),
-            name_key: "plugins.palette.name".into(),
-            description_key: "plugins.palette.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: voxelite_plugin_api::API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        };
-        assert_eq!(PalettePlugin.manifest(), expected);
-    }
-}

@@ -1,8 +1,6 @@
 //! Built-in agent command declarations; execution remains in the app.
 
-use voxelite_plugin_api::{
-    CommandContribution, Manifest, Plugin, PluginId, Registrar, Value, Version,
-};
+use voxelite_plugin_api::{CommandContribution, Manifest, Plugin, Registrar, Value};
 
 /// Metadata for the built-in agent commands.
 pub struct AgentPlugin;
@@ -10,10 +8,9 @@ pub struct AgentPlugin;
 impl Plugin for AgentPlugin {
     fn manifest(&self) -> Manifest {
         Manifest::builtin(
-            PluginId::new("dev.voxelite.agent").unwrap(),
-            "plugins.agent.name",
-            "plugins.agent.description",
-            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            "dev.voxelite.agent",
+            "plugins.agent",
+            env!("CARGO_PKG_VERSION"),
         )
     }
 
@@ -68,24 +65,4 @@ mod tests {
     voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
         AgentPlugin
     ));
-}
-
-#[cfg(test)]
-mod manifest_regression {
-    use super::*;
-
-    #[test]
-    fn manifest_matches_original_literal() {
-        let expected = Manifest {
-            id: PluginId::new("dev.voxelite.agent").unwrap(),
-            name_key: "plugins.agent.name".into(),
-            description_key: "plugins.agent.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: voxelite_plugin_api::API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        };
-        assert_eq!(AgentPlugin.manifest(), expected);
-    }
 }

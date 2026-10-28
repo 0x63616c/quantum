@@ -279,12 +279,7 @@ pub fn check(plugin_factory: impl FnOnce() -> Box<dyn Plugin>) {
 /// struct Example;
 /// impl Plugin for Example {
 ///     fn manifest(&self) -> Manifest {
-///         Manifest::builtin(
-///             PluginId::new("dev.example.plugin").unwrap(),
-///             "example.name",
-///             "example.description",
-///             Version::new(1, 0, 0),
-///         )
+///         Manifest::builtin("dev.example.plugin", "example", "1.0.0")
 ///     }
 ///     fn contribute(&self, _: &mut Registrar) {}
 /// }

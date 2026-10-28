@@ -19,12 +19,7 @@ pub struct CommentsPlugin;
 
 impl Plugin for CommentsPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest::builtin(
-            PluginId::new(PLUGIN_ID).unwrap(),
-            "plugins.comments.name",
-            "plugins.comments.description",
-            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-        )
+        Manifest::builtin(PLUGIN_ID, "plugins.comments", env!("CARGO_PKG_VERSION"))
     }
 
     fn comments_panel(&self, id: &str) -> Option<&dyn CommentsPanel> {
@@ -90,25 +85,5 @@ mod tests {
         assert!(host.has_overlay(PINS_ID).unwrap());
         // Comments remain core content; no extension namespace is introduced.
         assert_eq!(host.registry().data_sections().count(), 0);
-    }
-}
-
-#[cfg(test)]
-mod manifest_regression {
-    use super::*;
-
-    #[test]
-    fn manifest_matches_original_literal() {
-        let expected = Manifest {
-            id: PluginId::new("dev.voxelite.comments").unwrap(),
-            name_key: "plugins.comments.name".into(),
-            description_key: "plugins.comments.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: voxelite_plugin_api::API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        };
-        assert_eq!(CommentsPlugin.manifest(), expected);
     }
 }

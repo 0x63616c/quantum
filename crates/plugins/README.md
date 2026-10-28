@@ -12,7 +12,7 @@ target-specific dependencies. In particular, plugins must not depend directly on
 Dev-dependencies are exempt so plugin tests can use
 `voxelite_plugin_host::plugin_conformance_test!`, which runs the host conformance
 harness. Use `Manifest::builtin` for enabled, disableable built-ins, supplying
-the stable ID, localization keys and package version. Required infrastructure
+the stable ID, localization key prefix and package version. Required infrastructure
 can override `can_disable`; external templates retain explicit manifests.
 
 `voxelite-plugin-api` owns `ExportError`/`ExportResult` and the stable

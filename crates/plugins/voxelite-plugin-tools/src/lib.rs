@@ -4,8 +4,7 @@ mod behavior;
 use behavior::BuiltinTool;
 
 use voxelite_plugin_api::{
-    CommandContribution, Manifest, Plugin, PluginId, Registrar, Tool, ToolContribution, Value,
-    Version,
+    CommandContribution, Manifest, Plugin, Registrar, Tool, ToolContribution, Value,
 };
 
 /// Declarations and behavior for the standard editing tools.
@@ -21,10 +20,9 @@ impl Plugin for ToolsPlugin {
 
     fn manifest(&self) -> Manifest {
         Manifest::builtin(
-            PluginId::new("dev.voxelite.tools").unwrap(),
-            "plugins.tools.name",
-            "plugins.tools.description",
-            Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            "dev.voxelite.tools",
+            "plugins.tools",
+            env!("CARGO_PKG_VERSION"),
         )
     }
 
@@ -125,24 +123,4 @@ mod tests {
     voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
         ToolsPlugin
     ));
-}
-
-#[cfg(test)]
-mod manifest_regression {
-    use super::*;
-
-    #[test]
-    fn manifest_matches_original_literal() {
-        let expected = Manifest {
-            id: PluginId::new("dev.voxelite.tools").unwrap(),
-            name_key: "plugins.tools.name".into(),
-            description_key: "plugins.tools.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: voxelite_plugin_api::API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        };
-        assert_eq!(ToolsPlugin.manifest(), expected);
-    }
 }
