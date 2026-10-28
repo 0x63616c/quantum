@@ -317,6 +317,11 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read the
   board first, file an issue per ask, link every PR, and audit **Done when** items
   before claiming anything is done.
+- PRs that change anything visible follow the
+  [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md):
+  `cargo xtask screenshots --publish <PR#>` (or the **PR screenshots** CI job) fills
+  the description's Before | After Screenshots section. Never paste UI screenshots
+  by hand, and check the rendered PR page before asking for review.
 - Branch from `main` as `<type>/<issue#>-<slug>`; never push directly to `main`.
   Keep PRs small, focused and limited to one concern. Review harshly before merge: inspect correctness,
   scope, failure paths and actual UI evidence.
