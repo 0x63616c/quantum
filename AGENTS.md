@@ -24,6 +24,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 
 | Owner | Boundary |
 | --- | --- |
+| `voxelite-crash` | Own opt-in crash/feedback data, redaction, local panic reports and relay request preparation. No other workspace crate, UI or network client dependency. |
 | `voxelite-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
 | `voxelite-format` → `voxelite-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
 | `voxelite-mesh` → `voxelite-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |

@@ -11,6 +11,9 @@ rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
+voxelite-crash = { path = "crates/voxelite-crash" }
+regex = "1"
+url = "2"
 voxelite-core = { path = "crates/voxelite-core" }
 voxelite-format = { path = "crates/voxelite-format" }
 voxelite-mesh = { path = "crates/voxelite-mesh" }

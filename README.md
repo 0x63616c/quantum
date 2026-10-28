@@ -187,6 +187,7 @@ only a container.
 
 | Crate | Responsibility |
 | --- | --- |
+| [voxelite-crash](crates/voxelite-crash/) | Opt-in crash/feedback reports, redaction, local panic capture and relay request preparation; no automatic sending. |
 | [voxelite-core](crates/voxelite-core/) | Document invariants, voxel storage, palettes/layers, atomic commands, snapshots and undo/redo. |
 | [voxelite-format](crates/voxelite-format/) | Canonical, bounded `.voxl` JSON, build-history replay and document-session persistence. |
 | [voxelite-mesh](crates/voxelite-mesh/) | Deterministic greedy surface geometry shared by rendering and GLB export. |
