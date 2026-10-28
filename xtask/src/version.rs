@@ -6,6 +6,12 @@ use semver::Version;
 
 use crate::{Error, Result, cmd::Runner, workspace::Workspace};
 
+/// Read the inherited workspace version without invoking Cargo or build scripts.
+/// Useful for a dry-run plan; release tag checks use the app's Cargo metadata.
+pub fn workspace_version(workspace: &Workspace) -> Result<Version> {
+    manifest_version(&workspace.read("Cargo.toml")?).map(|(_, version)| version)
+}
+
 /// Choose a stable version. Explicit equal versions are harmless no-ops; downgrades,
 /// prereleases, build metadata and overflowing increments are rejected.
 pub fn next_version(current: &Version, request: &str) -> Result<Version> {

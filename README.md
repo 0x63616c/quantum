@@ -299,7 +299,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo test --workspace --locked --no-fail-fast
 cargo xtask check plugin-deps
-python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
+cargo test -p xtask --locked
 ```
 
 Run the platform-independent repository checks with
@@ -390,7 +390,7 @@ After building the site and browser bundle:
 
 ```sh
 python3 scripts/check-site.py
-python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
+cargo xtask macos check-appcast site/appcast.xml --allow-empty
 ```
 
 The site checker expects the complete generated site, including `site/app/`.
@@ -422,10 +422,10 @@ Signing and notarization secret names are `MACOS_CERTIFICATE_P12_BASE64`,
 an optional `SPARKLE_PUBLIC_ED_KEY` variable must match it. Never put private
 keys or credential values in the repository.
 
-[scripts/generate-macos-release-notes.py](scripts/generate-macos-release-notes.py)
+`cargo xtask macos release-notes`
 combines the packaging notes with non-merge commit subjects since the previous
 stable ancestor tag. Write meaningful commit subjects: they become release notes.
-[scripts/generate-macos-appcast.sh](scripts/generate-macos-appcast.sh) preserves
+`cargo xtask macos appcast` preserves
 prior feed entries and signs the update feed and notes. Published assets include
 `Voxelite.dmg`, `Voxelite.dmg.sha256`, `Voxelite.html` and `appcast.xml`.
 

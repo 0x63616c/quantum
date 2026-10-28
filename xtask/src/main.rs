@@ -6,7 +6,7 @@ use clap::{Args, CommandFactory, Parser, Subcommand};
 use xtask::{
     check,
     cmd::{Command, Runner, SystemRunner},
-    version,
+    macos, version,
     workspace::Workspace,
 };
 
@@ -21,6 +21,8 @@ Checks:
 
 Maintenance:
   bump-version  Update the stable workspace version and current references
+  version       Print the app version or check a release tag
+  macos         Package, sign, and prepare release feeds and notes
 
 Rendering:
   bench         Run performance harness (all arguments forwarded)
@@ -49,6 +51,17 @@ enum Task {
     Check(Check),
     /// Check tracked root entries, file sizes and junk files
     Tidy,
+    /// Print the app version, optionally requiring a matching release tag
+    Version {
+        /// Require this stable tag to match the app version
+        #[arg(long)]
+        check_tag: Option<String>,
+    },
+    /// macOS packaging, signing, feeds and release notes
+    Macos {
+        #[command(subcommand)]
+        command: macos::Task,
+    },
     /// Update the stable workspace version and its current references
     BumpVersion {
         /// major, minor, patch or an explicit stable X.Y.Z
@@ -129,6 +142,17 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
             println!();
         }
         Some(Task::Tidy) => xtask::tidy().map_err(xtask::Error::Invalid)?,
+        Some(Task::Version { check_tag }) => println!(
+            "{}",
+            macos::version(
+                &Workspace::discover()?,
+                &SystemRunner::default(),
+                check_tag.as_deref()
+            )?
+        ),
+        Some(Task::Macos { command }) => {
+            return Ok(macos::execute(command, &Workspace::discover()?)?);
+        }
         Some(Task::Check(Check { list: true, .. })) => {
             for check in check::CHECKS {
                 println!("{:<10} {}", check.name, check.description);
