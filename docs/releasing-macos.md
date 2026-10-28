@@ -84,11 +84,11 @@ certificate identities; reproduce locally to inspect Apple tool errors.
 
 ## CI behavior
 
-`.github/workflows/ci-macos.yml` runs on pushes to `main` and same-repository pull
-requests. Its job-level guard is:
+`.github/workflows/ci-macos.yml` runs on pushes to `main`, same-repository pull
+requests, a nightly schedule (10:00 UTC), and manual dispatch. Its job-level guard is:
 
 ```yaml
-if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+if: needs.changes.outputs.code == 'true' && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
 ```
 
 Fork pull requests never schedule this self-hosted job. Do not change the event to
@@ -98,9 +98,10 @@ All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
 `[self-hosted, macOS, ARM64, xcode]`, which select the self-hosted Apple Silicon runner, with
 `DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer`. There are no
 GitHub-hosted macOS jobs. CI macOS runs its Python script tests on a GitHub-hosted
-Linux runner, and builds the ad-hoc DMG only on pushes to `main` and on pull
-requests that change packaging inputs (`packaging/`, `scripts/*macos*`, Cargo
-manifests, the toolchain or the macOS workflows). Rendering checks need the
+Linux runner. Main pushes run workspace Clippy and tests without building a DMG.
+Nightly and manual runs on `main` also build and upload the ad-hoc DMG with the
+full `release` profile. Pull requests still build it when they change packaging
+inputs (`packaging/`, `scripts/*macos*`, Cargo manifests, the toolchain or the macOS workflows). Rendering checks need the
 `golden` label, which only the first Mac mini runner carries. The runner needs that Xcode installation and its Metal
 toolchain, the Rust toolchain from `rust-toolchain.toml` including rustfmt/Clippy,
 Python 3, curl, and GitHub CLI for releases. The runner must support
@@ -109,12 +110,19 @@ workflows.
 
 CI checks formatting, runs the mocked packaging/release regression tests,
 runs `cargo clippy --workspace --locked -- -D warnings`,
-runs `cargo test --workspace --locked`, builds the release app, and packages a
-DMG. Strict Clippy passed on Linux when this workflow was added; the first macOS
-run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
+runs `cargo test --workspace --locked --no-fail-fast`, and, when selected above,
+builds the release app and packages a DMG. Strict Clippy passed on Linux when
+this workflow was added; the first macOS run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
 No signing/notarization secrets are passed to CI. Its DMG and checksum artifacts
-expire after **3 days**. New runs cancel older CI runs for the same ref.
+expire after **3 days**. New push/PR runs cancel older change runs for the same
+ref. Nightly/manual runs use a separate concurrency group and are not cancelled
+by pushes or newer runs. Nightly runs intentionally check unchanged main too,
+because runner and toolchain drift can break packaging without a source change.
+A failed nightly or manual main run opens an issue, or comments on the existing
+open `ci: CI macOS nightly checks failed` issue, with the run link and labels
+`type:ci`, `area:ci`, `priority:p0`. A skipped Mac job also reports the missing
+verification; the owner/fork guard remains in force.
 
 ## Release behavior
 
