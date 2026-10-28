@@ -23,8 +23,13 @@ pub(super) struct SettingsState {
 }
 impl Global for SettingsState {}
 
+mod history;
+use history::SectionHistory;
+
+mod controls;
 mod menu_actions;
 mod persistence;
+mod window;
 #[cfg(all(test, feature = "test-support"))]
 pub(super) use persistence::init_at;
 #[cfg(test)]
@@ -210,46 +215,6 @@ fn search_sections(query: &str) -> Vec<SearchResult> {
         .collect()
 }
 
-/// Browser-style history: selecting a new section after going back drops the forward branch.
-struct SectionHistory {
-    entries: Vec<Section>,
-    cursor: usize,
-}
-impl SectionHistory {
-    fn new(section: Section) -> Self {
-        Self {
-            entries: vec![section],
-            cursor: 0,
-        }
-    }
-    fn current(&self) -> Section {
-        self.entries[self.cursor]
-    }
-    fn can_back(&self) -> bool {
-        self.cursor > 0
-    }
-    fn can_forward(&self) -> bool {
-        self.cursor + 1 < self.entries.len()
-    }
-    fn visit(&mut self, section: Section) {
-        if self.current() != section {
-            self.entries.truncate(self.cursor + 1);
-            self.entries.push(section);
-            self.cursor += 1;
-        }
-    }
-    fn back(&mut self) {
-        if self.can_back() {
-            self.cursor -= 1;
-        }
-    }
-    fn forward(&mut self) {
-        if self.can_forward() {
-            self.cursor += 1;
-        }
-    }
-}
-
 pub(super) struct SettingsView {
     history: SectionHistory,
     sidebar_visible: bool,
@@ -326,77 +291,6 @@ impl SettingsView {
         self.pane_scroll
             .set_offset(point(px(space::NONE), px(space::NONE)));
         cx.notify();
-    }
-    fn chrome_button(
-        &self,
-        id: &'static str,
-        glyph: &'static str,
-        label: &'static str,
-        enabled: bool,
-        t: Theme,
-    ) -> Stateful<Div> {
-        IconButton::button(id, glyph, label, t)
-            .disabled(!enabled)
-            .build()
-            .tooltip(super::hint(label, t))
-    }
-
-    fn sidebar_row(
-        &self,
-        section: Section,
-        setting: Option<&'static str>,
-        index: usize,
-        t: Theme,
-        cx: &Context<Self>,
-    ) -> Stateful<Div> {
-        let selected = setting.is_none() && section == self.history.current();
-        let label = setting.unwrap_or(section.title());
-        SidebarItem::row(
-            ("settings-result", index),
-            label,
-            if setting.is_some() {
-                "chevron-right"
-            } else {
-                section.icon()
-            },
-            selected,
-            t,
-        )
-        .mb(px(space::XXS))
-        .when(setting.is_some(), |d| {
-            d.ml(px(space::XXL)).text_size(px(type_size::CAPTION))
-        })
-        .on_click(cx.listener(move |this, _, window, cx| {
-            this.navigate(section, cx);
-            window.focus(&this.focus, cx);
-        }))
-    }
-    fn form_row(
-        &self,
-        label: impl Into<SharedString>,
-        detail: &'static str,
-        control: impl IntoElement,
-        t: Theme,
-    ) -> Div {
-        FormRow::row(label, detail, control, t)
-    }
-    fn group(&self, rows: Vec<Div>, t: Theme) -> Div {
-        Card::new(t).rows(rows)
-    }
-    fn toggle(
-        &self,
-        id: &'static str,
-        value: bool,
-        edit: fn(&mut Preferences),
-        t: Theme,
-        cx: &Context<Self>,
-    ) -> Stateful<Div> {
-        Toggle::switch(id, id, value, t)
-            .tooltip(super::hint(if value { "On" } else { "Off" }, t))
-            .on_click(cx.listener(move |_, _, _, cx| change(cx, edit)))
-    }
-    fn button(&self, id: &'static str, label: &'static str, t: Theme) -> Stateful<Div> {
-        Button::new(id, label, t).build()
     }
     fn appearance_preview(appearance: Appearance) -> Div {
         let fill: Background = match appearance {
@@ -1079,109 +973,6 @@ impl Render for SettingsView {
                             }),
                     ),
             )
-    }
-}
-
-impl EditorView {
-    pub(super) fn open_settings(
-        &mut self,
-        section: Section,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let owner = cx.weak_entity();
-        let owner_window = window.window_handle();
-        {
-            let existing = self.settings_window;
-            // open_window paints its first frame immediately. Defer until this
-            // EditorView update ends: settings reads the owner's live registry.
-            cx.defer(move |cx| {
-                if let Some(handle) = existing
-                    && handle
-                        .update(cx, |view, window, cx| {
-                            view.navigate(section, cx);
-                            window.activate_window();
-                            cx.notify();
-                        })
-                        .is_ok()
-                {
-                    return;
-                }
-                let bounds = Bounds::centered(
-                    None,
-                    size(px(metrics::SETTINGS_WIDTH), px(metrics::SETTINGS_HEIGHT)),
-                    cx,
-                );
-                let view_owner = owner.clone();
-                let result = cx.open_window(
-                    WindowOptions {
-                        window_bounds: Some(WindowBounds::Windowed(bounds)),
-                        app_owns_titlebar_drag: cfg!(target_os = "macos"),
-                        window_min_size: Some(size(
-                            px(metrics::SETTINGS_MIN_WIDTH),
-                            px(metrics::SETTINGS_MIN_HEIGHT),
-                        )),
-                        titlebar: Some(TitlebarOptions {
-                            title: Some("Quantum Settings".into()),
-                            appears_transparent: true,
-                            traffic_light_position: Some(point(
-                                px(space::SECTION),
-                                px(metrics::TRAFFIC_TOP),
-                            )),
-                        }),
-                        window_background: if cfg!(target_os = "macos") {
-                            WindowBackgroundAppearance::Blurred
-                        } else {
-                            WindowBackgroundAppearance::Opaque
-                        },
-                        app_id: Some(quantum_app::APP_ID.into()),
-                        ..Default::default()
-                    },
-                    |window, cx| {
-                        cx.new(|cx| {
-                            SettingsView::new(section, view_owner, owner_window, window, cx)
-                        })
-                    },
-                );
-                let _ = owner.update(cx, |this, cx| {
-                    match result {
-                        Ok(handle) => this.settings_window = Some(handle),
-                        Err(error) => {
-                            this.status = format!("Could not open settings: {error}").into();
-                            this.error = true;
-                        }
-                    }
-                    cx.notify();
-                });
-            });
-        }
-        cx.notify();
-    }
-    #[expect(
-        clippy::expect_used,
-        reason = "internal invariant: declared boolean grid setting"
-    )]
-    pub(super) fn sync_preferences(&mut self, window: &Window, cx: &mut Context<Self>) {
-        let next = cx.global::<SettingsState>().values.clone();
-        let next_theme = theme(next.appearance, window);
-        let rerender = self.preferences.antialiasing != next.antialiasing
-            || self.preferences.viewport_ambient_occlusion() != next.viewport_ambient_occlusion()
-            || (self.viewport.gpu_enabled()
-                && (self.theme != next_theme
-                    || self.preferences.grid != next.grid
-                    || self.preferences.show_debug_overlay != next.show_debug_overlay));
-        self.theme = next_theme;
-        self.editor
-            .set_grid(next.grid)
-            .expect("declared boolean grid setting");
-        if self.preferences.show_debug_overlay != next.show_debug_overlay {
-            self.viewport.clear_diagnostics();
-        }
-        self.preferences = next;
-        if rerender {
-            self.request_render(cx);
-        }
-        cx.notify();
     }
 }
 
