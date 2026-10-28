@@ -14,8 +14,8 @@ use voxelite_app::{
     thumbnails::ThumbnailCache,
 };
 use voxelite_ui::{
-    Button, ButtonVariant, IconButton, SidebarItem, icon, row,
-    tokens::{space, type_size},
+    AsciiReveal, Button, ButtonVariant, IconButton, SidebarItem, row,
+    tokens::{metrics, space, type_size},
 };
 
 struct Launcher {
@@ -289,7 +289,10 @@ pub(crate) struct WelcomeView {
     list_focus: FocusHandle,
     scroll: ScrollHandle,
     selected: usize,
-    previews: HashMap<PathBuf, PathBuf>,
+    previews: HashMap<PathBuf, Option<super::loading::Preview>>,
+    preview_projects: Vec<(PathBuf, std::time::SystemTime)>,
+    reduced_motion: bool,
+    retired_previews: Vec<std::sync::Arc<RenderImage>>,
     revision: u64,
     thumbnails: Option<Task<()>>,
     busy: bool,
@@ -313,8 +316,9 @@ impl WelcomeView {
             .detach();
         cx.observe_window_appearance(window, |_, _, cx| cx.notify())
             .detach();
-        cx.observe_window_activation(window, |_, window, cx| {
+        cx.observe_window_activation(window, |this, window, cx| {
             if window.is_window_active() {
+                this.reduced_motion = voxelite_app::reduce_motion::prefers_reduced_motion();
                 history(HistoryChange::Reload, cx);
             }
             cx.notify();
@@ -326,6 +330,9 @@ impl WelcomeView {
             scroll: ScrollHandle::new(),
             selected: 0,
             previews: HashMap::new(),
+            preview_projects: Vec::new(),
+            reduced_motion: voxelite_app::reduce_motion::prefers_reduced_motion(),
+            retired_previews: Vec::new(),
             revision: u64::MAX,
             thumbnails: None,
             busy: false,
@@ -340,11 +347,23 @@ impl WelcomeView {
         if self.revision == state.revision {
             return;
         }
-        self.revision = state.revision;
-        let revision = self.revision;
+        let revision = state.revision;
         let projects = state.projects.clone();
         self.selected = self.selected.min(projects.len().saturating_sub(1));
-        self.previews.clear();
+        let stamps: Vec<_> = projects
+            .iter()
+            .map(|p| (p.path.clone(), p.modified))
+            .collect();
+        if self.preview_projects == stamps {
+            return;
+        }
+        self.revision = revision;
+        self.preview_projects = stamps;
+        self.retired_previews.extend(
+            self.previews
+                .drain()
+                .filter_map(|(_, preview)| preview.map(|p| p.image)),
+        );
         let cache = ThumbnailCache::new(&voxelite_app::local_settings::data_dir());
         self.thumbnails = Some(cx.spawn(async move |this, cx| {
             // One preview at a time bounds memory and progressively fills placeholders.
@@ -353,14 +372,13 @@ impl WelcomeView {
                 let cache = cache.clone();
                 let result = cx
                     .background_executor()
-                    .spawn(async move { cache.ensure(&path) })
+                    .spawn(async move { super::loading::recent(&cache.ensure(&path)?) })
                     .await;
                 if this
                     .update(cx, |this, cx| {
                         if this.revision == revision {
-                            if let Ok(preview) = result {
-                                this.previews.insert(project.path, preview);
-                            }
+                            this.previews
+                                .insert(project.path, result.ok().map(|p| p.ready()));
                             cx.notify();
                         }
                     })
@@ -480,6 +498,9 @@ impl Render for WelcomeView {
             cx.global::<settings::SettingsState>().values.appearance,
             window,
         );
+        for image in self.retired_previews.drain(..) {
+            let _ = window.drop_image(image);
+        }
         let projects = cx.global::<Launcher>().projects.clone();
         let error = self
             .error
@@ -548,19 +569,20 @@ impl Render for WelcomeView {
         for (index, project) in projects.iter().enumerate() {
             let path = project.path.clone();
             let preview = div()
-                .w(px(80.))
-                .h(px(64.))
+                .w(px(metrics::RECENT_PREVIEW_COLUMN))
+                .h(px(metrics::RECENT_PREVIEW))
                 .flex_shrink_0()
                 .flex()
                 .items_center()
                 .justify_center()
                 .bg(t.surface())
-                .when_some(self.previews.get(&path), |d, preview| {
-                    d.child(img(preview.clone()).size(px(64.)))
-                })
-                .when(!self.previews.contains_key(&path), |d| {
-                    d.child(icon("cube").text_color(t.muted()))
-                });
+                .child(super::loading::recent_element(
+                    self.previews.get(&path),
+                    index,
+                    project.name.clone(),
+                    t,
+                    self.reduced_motion,
+                ));
             list = list.child(
                 SidebarItem::custom(
                     ("recent", index),
@@ -721,7 +743,11 @@ impl Render for WelcomeView {
                         .px(px(space::XXL))
                         .pb(px(space::LG))
                         .text_color(t.muted())
-                        .child("Opening project…"),
+                        .child(
+                            AsciiReveal::new("project-opening", "Opening project…", t)
+                                .loading(true)
+                                .reduced_motion(self.reduced_motion),
+                        ),
                 )
             })
             .when_some(error, |d, error| {

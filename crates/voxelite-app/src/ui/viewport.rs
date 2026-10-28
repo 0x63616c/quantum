@@ -42,6 +42,7 @@ pub(super) struct Viewport {
     navigation_settle: Option<Task<()>>,
     interactive_render: bool,
     bounds: Rc<Cell<Bounds<Pixels>>>,
+    reveal_started: std::time::Instant,
 }
 
 impl Viewport {
@@ -72,6 +73,7 @@ impl Viewport {
             navigation_settle: None,
             interactive_render: false,
             bounds: Rc::new(Cell::new(Bounds::default())),
+            reveal_started: std::time::Instant::now(),
         }
     }
 
@@ -121,6 +123,16 @@ impl Viewport {
     }
     pub(super) fn has_frame(&self) -> bool {
         self.image.is_some() || self.gpu.has_frame()
+    }
+
+    pub(super) fn reveal_started(&self) -> std::time::Instant {
+        self.reveal_started
+    }
+
+    fn first_frame_ready(&mut self) {
+        if !self.has_frame() {
+            self.reveal_started = std::time::Instant::now();
+        }
     }
 
     pub(super) fn is_current(&self, editor: &Editor) -> bool {
@@ -347,6 +359,7 @@ impl EditorView {
                 if this.viewport.accepts(identity, &this.editor) {
                     match result {
                         Ok(mut frame) => {
+                            this.viewport.first_frame_ready();
                             for pixel in frame.rgba.as_chunks_mut::<4>().0 {
                                 pixel.swap(0, 2);
                             }

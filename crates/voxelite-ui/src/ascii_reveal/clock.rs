@@ -2,7 +2,7 @@
 //! Elapsed-time playback and one-shot repaint scheduling.
 
 use super::skeleton::FPS_MS;
-use gpui::{App, Bounds, Context, Entity, Pixels, Task, Window};
+use gpui::{App, Bounds, Context, Entity, Pixels, Subscription, Task, Window};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Default)]
@@ -15,6 +15,7 @@ pub(crate) struct Clock {
     start: Instant,
     loading: bool,
     timer: Option<Task<()>>,
+    visibility: Option<Subscription>,
 }
 impl Clock {
     pub fn new() -> Self {
@@ -22,6 +23,7 @@ impl Clock {
             start: Instant::now(),
             loading: false,
             timer: None,
+            visibility: None,
         }
     }
     pub fn elapsed(&mut self, playback: Playback, loading: bool, restart: bool) -> f64 {
@@ -46,6 +48,14 @@ impl Clock {
     }
     pub fn stop(&mut self) {
         self.timer = None;
+        self.visibility = None;
+    }
+
+    fn visibility_changed(&mut self, visible: bool) -> bool {
+        if !visible {
+            self.timer = None;
+        }
+        visible
     }
 }
 
@@ -54,21 +64,28 @@ pub(crate) fn schedule(
     clock: &Entity<Clock>,
     bounds: Bounds<Pixels>,
     active: bool,
-    window: &Window,
+    window: &mut Window,
     cx: &mut App,
 ) {
-    let visible = bounds.intersects(&window.content_mask().bounds)
-        && window.is_visible()
-        && window.is_window_active();
-    if !visible {
-        return;
-    }
+    let visible = bounds.intersects(&window.content_mask().bounds) && window.is_visible();
     clock.update(cx, |clock, cx: &mut Context<Clock>| {
         if !active {
             clock.stop();
             return;
         }
-        if clock.timer.is_some() {
+        if clock.visibility.is_none() {
+            clock.visibility = Some(cx.observe_window_visibility(
+                window,
+                |clock, visibility, _, cx| {
+                    if clock.visibility_changed(visibility.is_visible()) {
+                        // No polling while hidden: one repaint re-evaluates elapsed time
+                        // and prepaint rearms only if this component is still animating.
+                        cx.notify();
+                    }
+                },
+            ));
+        }
+        if !should_arm(active, visible, clock.timer.is_some()) {
             return;
         }
         clock.timer = Some(cx.spawn_in(window, async move |state, cx| {
@@ -77,7 +94,7 @@ pub(crate) fn schedule(
                 .await;
             let _ = state.update_in(cx, |clock, window, cx| {
                 clock.timer = None;
-                if window.is_visible() && window.is_window_active() {
+                if window.is_visible() {
                     cx.notify();
                 }
             });
@@ -85,9 +102,45 @@ pub(crate) fn schedule(
     });
 }
 
+fn should_arm(animating: bool, visible: bool, pending: bool) -> bool {
+    animating && visible && !pending
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn timers_follow_visibility_and_animation_without_focus_or_idle_polling() {
+        assert!(should_arm(true, true, false)); // Visible, including inactive windows.
+        assert!(!should_arm(true, true, true)); // At most one queued timer.
+        assert!(!should_arm(true, false, false)); // Hidden: wait for visibility event.
+        assert!(should_arm(true, true, false)); // Visible again: rearm.
+        assert!(!should_arm(false, true, false)); // Finished/static: no idle work.
+        assert!(!should_arm(false, false, false));
+        assert!(!should_arm(false, true, true));
+    }
+
+    #[test]
+    fn hiding_cancels_the_timer_but_completion_also_removes_the_resume_observer() {
+        let unsubscribed = std::rc::Rc::new(std::cell::Cell::new(0));
+        let count = unsubscribed.clone();
+        let mut clock = Clock::new();
+        clock.visibility = Some(Subscription::new(move || count.set(count.get() + 1)));
+        clock.timer = Some(Task::ready(()));
+        assert!(!clock.visibility_changed(false));
+        assert!(clock.timer.is_none());
+        assert_eq!(unsubscribed.get(), 0);
+        assert!(clock.visibility_changed(true));
+        assert!(should_arm(true, true, clock.timer.is_some()));
+        clock.timer = Some(Task::ready(()));
+        clock.stop();
+        assert!(clock.timer.is_none());
+        assert!(clock.visibility.is_none());
+        assert_eq!(unsubscribed.get(), 1);
+        clock.stop();
+        assert_eq!(unsubscribed.get(), 1);
+    }
 
     #[test]
     fn automatic_clock_restarts_when_data_arrives_and_preserves_elapsed_between_renders() {

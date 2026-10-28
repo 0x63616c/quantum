@@ -9,6 +9,7 @@ mod comments;
 mod history;
 mod keyboard_guide;
 pub(crate) mod launch;
+mod loading;
 mod viewport;
 use keyboard_guide::keyboard_guide;
 mod debug_overlay;
@@ -77,6 +78,7 @@ pub struct EditorView {
     editor: Editor,
     theme: Theme,
     preferences: voxelite_app::preferences::Preferences,
+    reduced_motion: bool,
     settings_window: Option<WindowHandle<settings::SettingsView>>,
     palette_focus: FocusHandle,
     modal_focus: FocusHandle,
@@ -214,6 +216,7 @@ impl EditorView {
             .unwrap_or(true)
         });
         cx.observe_window_activation(window, |this, window, cx| {
+            this.reduced_motion = voxelite_app::reduce_motion::prefers_reduced_motion();
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;
@@ -265,6 +268,7 @@ impl EditorView {
         Self::monitor_gpu(cx);
         Self {
             capture_state: None,
+            reduced_motion: voxelite_app::reduce_motion::prefers_reduced_motion(),
             agent,
             palettes,
             discussion: comments::Discussion::new(window, cx),
@@ -356,7 +360,7 @@ impl EditorView {
         if let Some(old) = self.agent.capture.take() {
             self.agent
                 .retired
-                .extend(old.views.into_iter().map(|v| v.2));
+                .extend(old.views.into_iter().map(|v| v.2.image));
         }
         editor.comments_state.region = self.editor.comments_state.region;
         editor.comments_state.filter = self.editor.comments_state.filter;
@@ -1137,20 +1141,49 @@ impl EditorView {
             .overflow_hidden()
             .cursor_crosshair()
             .child(surface)
+            .when(
+                !self.viewport.has_frame() && self.viewport.rendering(),
+                |d| {
+                    d.child(
+                        div()
+                            .absolute()
+                            .inset_0()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(
+                                div().w(px(metrics::SCENE_LOADING_WIDTH)).child(
+                                    voxelite_ui::AsciiSkeleton::new("scene-loading", t)
+                                        .rows(12)
+                                        .reduced_motion(self.reduced_motion),
+                                ),
+                            ),
+                    )
+                },
+            )
             .child(
                 div()
                     .absolute()
                     .top(px(space::PANEL))
                     .left(px(space::XXL))
-                    .child(row().gap(px(space::INSET)).text_color(t.muted()).child(
-                        match self.camera_view {
-                            Some(Op::Front) => "Front",
-                            Some(Op::Right) => "Right",
-                            Some(Op::Top) => "Top",
-                            Some(Op::Frame) => "Isometric",
-                            _ => "Orthographic",
-                        },
-                    )),
+                    .child(
+                        row().gap(px(space::INSET)).text_color(t.muted()).child(
+                            voxelite_ui::AsciiReveal::new(
+                                "scene-view",
+                                match self.camera_view {
+                                    Some(Op::Front) => "Front",
+                                    Some(Op::Right) => "Right",
+                                    Some(Op::Top) => "Top",
+                                    Some(Op::Frame) => "Isometric",
+                                    _ => "Orthographic",
+                                },
+                                t,
+                            )
+                            .loading(!self.viewport.has_frame() && self.viewport.rendering())
+                            .started_at(self.viewport.reveal_started())
+                            .reduced_motion(self.reduced_motion),
+                        ),
+                    ),
             )
             .children(self.comment_pins(cx))
             .when(self.editor.preview.is_some(), |d| {
@@ -1959,7 +1992,22 @@ impl EditorView {
                                                 ),
                                         )
                                     })
-                                    .child(self.status.clone()),
+                                    .child(
+                                        if self.save_flow.working()
+                                            && let Some(text) = self.status.plain_text()
+                                        {
+                                            voxelite_ui::AsciiReveal::new(
+                                                "io-dialog-progress",
+                                                text.to_owned(),
+                                                t,
+                                            )
+                                            .loading(true)
+                                            .reduced_motion(self.reduced_motion)
+                                            .into_any_element()
+                                        } else {
+                                            self.status.clone().into_any_element()
+                                        },
+                                    ),
                             )
                             .when(self.save_flow.picker.waiting(), |d| {
                                 d.child(

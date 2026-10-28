@@ -346,6 +346,12 @@ impl ControlSize {
 }
 /// Legacy application geometry; migrate control metrics in #134.
 pub mod metrics {
+    /// Existing recent-project preview image edge.
+    pub const RECENT_PREVIEW: f32 = 64.;
+    /// Reserved recent-project preview column, including its horizontal gutter.
+    pub const RECENT_PREVIEW_COLUMN: f32 = 80.;
+    /// Compact centered placeholder while the first viewport frame is rendering.
+    pub const SCENE_LOADING_WIDTH: f32 = 240.;
     /// Preserve the mirror tooltip anchor: four pixels of width change plus the new border.
     pub const MIRROR_HINT_X: f32 = 5.;
     /// First mirror tooltip's vertical correction after its button grows from 34 to 36.

@@ -79,10 +79,18 @@ shaped run per layer, never a tree of glyph elements. Its wave uses the same
 16 clipped strips as upstream. Text and image glyphs reuse cached shaping and
 stack-local decoration runs. One pending 33 ms timer per component requests
 the next redraw; there is no vsync loop or catch-up work. Finished, static,
-reduced skeletons and elapsed snapshots do not schedule. Clipped or inactive
-windows do not rearm timers; a previously queued timer may wake once. For long
-lists use `animate(false)`. Existing shared controls and app screens are unchanged
-apart from the added acknowledgement.
+reduced skeletons and elapsed snapshots do not schedule. Clipped or hidden
+windows do not rearm timers; a previously queued timer may wake once. Visible
+windows animate even without keyboard focus. A visibility subscription resumes
+an unfinished animation after hiding and is removed on completion. For long
+lists use `animate(false)`.
+
+Quantum uses these components for recent-project previews, project opening,
+the first viewport frame, save/export I/O, and agent inspection images. Preview
+pixels and both theme grids are prepared in background jobs; ordinary camera
+changes and status updates do not replay a reveal. Run the native preset gallery
+with `cargo run -p voxelite-app --example ascii_loading --locked` (Space replays;
+`-- --light` or `-- --reduced-motion` selects those modes).
 
 ### Deviations from the original
 

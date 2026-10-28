@@ -139,7 +139,6 @@ impl From<String> for HintText {
 }
 
 impl HintText {
-    #[cfg(test)]
     pub(super) fn plain_text(&self) -> Option<&str> {
         match self.0.as_slice() {
             [HintPart::Text(text)] => Some(text.as_ref()),
