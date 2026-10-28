@@ -45,8 +45,14 @@ impl Editor {
     /// Load the existing local library through host-owned bounded storage.
     pub fn load_palette_library(&mut self) -> EditorResult<()> {
         if self.palette_enabled() {
-            let bytes =
-                local_settings::read_local(&local_settings::data_dir().join("palettes.json"))?;
+            let value = local_settings::json_store::<Option<serde_json::Value>>(
+                &local_settings::data_dir().join("palettes.json"),
+            )?
+            .load()?;
+            let bytes = value
+                .map(|value| serde_json::to_vec(&value))
+                .transpose()
+                .map_err(|error| EditorError::Gesture(error.to_string()))?;
             self.palette_action(PaletteAction::LoadLibrary(bytes))?;
         }
         Ok(())
@@ -58,7 +64,12 @@ impl Editor {
         action: PaletteAction,
     ) -> EditorResult<Option<PaletteOutcome>> {
         self.palette_action_with(action, |bytes| {
-            local_settings::write_local(&local_settings::data_dir().join("palettes.json"), bytes)
+            let value: serde_json::Value = serde_json::from_slice(bytes)
+                .map_err(|error| EditorError::Gesture(error.to_string()))?;
+            Ok(local_settings::json_store::<Option<serde_json::Value>>(
+                &local_settings::data_dir().join("palettes.json"),
+            )?
+            .save(&Some(value))?)
         })
     }
 

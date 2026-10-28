@@ -272,19 +272,14 @@ fn atomic_write(
     expected: Option<&str>,
     policy: SavePolicy,
 ) -> SessionResult<()> {
-    use std::{
-        fs::{self, File},
-        io::Write,
-    };
+    use std::fs;
     let parent = path.parent().ok_or(SessionError::MissingFilename)?;
     let parent = if parent.as_os_str().is_empty() {
         Path::new(".")
     } else {
         parent
     };
-    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-    temporary.write_all(bytes)?;
-    temporary.flush()?;
+    let temporary = crate::storage::stage(path, bytes)?;
     if policy == SavePolicy::ReplaceSelected
         && let Ok(metadata) = fs::metadata(path)
     {
@@ -315,10 +310,7 @@ fn atomic_write(
             }
         })?;
     }
-    #[cfg(unix)]
-    File::open(parent)
-        .and_then(|directory| directory.sync_all())
-        .map_err(SessionError::DirectorySync)?;
+    crate::storage::sync_directory(parent).map_err(SessionError::DirectorySync)?;
     Ok(())
 }
 

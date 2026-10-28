@@ -336,7 +336,15 @@ The standalone server retains those tools. This is a local session, not hosted
 multi-user collaboration or a durable recovery journal.
 
 `VOXELITE_DATA_DIR` overrides local palette/settings/socket storage for isolated runs.
-The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
+On macOS the default is `~/Library/Application Support/voxelite`; other platforms
+use `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`. Each JSON file migrates
+once from the legacy data directory when its new destination is absent. Migration
+never replaces an existing destination and records a `.migrated` marker to prevent
+legacy data from returning after recovery. Legacy files are left in place so an older build still finds them.
+Preferences, recent projects and the palette library use bounded `JsonStore` storage.
+Malformed JSON moves to a unique `*.corrupt` sibling before reporting an error
+(recent projects fall back to an empty list). All replacements stage beside the
+original, sync the file, rename, then sync the directory on Unix.
 `bash scripts/capture-native.sh` now also captures main/tools/palettes/
 comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
 client drives the real stdio bridge and checks edit receipts. It also checks

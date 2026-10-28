@@ -1,17 +1,13 @@
 //! Atomic local preferences; project persistence lives in voxelite-format.
-use crate::editor::{EditorError, EditorResult};
+use crate::editor::EditorResult;
 use std::{fs, path::Path};
 
-/// Replace app preferences atomically, using the same durable staging as project saves.
+/// Replace local bytes with the shared durable writer.
 pub(crate) fn write_local(path: &Path, bytes: &[u8]) -> EditorResult<()> {
-    use std::io::Write;
     let parent = path
         .parent()
-        .ok_or_else(|| EditorError::Gesture("Invalid settings path".into()))?;
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
     fs::create_dir_all(parent)?;
-    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-    temporary.write_all(bytes)?;
-    temporary.as_file().sync_all()?;
-    temporary.persist(path).map_err(|e| e.error)?;
-    Ok(())
+    Ok(voxelite_format::storage::safe_write(path, bytes)?)
 }
