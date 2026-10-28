@@ -173,7 +173,10 @@ fn release_build_precedes_credentials() {
     let position = |name: &str| WORKFLOW.find(&format!("      - name: {name}")).unwrap();
     let package = position("Sign and package");
     assert!(position("Build app without signing credentials") < package);
-    assert!(!WORKFLOW[..package].contains("secrets."));
+    let preflight = position("Validate release credentials");
+    let build_start = position("Build app without signing credentials");
+    assert!(preflight < build_start);
+    assert!(!WORKFLOW[build_start..package].contains("secrets."));
     let build = workflow_step("Build app without signing credentials");
     for command in [
         "cargo build --release --locked -p xtask",
@@ -228,23 +231,18 @@ fn site_release_trigger_and_shared_concurrency() {
     }
 }
 #[test]
-fn release_requires_all_apple_credentials_before_packaging() {
+fn release_requires_all_credentials_before_building() {
     let names = [
         "MACOS_CERTIFICATE_P12_BASE64",
         "MACOS_CERTIFICATE_PASSWORD",
         "APPLE_API_KEY_P8_BASE64",
         "APPLE_API_KEY_ID",
         "APPLE_API_ISSUER_ID",
+        "SPARKLE_ED_PRIVATE_KEY",
     ];
     for missing in names.into_iter().map(Some).chain([None]) {
         let root = fixture();
-        fs::create_dir_all(root.path().join("target/release")).unwrap();
-        fs::copy(
-            tool().join("tool"),
-            root.path().join("target/release/xtask"),
-        )
-        .unwrap();
-        let mut cmd = shell(root.path(), "Sign and package");
+        let mut cmd = shell(root.path(), "Validate release credentials");
         cmd.env("TAG", "v1.2.3");
         for name in names {
             cmd.env(
@@ -258,7 +256,7 @@ fn release_requires_all_apple_credentials_before_packaging() {
         }
         let output = cmd.output().unwrap();
         success(&output, missing.is_none());
-        assert_eq!(root.path().join("packaged").exists(), missing.is_none());
+        assert!(!root.path().join("packaged").exists());
         assert!(
             !String::from_utf8_lossy(&output.stdout).contains("fixture value")
                 && !String::from_utf8_lossy(&output.stderr).contains("fixture value")
