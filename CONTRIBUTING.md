@@ -156,8 +156,8 @@ payload preserves those protections while adding PR and CI requirements.
 A repository administrator can inspect and update the existing ruleset:
 
 ```sh
-gh api repos/0x63616c/voxelite/rulesets/25883879
-gh api --method PUT repos/0x63616c/voxelite/rulesets/25883879 \
+gh api repos/0x63616c/quantum/rulesets/25883879
+gh api --method PUT repos/0x63616c/quantum/rulesets/25883879 \
   --input .github/rulesets/protect-main.json
 ```
 
