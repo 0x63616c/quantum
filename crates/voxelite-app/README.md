@@ -148,7 +148,11 @@ the full sample name remains available in its tooltip.
 
 Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin are embedded `.voxl`
 projects. Samples open as untitled copies (no destination path) through the same
-unsaved-change flow as file opens. The three new projects total about 235 KB;
+unsaved-change flow as file opens. Never-saved sessions also require confirmation
+before New, Open, close or quit, even before the first edit. Save opens the path
+picker; cancellation or failure keeps the copy open and unsaved. Only a successful
+project save adopts a destination; exporting does not satisfy Save/Discard/Cancel.
+The three new projects total about 235 KB;
 Autumn Workshop was already embedded, so packaging needs no extra resources.
 Sample counts come from the documents. Both samples and recents use the same
 opt-in renderer treatment: isometric framing, directional face light, per-voxel

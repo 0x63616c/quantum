@@ -133,6 +133,37 @@ impl SaveFlow {
         true
     }
 
+    fn complete_picker(
+        &mut self,
+        request: u64,
+        result: anyhow::Result<Option<(PathBuf, SaveFormat)>>,
+        status: &mut HintText,
+        error: &mut bool,
+    ) -> Option<(PathBuf, SaveFormat)> {
+        if !self.picker.complete(request) {
+            return None;
+        }
+        self.restore_picker_status(status, error);
+        match result {
+            Ok(Some((path, format))) if !path.as_os_str().is_empty() => Some((path, format)),
+            Ok(_) => {
+                self.cancel_save();
+                None
+            }
+            Err(_) => {
+                self.cancel_save();
+                *status = if cfg!(target_os = "macos") {
+                    "Save dialog unavailable; edits are still open."
+                } else {
+                    "Save dialog unavailable. Enable a desktop file portal; edits are still open."
+                }
+                .into();
+                *error = true;
+                None
+            }
+        }
+    }
+
     // Saving ends the dialog gate separately and consumes the continuation
     // on failure.
     pub(super) fn complete_save(&mut self, success: bool) -> Option<Op> {
@@ -200,7 +231,7 @@ impl EditorView {
         self.save_flow.open_path = Some(path);
         if !self
             .save_flow
-            .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
+            .confirm_if_dirty(Op::Open, || self.editor.needs_save())
         {
             self.open_dialog(cx);
         }
@@ -225,7 +256,7 @@ impl EditorView {
         self.save_flow.sample = Some(sample);
         if !self
             .save_flow
-            .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
+            .confirm_if_dirty(Op::Open, || self.editor.needs_save())
         {
             self.open_dialog(cx);
         }
@@ -445,48 +476,45 @@ impl EditorView {
             let result = receiver.await;
             #[cfg(not(target_os = "macos"))]
             let result = result.map(|result| {
-                result.map(|path| path.map(|path| {
-                    let format = SaveFormat::from_extension(
-                        &formats,
-                        path.extension().and_then(|ext| ext.to_str()).unwrap_or_default(),
-                    );
-                    (path, format)
-                }))
+                result.map(|path| {
+                    path.map(|path| {
+                        let format = SaveFormat::from_extension(
+                            &formats,
+                            path.extension()
+                                .and_then(|ext| ext.to_str())
+                                .unwrap_or_default(),
+                        );
+                        (path, format)
+                    })
+                })
             });
             let _ = this.update(cx, |this, cx| {
-                if !this.save_flow.picker.complete(request) {
-                    return;
-                }
-                this.save_flow.restore_picker_status(&mut this.status, &mut this.error);
-                match result {
-                    Ok(Ok(Some((path, format)))) if !path.as_os_str().is_empty() => {
-                        #[cfg(not(target_os = "macos"))]
-                        let path = {
-                            let mut path = path;
-                            if path.extension().is_none() {
-                                path.set_extension(format.extension());
-                            }
-                            path
-                        };
-                        match format {
-                            SaveFormat::Project => this.write_project(path, cx),
-                            SaveFormat::Export(format) => this.write_export(path, format, cx),
+                let result = result
+                    .map_err(anyhow::Error::from)
+                    .and_then(|result| result);
+                if let Some((path, format)) = this.save_flow.complete_picker(
+                    request,
+                    result,
+                    &mut this.status,
+                    &mut this.error,
+                ) {
+                    #[cfg(not(target_os = "macos"))]
+                    let path = {
+                        let mut path = path;
+                        if path.extension().is_none() {
+                            path.set_extension(format.extension());
                         }
-                    }
-                    Ok(Ok(_)) => { this.save_flow.cancel_save(); }
-                    _ => {
-                        this.save_flow.cancel_save();
-                        this.status = if cfg!(target_os = "macos") {
-                            "Save dialog unavailable; edits are still open."
-                        } else {
-                            "Save dialog unavailable. Enable a desktop file portal; edits are still open."
-                        }.into();
-                        this.error = true;
+                        path
+                    };
+                    match format {
+                        SaveFormat::Project => this.write_project(path, cx),
+                        SaveFormat::Export(format) => this.write_export(path, format, cx),
                     }
                 }
                 cx.notify();
             });
-        }).detach();
+        })
+        .detach();
     }
     pub(super) fn cancel_save_picker(&mut self, cx: &mut Context<Self>) {
         if self
@@ -522,6 +550,170 @@ impl EditorView {
 mod tests {
     use super::{CloseRequest, Op, PendingAction, SaveChoice, SaveFlow, ShortcutPlatform};
     use gpui::Keystroke;
+    use voxelite_app::{editor::Editor, samples::Sample, save_format::SaveFormat};
+
+    #[test]
+    fn untouched_samples_require_confirmation_until_a_project_save_succeeds() {
+        let dir = tempfile::tempdir().unwrap();
+        for sample in Sample::ALL {
+            let mut editor = Editor::from_session(sample.session().unwrap()).unwrap();
+            assert!(!editor.engine.is_dirty());
+            for op in [Op::New, Op::Open, Op::Quit] {
+                let mut flow = SaveFlow::default();
+                assert!(flow.confirm_if_dirty(op, || editor.needs_save()));
+                assert_eq!(
+                    flow.resolve(SaveChoice::Cancel),
+                    Some(PendingAction::Cancelled)
+                );
+                assert!(editor.path.is_none());
+                assert!(flow.confirm_if_dirty(op, || editor.needs_save()));
+                assert_eq!(
+                    flow.resolve(SaveChoice::DontSave),
+                    Some(PendingAction::Run(op))
+                );
+            }
+            let mut flow = SaveFlow::default();
+            assert!(matches!(
+                flow.request_close(|| editor.needs_save()),
+                CloseRequest::Confirm
+            ));
+            flow.cancel_confirmation();
+            editor
+                .save(&dir.path().join(format!("{}.voxl", sample.name())))
+                .unwrap();
+            assert!(matches!(
+                flow.request_close(|| editor.needs_save()),
+                CloseRequest::Allow
+            ));
+        }
+    }
+
+    #[test]
+    fn sample_picker_cancellation_and_failures_preserve_the_unsaved_copy_and_original() {
+        let sample = Sample::Lighthouse;
+        let original = sample.session().unwrap().engine.document().content.clone();
+        let dir = tempfile::tempdir().unwrap();
+        for op in [Op::Save, Op::SaveAs, Op::New, Op::Open, Op::Quit] {
+            for outcome in 0..5 {
+                let mut editor = Editor::from_session(sample.session().unwrap()).unwrap();
+                editor
+                    .execute(
+                        "Rename copy",
+                        voxelite_core::Command::EditDocument {
+                            name: Some("My lighthouse".into()),
+                            bounds: None,
+                        },
+                    )
+                    .unwrap();
+                let mut flow = SaveFlow::default();
+                if op == Op::Open {
+                    flow.sample = Some(Sample::Snow);
+                }
+                if flow.confirm_if_dirty(op, || editor.needs_save()) {
+                    assert_eq!(flow.resolve(SaveChoice::Save), Some(PendingAction::Save));
+                }
+                let request = flow.picker.begin();
+                flow.begin_dialog();
+                flow.before_picker = Some(("Previous status".into(), false));
+                let mut status = "Waiting for file dialog…".into();
+                let mut error = false;
+                match outcome {
+                    0 => assert!(flow.cancel_picker(&mut status, &mut error)),
+                    1..=3 => {
+                        let result = match outcome {
+                            1 => Ok(None),
+                            2 => Ok(Some((std::path::PathBuf::new(), SaveFormat::Project))),
+                            _ => Err(anyhow::anyhow!("picker failed")),
+                        };
+                        assert!(
+                            flow.complete_picker(request, result, &mut status, &mut error)
+                                .is_none()
+                        );
+                    }
+                    _ => {
+                        // A valid picker response can still fail to write. No receipt
+                        // means the current session must remain pathless and unsaved.
+                        let (path, _) = flow
+                            .complete_picker(
+                                request,
+                                Ok(Some((dir.path().to_path_buf(), SaveFormat::Project))),
+                                &mut status,
+                                &mut error,
+                            )
+                            .unwrap();
+                        assert!(editor.prepare_save(&path).write().is_err());
+                        flow.finish_dialog();
+                        assert_eq!(flow.complete_save(false), None);
+                    }
+                }
+                assert!(!flow.dialog_open());
+                assert!(!flow.picker.waiting());
+                assert!(flow.before_picker.is_none());
+                assert!(flow.sample.is_none());
+                assert!(flow.open_path.is_none());
+                assert_eq!(flow.complete_save(true), None);
+                assert!(editor.path.is_none());
+                assert!(editor.needs_save());
+                assert_eq!(editor.snapshot().name, "My lighthouse");
+                assert_eq!(
+                    sample.session().unwrap().engine.document().content,
+                    original
+                );
+                // Late native replies cannot turn Cancel into a save, including
+                // after the user has started a fresh picker.
+                let retry = flow.picker.begin();
+                let late = dir.path().join("late.voxl");
+                assert!(
+                    flow.complete_picker(
+                        request,
+                        Ok(Some((late.clone(), SaveFormat::Project))),
+                        &mut status,
+                        &mut error
+                    )
+                    .is_none()
+                );
+                assert!(flow.picker.waiting());
+                assert!(!late.exists());
+                assert!(flow.picker.complete(retry));
+            }
+        }
+    }
+
+    #[test]
+    fn sample_save_as_adopts_only_the_successfully_written_path() {
+        let dir = tempfile::tempdir().unwrap();
+        for sample in Sample::ALL {
+            let mut editor = Editor::from_session(sample.session().unwrap()).unwrap();
+            let original = editor.snapshot().clone();
+            let mut flow = SaveFlow::default();
+            let request = flow.picker.begin();
+            flow.begin_dialog();
+            let destination = dir.path().join(format!("{}.voxl", sample.name()));
+            let (path, format) = flow
+                .complete_picker(
+                    request,
+                    Ok(Some((destination.clone(), SaveFormat::Project))),
+                    &mut "Waiting…".into(),
+                    &mut false,
+                )
+                .unwrap();
+            assert!(matches!(format, SaveFormat::Project));
+            assert!(flow.dialog_open());
+            assert!(editor.path.is_none());
+            assert!(editor.needs_save());
+            editor.finish_save(editor.prepare_save(&path).write().unwrap());
+            flow.finish_dialog();
+            assert_eq!(flow.complete_save(true), None);
+            assert_eq!(editor.path, Some(destination.canonicalize().unwrap()));
+            assert!(!editor.needs_save());
+            assert!(flow.sample.is_none());
+            assert_eq!(Editor::open(&destination).unwrap().snapshot(), &original);
+            assert_eq!(
+                sample.session().unwrap().engine.document().content,
+                original
+            );
+        }
+    }
 
     fn key(flow: &mut SaveFlow, stroke: &str) -> Option<SaveChoice> {
         flow.key(
