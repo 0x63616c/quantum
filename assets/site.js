@@ -116,9 +116,12 @@ for (const pre of document.querySelectorAll('.docs-content pre')) {
 }
 
 // Native disclosures keep both menus usable without JavaScript. Enhancement
-// dismisses them on navigation, outside clicks and Escape without trapping focus.
+// dismisses them on navigation, focus leaving, outside clicks and Escape.
 const docsMenus = document.querySelectorAll('.docs-mobile-nav details');
 for (const menu of docsMenus) {
+  menu.addEventListener('focusout', event => {
+    if (!menu.contains(event.relatedTarget)) menu.open = false;
+  });
   menu.addEventListener('click', event => {
     const anchor = event.target.closest('a');
     if (!anchor) return;
