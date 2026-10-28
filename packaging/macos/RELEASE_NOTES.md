@@ -7,5 +7,3 @@ Voxelite for macOS (Apple silicon).
 Voxelite is Developer ID signed and notarized by Apple. No Gatekeeper workaround is needed.
 
 Starting with version 0.3.0, Voxelite checks for updates automatically through Sparkle and prompts you to install them.
-
-Prefer not to install? Use the browser editor: https://voxelite.worldwidewebb.co/app/
