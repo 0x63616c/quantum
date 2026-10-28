@@ -143,6 +143,70 @@ impl StatusSegment {
             )
     }
 }
+
+/// Proportional label with a fixed-width tabular value and optional separator.
+/// Values cannot shift neighboring items as their number of digits changes.
+pub struct StatusBarItem {
+    label: SharedString,
+    value: String,
+    cells: usize,
+    separator: bool,
+    theme: Theme,
+}
+impl StatusBarItem {
+    /// Reserve exactly `cells` Geist Mono digits, truncating overflow with `+`.
+    pub fn new(
+        label: impl Into<SharedString>,
+        value: Option<impl ToString>,
+        cells: usize,
+        theme: Theme,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: fixed_slot(value, cells),
+            cells,
+            separator: true,
+            theme,
+        }
+    }
+    /// Omit the separator for the first item in a cluster.
+    pub fn separator(mut self, separator: bool) -> Self {
+        self.separator = separator;
+        self
+    }
+    /// Build a static-width value next to a proportional label.
+    pub fn build(self) -> Div {
+        use crate::{ColorToken as C, ControlHeight, Space, TextSize, tokens::geometry};
+        TextSize::Small
+            .apply(row())
+            .h(px(ControlHeight::Dense.px()))
+            .flex_shrink_0()
+            .gap(px(Space::S3.px()))
+            .text_color(self.theme.color(C::TextSecondary))
+            .when(self.separator, |d| {
+                d.child(
+                    div()
+                        .w(px(geometry::EDGE))
+                        .h(px(Space::S4.px()))
+                        .mr(px(Space::S2.px()))
+                        .bg(self.theme.color(C::BorderSubtle)),
+                )
+            })
+            .child(self.label)
+            .child(
+                TextSize::Mono
+                    .apply(div())
+                    .w(px(self.cells as f32
+                        * TextSize::Mono.px()
+                        * type_size::MONO_ADVANCE))
+                    .flex_shrink_0()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .child(self.value),
+            )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

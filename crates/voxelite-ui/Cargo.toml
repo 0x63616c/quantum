@@ -12,3 +12,7 @@ unicode-segmentation = "=1.13.3"
 
 [lints]
 workspace = true
+
+# Only the executable gallery needs a native GPUI platform. Library dependencies stay portable.
+[dev-dependencies]
+gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"] }
