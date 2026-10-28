@@ -1,6 +1,6 @@
 //! Validate workflow action references and explicit default permissions.
 
-use serde_yaml_ng::Value;
+use serde_json::Value;
 
 use crate::{
     Error, Result,
@@ -37,12 +37,12 @@ fn check(workspace: &Workspace) -> Result<Vec<String>> {
     Ok(errors)
 }
 
-fn audit(source: &str) -> std::result::Result<Vec<String>, serde_yaml_ng::Error> {
-    let workflow: Value = serde_yaml_ng::from_str(source)?;
+fn audit(source: &str) -> std::result::Result<Vec<String>, serde_saphyr::Error> {
+    let workflow: Value = serde_saphyr::from_str(source)?;
     let mut errors = Vec::new();
     if !workflow
-        .as_mapping()
-        .is_some_and(|map| map.contains_key(Value::from("permissions")))
+        .as_object()
+        .is_some_and(|map| map.contains_key("permissions"))
     {
         errors.push("missing top-level permissions key".into());
     }
@@ -54,15 +54,15 @@ fn audit(source: &str) -> std::result::Result<Vec<String>, serde_yaml_ng::Error>
 
 fn inspect(value: &Value, errors: &mut Vec<String>) {
     match value {
-        Value::Mapping(map) => {
+        Value::Object(map) => {
             for (key, value) in map {
-                if key.as_str() == Some("uses") && !value.as_str().is_some_and(pinned) {
+                if key == "uses" && !value.as_str().is_some_and(pinned) {
                     errors.push("uses must reference a full 40-hex commit SHA (or a local action / digest-pinned Docker image)".into());
                 }
                 inspect(value, errors);
             }
         }
-        Value::Sequence(values) => {
+        Value::Array(values) => {
             for value in values {
                 inspect(value, errors);
             }
