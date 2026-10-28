@@ -157,7 +157,7 @@ impl Runner for FakeRunner {
                             })
                             .expect("explicit build target"),
                     )
-                    .join(format!("release/{binary}")),
+                    .join(format!("{}/{binary}", build_profile(&args))),
                     format!("fixture {binary}"),
                 );
             }
@@ -429,4 +429,11 @@ impl Fixture {
         assert_eq!(fs::read_dir(self.path("tmp")).unwrap().count(), 0);
         result
     }
+}
+
+fn build_profile(args: &[String]) -> &str {
+    &args
+        .windows(2)
+        .find(|a| a[0] == "--profile")
+        .expect("explicit build profile")[1]
 }
