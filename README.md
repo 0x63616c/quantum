@@ -1,3 +1,5 @@
+<img src="site/assets/mark.svg" width="96" height="96" alt="Quantize: a smooth hemisphere beside a grid of rounded voxels">
+
 # Quantum
 
 An Aseprite-style 3D voxel editor for people and agents.
@@ -273,16 +275,20 @@ compatibility version and workspace lockfile entries. It also accepts `major`,
 not tag or publish a release. See [xtask/README.md](xtask/README.md) for the
 maintenance modules and how to add commands.
 
-The standard workspace test command is `cargo test --workspace`. The exact
+The standard workspace test gate is `cargo xtask check test`; it uses nextest
+when installed and falls back to Cargo otherwise. Install nextest with
+`cargo install cargo-nextest --version 0.9.150 --locked`. The exact
 format, lint and test invocations in [CI Linux](.github/workflows/ci-linux.yml) and
 [CI macOS](.github/workflows/ci-macos.yml) are:
 
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
-cargo test --workspace --locked --no-fail-fast
+cargo nextest run --workspace --locked --profile ci
+cargo test --doc --workspace --locked
 cargo xtask check plugin-deps
-cargo test -p xtask --locked
+cargo nextest run -p xtask --locked --profile ci
+cargo test --doc -p xtask --locked
 ```
 
 Run the platform-independent repository checks with

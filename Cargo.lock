@@ -7587,6 +7587,7 @@ dependencies = [
  "pulldown-cmark",
  "quote",
  "regex",
+ "resvg",
  "roxmltree 0.21.2",
  "rustix",
  "semver",

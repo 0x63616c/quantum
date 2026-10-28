@@ -94,8 +94,8 @@
   "examples/support/autumn_workshop.rs:function-lines:::build": 545,
   "xtask/src/cmd.rs:function-lines:impl Runner for SystemRunner::execute": 144,
   "xtask/src/macos/appcast.rs:function-lines:::generate": 143,
-  "xtask/src/macos/package.rs:function-lines:::build": 314,
-  "xtask/src/macos/tests/support.rs:function-lines:impl Runner for FakeRunner::execute": 231,
+  "xtask/src/macos/package.rs:function-lines:::build": 295,
+  "xtask/src/macos/tests/support.rs:function-lines:impl Runner for FakeRunner::execute": 229,
   "xtask/src/release.rs:function-lines:::run": 105,
   "xtask/src/screenshots.rs:function-lines:::run": 138,
   "xtask/src/version.rs:function-lines:impl  for Plan::prepare": 101

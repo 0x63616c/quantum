@@ -133,6 +133,14 @@ Tests may unwrap/expect/panic via `clippy.toml`. Production exceptions require a
 narrow `#[expect(..., reason = "...")]` documenting a verified invariant or CLI
 output contract, never a blanket library allowance.
 
+CI runs `cargo nextest run --workspace --locked --profile ci`, followed by
+`cargo test --doc --workspace --locked` because nextest excludes doctests.
+Install the CI version locally with `cargo install cargo-nextest --version 0.9.150 --locked`.
+`cargo xtask validate` uses nextest when installed and always runs doctests;
+otherwise it falls back to `cargo test --workspace --locked` (including doctests).
+The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
+CI snapshot verification; insta inherits that variable under nextest too.
+
 `cargo xtask validate` runs the registered gates: boundaries, source-lints, tidy, workflows, plugin-deps, brand,
 docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
 machete. Missing tools skip with a reason; use `--strict` to fail instead.
@@ -150,9 +158,11 @@ Run from the repository root. These are the general macOS CI checks:
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
-cargo test --workspace --locked --no-fail-fast
+cargo nextest run --workspace --locked --profile ci
+cargo test --doc --workspace --locked
 cargo xtask check plugin-deps
-cargo test -p xtask --locked
+cargo nextest run -p xtask --locked --profile ci
+cargo test --doc -p xtask --locked
 ```
 
 | Purpose | Command |
@@ -163,7 +173,7 @@ cargo test -p xtask --locked
 | Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
 | Start native editor | `cargo run -p voxelite-app --bin voxelite` |
 | Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
-| Standard workspace tests | `cargo test --workspace` |
+| Standard workspace tests and doctests | `cargo xtask check test` |
 | Focused core tests | `cargo test -p voxelite-core --locked` |
 | Editor model without GPUI | `cargo test -p voxelite-app --no-default-features --locked` |
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |

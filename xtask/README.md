@@ -18,8 +18,18 @@ cargo xtask bump-version patch --dry-run
 cargo xtask version --check-tag v0.3.1
 cargo xtask macos package --dry-run
 cargo xtask macos check-appcast site/appcast.xml --allow-empty
+cargo xtask icons
+cargo xtask icons --check
 cargo xtask bench --help
 ```
+
+CI runs `cargo nextest run --workspace --locked --profile ci`, followed by
+`cargo test --doc --workspace --locked` because nextest excludes doctests.
+Install the CI version locally with `cargo install cargo-nextest --version 0.9.150 --locked`.
+`cargo xtask validate` uses nextest when installed and always runs doctests;
+otherwise it falls back to `cargo test --workspace --locked` (including doctests).
+The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
+CI snapshot verification; insta inherits that variable under nextest too.
 
 ## PR screenshots
 
@@ -109,6 +119,8 @@ The repository checks run in-process from `src/checks/`:
 - `docs-assets`: local image links in the root guides, docs and crate READMEs;
   images must exist outside `screenshots/`. Checks Git ignores captures while
   keeping `docs/images/*.png` available.
+- `icons`: exact regeneration of the Quantize SVG derivatives, including PNGs,
+  ICNS, site marks and the design preview. See [artwork notes](../packaging/macos/ARTWORK.md).
 
 Source rules use `syn` and token trees, including inactive platform code and
 inline tests. Comments and string contents are not source violations. All tracked

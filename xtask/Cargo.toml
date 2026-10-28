@@ -15,6 +15,7 @@ plist.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true
 regex.workspace = true
+resvg.workspace = true
 roxmltree.workspace = true
 semver.workspace = true
 serde.workspace = true

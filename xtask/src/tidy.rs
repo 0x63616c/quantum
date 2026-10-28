@@ -13,6 +13,7 @@ use crate::workspace::tracked_paths;
 const ROOT_ENTRIES: &[&str] = &[
     ".agents",
     ".cargo",
+    ".config",
     ".gitattributes",
     ".github",
     ".gitignore",
