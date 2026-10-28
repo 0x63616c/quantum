@@ -46,6 +46,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, xcode, golden]
     timeout-minutes: 60
     env:
+      CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       RENDER_COMMAND: ${{ inputs.command || 'visual' }}
       RENDER_RUNS: ${{ inputs.runs || '3' }}
