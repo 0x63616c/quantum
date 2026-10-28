@@ -287,7 +287,7 @@ pub(crate) struct WelcomeView {
     error: Option<String>,
 }
 impl WelcomeView {
-    pub(super) fn show_error(&mut self, error: Option<String>, cx: &mut Context<Self>) {
+    pub(crate) fn show_error(&mut self, error: Option<String>, cx: &mut Context<Self>) {
         self.error = error;
         cx.notify();
     }
