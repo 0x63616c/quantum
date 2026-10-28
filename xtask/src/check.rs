@@ -90,6 +90,11 @@ pub static CHECKS: &[Check] = &[
         tidy_check,
     ),
     Check::new(
+        "workflows",
+        "SHA-pinned workflow actions and explicit default permissions",
+        checks::workflows::run,
+    ),
+    Check::new(
         "plugin-deps",
         "Plugin and MCP dependency boundaries",
         checks::plugin_deps::run,
