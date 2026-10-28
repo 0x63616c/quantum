@@ -25,7 +25,7 @@
 //!   both base and wave (upstream's wave alone substitutes seed one).
 //! - One-shot 33 ms timers replace the shared browser rAF. They stop on completion,
 //!   removal, explicit elapsed-time snapshots, static/reduced skeletons, clipping,
-//!   and inactive/hidden windows. There is no browser watchdog; delayed frames
+//!   and hidden windows. There is no browser watchdog; delayed frames
 //!   evaluate current time without replaying missed ticks.
 //! - Images take bounded, already fitted RGBA thumbnails at DPR 1; loading,
 //!   decoding, object-fit, CORS fallback and device-pixel resampling belong to the

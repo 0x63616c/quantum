@@ -17,6 +17,10 @@ name = "voxelite"
 path = "src/main.rs"
 required-features = ["native"]
 
+[[example]]
+name = "ascii_loading"
+required-features = ["native"]
+
 [dependencies]
 voxelite-mcp.workspace = true
 tempfile.workspace = true

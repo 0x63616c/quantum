@@ -43,6 +43,8 @@ pub(super) struct SaveFlow {
     choice: SaveChoice,
     after_save: Option<Op>,
     dialog_open: bool,
+    working: bool,
+    completion: Option<(String, std::time::Instant)>,
     open_path: Option<PathBuf>,
     pub(super) picker: voxelite_app::save_picker::SavePicker,
     before_picker: Option<(HintText, bool)>,
@@ -55,6 +57,8 @@ impl Default for SaveFlow {
             choice: SaveChoice::Save,
             after_save: None,
             dialog_open: false,
+            working: false,
+            completion: None,
             open_path: None,
             picker: Default::default(),
             before_picker: None,
@@ -104,6 +108,30 @@ impl SaveFlow {
     }
     pub(super) fn finish_dialog(&mut self) {
         self.dialog_open = false;
+        self.working = false;
+    }
+
+    pub(super) fn working(&self) -> bool {
+        self.working
+    }
+
+    pub(super) fn completion(&self, message: &str) -> Option<std::time::Instant> {
+        self.completion
+            .as_ref()
+            .filter(|(text, _)| text == message)
+            .map(|(_, at)| *at)
+    }
+
+    fn begin_work(&mut self) {
+        self.begin_dialog();
+        self.working = true;
+        self.completion = None;
+    }
+
+    fn finished_work(&mut self, status: &HintText) {
+        self.completion = status
+            .plain_text()
+            .map(|text| (text.to_string(), std::time::Instant::now()));
     }
 
     fn cancel_save(&mut self) {
@@ -175,6 +203,29 @@ impl SaveFlow {
     }
 }
 
+#[cfg(test)]
+mod loading_tests {
+    use super::SaveFlow;
+
+    #[test]
+    fn only_io_work_shimmers_and_completion_does_not_animate_later_status_messages() {
+        let mut flow = SaveFlow::default();
+        flow.begin_dialog();
+        assert!(!flow.working());
+        flow.begin_work();
+        assert!(flow.working());
+        flow.finish_dialog();
+        flow.finished_work(&"Saved".into());
+        assert!(!flow.working());
+        assert!(flow.completion("Saved").is_some());
+        assert!(flow.completion("Voxel placed").is_none());
+        flow.begin_work();
+        assert!(flow.completion("Saved").is_none());
+        flow.finish_dialog(); // Includes cancellation and failure paths.
+        assert!(!flow.working());
+    }
+}
+
 impl EditorView {
     pub(super) fn open_recent(
         &mut self,
@@ -201,7 +252,8 @@ impl EditorView {
     }
 
     fn load_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        self.save_flow.begin_dialog();
+        self.save_flow.begin_work();
+        self.error = false;
         self.status = "Opening project…".into();
         let task = cx
             .background_executor()
@@ -220,6 +272,7 @@ impl EditorView {
                         this.error = true;
                     }
                 }
+                this.save_flow.finished_work(&this.status);
                 cx.notify();
             });
         })
@@ -259,7 +312,8 @@ impl EditorView {
         }).detach();
     }
     fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        self.save_flow.begin_dialog();
+        self.save_flow.begin_work();
+        self.error = false;
         self.status = "Saving project…".into();
         let save = self.editor.prepare_save(&path);
         let task = cx.background_executor().spawn(async move { save.write() });
@@ -284,6 +338,7 @@ impl EditorView {
                         this.error = true;
                     }
                 }
+                this.save_flow.finished_work(&this.status);
                 cx.notify();
             });
         })
@@ -297,7 +352,8 @@ impl EditorView {
     ) {
         // An export cannot satisfy a deferred New/Open/Quit that needs a project save.
         self.save_flow.complete_save(false);
-        self.save_flow.begin_dialog();
+        self.save_flow.begin_work();
+        self.error = false;
         self.status = format!("Exporting {}…", format.label_key).into();
         let job = match self.editor.prepare_export(&format.id) {
             Ok(job) => job,
@@ -352,6 +408,7 @@ impl EditorView {
                         this.error = true;
                     }
                 }
+                this.save_flow.finished_work(&this.status);
                 cx.notify();
             });
         })

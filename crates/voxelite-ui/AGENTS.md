@@ -94,7 +94,7 @@ Use the public re-exports in `src/lib.rs`; icon assets remain in the app.
   original 220 ms fade; hide is instant. Cache patterns/timings/shaping; never
   allocate an element per glyph or accumulate animation state per frame.
   Rearm at most one 33 ms timer per component only while visible and animating;
-  stop on completion, removal, static snapshots, or inactive/hidden windows.
+  stop on completion, removal, static snapshots, or hidden windows.
   Keep [NOTICE](NOTICE) and the app acknowledgement with the port.
 
 ### Deviations from the original

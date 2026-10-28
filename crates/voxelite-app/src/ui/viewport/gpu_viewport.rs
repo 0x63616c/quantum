@@ -195,6 +195,7 @@ impl EditorView {
                         // Camera motion may queue a newer frame; keep completed frames
                         // flowing, but never install a different document/preview.
                         if this.viewport.accepts(identity, &this.editor) {
+                            this.viewport.first_frame_ready();
                             if this.preferences.show_debug_overlay
                                 && this.viewport.gpu.diagnostics_epoch == diagnostics_epoch
                             {

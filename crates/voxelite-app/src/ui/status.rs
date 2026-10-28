@@ -136,7 +136,35 @@ impl EditorView {
                     .font_family(type_size::UI)
                     .text_color(if self.error { t.danger() } else { t.muted() })
                     .anchored_hint(self.status.clone(), t, TooltipSide::Above)
-                    .when(!compact, |d| d.child(self.status.clone()))
+                    .when(!compact, |d| {
+                        if !self.error
+                            && let Some(text) = self.status.plain_text()
+                        {
+                            if self.save_flow.working() {
+                                return d.child(
+                                    voxelite_ui::AsciiReveal::new(
+                                        "io-progress",
+                                        text.to_owned(),
+                                        t,
+                                    )
+                                    .loading(true)
+                                    .reduced_motion(self.reduced_motion),
+                                );
+                            }
+                            if let Some(at) = self.save_flow.completion(text) {
+                                return d.child(
+                                    voxelite_ui::AsciiReveal::new(
+                                        "io-progress",
+                                        text.to_owned(),
+                                        t,
+                                    )
+                                    .started_at(at)
+                                    .reduced_motion(self.reduced_motion),
+                                );
+                            }
+                        }
+                        d.child(self.status.clone())
+                    })
                     .when(compact && self.error, |d| d.child("!")),
             )
             .child(
