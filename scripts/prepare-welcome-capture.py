@@ -9,22 +9,23 @@ import sys
 import time
 
 
-def prepare(root: Path, fixtures: Path, data: Path) -> None:
-    """Use identical paths and mtimes on both sides, without touching user data."""
-    fixtures.mkdir(parents=True, exist_ok=True)
-    clock = fixtures / "clock.txt"
+def prepare(root: Path, capture_home: Path, data: Path) -> None:
+    """Seed only the explicit disposable home, shared by both capture revisions."""
+    capture_home.mkdir(parents=True, exist_ok=True)
+    clock = capture_home / "clock.txt"
     if not clock.exists():
         clock.write_text(str(int(time.time())), encoding="utf-8")
     now = int(clock.read_text(encoding="utf-8"))
     projects = []
-    for filename, name, age in [
-        ("autumn-workshop", "Autumn Workshop", 2 * 3600),
-        ("snow-cabin", "Snow Cabin", 86400),
-        ("cherry-blossom", "Cherry Blossom", 3 * 86400),
-        ("lighthouse", "Lighthouse", 5 * 86400),
-        ("autumn-workshop", "Workshop Study", 8 * 86400),
+    for filename, name, folder, age in [
+        ("autumn-workshop", "Autumn Workshop", "Quantum", 2 * 3600),
+        ("snow-cabin", "Snow Cabin", "Quantum/client", 86400),
+        ("cherry-blossom", "Cherry Blossom", "Desktop", 3 * 86400),
+        ("lighthouse", "Lighthouse", "Quantum", 5 * 86400),
+        ("autumn-workshop", "Workshop Study", "Quantum/samples", 8 * 86400),
     ]:
-        path = fixtures / f"{name}.voxl"
+        path = capture_home / folder / f"{name}.voxl"
+        path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(root / "examples" / f"{filename}.voxl", path)
         modified = now - age
         os.utime(path, (modified, modified))
