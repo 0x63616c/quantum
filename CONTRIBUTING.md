@@ -71,10 +71,23 @@ and light themes). It is generated, never pasted by hand:
 ```sh
 cargo xtask screenshots              # local preview in target/pr-screenshots/
 cargo xtask screenshots --publish 123  # fill the Screenshots section of PR #123
+cargo xtask screenshots --screen 'settings-*' # local preview of just Settings
 ```
 
-The **PR screenshots** CI job runs the publish step for PRs touching UI paths, and
-non-UI PRs get no Screenshots section. Details, adding screens and troubleshooting:
+The default captures only `welcome`, `editor-dark` and `editor-light`. Migration
+PRs add the surfaces they change with one plain, column-zero line in the PR body,
+outside the generated Screenshots section: `Screens: panels-* settings-general-*`.
+Exact names and trailing `*` prefixes work; unmatched selectors fail. Both CI and
+local `--publish` add those matches to the key set. Explicit `--screen` options
+select only their matches; quote patterns in shell commands.
+
+The **PR screenshots** CI job runs the publish step for PRs touching UI paths.
+After editing the `Screens:` line, push or use `workflow_dispatch`; body edits
+alone do not trigger it. Dispatch accepts an optional `screens` field to replace
+the body's extra selectors for that run (blank uses the body). Unchanged screens
+appear as a collapsed text list; their PNGs stay in local/CI artifacts and are
+never pushed to `pr-assets`. Non-UI PRs get no Screenshots section.
+Details, adding screens and troubleshooting:
 [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
 ## 5. One focus per PR

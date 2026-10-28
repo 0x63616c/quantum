@@ -328,7 +328,7 @@ impl EditorView {
     }
 
     /// Render thumbnails from the exact content inspected by MCP, not newer live edits.
-    fn capture_agent_views(
+    pub(super) fn capture_agent_views(
         &mut self,
         snapshot: Arc<voxelite_core::Snapshot>,
         names: Vec<String>,

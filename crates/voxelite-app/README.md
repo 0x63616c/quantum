@@ -26,6 +26,52 @@ GPUI dependency when built with `--no-default-features`:
 cargo test -p voxelite-app --no-default-features
 ```
 
+## UI capture states
+
+The development-only `--show <state>` flag opens a surface at launch on the bundled
+Autumn Workshop example, without scripted clicks. It is inert unless supplied,
+implies `--example`, and rejects unknown/repeated states, project paths and
+`--viewport-png`. Use a fresh `VOXELITE_DATA_DIR` for isolated preferences, palettes
+and recents; `cargo xtask screenshots` does this automatically.
+
+```sh
+cargo run --locked -p voxelite-app --bin voxelite -- --show dialogs-about --theme light
+cargo xtask screenshots --screen panels-history-dark --screen panels-history-light
+```
+
+Each full state below is a prefix plus one suffix. Its screenshot names are
+`<state>-dark` and `<state>-light`.
+
+| Prefix | Suffixes |
+| --- | --- |
+| `chrome-menu-` | `file`, `edit`, `view`, `tools`, `palette`, `layers`, `agent`, `extensions`, `window`, `help` |
+| `panels-` | `palette`, `history`, `history-preview`, `comments-empty`, `comments`, `comment-thread`, `comment-draft`, `agent`, `agent-inspection` |
+| `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
+| `popovers-` | `connect-agent`, `palette-chooser`, `palette-menu` |
+| `overlays-` | `debug` |
+| `settings-` | `general`, `appearance`, `viewport`, `shortcuts`, `agent`, `updates`, `advanced` |
+
+The existing `welcome`, `editor-dark` and `editor-light` captures retain their args
+and sizes. The editor captures already cover the title bar, toolbar, tool rail,
+status bar, Session panel, layers and palette. All new editor surfaces use
+1440×900; Settings uses its own **Quantum Settings** window at 880×640. About is
+an editor overlay, not a separate window.
+
+History fixtures add an empty layer and a named version through the editor;
+preview uses an immutable snapshot. Comments use the normal plugin transactions.
+The empty comments state selects the example’s empty Resolved filter. The agent
+feed reuses a committed example entry and adds a fixed rejected request. Its
+inspection state also renders three thumbnails; separate captures keep the expanded
+event controls visible. The palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
+save-waiting fixture holds the app-owned waiting/cancel surface with a static
+spinner, without opening a desktop portal. Capture states omit live frame cadence in the status bar and debug overlay.
+
+Native file pickers, macOS menus, Sparkle dialogs, the macOS eyedropper and hover
+tooltip timing/placement still need platform/manual checks. The Linux captures
+show the app menu surfaces and CPU debug overlay. Tooltips currently require
+GPUI pointer dwell; there is no launch tooltip state. Newly introduced states
+show “not on this side” when the before binary predates `--show`.
+
 ## Controls
 
 Keyboard shortcuts are generated from `src/actions.rs`, which also supplies the
