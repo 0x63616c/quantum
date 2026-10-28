@@ -112,14 +112,10 @@ fn main() -> anyhow::Result<()> {
         std::fs::write(path, bytes)?;
         return Ok(());
     }
-    let editor = if options.example {
-        Some(Editor::example()?)
+    let (editor, open_error) = if options.example {
+        (Some(Editor::example()?), None)
     } else {
-        options
-            .path
-            .as_ref()
-            .map(|path| Editor::open(path))
-            .transpose()?
+        voxelite_app::startup::open(options.path.as_deref())
     };
     // Load local preferences before starting GPUI's event loop.
     let preferences = voxelite_app::preferences::Preferences::load(
@@ -138,6 +134,13 @@ fn main() -> anyhow::Result<()> {
             ui::welcome::init(options.theme, options.session_socket, preferences, cx);
             let result = if let Some(editor) = editor {
                 ui::welcome::open_editor(editor, cx)
+            } else if open_error.is_some() {
+                // A failed launch path always lands on Welcome so the error is
+                // visible, even when "Show at launch" is off.
+                ui::welcome::show(cx).and_then(|handle| {
+                    handle.update(cx, |view, _, cx| view.show_error(open_error, cx))?;
+                    Ok(())
+                })
             } else {
                 ui::welcome::startup(cx)
             };

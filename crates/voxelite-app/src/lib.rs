@@ -22,6 +22,7 @@ pub mod samples;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;
 pub mod save_picker;
+pub mod startup;
 pub mod thumbnails;
 
 #[cfg(test)]
