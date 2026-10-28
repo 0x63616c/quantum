@@ -109,7 +109,7 @@ fn every_free_text_field_is_redacted_and_contact_is_opt_in() {
     if let Report::Crash(r) = clean {
         assert_eq!(r.contact_email, Some(email()));
     }
-    assert!(report.markdown(&policy()).unwrap().contains(&email()));
+    assert!(!report.markdown(&policy()).unwrap().contains(&email()));
 }
 
 #[test]
@@ -140,12 +140,12 @@ fn feedback_and_persisted_data_share_privacy_policy() {
 #[test]
 fn feedback_markdown_is_stable_and_payload_matches_preview() {
     let report = feedback();
-    let expected = "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below. Contact opted in: false.\nScene consent: false; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n> Quantum 0.3.1\n> TestOS 1\n> test-arch\n\n## What happened\n\n> Something happened\n\n## Contact\n\n> Not provided\n";
+    let expected = "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below.\nContact email (if provided) is sent privately to the maintainers through the relay and is not shown in the public issue. The browser fallback excludes contact email entirely.\nScene consent: false; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n> Quantum 0.3.1\n> TestOS 1\n> test-arch\n\n## What happened\n\n> Something happened\n";
     assert_eq!(report.markdown(&policy()).unwrap(), expected);
     let payload = report.payload("Bug", &policy()).unwrap();
     assert_eq!(payload.body, expected);
     assert_eq!(payload.schema_version, 1);
-    assert_eq!(payload.labels, ["type:bug"]);
+    assert_eq!(payload.labels, ["type:fix"]);
     let value = serde_json::to_value(&payload).unwrap();
     assert_eq!(value.as_object().unwrap().len(), 5);
     assert_eq!(
@@ -342,14 +342,16 @@ fn panic_hook_writes_and_chains_even_on_io_failure() {
     }));
     let dir = tempfile::tempdir().unwrap();
     let directory = dir.path().join("pending");
+    let log_tail = LogTail::new(1);
+    log_tail.push("old");
     install_panic_hook(HookConfig {
         directory: directory.clone(),
         environment: environment(),
         redactor: policy(),
-        log_lines: vec!["old".into(), "/home/PRIVATE/recent".into()],
-        max_log_lines: 1,
+        log_tail: log_tail.clone(),
     })
     .unwrap();
+    log_tail.push("/home/PRIVATE/recent");
     assert!(std::panic::catch_unwind(|| panic!("forced diagnostic test")).is_err());
     let pending = list_pending(&directory).unwrap();
     assert_eq!(pending.len(), 1);
@@ -368,4 +370,39 @@ fn panic_hook_writes_and_chains_even_on_io_failure() {
     std::fs::write(&directory, "block directory").unwrap();
     assert!(std::panic::catch_unwind(|| panic!("forced IO failure test")).is_err());
     assert_eq!(CHAINED.load(Ordering::SeqCst), 2);
+}
+
+#[test]
+fn contact_is_private_relay_only_for_both_report_kinds() {
+    for mut report in [crash(), feedback()] {
+        for opted_in in [false, true] {
+            let contact = opted_in.then(email);
+            match &mut report {
+                Report::Crash(r) => r.contact_email = contact.clone(),
+                Report::Feedback(r) => r.contact_email = contact.clone(),
+            }
+            let payload = report.payload(&email(), &policy()).unwrap();
+            assert!(!payload.title.contains(&email()));
+            assert!(!payload.body.contains(&email()));
+            let url = url::Url::parse(&payload.github_url(100_000).unwrap()).unwrap();
+            assert!(
+                url.query_pairs()
+                    .all(|(_, value)| !value.contains(&email()))
+            );
+            let request = payload
+                .request("https://relay.invalid/reports", "0.3.1")
+                .unwrap();
+            let json: serde_json::Value = serde_json::from_str(&request.json_body).unwrap();
+            if opted_in {
+                assert_eq!(json["contact_email"], email());
+            } else {
+                assert!(json.get("contact_email").is_none());
+                assert!(!request.json_body.contains(&email()));
+            }
+        }
+    }
+    assert_eq!(
+        crash().payload("Crash", &policy()).unwrap().labels,
+        ["type:fix"]
+    );
 }

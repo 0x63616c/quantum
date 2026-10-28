@@ -1,9 +1,13 @@
 use std::{
     backtrace::Backtrace,
+    collections::VecDeque,
     fs::{self, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -113,7 +117,45 @@ pub fn mark_sent(path: &Path) -> Result<(), Error> {
     dismiss(path)
 }
 
-/// Precomputed panic-hook state. No caller callbacks or logging locks run in the hook.
+/// Cloneable live log tail. Retains at most 100 lines, each bounded to 16,384 characters.
+/// The app pushes lines during normal operation; capture never waits on its lock.
+#[derive(Clone, Debug)]
+pub struct LogTail {
+    lines: Arc<Mutex<VecDeque<String>>>,
+    capacity: usize,
+}
+
+impl LogTail {
+    /// Create a tail with the requested capacity, capped at 100 (zero disables logs).
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            lines: Arc::new(Mutex::new(VecDeque::new())),
+            capacity: capacity.min(100),
+        }
+    }
+
+    /// Append a bounded line during normal operation. No redaction occurs until capture.
+    pub fn push(&self, line: &str) {
+        if self.capacity == 0 {
+            return;
+        }
+        let line = bounded(line);
+        let mut lines = self.lines.lock().unwrap_or_else(|e| e.into_inner());
+        if lines.len() == self.capacity {
+            lines.pop_front();
+        }
+        lines.push_back(line);
+    }
+
+    pub(crate) fn capture(&self, redactor: &Redactor) -> Vec<String> {
+        match self.lines.try_lock() {
+            Ok(lines) => lines.iter().map(|s| redactor.redact(s)).collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+}
+
+/// Precomputed panic-hook state with a shared live log tail.
 pub struct HookConfig {
     /// App-owned private directory for pending reports.
     pub directory: PathBuf,
@@ -121,10 +163,8 @@ pub struct HookConfig {
     pub environment: Environment,
     /// Compiled privacy policy.
     pub redactor: Redactor,
-    /// Caller-supplied recent log snapshot; not a live log collector.
-    pub log_lines: Vec<String>,
-    /// Maximum trailing lines retained (also capped at 100).
-    pub max_log_lines: usize,
+    /// Live bounded log handle; the app retains a clone to push recent lines.
+    pub log_tail: LogTail,
 }
 
 fn bounded(text: &str) -> String {
@@ -137,17 +177,10 @@ fn bounded(text: &str) -> String {
 /// handlers. Allocation failure, abort, stack overflow and a panicking previous
 /// hook cannot be recovered; this is best-effort Rust panic capture, not a guarantee.
 /// Backtrace symbolization necessarily allocates; regex compilation and log bounding
-/// happen at installation, with no locks/caller callbacks or network in capture.
-pub fn install_panic_hook(mut config: HookConfig) -> Result<(), Error> {
+/// happen before capture. Log capture uses try_lock and skips contended/poisoned
+/// buffers; no caller callbacks or network run during capture.
+pub fn install_panic_hook(config: HookConfig) -> Result<(), Error> {
     fs::create_dir_all(&config.directory)?;
-    let keep = config.max_log_lines.min(100);
-    let skip = config.log_lines.len().saturating_sub(keep);
-    config.log_lines = config
-        .log_lines
-        .iter()
-        .skip(skip)
-        .map(|s| config.redactor.redact(&bounded(s)))
-        .collect();
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let message = info
@@ -164,7 +197,7 @@ pub fn install_panic_hook(mut config: HookConfig) -> Result<(), Error> {
                 .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column())),
             backtrace: bounded(&Backtrace::force_capture().to_string()),
             timestamp_utc: now(),
-            log_lines: config.log_lines.clone(),
+            log_lines: config.log_tail.capture(&config.redactor),
             user_note: None,
             contact_email: None,
             scene_attachment: false,
@@ -173,4 +206,38 @@ pub fn install_panic_hook(mut config: HookConfig) -> Result<(), Error> {
         previous(info);
     }));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn live_tail_bounds_capacity_and_lines_and_skips_unavailable_lock() {
+        let tail = LogTail::new(200);
+        let clone = tail.clone();
+        for i in 0..101 {
+            clone.push(&i.to_string());
+        }
+        let redactor = Redactor::new(None).unwrap();
+        let lines = tail.capture(&redactor);
+        assert_eq!(lines.len(), 100);
+        assert_eq!(lines[0], "1");
+        clone.push(&"雪".repeat(20_000));
+        assert_eq!(
+            tail.capture(&redactor).last().unwrap().chars().count(),
+            16_384
+        );
+        let guard = tail.lines.lock().unwrap();
+        assert!(tail.capture(&redactor).is_empty());
+        drop(guard);
+        let _ = std::panic::catch_unwind(|| {
+            let _guard = tail.lines.lock().unwrap();
+            panic!("poison test");
+        });
+        assert!(tail.capture(&redactor).is_empty());
+        let disabled = LogTail::new(0);
+        disabled.push("ignored");
+        assert!(disabled.capture(&redactor).is_empty());
+    }
 }

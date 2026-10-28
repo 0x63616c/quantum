@@ -3,7 +3,7 @@ use url::Url;
 
 use crate::{Error, FeedbackKind};
 
-/// Versioned relay protocol. Contains exactly the rendered issue, never scene bytes.
+/// Versioned relay protocol. Contains the public issue and optional private contact, never scene bytes.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RelayPayload {
     /// Currently 1. Relays must reject unsupported versions.
@@ -14,6 +14,10 @@ pub struct RelayPayload {
     pub body: String,
     /// Suggested GitHub labels; the relay must enforce its own allowlist.
     pub labels: Vec<String>,
+    /// Private opt-in contact. The relay must store/forward this privately and
+    /// never publish it in the GitHub issue. Omitted without contact consent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact_email: Option<String>,
     /// Feedback classification.
     pub kind: FeedbackKind,
 }
@@ -21,7 +25,7 @@ pub struct RelayPayload {
 impl RelayPayload {
     /// Build a prefilled GitHub URL. Returns an error instead of silently truncating
     /// the preview. The app can offer copy/save or relay when the URL is too long.
-    /// Explicit contact consent also applies to placing that address in this URL.
+    /// The private contact field is always excluded from this browser fallback.
     pub fn github_url(&self, max_bytes: usize) -> Result<String, Error> {
         let mut url = Url::parse("https://github.com/0x63616c/voxelite/issues/new")
             .map_err(|_| Error::Configuration)?;

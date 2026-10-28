@@ -11,17 +11,20 @@ or preparing a URL/request does not contact any service or open a browser.
 
 A crash report contains caller-supplied app version, OS name/version and CPU
 architecture; panic message and source location; `std::backtrace` text; UTC Unix
-epoch seconds; a caller-supplied log snapshot; and an optional user note. The hook
+epoch seconds; a caller-supplied live log tail; and an optional user note. The hook
 records no email, user note or scene consent. It keeps the last configured N log
 lines (at most 100), bounds each line and panic/backtrace text to 16,384 characters,
 and captures a backtrace even when `RUST_BACKTRACE` is unset. It does not read log
 files or collect environment variables, hostnames, device identifiers or documents.
-Log snapshots are supplied at installation, not collected live during a panic.
+The app retains a clone of `LogTail` and pushes lines during normal operation;
+the hook snapshots the latest lines and redacts them at capture time.
 
 Feedback contains caller-supplied version/OS/architecture, a bug/feature kind and
 what happened. Either report may carry an optional contact email: setting that
-field is explicit consent to publish it, including in a browser URL. Emails in
-all other fields remain redacted regardless of contact consent. Malformed contact
+field is explicit consent to send it privately to maintainers through the relay.
+It is never included in the public issue title/body or browser fallback URL.
+The relay must store/forward `contact_email` privately and never publish it.
+Emails in all other fields remain redacted regardless of contact consent. Malformed contact
 text is redacted normally. A crash report's scene flag records consent only; this
 crate never reads, embeds or uploads scene contents, even when the flag is true.
 
@@ -40,7 +43,8 @@ Raw models remain editable so the app can implement review and consent.
 
 `install_panic_hook(HookConfig)` is explicitly installed once by the shell during
 normal startup. It precompiles no regexes in the hook, runs no caller callbacks,
-uses no logging locks, and chains the previous hook even after capture I/O failure.
+uses `try_lock` on the log tail (skipping contended or poisoned buffers), and
+chains the previous hook even after capture I/O failure.
 It writes redacted JSON using exclusive temporary creation, sync, then atomic
 rename; temporary files are ignored by `list_pending`. Unix report files use mode
 0600. The app must supply a private crash directory, manage retention and surface
@@ -61,8 +65,9 @@ No panic hook is installed simply by linking this library.
 `Report::markdown` and `Report::payload` share the exact sectioned Markdown body,
 including a “What is sent” section. User text is blockquoted and HTML escaped.
 `Report::payload(title, redactor)` also redacts the title. The serializable
-`RelayPayload` protocol has `schema_version: 1`, `title`, `body`, `labels` and `kind`.
-Labels are `type:bug` or `type:feat`; kind is `bug` or `feature`.
+`RelayPayload` protocol has `schema_version: 1`, `title`, `body`, `labels`, `kind`
+and an optional private `contact_email` field (omitted without consent).
+Labels are `type:fix` or `type:feat`; kind is `bug` or `feature`.
 
 After preview and confirmation, the app can prepare a request with
 `payload.request(configured_endpoint, app_version)` and explicitly call

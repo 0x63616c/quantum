@@ -7,7 +7,9 @@ mod relay;
 mod storage;
 pub use privacy::Redactor;
 pub use relay::{RelayPayload, RelayRequest, RelayTransport, SendError};
-pub use storage::{HookConfig, dismiss, install_panic_hook, list_pending, load, mark_sent, write};
+pub use storage::{
+    HookConfig, LogTail, dismiss, install_panic_hook, list_pending, load, mark_sent, write,
+};
 
 /// Failure preparing or storing a report.
 #[derive(Debug, thiserror::Error)]
@@ -100,10 +102,9 @@ impl Report {
     /// All user text is quoted to prevent injected Markdown sections/HTML.
     pub fn markdown(&self, redactor: &Redactor) -> Result<String, Error> {
         let report = redactor.report(self)?;
-        let (environment, contact, details, scene) = match &report {
+        let (environment, details, scene) = match &report {
             Self::Crash(r) => (
                 &r.environment,
-                &r.contact_email,
                 format!(
                     "## Panic\n\n{}\n## Location\n\n{}\n## Backtrace\n\n{}\n## Recent logs\n\n{}\n## User note\n\n{}\n## Timestamp (Unix seconds, UTC)\n\n{}\n",
                     quote(&r.panic_message),
@@ -117,14 +118,12 @@ impl Report {
             ),
             Self::Feedback(r) => (
                 &r.environment,
-                &r.contact_email,
                 format!("## What happened\n\n{}", quote(&r.what_happened)),
                 false,
             ),
         };
         Ok(format!(
-            "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below. Contact opted in: {}.\nScene consent: {}; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n{}\n{}\n## Contact\n\n{}",
-            contact.is_some(),
+            "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below.\nContact email (if provided) is sent privately to the maintainers through the relay and is not shown in the public issue. The browser fallback excludes contact email entirely.\nScene consent: {}; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n{}\n{}",
             scene,
             quote(&format!(
                 "Quantum {}\n{} {}\n{}",
@@ -133,8 +132,7 @@ impl Report {
                 environment.os_version,
                 environment.arch
             )),
-            details,
-            quote(contact.as_deref().unwrap_or("Not provided"))
+            details
         ))
     }
 
@@ -145,12 +143,16 @@ impl Report {
             Self::Crash(_) => FeedbackKind::Bug,
         };
         Ok(RelayPayload {
+            contact_email: match redactor.report(self)? {
+                Self::Crash(r) => r.contact_email,
+                Self::Feedback(r) => r.contact_email,
+            },
             schema_version: 1,
             title: redactor.redact(title),
             body: self.markdown(redactor)?,
             labels: vec![
                 match kind {
-                    FeedbackKind::Bug => "type:bug",
+                    FeedbackKind::Bug => "type:fix",
                     FeedbackKind::Feature => "type:feat",
                 }
                 .into(),
