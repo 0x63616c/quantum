@@ -22,14 +22,14 @@ fn package(name: &str, directory: &str) -> Value {
 
 fn fixture() -> Value {
     let packages: Vec<_> = [
-        ("voxelite-plugin-example", "plugins/voxelite-plugin-example"),
-        ("voxelite-plugin-api", "voxelite-plugin-api"),
-        ("voxelite-core", "voxelite-core"),
-        ("voxelite-plugin-host", "voxelite-plugin-host"),
-        ("voxelite-mesh", "voxelite-mesh"),
-        ("voxelite-plugin-other", "plugins/voxelite-plugin-other"),
-        ("voxelite-mcp", "voxelite-mcp"),
-        ("voxelite-plugins-builtin", "voxelite-plugins-builtin"),
+        ("quantum-plugin-example", "plugins/quantum-plugin-example"),
+        ("quantum-plugin-api", "quantum-plugin-api"),
+        ("quantum-core", "quantum-core"),
+        ("quantum-plugin-host", "quantum-plugin-host"),
+        ("quantum-mesh", "quantum-mesh"),
+        ("quantum-plugin-other", "plugins/quantum-plugin-other"),
+        ("quantum-mcp", "quantum-mcp"),
+        ("quantum-plugins-builtin", "quantum-plugins-builtin"),
     ]
     .iter()
     .map(|(name, path)| package(name, &format!("/repo/crates/{path}")))
@@ -127,13 +127,13 @@ fn rejects_all_production_dependency_forms() {
         (
             PLUGIN,
             CORE,
-            "crates/plugins/voxelite-plugin-example/Cargo.toml",
-            "only voxelite-plugin-api is allowed outside dev-dependencies",
+            "crates/plugins/quantum-plugin-example/Cargo.toml",
+            "only quantum-plugin-api is allowed outside dev-dependencies",
         ),
         (
             MCP,
             PLUGIN,
-            "crates/voxelite-mcp/Cargo.toml",
+            "crates/quantum-mcp/Cargo.toml",
             "MCP must receive plugins from its composition root",
         ),
     ] {
@@ -190,7 +190,7 @@ fn rejects_other_workspace_dependencies() {
         assert_eq!(
             violations(&m),
             [format!(
-                "crates/plugins/voxelite-plugin-example/Cargo.toml: normal dependency on {name}; only voxelite-plugin-api is allowed outside dev-dependencies"
+                "crates/plugins/quantum-plugin-example/Cargo.toml: normal dependency on {name}; only quantum-plugin-api is allowed outside dev-dependencies"
             )]
         );
     }
@@ -203,7 +203,7 @@ fn uses_plugin_directory_not_package_name_or_path_prefix() {
         "/repo/crates/plugins-helper",
         "/outside/crates/plugins/helper",
     ] {
-        let mut outside = package("voxelite-plugin-outside", directory);
+        let mut outside = package("quantum-plugin-outside", directory);
         outside["dependencies"] = json!([workspace_dependency(&m, CORE, json!({}))]);
         m["packages"].as_array_mut().unwrap().push(outside);
     }
@@ -228,8 +228,8 @@ fn checks_all_packages_under_plugin_directory() {
 fn external_packages_with_workspace_names_are_allowed() {
     let mut m = fixture();
     m["packages"][PLUGIN]["dependencies"] = json!([
-        dependency("voxelite-core", None, json!({})),
-        dependency("voxelite-core", Some("/outside/voxelite-core"), json!({}))
+        dependency("quantum-core", None, json!({})),
+        dependency("quantum-core", Some("/outside/quantum-core"), json!({}))
     ]);
     assert!(violations(&m).is_empty());
 }
@@ -241,8 +241,8 @@ fn reports_all_violations_in_package_order() {
     m["packages"][OTHER]["dependencies"] = json!([workspace_dependency(&m, HOST, json!({}))]);
     let errors = violations(&m);
     assert_eq!(errors.len(), 2);
-    assert!(errors[0].contains("voxelite-plugin-example/Cargo.toml"));
-    assert!(errors[1].contains("voxelite-plugin-other/Cargo.toml"));
+    assert!(errors[0].contains("quantum-plugin-example/Cargo.toml"));
+    assert!(errors[1].contains("quantum-plugin-other/Cargo.toml"));
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn fails_on_violations_without_retrying_successful_metadata() {
     let mut m = fixture();
     m["packages"][PLUGIN]["dependencies"] = json!([workspace_dependency(&m, CORE, json!({}))]);
     let runner = RecordingRunner::stdout(&serde_json::to_vec(&m).unwrap());
-    let expected = "Plugin dependency rule failed:\ncrates/plugins/voxelite-plugin-example/Cargo.toml: normal dependency on voxelite-core; only voxelite-plugin-api is allowed outside dev-dependencies\n";
+    let expected = "Plugin dependency rule failed:\ncrates/plugins/quantum-plugin-example/Cargo.toml: normal dependency on quantum-core; only quantum-plugin-api is allowed outside dev-dependencies\n";
     assert_eq!(
         run_check(&runner),
         (

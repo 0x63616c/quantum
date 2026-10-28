@@ -15,10 +15,10 @@ Only `gpui-apple/src/metal_renderer.rs` changes upstream behavior:
   ID. The producer selects this actual physical device, including on multi-GPU
   Macs, rather than independently guessing the current power-preference policy.
 - Report surface import errors through `take_surface_error()` instead of
-  asserting. The single Voxelite editor monitors this and switches to CPU.
+  asserting. The single Quantum editor monitors this and switches to CPU.
 
 The producer creates its CVMetalTextureCache with the exact MTLDevice borrowed
-from wgpu's HAL. See `crates/voxelite-render/src/gpu/mac.rs` for the three-buffer
+from wgpu's HAL. See `crates/quantum-render/src/gpu/mac.rs` for the three-buffer
 CoreVideo pool, producer completion fence and imported-plane retirement leases.
 Do not remove these consumer leases independently of the producer pool.
 

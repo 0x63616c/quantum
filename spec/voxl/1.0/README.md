@@ -47,7 +47,7 @@ round trips.
 `build_history` is a versioned command recipe for projects built from an empty
 `Document::new(document.id, base_layer)` scene. Version 1 stores `base_layer` and
 1–64 `steps`, each with a stable `id`, human-readable `label`, `origin`, logical
-`elapsed_ms`, and a typed `voxelite-core::Command`. Commands use snake-case external
+`elapsed_ms`, and a typed `quantum-core::Command`. Commands use snake-case external
 tags; `set_voxels.voxels` uses `[x, y, z, slot]` tuples (zero erases). Optional command
 arguments are explicit nulls. Unknown fields inside recipes and noncanonical UUIDs
 are rejected; recipe schema changes require a new recipe version.
@@ -75,7 +75,7 @@ name. Each section is an envelope, for example:
 
 ```json
 "extensions": {
-  "dev.voxelite.example": {
+  "dev.quantum.example": {
     "state": {"schema_version": 2, "encoding": "json", "payload": {"scale": 1.25}},
     "cache": {"schema_version": 1, "encoding": "bytes", "payload": [0, 255, 128]}
   }
@@ -123,3 +123,10 @@ engine. Disabled or unavailable owners remain opaque. All successful migrations
 commit as one undoable, dirty edit. No migration is saved implicitly. A malformed
 section reports its owner/name and fails the open atomically, preserving the
 previous session and the original file (including all other sections).
+
+## Product rename compatibility
+
+Quantum deliberately keeps `"format": "voxelite"` and the media type above as
+frozen v1 wire identifiers. Both old and new writers use the same discriminator,
+so 0.3.x applications can open projects saved by Quantum. The `.voxl` extension,
+canonical bytes, document paths and format version are unchanged by the rename.

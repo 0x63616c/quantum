@@ -2408,6 +2408,7 @@ dependencies = [
  "gpui-macos-gpui-unofficial",
  "gpui-unofficial",
  "gpui-web-gpui-unofficial",
+ "gpui-wgpu-gpui-unofficial",
  "gpui-windows-gpui-unofficial",
 ]
 
@@ -2545,6 +2546,7 @@ dependencies = [
  "etagere",
  "gpui-unofficial",
  "gpui-util-gpui-unofficial",
+ "image",
  "itertools",
  "log",
  "parking_lot",
@@ -4580,6 +4582,316 @@ dependencies = [
 ]
 
 [[package]]
+name = "quantum-app"
+version = "0.3.1"
+dependencies = [
+ "anyhow",
+ "async-lock",
+ "block2 0.6.2",
+ "chrono",
+ "env_logger",
+ "futures-channel",
+ "glam",
+ "gpui-apple-gpui-unofficial",
+ "gpui-platform-gpui-unofficial",
+ "gpui-unofficial",
+ "image",
+ "libloading",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "objc2-uniform-type-identifiers",
+ "png 0.18.1",
+ "quantum-core",
+ "quantum-crash",
+ "quantum-format",
+ "quantum-mcp",
+ "quantum-plugin-api",
+ "quantum-plugin-comments",
+ "quantum-plugin-exporters",
+ "quantum-plugin-gizmo-grid",
+ "quantum-plugin-host",
+ "quantum-plugin-mirror",
+ "quantum-plugin-palette",
+ "quantum-plugin-shadows-lighting",
+ "quantum-plugin-tools",
+ "quantum-plugins-builtin",
+ "quantum-render",
+ "quantum-ui",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "quantum-bench"
+version = "0.3.1"
+dependencies = [
+ "png 0.18.1",
+ "quantum-core",
+ "quantum-format",
+ "quantum-render",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "quantum-core"
+version = "0.3.1"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "slotmap",
+ "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "quantum-crash"
+version = "0.3.1"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "url",
+]
+
+[[package]]
+name = "quantum-format"
+version = "0.3.1"
+dependencies = [
+ "insta",
+ "proptest",
+ "quantum-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "quantum-mcp"
+version = "0.3.1"
+dependencies = [
+ "base64 0.22.1",
+ "insta",
+ "jsonschema",
+ "png 0.18.1",
+ "quantum-core",
+ "quantum-format",
+ "quantum-plugin-api",
+ "quantum-plugin-comments",
+ "quantum-plugin-host",
+ "quantum-plugin-shadows-lighting",
+ "quantum-plugins-builtin",
+ "quantum-render",
+ "rmcp",
+ "rustix",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "quantum-mesh"
+version = "0.3.1"
+dependencies = [
+ "divan",
+ "glam",
+ "proptest",
+ "quantum-core",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "quantum-plugin-agent"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-api"
+version = "0.3.1"
+dependencies = [
+ "png 0.18.1",
+ "quantum-core",
+ "quantum-mesh",
+ "quantum-render-plan",
+ "semver",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "quantum-plugin-comments"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-example"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-exporters"
+version = "0.3.1"
+dependencies = [
+ "gltf",
+ "insta",
+ "png 0.18.1",
+ "proptest",
+ "quantum-core",
+ "quantum-format",
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+ "quantum-render",
+ "serde_json",
+]
+
+[[package]]
+name = "quantum-plugin-gizmo-grid"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-host"
+version = "0.3.1"
+dependencies = [
+ "quantum-core",
+ "quantum-format",
+ "quantum-plugin-api",
+ "quantum-render-plan",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "quantum-plugin-mirror"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-palette"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugin-shadows-lighting"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-exporters",
+ "quantum-plugin-host",
+ "quantum-render",
+]
+
+[[package]]
+name = "quantum-plugin-tools"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-api",
+ "quantum-plugin-host",
+]
+
+[[package]]
+name = "quantum-plugins-builtin"
+version = "0.3.1"
+dependencies = [
+ "quantum-plugin-agent",
+ "quantum-plugin-api",
+ "quantum-plugin-comments",
+ "quantum-plugin-exporters",
+ "quantum-plugin-gizmo-grid",
+ "quantum-plugin-host",
+ "quantum-plugin-mirror",
+ "quantum-plugin-palette",
+ "quantum-plugin-shadows-lighting",
+ "quantum-plugin-tools",
+]
+
+[[package]]
+name = "quantum-render"
+version = "0.3.1"
+dependencies = [
+ "bytemuck",
+ "divan",
+ "futures-channel",
+ "futures-timer",
+ "glam",
+ "naga",
+ "objc2 0.6.5",
+ "objc2-core-foundation",
+ "objc2-core-video",
+ "objc2-io-surface",
+ "objc2-metal 0.3.2",
+ "pollster 0.4.0",
+ "proptest",
+ "quantum-core",
+ "quantum-format",
+ "quantum-mesh",
+ "quantum-render-plan",
+ "rayon",
+ "serde",
+ "serde_json",
+ "wgpu",
+]
+
+[[package]]
+name = "quantum-render-plan"
+version = "0.3.1"
+
+[[package]]
+name = "quantum-site"
+version = "0.3.1"
+dependencies = [
+ "base64 0.22.1",
+ "htmd",
+ "insta",
+ "percent-encoding",
+ "quantum-format",
+ "same-file",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "url",
+]
+
+[[package]]
+name = "quantum-ui"
+version = "0.3.1"
+dependencies = [
+ "gpui-platform-gpui-unofficial",
+ "gpui-unofficial",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6264,314 +6576,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
-name = "voxelite-app"
-version = "0.3.1"
-dependencies = [
- "anyhow",
- "async-lock",
- "block2 0.6.2",
- "chrono",
- "env_logger",
- "futures-channel",
- "glam",
- "gpui-apple-gpui-unofficial",
- "gpui-platform-gpui-unofficial",
- "gpui-unofficial",
- "image",
- "libloading",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "objc2-uniform-type-identifiers",
- "png 0.18.1",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "voxelite-core",
- "voxelite-format",
- "voxelite-mcp",
- "voxelite-plugin-api",
- "voxelite-plugin-comments",
- "voxelite-plugin-exporters",
- "voxelite-plugin-gizmo-grid",
- "voxelite-plugin-host",
- "voxelite-plugin-mirror",
- "voxelite-plugin-palette",
- "voxelite-plugin-shadows-lighting",
- "voxelite-plugin-tools",
- "voxelite-plugins-builtin",
- "voxelite-render",
- "voxelite-ui",
-]
-
-[[package]]
-name = "voxelite-bench"
-version = "0.3.1"
-dependencies = [
- "png 0.18.1",
- "serde",
- "serde_json",
- "voxelite-core",
- "voxelite-format",
- "voxelite-render",
-]
-
-[[package]]
-name = "voxelite-core"
-version = "0.3.1"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
- "sha2",
- "slotmap",
- "thiserror 2.0.21",
- "uuid",
-]
-
-[[package]]
-name = "voxelite-crash"
-version = "0.3.1"
-dependencies = [
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "url",
-]
-
-[[package]]
-name = "voxelite-format"
-version = "0.3.1"
-dependencies = [
- "insta",
- "proptest",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.21",
- "voxelite-core",
-]
-
-[[package]]
-name = "voxelite-mcp"
-version = "0.3.1"
-dependencies = [
- "base64 0.22.1",
- "insta",
- "jsonschema",
- "png 0.18.1",
- "rmcp",
- "rustix",
- "schemars",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "voxelite-core",
- "voxelite-format",
- "voxelite-plugin-api",
- "voxelite-plugin-comments",
- "voxelite-plugin-host",
- "voxelite-plugin-shadows-lighting",
- "voxelite-plugins-builtin",
- "voxelite-render",
-]
-
-[[package]]
-name = "voxelite-mesh"
-version = "0.3.1"
-dependencies = [
- "divan",
- "glam",
- "proptest",
- "thiserror 2.0.21",
- "voxelite-core",
-]
-
-[[package]]
-name = "voxelite-plugin-agent"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-api"
-version = "0.3.1"
-dependencies = [
- "png 0.18.1",
- "semver",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "voxelite-core",
- "voxelite-mesh",
- "voxelite-render-plan",
-]
-
-[[package]]
-name = "voxelite-plugin-comments"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-example"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-exporters"
-version = "0.3.1"
-dependencies = [
- "gltf",
- "insta",
- "png 0.18.1",
- "proptest",
- "serde_json",
- "voxelite-core",
- "voxelite-format",
- "voxelite-plugin-api",
- "voxelite-plugin-host",
- "voxelite-render",
-]
-
-[[package]]
-name = "voxelite-plugin-gizmo-grid"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-host"
-version = "0.3.1"
-dependencies = [
- "thiserror 2.0.21",
- "voxelite-core",
- "voxelite-format",
- "voxelite-plugin-api",
- "voxelite-render-plan",
-]
-
-[[package]]
-name = "voxelite-plugin-mirror"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-palette"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugin-shadows-lighting"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-exporters",
- "voxelite-plugin-host",
- "voxelite-render",
-]
-
-[[package]]
-name = "voxelite-plugin-tools"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-api",
- "voxelite-plugin-host",
-]
-
-[[package]]
-name = "voxelite-plugins-builtin"
-version = "0.3.1"
-dependencies = [
- "voxelite-plugin-agent",
- "voxelite-plugin-api",
- "voxelite-plugin-comments",
- "voxelite-plugin-exporters",
- "voxelite-plugin-gizmo-grid",
- "voxelite-plugin-host",
- "voxelite-plugin-mirror",
- "voxelite-plugin-palette",
- "voxelite-plugin-shadows-lighting",
- "voxelite-plugin-tools",
-]
-
-[[package]]
-name = "voxelite-render"
-version = "0.3.1"
-dependencies = [
- "bytemuck",
- "divan",
- "futures-channel",
- "futures-timer",
- "glam",
- "naga",
- "objc2 0.6.5",
- "objc2-core-foundation",
- "objc2-core-video",
- "objc2-io-surface",
- "objc2-metal 0.3.2",
- "pollster 0.4.0",
- "proptest",
- "rayon",
- "serde",
- "serde_json",
- "voxelite-core",
- "voxelite-format",
- "voxelite-mesh",
- "voxelite-render-plan",
- "wgpu",
-]
-
-[[package]]
-name = "voxelite-render-plan"
-version = "0.3.1"
-
-[[package]]
-name = "voxelite-site"
-version = "0.3.1"
-dependencies = [
- "base64 0.22.1",
- "htmd",
- "insta",
- "percent-encoding",
- "same-file",
- "serde",
- "serde_json",
- "tempfile",
- "url",
- "voxelite-format",
-]
-
-[[package]]
-name = "voxelite-ui"
-version = "0.3.1"
-dependencies = [
- "gpui-platform-gpui-unofficial",
- "gpui-unofficial",
- "unicode-segmentation",
-]
-
-[[package]]
 name = "vsimd"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7668,6 +7672,7 @@ dependencies = [
  "glob",
  "percent-encoding",
  "plist",
+ "png 0.18.1",
  "proc-macro2",
  "pulldown-cmark",
  "quote",

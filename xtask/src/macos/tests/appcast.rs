@@ -5,8 +5,8 @@ use std::{collections::BTreeMap, fs};
 
 fn release(version: &str, draft: bool, prerelease: bool, feed: bool) -> serde_json::Value {
     let mut assets = vec![
-        json!({"name":"Voxelite.dmg", "size":11, "browser_download_url":format!("{}v{version}/Voxelite.dmg", macos::DOWNLOAD)}),
-        json!({"name":"Voxelite.html", "size":13, "browser_download_url":format!("{}v{version}/Voxelite.html", macos::DOWNLOAD)}),
+        json!({"name":"Quantum.dmg", "size":11, "browser_download_url":format!("{}v{version}/Quantum.dmg", macos::DOWNLOAD)}),
+        json!({"name":"Quantum.html", "size":13, "browser_download_url":format!("{}v{version}/Quantum.html", macos::DOWNLOAD)}),
     ];
     if feed {
         assets.push(json!({"name":"appcast.xml", "size":900, "browser_download_url":format!("{}v{version}/appcast.xml", macos::DOWNLOAD)}));
@@ -31,7 +31,7 @@ fn offline_validation_matches_actual_files_and_history() {
         f.path("site/appcast.xml"),
         fixture_feed(&["1.2.3", "1.2.2"]),
     );
-    write(f.path("dist/Voxelite.html"), "fixture notes");
+    write(f.path("dist/Quantum.html"), "fixture notes");
     let check = || {
         validate_release(
             &f.path("site/appcast.xml"),
@@ -40,7 +40,7 @@ fn offline_validation_matches_actual_files_and_history() {
         )
     };
     check().unwrap();
-    let path = f.path("dist/Voxelite.app/Contents/Info.plist");
+    let path = f.path("dist/Quantum.app/Contents/Info.plist");
     let original = files::read_plist(&path).unwrap();
     for key in [
         "CFBundleVersion",
@@ -55,7 +55,7 @@ fn offline_validation_matches_actual_files_and_history() {
     plist::Value::Dictionary(original)
         .to_file_xml(&path)
         .unwrap();
-    for name in ["dist/Voxelite.dmg", "dist/Voxelite.html"] {
+    for name in ["dist/Quantum.dmg", "dist/Quantum.html"] {
         let old = fs::read(f.path(name)).unwrap();
         let mut altered = old.clone();
         altered.push(b'!');
@@ -70,23 +70,23 @@ fn offline_validation_matches_actual_files_and_history() {
 fn url_signature_length_and_metadata_rejection() {
     let f = Fixture::new();
     let base = fixture_feed(&["1.2.3"]);
-    let url = format!("{}v1.2.3/Voxelite.dmg", macos::DOWNLOAD);
+    let url = format!("{}v1.2.3/Quantum.dmg", macos::DOWNLOAD);
     for (old, new) in [
         (
             url.as_str(),
-            "https://github.com.evil.invalid/0x63616c/voxelite/releases/download/v1.2.3/Voxelite.dmg",
+            "https://github.com.evil.invalid/0x63616c/quantum/releases/download/v1.2.3/Quantum.dmg",
         ),
         (
             url.as_str(),
-            "https://github.com/0x63616c/voxelite/releases/download/v1.2.2/Voxelite.dmg",
+            "https://github.com/0x63616c/quantum/releases/download/v1.2.2/Quantum.dmg",
         ),
         (
             url.as_str(),
-            "https://github.com/0x63616c/voxelite/releases/download/v1.2.3/../Voxelite.dmg",
+            "https://github.com/0x63616c/quantum/releases/download/v1.2.3/../Quantum.dmg",
         ),
         (
             url.as_str(),
-            "https://github.com/0x63616c/voxelite/releases/download/v1.2.3/Voxelite.dmg?redirect=1",
+            "https://github.com/0x63616c/quantum/releases/download/v1.2.3/Quantum.dmg?redirect=1",
         ),
         (SIGNATURE, ""),
         (SIGNATURE, "not base64!"),
@@ -199,7 +199,7 @@ fn appcast_dry_run_preserves_existing_outputs_without_release_artifacts() {
             "keep existing bytes"
         );
     }
-    assert!(!f.path("dist/Voxelite.html").exists());
+    assert!(!f.path("dist/Quantum.html").exists());
     assert_eq!(fs::read_dir(f.path("tmp")).unwrap().count(), 0);
 }
 #[test]
@@ -207,13 +207,13 @@ fn asset_metadata_must_cover_every_asset() {
     let f = Fixture::new();
     write(f.path("feed.xml"), fixture_feed(&["1.2.3"]));
     let mut sizes: BTreeMap<_, _> = [
-        (format!("{}v1.2.3/Voxelite.dmg", macos::DOWNLOAD), 11),
-        (format!("{}v1.2.3/Voxelite.html", macos::DOWNLOAD), 13),
+        (format!("{}v1.2.3/Quantum.dmg", macos::DOWNLOAD), 11),
+        (format!("{}v1.2.3/Quantum.html", macos::DOWNLOAD), 13),
     ]
     .into();
     validate(&f.path("feed.xml"), false, Some(&sizes)).unwrap();
     assert!(validate(&f.path("feed.xml"), false, Some(&BTreeMap::new())).is_err());
-    sizes.insert(format!("{}v1.2.3/Voxelite.dmg", macos::DOWNLOAD), 12);
+    sizes.insert(format!("{}v1.2.3/Quantum.dmg", macos::DOWNLOAD), 12);
     assert!(validate(&f.path("feed.xml"), false, Some(&sizes)).is_err());
 }
 #[test]
@@ -335,7 +335,7 @@ fn sparkle_signing_and_feed_validation() {
             );
         }
         if success {
-            let html = fs::read_to_string(f.path("dist/Voxelite.html")).unwrap();
+            let html = fs::read_to_string(f.path("dist/Quantum.html")).unwrap();
             // Independent expected bytes, including the wrapper and all five
             // html.escape substitutions; do not compare the encoder to itself.
             assert_eq!(
@@ -364,7 +364,7 @@ fn sparkle_signing_and_feed_validation() {
         f.path("dist/previous-appcast.xml"),
     )
     .unwrap();
-    let path = f.path("dist/Voxelite.app/Contents/Info.plist");
+    let path = f.path("dist/Quantum.app/Contents/Info.plist");
     let mut info = files::read_plist(&path).unwrap();
     for key in ["CFBundleVersion", "CFBundleShortVersionString"] {
         info.insert(key.into(), "1.2.4".into());
@@ -390,7 +390,7 @@ fn sparkle_signing_and_feed_validation() {
     fs::remove_file(f.path("dist/RELEASE_NOTES.md")).unwrap();
     assert!(f.generate().is_err());
     write(f.path("dist/RELEASE_NOTES.md"), notes);
-    write(f.path("dist/Voxelite.dmg"), "corrupt dmg");
+    write(f.path("dist/Quantum.dmg"), "corrupt dmg");
     assert!(f.generate().unwrap_err().to_string().contains("checksum"));
 }
 #[test]
@@ -414,4 +414,46 @@ fn missing_history_mismatched_repository_and_nonincreasing_versions_fail() {
     }
     fs::remove_file(f.path("dist/previous-appcast.xml")).unwrap();
     assert!(f.generate().is_err());
+}
+
+#[test]
+fn legacy_signed_urls_validate_before_and_after_repository_redirects() {
+    let f = Fixture::new();
+    let legacy = fixture_feed(&["0.3.1"])
+        .replace(macos::DOWNLOAD, macos::LEGACY_DOWNLOAD)
+        .replace("Quantum.dmg", "Voxelite.dmg")
+        .replace("Quantum.html", "Voxelite.html");
+    let path = f.path("old.xml");
+    write(&path, &legacy);
+    let sizes = BTreeMap::from([
+        (format!("{}v0.3.1/Voxelite.dmg", macos::DOWNLOAD), 11),
+        (format!("{}v0.3.1/Voxelite.html", macos::DOWNLOAD), 13),
+    ]);
+    assert_eq!(
+        validate(&path, false, Some(&sizes)).unwrap()[0].version,
+        "0.3.1"
+    );
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        legacy,
+        "signed bytes must not change"
+    );
+    for impostor in [
+        "https://github.com.evil.invalid/",
+        "https://github.com/other/",
+    ] {
+        write(&path, legacy.replace("https://github.com/", impostor));
+        assert!(validate(&path, false, None).is_err());
+    }
+}
+
+#[test]
+fn repository_transition_accepts_only_both_owner_slugs() {
+    let mut env = macos::Environment::default();
+    for repository in [macos::LEGACY_REPOSITORY, macos::REPOSITORY] {
+        env.set("GITHUB_REPOSITORY", repository);
+        assert_eq!(macos::release_repository(&env).unwrap(), repository);
+    }
+    env.set("GITHUB_REPOSITORY", "another-owner/quantum");
+    assert!(macos::release_repository(&env).is_err());
 }

@@ -13,8 +13,8 @@ and chat history are not. Follow [CONTRIBUTING.md](../../../CONTRIBUTING.md).
 Before planning or coding, list open issues and board state:
 
 ```sh
-gh issue list --repo 0x63616c/voxelite --state open --limit 200
-gh pr list --repo 0x63616c/voxelite --state open
+gh issue list --repo 0x63616c/quantum --state open --limit 200
+gh pr list --repo 0x63616c/quantum --state open
 gh project item-list <project-number> --owner 0x63616c --limit 200   # needs the `project` scope
 ```
 

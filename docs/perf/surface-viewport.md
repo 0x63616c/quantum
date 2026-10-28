@@ -3,7 +3,7 @@
 ## What changed
 
 The macOS editor defaults to a wgpu Metal viewport presented with GPUI's
-`Window::paint_surface`. `VOXELITE_CPU_VIEWPORT=1` forces the software viewport.
+`Window::paint_surface`. `QUANTUM_CPU_VIEWPORT=1` forces the software viewport.
 The software rasterizer remains the export/thumbnail renderer and the automatic
 fallback. Its existing interactive resolution/refinement behavior is retained;
 GPU supersampling adapts to surface limits while MSAA, AO and shadows are retained.
@@ -165,7 +165,7 @@ After the rebase and FPS/banding fixes (2026-10-26):
 - `cargo clippy --workspace --locked -- -D warnings`: passed.
 - `cargo test --workspace --locked`: passed, including GPU/CPU meter transitions,
   duplicate presentation handling, actual WGSL math and shadow filter guards.
-- `cargo clippy -p voxelite-render --features gpu --target aarch64-apple-darwin --tests --locked -- -D warnings`:
+- `cargo clippy -p quantum-render --features gpu --target aarch64-apple-darwin --tests --locked -- -D warnings`:
   passed. The macOS UI paint/fallback code was also manually checked for cfg,
   ownership and Rust 2024 Clippy issues; no full macOS UI/runtime pass is claimed.
 
@@ -176,7 +176,7 @@ Earlier branch verification and platform constraints:
   seams, AO neighbors, visibility/palette changes, shader validation, WGSL/Metal
   matrix round-trips and supersampled dimension/admission tests.
 - `cargo build`: passed for the native Linux workspace.
-- `cargo check -p voxelite-render --features gpu --target aarch64-apple-darwin --tests`:
+- `cargo check -p quantum-render --features gpu --target aarch64-apple-darwin --tests`:
   passed, including the Metal interop and opt-in hardware test code.
 - `cargo check --target aarch64-apple-darwin`: **blocked on the clean GPUI build**:
   `include_bytes!` cannot find `shaders.metallib`. Upstream's build script is
@@ -185,9 +185,9 @@ Earlier branch verification and platform constraints:
   the previous session. That artifact was removed and the check repeated; this
   is not a successful complete macOS build. Rust checking with that artifact
   had reached the app and GPUI patch, but did not validate Metal shaders/linking.
-- Workflow configuration targeted `[self-hosted, homelab-voxelite]` at the time of this note (the workflows now use `[self-hosted, macOS, ARM64, xcode]`) on pushes to
+- Workflow configuration targeted `[self-hosted, homelab-quantum]` at the time of this note (the workflows now use `[self-hosted, macOS, ARM64, xcode]`) on pushes to
   `main` and `perf/**`, plus manual dispatch. It runs `cargo xtask macos package`
-  and uploads `dist/Voxelite.dmg` as the `Voxelite.dmg` artifact. No release or
+  and uploads `dist/Quantum.dmg` as the `Quantum.dmg` artifact. No release or
   push was performed from this worktree; the workflow itself was not executed.
 
 ## Untested and remaining risks
@@ -213,13 +213,13 @@ The worker prevents viewport driver work from blocking AppKit, but a driver call
 that itself hangs cannot be interrupted by the polling deadline. GPUI's existing
 window drawable acquisition/presentation behavior is unchanged. The device is
 pinned for the process; device removal falls back rather than migrating GPUs.
-The GPUI error bridge assumes Voxelite's single editor window. Future multiwindow
+The GPUI error bridge assumes Quantum's single editor window. Future multiwindow
 support needs per-window error routing and a new device/lifetime review.
 
 On macOS, run the ignored producer regression explicitly:
 
 ```sh
-cargo test -p voxelite-render --features gpu metal_planes_completion_leases_and_resize -- --ignored
+cargo test -p quantum-render --features gpu metal_planes_completion_leases_and_resize -- --ignored
 ```
 
 It checks actual GPU-written Y/CbCr values, producer completion, odd display

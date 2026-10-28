@@ -1,6 +1,7 @@
 //! Repository maintenance CLI and release-mode launcher for the GPU harness.
 
 mod screenshots;
+mod ui_snapshots;
 
 use std::{ffi::OsString, process::ExitCode};
 
@@ -28,6 +29,7 @@ Maintenance:
   version       Print the app version or check a release tag
   macos         Package, sign, and prepare release feeds and notes
   screenshots   Capture before/after screens for UI PRs
+  ui-snapshots  Compare display-free GPUI pixels with reviewed goldens
   icons         Render the Quantize SVG masters into app and site assets
 
 Rendering:
@@ -71,6 +73,8 @@ enum Task {
     /// Capture before/after screens for UI PRs
     #[command(disable_help_flag = true)]
     Screenshots(Harness),
+    /// Compare headless GPUI pixel goldens on Linux (no display server)
+    UiSnapshots(ui_snapshots::Options),
     /// Print the app version, optionally requiring a matching release tag
     Version {
         /// Require this stable tag to match the app version
@@ -188,6 +192,7 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
                 screenshots::run(&args).map_err(xtask::Error::Invalid)?;
             }
         }
+        Some(Task::UiSnapshots(options)) => ui_snapshots::run(options)?,
         Some(Task::Tidy) => xtask::tidy().map_err(xtask::Error::Invalid)?,
         Some(Task::Version { check_tag }) => println!(
             "{}",
@@ -279,7 +284,7 @@ fn harness_command(workspace: &Workspace, subcommand: &str, args: &[OsString]) -
     let mut command =
         workspace
             .cargo()
-            .args(["run", "--release", "--locked", "-p", "voxelite-bench"]);
+            .args(["run", "--release", "--locked", "-p", "quantum-bench"]);
     if args
         .windows(2)
         .any(|pair| pair[0] == "--scene" && pair[1] == "terrain10m")

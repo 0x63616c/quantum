@@ -75,7 +75,7 @@ pub fn package(context: &Context<'_>, options: &Options<'_>) -> Result<()> {
     super::stable_version(&version)
         .map_err(|_| invalid("VERSION must be a stable version such as 0.1.0."))?;
     let public_key = files::public_key(context)?;
-    let work = WorkDir::new(context, "voxelite-package.")?;
+    let work = WorkDir::new(context, "quantum-package.")?;
     let mut keychain = None;
     let result = build(
         context,
@@ -110,8 +110,8 @@ fn build<'a, 'b>(
     keychain: &mut Option<Keychain<'a, 'b>>,
 ) -> Result<()> {
     let dry = context.runner.is_dry_run();
-    let app = context.path("dist/Voxelite.app");
-    let dmg = context.path("dist/Voxelite.dmg");
+    let app = context.path("dist/Quantum.app");
+    let dmg = context.path("dist/Quantum.dmg");
     context.plan("remove dist/ and its old notarization marker");
     if !dry {
         match fs::remove_dir_all(context.path("dist")) {
@@ -132,29 +132,29 @@ fn build<'a, 'b>(
         context
             .script(xshell::cmd!(
                 shell,
-                "cargo build --profile {profile} --locked -p voxelite-app --bin voxelite"
+                "cargo build --profile {profile} --locked -p quantum-app --bin quantum"
             ))
             .env("CARGO_TARGET_DIR", &target)
             .run(context.runner)?;
         context
             .script(xshell::cmd!(
                 shell,
-                "cargo build --profile {profile} --locked -p voxelite-mcp"
+                "cargo build --profile {profile} --locked -p quantum-mcp"
             ))
             .env("CARGO_TARGET_DIR", &target)
             .run(context.runner)?;
     }
-    context.plan(format_args!("assemble dist/Voxelite.app from {}/{profile}/voxelite and voxelite-mcp; write Info.plist version {version} with the committed Sparkle public key", target.display()));
+    context.plan(format_args!("assemble dist/Quantum.app from {}/{profile}/quantum and quantum-mcp; write Info.plist version {version} with the committed Sparkle public key", target.display()));
     if !dry {
         mkdir(&app.join("Contents/MacOS"))?;
         mkdir(&app.join("Contents/Resources"))?;
         copy(
-            &target.join(profile).join("voxelite"),
-            &app.join("Contents/MacOS/Voxelite"),
+            &target.join(profile).join("quantum"),
+            &app.join("Contents/MacOS/Quantum"),
         )?;
         copy(
-            &target.join(profile).join("voxelite-mcp"),
-            &app.join("Contents/MacOS/voxelite-mcp"),
+            &target.join(profile).join("quantum-mcp"),
+            &app.join("Contents/MacOS/quantum-mcp"),
         )?;
         bundle_plist(
             context,
@@ -163,11 +163,11 @@ fn build<'a, 'b>(
             &app.join("Contents/Info.plist"),
         )?;
     }
-    context.plan("copy the reproducible Quantize icon from packaging/macos/Voxelite.icns");
+    context.plan("copy the reproducible Quantize icon from packaging/macos/Quantum.icns");
     if !dry {
         copy(
-            &context.path("packaging/macos/Voxelite.icns"),
-            &app.join("Contents/Resources/Voxelite.icns"),
+            &context.path("packaging/macos/Quantum.icns"),
+            &app.join("Contents/Resources/Quantum.icns"),
         )?;
     }
     let archive = work.path().join("Sparkle.tar.xz");
@@ -205,7 +205,7 @@ fn build<'a, 'b>(
         .arg(&framework)
         .run(context.runner)?;
     context.plan(
-        "copy dist/sparkle/LICENSE to dist/Voxelite.app/Contents/Resources/Sparkle-LICENSE.txt",
+        "copy dist/sparkle/LICENSE to dist/Quantum.app/Contents/Resources/Sparkle-LICENSE.txt",
     );
     if !dry {
         copy(
@@ -258,13 +258,13 @@ fn build<'a, 'b>(
         }
     }
     for (label, path, entitlements) in [
-        ("MCP", "Contents/MacOS/voxelite-mcp", false),
-        ("Main executable", "Contents/MacOS/Voxelite", true),
+        ("MCP", "Contents/MacOS/quantum-mcp", false),
+        ("Main executable", "Contents/MacOS/Quantum", true),
         ("App", "", true),
     ] {
         let mut command = signing.command(context);
         if entitlements {
-            command = command.args(["--entitlements", "packaging/macos/Voxelite.entitlements"]);
+            command = command.args(["--entitlements", "packaging/macos/Quantum.entitlements"]);
         }
         context.private(
             &format!("{label} signing"),
@@ -299,7 +299,7 @@ fn build<'a, 'b>(
         );
     }
     if notarize {
-        let zip = work.path().join("Voxelite.zip");
+        let zip = work.path().join("Quantum.zip");
         context
             .command("ditto")
             .args(["-c", "-k", "--keepParent"])
@@ -323,7 +323,7 @@ fn build<'a, 'b>(
     context
         .command("ditto")
         .arg(&app)
-        .arg(stage.join("Voxelite.app"))
+        .arg(stage.join("Quantum.app"))
         .run(context.runner)?;
     context.plan(format_args!(
         "symlink {} -> /Applications",
@@ -378,12 +378,11 @@ fn build<'a, 'b>(
                 .arg(&dmg),
         )?;
     }
-    context.plan(
-        "write dist/Voxelite.dmg.sha256 using SHA-256 and the relative filename Voxelite.dmg",
-    );
+    context
+        .plan("write dist/Quantum.dmg.sha256 using SHA-256 and the relative filename Quantum.dmg");
     if !dry {
-        let checksum = format!("{}  Voxelite.dmg\n", files::sha256(&dmg)?);
-        write(&context.path("dist/Voxelite.dmg.sha256"), &checksum)?;
+        let checksum = format!("{}  Quantum.dmg\n", files::sha256(&dmg)?);
+        write(&context.path("dist/Quantum.dmg.sha256"), &checksum)?;
         print!("{checksum}");
     }
     if notarize {
@@ -395,11 +394,11 @@ fn build<'a, 'b>(
     Ok(())
 }
 
-/// Create the same HFS+/UDZO image with the stable Voxelite volume name.
+/// Create the same HFS+/UDZO image with the stable Quantum volume name.
 pub fn create_dmg(context: &Context<'_>, stage: &Path, destination: &Path) -> Result<()> {
     context
         .command("hdiutil")
-        .args(["create", "-volname", "Voxelite", "-srcfolder"])
+        .args(["create", "-volname", "Quantum", "-srcfolder"])
         .arg(stage)
         .args(["-fs", "HFS+", "-format", "UDZO", "-ov"])
         .arg(destination)
@@ -411,7 +410,7 @@ fn bundle_plist(context: &Context<'_>, version: &str, key: &str, path: &Path) ->
     for (name, value) in [
         ("CFBundleVersion", version),
         ("CFBundleShortVersionString", version),
-        ("SUFeedURL", "https://voxelite.worldwidewebb.co/appcast.xml"),
+        ("SUFeedURL", "https://quantum.worldwidewebb.co/appcast.xml"),
         ("SUPublicEDKey", key),
     ] {
         info.insert(name.into(), value.into());

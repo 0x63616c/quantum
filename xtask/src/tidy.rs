@@ -19,6 +19,7 @@ const ROOT_ENTRIES: &[&str] = &[
     ".gitignore",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "CHANGELOG.md",
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",

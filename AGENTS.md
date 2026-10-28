@@ -2,9 +2,8 @@
 
 ## Scope and naming
 
-- Treat Quantum as the product name. It was formerly Voxelite; current crates,
-  binaries, bundle IDs and the repo slug still use `voxelite`. Do not rename them
-  piecemeal. Use real names in commands, paths and identifiers.
+- Treat Quantum as the product name and `quantum` as its crate/binary prefix.
+  Keep only the compatibility identifiers documented in [brand.toml](brand.toml).
 - Build an Aseprite-style 3D voxel editor with a Rust/GPUI native macOS shell,
   `.voxl` projects, GLB/PNG exports and MCP agent workflows.
 - Verify behavior in code and manifests. [Product direction](docs/adr/0003-product-direction.md)
@@ -15,7 +14,7 @@
   file-format compatibility and published release assets.
 
 Brand-bearing identifiers live in [brand.toml](brand.toml), with current values
-and planned display/internal names. Stable ones must not change without a migration.
+and explicit compatibility exceptions. Stable ones must not change without a migration.
 
 ## Architecture and ownership
 
@@ -24,45 +23,45 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 
 | Owner | Boundary |
 | --- | --- |
-| `voxelite-crash` | Own opt-in crash/feedback data, redaction, local panic reports and relay request preparation. No other workspace crate, UI or network client dependency. |
-| `voxelite-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
-| `voxelite-format` → `voxelite-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
-| `voxelite-mesh` → `voxelite-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |
-| `voxelite-render` → `voxelite-core`, `voxelite-mesh` | Render immutable snapshots; own cameras, rasterization, occupancy, shadows and GPU resources. No document mutations or host/encoder/plugin dependencies. |
-| `voxelite-plugin-api` → `voxelite-core`, `voxelite-mesh` | Expose portable manifests, contributions, capabilities, export errors and selected shared types/geometry. No GPUI, app, registry lifecycle or renderer. |
-| `voxelite-plugin-host` → `voxelite-core`, `voxelite-plugin-api` | Own registration, compatibility, enabled declarations, dispatch, fault quarantine, timings and conformance. No shell, GPUI or renderer. |
-| `crates/plugins/*` → `voxelite-plugin-api` | Implement optional features through portable capabilities; return proposals without accessing app internals. |
-| `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
-| `voxelite-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
-| `voxelite-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
-| `voxelite-app` | Compose editor state, plugins, native UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
-| `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
-| `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
+| `quantum-crash` | Own opt-in crash/feedback data, redaction, local panic reports and relay request preparation. No other workspace crate, UI or network client dependency. |
+| `quantum-core` | Own document invariants, chunks, palettes/layers, snapshots, atomic commands and undo. No other workspace crate, GUI or host dependency. |
+| `quantum-format` → `quantum-core` | Own canonical `.voxl`, bounded parsing, build recipes and `session::DocumentSession` persistence. No normal renderer/plugin dependencies. |
+| `quantum-mesh` → `quantum-core` | Own deterministic greedy geometry and geometry errors. No renderer/GPU/host dependency. |
+| `quantum-render` → `quantum-core`, `quantum-mesh` | Render immutable snapshots; own cameras, rasterization, occupancy, shadows and GPU resources. No document mutations or host/encoder/plugin dependencies. |
+| `quantum-plugin-api` → `quantum-core`, `quantum-mesh` | Expose portable manifests, contributions, capabilities, export errors and selected shared types/geometry. No GPUI, app, registry lifecycle or renderer. |
+| `quantum-plugin-host` → `quantum-core`, `quantum-plugin-api` | Own registration, compatibility, enabled declarations, dispatch, fault quarantine, timings and conformance. No shell, GPUI or renderer. |
+| `crates/plugins/*` → `quantum-plugin-api` | Implement optional features through portable capabilities; return proposals without accessing app internals. |
+| `quantum-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
+| `quantum-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
+| `quantum-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
+| `quantum-app` | Compose editor state, plugins, native UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
+| `quantum-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
+| `quantum-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
 
 - Keep engine/document/undo, native `.voxl` saving, renderer/camera and host/registry
-  in core infrastructure. “Core” here spans crates, not just `voxelite-core`.
-- Keep tools in `voxelite-plugin-tools`, command mirroring in
-  `voxelite-plugin-mirror`, camera gizmo/grid in `voxelite-plugin-gizmo-grid`,
-  palettes in `voxelite-plugin-palette`, discussions/pins in
-  `voxelite-plugin-comments`, bounded GLB/PNG encoders and export callbacks in
-  `voxelite-plugin-exporters`, and agent command metadata in `voxelite-plugin-agent`.
-- Keep `voxelite-plugin-example` a declaration-only template outside the app.
+  in core infrastructure. “Core” here spans crates, not just `quantum-core`.
+- Keep tools in `quantum-plugin-tools`, command mirroring in
+  `quantum-plugin-mirror`, camera gizmo/grid in `quantum-plugin-gizmo-grid`,
+  palettes in `quantum-plugin-palette`, discussions/pins in
+  `quantum-plugin-comments`, bounded GLB/PNG encoders and export callbacks in
+  `quantum-plugin-exporters`, and agent command metadata in `quantum-plugin-agent`.
+- Keep `quantum-plugin-example` a declaration-only template outside the app.
   Do not imply dynamic loading, scripting or a plugin enablement UI exists.
 - Admit edits through `Engine` transactions. Preserve atomic failure, no-op,
   revision, actor, history, lock/visibility and palette-slot semantics. Playback
   inspects immutable previews; never replay commands into the live engine.
-- Register features in [core_plugin.rs](crates/voxelite-app/src/core_plugin.rs).
-  Append optional built-ins through `voxelite-plugins-builtin::register_all`.
+- Register features in [core_plugin.rs](crates/quantum-app/src/core_plugin.rs).
+  Append optional built-ins through `quantum-plugins-builtin::register_all`.
   Keep labels, icons, menu placement, bindings and order in contributions.
-  [actions.rs](crates/voxelite-app/src/actions.rs) maps IDs to `Op` and builds shell
+  [actions.rs](crates/quantum-app/src/actions.rs) maps IDs to `Op` and builds shell
   metadata from enabled registry entries. Derive menus, command search, shortcut
   help and settings entries from that registry; preserve live enablement checks.
 
 ### Render isolation
 
-- Keep `voxelite-mesh` public API limited to `Quad`, `Mesh`, `greedy_mesh`,
+- Keep `quantum-mesh` public API limited to `Quad`, `Mesh`, `greedy_mesh`,
   `greedy_mesh_with_limit`, `MAX_QUADS`, `MeshError` and `MeshResult`.
-- Keep `voxelite-render` public API at cameras (`Camera`, `PresetView`,
+- Keep `quantum-render` public API at cameras (`Camera`, `PresetView`,
   `Projection`, `visible_bounds`), CPU images (`View`, `RenderOptions`,
   `RenderedImage`, `RasterCache`, `render`) and `RenderError`/`RenderResult`.
   Its optional `gpu` module exposes `Style`, macOS `Worker`/`Frame`, and headless
@@ -71,26 +70,26 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 - Supply renderer callbacks from app/MCP to exporters. Encoding fixtures may use
   renderer dev-dependencies; normal dependencies may not.
 - Run `normal_workspace_dependencies_preserve_renderer_boundary` in
-  [boundary.rs](crates/voxelite-render/tests/boundary.rs). It checks the renderer's
+  [boundary.rs](crates/quantum-render/tests/boundary.rs). It checks the renderer's
   two normal workspace dependencies and forbids normal renderer dependencies in
   format, plugin API/host and the exporters plugin:
 
 ```sh
-cargo test -p voxelite-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
+cargo test -p quantum-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
 ```
 
 ### Plugin dependency rule
 
-- Allow only `voxelite-plugin-api` plus external crates in plugin normal/build
+- Allow only `quantum-plugin-api` plus external crates in plugin normal/build
   dependencies, including optional, renamed and target-specific dependencies.
   Keep GPUI out of plugins. Expose required domain types through the API rather
   than directly depending on core, mesh, UI or app crates.
-- Use dev-dependencies for `voxelite_plugin_host::conformance::check`. Exercise
+- Use dev-dependencies for `quantum_plugin_host::conformance::check`. Exercise
   enable/disable/enable, validation, errors and panic isolation as appropriate.
 - MCP accepts a host factory from its composition root. Its default `standalone`
-  feature links `voxelite-plugins-builtin` for the binary; library consumers disable
+  feature links `quantum-plugins-builtin` for the binary; library consumers disable
   default features. Concrete plugins are allowed only as MCP dev-dependencies.
-  Verify library isolation with `cargo check -p voxelite-mcp --locked --lib --no-default-features`.
+  Verify library isolation with `cargo check -p quantum-mcp --locked --lib --no-default-features`.
 - Follow [the plugin guide](crates/plugins/README.md) and run:
 
 ```sh
@@ -173,13 +172,13 @@ cargo test --doc -p xtask --locked
 | List / run named checks | `cargo xtask check --list` / `cargo xtask check tidy fmt` |
 | Preview release preparation / tagging (offline default) | `cargo xtask release patch` / `cargo xtask release tag` |
 | Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
-| Start native editor | `cargo run -p voxelite-app --bin voxelite` |
-| Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
+| Start native editor | `cargo run -p quantum-app --bin quantum` |
+| Open sample in light mode | `cargo run -p quantum-app --bin quantum -- examples/autumn-workshop.voxl --theme light` |
 | Standard workspace tests and doctests | `cargo xtask check test` |
-| Focused core tests | `cargo test -p voxelite-core --locked` |
-| Editor model without GPUI | `cargo test -p voxelite-app --no-default-features --locked` |
-| Shared controls and editing | `cargo test -p voxelite-ui --locked` |
-| Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
+| Focused core tests | `cargo test -p quantum-core --locked` |
+| Editor model without GPUI | `cargo test -p quantum-app --no-default-features --locked` |
+| Shared controls and editing | `cargo test -p quantum-ui --locked` |
+| Plugin lifecycle/dispatch | `cargo test -p quantum-plugin-host --locked` |
 | Repository consistency (plugins, branding, documentation) | `cargo xtask check plugin-deps brand docs-links docs-assets` |
 | Remaining Python regressions (site, PII scan) | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
 | Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
@@ -189,7 +188,7 @@ cargo test --doc -p xtask --locked
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
 | Full site build | `scripts/build-site.sh` |
-| Site generator tests | `cargo test --locked -p voxelite-site` |
+| Site generator tests | `cargo test --locked -p quantum-site` |
 | Built-site validation | `python3 scripts/check-site.py` |
 | Offline feed validation | `cargo xtask macos check-appcast site/appcast.xml --allow-empty` |
 
@@ -259,29 +258,29 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
 
 ## Shared UI and text editing
 
-- Use [voxelite-ui](crates/voxelite-ui/README.md) for buttons, icon buttons,
+- Use [quantum-ui](crates/quantum-ui/README.md) for buttons, icon buttons,
   segmented controls, menus, fields, sliders, toggles, swatches, cards, dialogs
-  and chrome. Add reusable controls under `crates/voxelite-ui/src/` and export
+  and chrome. Add reusable controls under `crates/quantum-ui/src/` and export
   through `lib.rs`; do not hand-style one-off replacements in the app.
 - Build every control from the library: `Button`, `IconButton` (square 36 px
   rail button, `IconButton::rail`, optional corner badge such as the Mirror axis
   letter), `Tab`/`TabBar`, `Segment`/`SegmentedControl`, `Panel` and `Popover`
-  from [navigation.rs](crates/voxelite-ui/src/navigation.rs),
-  [surfaces.rs](crates/voxelite-ui/src/surfaces.rs) and
-  [components.rs](crates/voxelite-ui/src/components.rs). Buttons, tabs, segments
+  from [navigation.rs](crates/quantum-ui/src/navigation.rs),
+  [surfaces.rs](crates/quantum-ui/src/surfaces.rs) and
+  [components.rs](crates/quantum-ui/src/components.rs). Buttons, tabs, segments
   and rail controls all use `radius::CONTROL` on all four corners; selected and
   hover fills must be rounded too. Do not write raw `px(..)` sizes, radii or
   colors in `ui.rs` or `ui/*.rs`: add a token in
-  [tokens.rs](crates/voxelite-ui/src/tokens.rs) (`space`, `radius`, `metrics`,
+  [tokens.rs](crates/quantum-ui/src/tokens.rs) (`space`, `radius`, `metrics`,
   `Theme`) and a component if none fits. Component rules and the documented
-  radius exceptions live in [crates/voxelite-ui/AGENTS.md](crates/voxelite-ui/AGENTS.md).
+  radius exceptions live in [crates/quantum-ui/AGENTS.md](crates/quantum-ui/AGENTS.md).
   Any change to a shared control needs before/after captures of every screen
   that uses it.
-- Use [tokens.rs](crates/voxelite-ui/src/tokens.rs) for theme, spacing, radii,
+- Use [tokens.rs](crates/quantum-ui/src/tokens.rs) for theme, spacing, radii,
   typography, heights and focus rings. Keep domain dispatch, modal state, focus
   restoration and file dialogs in the app.
 - Keep the status bar static as values change. Use `StatusBar`, `StatusSegment`
-  and fixed slots from [status.rs](crates/voxelite-ui/src/status.rs); reserve
+  and fixed slots from [status.rs](crates/quantum-ui/src/status.rs); reserve
   physical widths, pad placeholders/signs and handle overflow within the slot.
   Only the middle message region flexes. Coordinates, counts and FPS must not
   shift separators or neighboring controls.
@@ -296,15 +295,15 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
 
 ### Every app text field uses the shared editor
 
-- Use `voxelite_ui::TextField` (app re-export:
-  [text_field.rs](crates/voxelite-app/src/text_field.rs)) or its `NumericField`
+- Use `quantum_ui::TextField` (app re-export:
+  [text_field.rs](crates/quantum-app/src/text_field.rs)) or its `NumericField`
   wrapper. Never hand-roll a text input, caret, selection or key-down editor.
   OS file dialogs retain their platform-owned filename controls.
-- Keep pure editing in [editing/](crates/voxelite-ui/src/editing/) and native input,
+- Keep pure editing in [editing/](crates/quantum-ui/src/editing/) and native input,
   clipboard, UTF-16/IME adaptation and painting in
-  [text_field.rs](crates/voxelite-ui/src/text_field.rs). Use `Editor` mutations,
+  [text_field.rs](crates/quantum-ui/src/text_field.rs). Use `Editor` mutations,
   `set()` for model replacement and `TextFieldEvent` for domain effects.
-- Preserve [bindings.rs](crates/voxelite-ui/src/editing/bindings.rs)'s natural
+- Preserve [bindings.rs](crates/quantum-ui/src/editing/bindings.rs)'s natural
   macOS editing behavior:
 
 | Key | Behavior |
@@ -319,8 +318,8 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
 - Consume field undo/redo even with empty local history; never fall through to
   document undo. Preserve grapheme-safe movement, selection reversal, clipboard,
   IME composition, Escape/commit policies, numeric stepping and focus behavior.
-- Run `cargo test -p voxelite-ui --locked`. The
-  [editing tests](crates/voxelite-ui/src/editing/tests.rs) include
+- Run `cargo test -p quantum-ui --locked`. The
+  [editing tests](crates/quantum-ui/src/editing/tests.rs) include
   `binding_commands_match_the_full_reviewed_table`,
   `every_movement_and_deletion_binding_executes_its_declared_action`, and
   `modified_moves_use_head_and_shift_keeps_anchor`. Adapter tests include
@@ -333,16 +332,16 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
 - Regenerate the **app crate README** shortcut table after contribution changes:
 
 ```sh
-UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match_registry
+UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_registry
 ```
 
-- Edit site templates in `crates/voxelite-site/templates/`, article bodies in
-  `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
+- Edit site templates in `crates/quantum-site/templates/`, article bodies in
+  `site/content/`, generation/metadata in `crates/quantum-site/src/`, and skills
   in `skills/`. Run `scripts/build-site.sh`.
 - The site reads the committed `spec/mcp/v1/tools.json` catalog without linking
-  `voxelite-mcp`. After changing MCP tool metadata or schemas, refresh and commit
-  it with `UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
-  The MCP test checks exact bytes against `VoxeliteServer::tools()`; the site
+  `quantum-mcp`. After changing MCP tool metadata or schemas, refresh and commit
+  it with `UPDATE_TOOLS_JSON=1 cargo test -p quantum-mcp --locked --test tools_catalog`.
+  The MCP test checks exact bytes against `QuantumServer::tools()`; the site
   preserves that tool and JSON key order in its generated references.
 - Generated site pages, Markdown/LLM exports, crawl files, MCP catalog copies and
   downloadable skill/integration copies are ignored. Do not commit them: CI
@@ -350,7 +349,7 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   `site-dist`. Keep authored assets, `site/content/`, `site/vercel.json` and the
   input `site/appcast.xml` tracked.
 - The generator also updates the tracked root `integrations/` examples. Do not
-  maintain them separately; their source is `crates/voxelite-site/src/install.rs`
+  maintain them separately; their source is `crates/quantum-site/src/install.rs`
   and its templates.
 - Generate signed appcasts through the release workflow and
   `cargo xtask macos appcast`; fetch release feeds with
@@ -446,5 +445,5 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Core architecture](docs/architecture/core.md) | Document/transaction invariants. |
 | [Plugin guide](crates/plugins/README.md), [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) | API, host and built-in ownership. |
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
-| [UI library](crates/voxelite-ui/README.md), [UI rules](crates/voxelite-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
+| [UI library](crates/quantum-ui/README.md), [UI rules](crates/quantum-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |

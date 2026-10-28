@@ -1,6 +1,6 @@
 //! `cargo xtask screenshots`: before/after captures of key screens for UI pull requests.
 //!
-//! Builds `voxelite` at two refs, captures the same screens from each on a virtual X
+//! Builds `quantum` at two refs, captures the same screens from each on a virtual X
 //! display (`scripts/capture-pr-screens.sh`), and writes a Before | After markdown block.
 //! `--publish <PR>` stores the PNGs on the `pr-assets` branch and puts that block in the
 //! PR description. See `.agents/skills/ui-pr-screenshots/SKILL.md`.
@@ -16,12 +16,12 @@ type Result<T> = std::result::Result<T, String>;
 
 /// Capture surfaces, in display order, with fixed fixtures and sizes.
 #[derive(Debug)]
-struct Screen {
+pub(super) struct Screen {
     key: bool,
-    name: &'static str,
+    pub(super) name: &'static str,
     caption: &'static str,
     title: &'static str,
-    size: (u32, u32),
+    pub(super) size: (u32, u32),
     args: &'static str,
 }
 
@@ -101,7 +101,7 @@ macro_rules! screens {
     };
 }
 
-const SCREENS: &[Screen] = screens![
+pub(super) const SCREENS: &[Screen] = screens![
     "Autumn Workshop", (1440, 900) => [
         ("chrome-menu-file", "File menu"),
         ("chrome-menu-edit", "Edit menu"),
@@ -136,6 +136,10 @@ const SCREENS: &[Screen] = screens![
         ("popovers-palette-menu", "Palette import/export menu"),
         ("dialogs-palette-delete", "Delete custom palette confirmation"),
         ("overlays-debug", "Debug overlay"),
+    ],
+    "^Quantum Feedback$", (880, 760) => [
+        ("dialogs-feedback", "Feedback preview and consent"),
+        ("dialogs-crash-report", "Next-launch crash report preview"),
     ],
     "^Quantum Settings$", (880, 640) => [
         ("settings-general", "Settings: General"),
@@ -442,23 +446,45 @@ fn build(tree: &Path, out: &Path, label: &str) -> Result<PathBuf> {
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../target"));
-    eprintln!("building voxelite ({label}) in {}", tree.display());
+    let (package, executable) = app_target(tree)?;
+    eprintln!("building {executable} ({label}) in {}", tree.display());
     status(
         Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
             .current_dir(tree)
             .env("CARGO_TARGET_DIR", &target)
-            .args([
-                "build",
-                "--locked",
-                "-p",
-                "voxelite-app",
-                "--bin",
-                "voxelite",
-            ]),
+            .args(["build", "--locked", "-p", &package, "--bin", &executable]),
     )?;
     let bin = out.join("bin").join(label);
-    fs::copy(target.join("debug/voxelite"), &bin).map_err(|e| format!("copy binary: {e}"))?;
+    fs::copy(target.join("debug").join(executable), &bin)
+        .map_err(|e| format!("copy binary: {e}"))?;
     Ok(bin)
+}
+
+// Read the selected revision's manifest so comparisons span package renames.
+fn app_target(tree: &Path) -> Result<(String, String)> {
+    for entry in fs::read_dir(tree.join("crates")).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if !entry.file_name().to_string_lossy().ends_with("-app") {
+            continue;
+        }
+        let source =
+            fs::read_to_string(entry.path().join("Cargo.toml")).map_err(|e| e.to_string())?;
+        let manifest: toml::Value = toml::from_str(&source).map_err(|e| e.to_string())?;
+        let package = manifest
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(toml::Value::as_str);
+        let executable = manifest
+            .get("bin")
+            .and_then(toml::Value::as_array)
+            .and_then(|bins| bins.first())
+            .and_then(|b| b.get("name"))
+            .and_then(toml::Value::as_str);
+        if let (Some(package), Some(executable)) = (package, executable) {
+            return Ok((package.into(), executable.into()));
+        }
+    }
+    Err("Selected revision has no application target".into())
 }
 
 #[derive(PartialEq)]
@@ -678,7 +704,7 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
         }
         let _ = writeln!(
             md,
-            "\n<sub><code>voxelite {}</code> at {}×{}</sub>\n",
+            "\n<sub><code>quantum {}</code> at {}×{}</sub>\n",
             s.args, s.size.0, s.size.1
         );
     }

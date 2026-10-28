@@ -33,6 +33,10 @@ CI snapshot verification; insta inherits that variable under nextest too.
 
 ## PR screenshots
 
+For the independent display-free regression gate, run `cargo xtask ui-snapshots`.
+Explicit `--rebaseline` updates reviewed references; `--screen 'settings-*'`
+filters the key set. See [UI snapshots](../docs/ui-snapshots.md).
+
 `cargo xtask screenshots` captures only the key set: `welcome`, `editor-dark` and
 `editor-light`. The other registered surfaces are opt-in, keeping routine CI time
 independent of the size of the capture catalog. Capture quality and sizes stay fixed.
@@ -92,9 +96,9 @@ registered in `validate`, which runs Clippy only once.
 The repository checks run in-process from `src/checks/`:
 
 - `boundaries`: locked `cargo metadata --all-features` graph traversal from
-  `voxelite-core`, `voxelite-format` and `voxelite-mesh`. Rejects direct/transitive
+  `quantum-core`, `quantum-format` and `quantum-mesh`. Rejects direct/transitive
   dependencies on `gpui`, its published package `gpui-unofficial`, or
-  `voxelite-app`, including dev/build/optional and target-specific edges.
+  `quantum-app`, including dev/build/optional and target-specific edges.
   Errors show the dependency path; cycles terminate.
 - `source-lints`: syntax-aware rules described below.
 - `workflows`: parse every workflow YAML file, require explicit top-level
@@ -131,7 +135,7 @@ closures and macro-generated functions do not have separate function budgets.
 Qualified module/impl/function names identify functions; mutually exclusive cfg
 implementations with the same name share their maximum size budget.
 
-In `crates/voxelite-app/src/`, including submodules, the styling rules count:
+In `crates/quantum-app/src/`, including submodules, the styling rules count:
 
 - `px` calls with numeric literal, negated or parenthesized literal arguments;
 - `rgb`/`rgba` calls with hexadecimal literal arguments, and `hsl`/`hsla` calls
@@ -144,8 +148,16 @@ Qualified calls and styling inside macro tokens count. Macro string dispatch is
 checked for literal arms/alternatives and equality comparisons; `matches!` checks
 all string literals. Arbitrary generated macro expansions and renamed imports
 are not expanded. Dynamic document colors and `px(metrics::TOKEN)` are permitted;
-put new control styling in `voxelite-ui` components/tokens. Shared UI owns styling
+put new control styling in `quantum-ui` components/tokens. Shared UI owns styling
 and is exempt from the app styling rules, but retains the source size budgets.
+
+Across `crates/`, `raw-radius` rejects numeric literals inside `rounded` and
+`rounded_*` arguments, including corner-specific calls and macro tokens. Fixed
+shortcuts such as `rounded_sm()` also fail. Use `quantum-ui` radius tokens or
+token-based concentric calculations; `rounded_full()` remains the intentional
+circular-shape exception. Only `quantum-ui/src/tokens.rs` and its `tokens/`
+submodules may define literal radii. Numeric expected values in style assertions
+remain independent checks of the rendered geometry.
 
 `xtask/lint-allowlist.json` records existing debt by file/rule and qualified
 function. Every entry must exactly match the remaining count or oversized line
@@ -158,7 +170,9 @@ The baseline itself is checked against `HEAD` locally, or `LINT_BASE_REF` when
 set. CI supplies the PR base SHA (previous revision for pushes), using full Git
 history, so increasing the baseline alongside new violations fails. Only the
 initial introduction may bootstrap when the base revision has no baseline file.
-An invalid/missing base revision fails. To reproduce the full PR comparison:
+An invalid/missing base revision fails. Git-recognized file renames carry their
+existing rule/function budgets to the new path; counts may still only shrink,
+and new rules or functions gain no allowance. To reproduce the full PR comparison:
 `LINT_BASE_REF=<base-sha> cargo xtask lint`.
 
 Run their fixture and parsing tests with `cargo test -p xtask --locked checks::`.
@@ -270,8 +284,8 @@ possible certificate subject or authentication detail in it.
 | --- | --- |
 | `uname -s` | `macos::package::Options::is_macos`, production `cfg!(target_os = "macos")`; dry runs bypass execution |
 | `cargo metadata ...` + Python JSON version selector | `macos::version`, using cleaned Cargo metadata; dry runs read `version::workspace_version` |
-| `cargo build --release --locked -p voxelite-app --bin voxelite` | `package::build`, omitted by `--skip-build` |
-| `cargo build --release --locked -p voxelite-mcp` | `package::build`, omitted by `--skip-build` |
+| `cargo build --release --locked -p quantum-app --bin quantum` | `package::build`, omitted by `--skip-build` |
+| `cargo build --release --locked -p quantum-mcp` | `package::build`, omitted by `--skip-build` |
 | `mktemp -d` | `files::WorkDir`, tempfile with explicit 0700 directory permissions |
 | Python canonical public-key validation | `files::public_key`, canonical 32-byte base64 and committed-file equality |
 | Python secret decoding | `files::decode_secret`, in-process base64 into create-new 0600 files |
@@ -301,17 +315,17 @@ possible certificate subject or authentication detail in it.
 | `spctl --assess --type execute` app | `package::build`, private diagnostics |
 | `ditto` stapled app into stage | `package::build`, after app ticket validation |
 | `ln -s /Applications` | `std::os::unix::fs::symlink` in `package::build` |
-| `hdiutil create -volname Voxelite -srcfolder ... -fs HFS+ -format UDZO -ov ...` | `package::create_dmg` |
+| `hdiutil create -volname Quantum -srcfolder ... -fs HFS+ -format UDZO -ov ...` | `package::create_dmg` |
 | DMG `codesign --force --keychain ... --sign ... --timestamp` and `--verify --strict` | `package::build`, private diagnostics |
 | `spctl --assess --type open --context context:primary-signature` DMG | `package::build`, private diagnostics |
-| `(cd dist && shasum -a 256 Voxelite.dmg > Voxelite.dmg.sha256)` and `cat` | `macos::sha256`, `write` and `print!`; same relative filename and two-space separator |
+| `(cd dist && shasum -a 256 Quantum.dmg > Quantum.dmg.sha256)` and `cat` | `macos::sha256`, `write` and `print!`; same relative filename and two-space separator |
 | EXIT/INT/TERM traps; `security delete-keychain`, `security list-keychains -d user -s ...`, `rm -rf` | `macos::Signals`, interruptible `SystemRunner`, `Keychain::finish`/Drop, `Marker` and `WorkDir` guards |
 
 The other migrated commands map as follows:
 
 | Former operation | Rust implementation |
 | --- | --- |
-| `gh api --paginate --slurp repos/0x63616c/voxelite/releases?per_page=100` | `appcast::fetch` |
+| `gh api --paginate --slurp repos/0x63616c/quantum/releases?per_page=100` | `appcast::fetch` |
 | `gh release download ... --pattern appcast.xml --dir ...` | `appcast::fetch`; numeric stable selection and complete API asset-size validation |
 | XML parsing/validation | `feed::validate`, `feed::validate_release`; original XML copied without serialization |
 | DMG checksum check and `xcrun stapler validate` before signing feed | `appcast::generate` |

@@ -27,6 +27,23 @@ jobs:
             echo "Release tag must be a stable version such as v0.2.0." >&2
             exit 1
           fi
+      - name: Validate release credentials
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set +x
+          for required in MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD APPLE_API_KEY_P8_BASE64 APPLE_API_KEY_ID APPLE_API_ISSUER_ID SPARKLE_ED_PRIVATE_KEY; do
+            if [[ -z ${!required} ]]; then
+              echo "Missing required release secret: $required" >&2
+              exit 1
+            fi
+          done
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # A branch with the same name must never supply the release's code.
@@ -38,15 +55,15 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
       - name: Clippy workspace
-        run: cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked --features quantum-app/test-support -- -D warnings
       - name: Test workspace
-        run: cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast
+        run: cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast
       - name: Build app without signing credentials
         run: |
           cargo build --release --locked -p xtask
           target/release/xtask version --check-tag "$TAG"
-          cargo build --release --locked -p voxelite-app --bin voxelite
-          cargo build --release --locked -p voxelite-mcp
+          cargo build --release --locked -p quantum-app --bin quantum
+          cargo build --release --locked -p quantum-mcp
       - name: Sign and package
         env:
           MACOS_SIGNING_MODE: auto
@@ -59,12 +76,6 @@ jobs:
           SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
         run: |
           set +x
-          for required in MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD APPLE_API_KEY_P8_BASE64 APPLE_API_KEY_ID APPLE_API_ISSUER_ID; do
-            if [[ -z ${!required} ]]; then
-              echo "Missing required release secret: $required" >&2
-              exit 1
-            fi
-          done
           VERSION="${TAG#v}" target/release/xtask macos package --skip-build
       - name: Generate release notes
         run: |
@@ -86,7 +97,7 @@ jobs:
           # Creation fails if this tag already has a release. Never replace bytes
           # referenced by an existing signed appcast, even when retrying a run.
           test "$APPCAST_GENERATED" = true
-          gh release create "$TAG" --draft --title "Voxelite $TAG" --notes-file dist/RELEASE_NOTES.md --verify-tag
-          assets=(dist/Voxelite.dmg dist/Voxelite.dmg.sha256 dist/Voxelite.html site/appcast.xml)
+          gh release create "$TAG" --draft --title "Quantum $TAG" --notes-file dist/RELEASE_NOTES.md --verify-tag
+          assets=(dist/Quantum.dmg dist/Quantum.dmg.sha256 dist/Quantum.html site/appcast.xml)
           gh release upload "$TAG" "${assets[@]}"
           gh release edit "$TAG" --draft=false

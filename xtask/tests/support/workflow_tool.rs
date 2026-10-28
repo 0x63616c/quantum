@@ -23,7 +23,7 @@ fn main() {
     }
     match name {
         "cargo" if args[0] == "metadata" => println!(
-            "{{\"packages\":[{{\"id\":\"app\",\"name\":\"voxelite-app\",\"version\":\"1.2.3\"}}],\"workspace_members\":[\"app\"]}}"
+            "{{\"packages\":[{{\"id\":\"app\",\"name\":\"quantum-app\",\"version\":\"1.2.3\"}}],\"workspace_members\":[\"app\"]}}"
         ),
         "cargo" if args.iter().any(|a| a == "xtask") => {
             fs::create_dir_all("target/release").unwrap();

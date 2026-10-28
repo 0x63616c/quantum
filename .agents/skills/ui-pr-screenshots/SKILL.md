@@ -1,6 +1,6 @@
 ---
 name: ui-pr-screenshots
-description: Use whenever a pull request changes anything a user can see (crates/voxelite-app, crates/voxelite-ui, rendering, plugins with UI, themes, icons, fonts), before opening it, after each push to it, and before asking for review. Produces before/after screenshots in the PR description's Screenshots section and keeps PR descriptions consistent.
+description: Use whenever a pull request changes anything a user can see (crates/quantum-app, crates/quantum-ui, rendering, plugins with UI, themes, icons, fonts), before opening it, after each push to it, and before asking for review. Produces before/after screenshots in the PR description's Screenshots section and keeps PR descriptions consistent.
 ---
 
 # UI PR screenshots
@@ -82,7 +82,7 @@ scripting clicks, so it stays deterministic.
 
 The app's development-only `--show <state>` opens the bundled example directly in
 an editor surface or a Settings page. The complete state list and manual/platform
-exclusions are in [the app README](../../../crates/voxelite-app/README.md#ui-capture-states).
+exclusions are in [the app README](../../../crates/quantum-app/README.md#ui-capture-states).
 Use `chrome-menu-*`, `panels-*`, `dialogs-*`, `popovers-*`, `overlays-debug` and
 `settings-*` states. Each entry in the `screens!` registry expands into both
 `<state>-dark` and `<state>-light`; select both with `--screen 'dialogs-about-*'`,
@@ -103,6 +103,26 @@ PNG for the intended surface. A base binary without `--show` will correctly show
    to the changed area and enlarged, so check that row too. A screen marked *changed* that you did
    not mean to change is a regression; fix it or explain it in **Changes**.
 3. Tick the UI checklist items only after doing the above.
+
+## Headless regression gate
+
+Before/after PR screenshots remain the design review evidence. The independent
+`cargo xtask ui-snapshots` gate renders production GPUI views on Linux through
+`HeadlessAppContext` and lavapipe without DISPLAY, WAYLAND_DISPLAY, or Xvfb.
+It checks committed references in `crates/quantum-app/tests/ui-goldens/`.
+
+Run `cargo xtask ui-snapshots` after UI changes. For an intentional appearance
+change, run `cargo xtask ui-snapshots --rebaseline --screen 'settings-*'` (or omit
+the filter for every key screen), inspect every changed PNG in both themes, and
+commit the references with the change. Only `--rebaseline` writes goldens; CI
+never accepts them automatically. Failures leave actual/expected/diff images in
+`target/ui-snapshots/` and upload them as CI artifacts. Review focus/hover/pressed,
+empty/loading states and long-label truncation as well as the default snapshots.
+See [UI snapshots](../../../docs/ui-snapshots.md) for coverage and tolerance.
+
+Native macOS goldens from the closed draft #194 are parked as an optional later
+addition. This gate does not need a macOS GUI session and does not verify AppKit
+chrome, Core Text rasterization, or the Metal viewport/surface handoff.
 
 ## Troubleshooting
 

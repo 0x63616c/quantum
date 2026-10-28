@@ -1,4 +1,4 @@
-# Voxelite — Art Checklist
+# Quantum — Art Checklist
 
 ## Target
 Pro creative tool. Concept A now leads: modern macOS Sonoma/Sequoia toolbar and sidebar, shadcn-style menus/popovers/dialogs, Vercel/Stripe restraint, Figma collaboration and Blender viewport conventions. Aseprite informs keyboard workflow, not dense or dated editor chrome. B/C remain historical studies.
@@ -24,7 +24,7 @@ Pro creative tool. Concept A now leads: modern macOS Sonoma/Sequoia toolbar and 
 Vercel / Stripe aesthetic. Dark mode = pure black #000 backgrounds, crisp 1px hairline borders (#1f1f1f–#2e2e2e), Geist / Geist Mono typography, restrained single accent, very clean. Light mode = pure white with matching hairlines. Applies to all concepts, the GPUI app theme and the marketing site. App is all-Rust GPUI (Zed-level native polish), not Tauri.
 
 ## Positioning (2026-10-24)
-Voxelite is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a prominent agent session panel: live tool calls, added/removed diff counts, per-step undo, multi-angle render thumbnails, and a follow-agent camera toggle. Humans watch agents build and retain a complete keyboard-first editor. ⌘K must be visible and operable. Use native split panes, muted macOS traffic lights, readable secondary text and genuinely distinct concept layouts. Marketing leads with the agent workflow; docs and integrations make it reproducible.
+Quantum is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a prominent agent session panel: live tool calls, added/removed diff counts, per-step undo, multi-angle render thumbnails, and a follow-agent camera toggle. Humans watch agents build and retain a complete keyboard-first editor. ⌘K must be visible and operable. Use native split panes, muted macOS traffic lights, readable secondary text and genuinely distinct concept layouts. Marketing leads with the agent workflow; docs and integrations make it reproducible.
 
 ## Palette system (2026-10-25)
 

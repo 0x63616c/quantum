@@ -15,7 +15,7 @@
   "project_format": "voxl/1.0",
   "stage": "standalone-headless-mcp",
   "durability": "explicit-document-save",
-  "wire_test": "crates/voxelite-mcp/tests/stdio.rs",
+  "wire_test": "crates/quantum-mcp/tests/stdio.rs",
   "host_configs": [
     "cursor",
     "claude",

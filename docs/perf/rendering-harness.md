@@ -1,6 +1,6 @@
 # Rendering harness
 
-Two independent tools exercise the **real `voxelite_render::gpu::Viewport`**:
+Two independent tools exercise the **real `quantum_render::gpu::Viewport`**:
 `cargo xtask bench` measures performance; `cargo xtask visual` compares pixels.
 A failure in one does not require running the other. Neither invokes the CPU
 rasterizer. They share scene generators and camera paths.
@@ -89,7 +89,7 @@ export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
 export XDG_RUNTIME_DIR=/tmp
 cargo xtask visual --scene autumn --local-baseline
 cargo xtask bench --scene autumn --runs 1 --frames 10
-cargo test -p voxelite-bench --release --locked --test headless -- --ignored --nocapture
+cargo test -p quantum-bench --release --locked --test headless -- --ignored --nocapture
 ```
 
 The shared target export is required in this Linux development workspace. The
@@ -120,8 +120,8 @@ cargo xtask bench --scene terrain10m
 cargo xtask visual --scene terrain10m
 ```
 
-`xtask` enables `voxelite-bench/large-scenes`, which enables the bench-only
-`voxelite-core/unbounded-voxels` feature. That feature raises admission to
+`xtask` enables `quantum-bench/large-scenes`, which enables the bench-only
+`quantum-core/unbounded-voxels` feature. That feature raises admission to
 16,777,216 occupied cells, retaining coordinate/chunk/work constraints. It is off
 by default; `cargo test --workspace --locked` retains the production 1,048,576
 limit. Never enable it in application builds or use an all-features application
