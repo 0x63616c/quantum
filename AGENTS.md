@@ -190,7 +190,7 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 - Keep performance references in [bench/baseline/](bench/baseline/). Generate them
   explicitly with `cargo xtask bench --runs 3 --update-baseline` or `bench-baseline`
   dispatch. Do not combine that flag with `--compare` or `--input`. The current M2
-  baseline is provisional; remeasure on an idle mini before using it as a hard gate.
+  baseline (run 40613358223) was recorded with the runner otherwise idle; see bench/README.md.
 - Match scene hashes, dimensions, machine/driver, shadow path and camera sampling.
   Attach JSON, markdown metric deltas, run spread and machine load. Performance
   dispatch is diagnostic on shared CI; required visual comparison must pass.

@@ -260,6 +260,12 @@ pub mod radius {
 }
 /// Font families, type scale and weights.
 pub mod type_size {
+    /// ASCII skeleton paragraph line height, matching upstream's 1.3em.
+    pub const ASCII_LINE_EM: f32 = 1.3;
+    /// Dither skeleton glyph tracking, matching upstream's -.02em.
+    pub const ASCII_DITHER_TRACKING_EM: f32 = -0.02;
+    /// Paragraph skeleton row gap, matching upstream's .55em.
+    pub const ASCII_GAP_EM: f32 = 0.55;
     /// Axis badge inside a rail button.
     pub const BADGE: f32 = 9.;
     /// Document title in the toolbar.
