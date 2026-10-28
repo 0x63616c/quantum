@@ -16,8 +16,22 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    /// Locate the repository containing this xtask's manifest.
+    /// Locate the caller's repository, falling back to this xtask's manifest.
+    /// Shared Cargo target directories can reuse a binary built in another worktree.
     pub fn discover() -> Result<Self> {
+        let current = std::env::current_dir().map_err(|source| Error::Io {
+            path: PathBuf::from("."),
+            source,
+        })?;
+        Self::from_directory(&current)
+    }
+
+    fn from_directory(directory: &Path) -> Result<Self> {
+        for root in directory.ancestors() {
+            if root.join("xtask/Cargo.toml").is_file() {
+                return Self::at(root);
+            }
+        }
         Self::at(Path::new(env!("CARGO_MANIFEST_DIR")).join(".."))
     }
 
@@ -183,6 +197,20 @@ mod tests {
                 .any(|(key, value)| key == "CARGO_PKG_NAME" && value.is_none())
         );
         assert!(Workspace::at(tempfile::tempdir().unwrap().path()).is_err());
+    }
+
+    #[test]
+    fn discovery_prefers_the_callers_worktree_over_the_compiled_manifest() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(temp.path().join("xtask/src")).unwrap();
+        std::fs::write(temp.path().join("Cargo.toml"), "[workspace]\n").unwrap();
+        std::fs::write(temp.path().join("xtask/Cargo.toml"), "").unwrap();
+        for directory in [temp.path().to_path_buf(), temp.path().join("xtask/src")] {
+            assert_eq!(
+                Workspace::from_directory(&directory).unwrap().root(),
+                temp.path().canonicalize().unwrap()
+            );
+        }
     }
 
     #[test]

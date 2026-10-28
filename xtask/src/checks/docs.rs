@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub(crate) fn links(context: &Context<'_>) -> Outcome {
-    super::outcome(check_links(context.workspace))
+    super::outcome(check_links(context.workspace, context.runner))
 }
 
 pub(crate) fn assets(context: &Context<'_>) -> Outcome {
@@ -46,16 +46,27 @@ fn local_path(target: &str) -> Option<String> {
     )
 }
 
-fn check_links(workspace: &Workspace) -> Result<Vec<String>> {
+fn check_links(workspace: &Workspace, runner: &dyn Runner) -> Result<Vec<String>> {
     let mut errors = Vec::new();
-    for relative in ["docs/glossary.md", "docs/adr/0003-product-direction.md"] {
-        let document = workspace.path(relative);
-        let targets = super::captures(&workspace.read(relative)?, r"\[[^\]]+\]\(([^\s)]+)\)")?;
-        if targets.is_empty() {
-            errors.push(format!("{relative}: expected at least one Markdown link"));
-        }
-        for target in targets {
-            if let Some(path) = local_path(&target)
+    // Read only authored, tracked docs: never walk generated site/build outputs.
+    for relative in workspace
+        .tracked_files(runner)?
+        .into_iter()
+        .filter(|path| path.starts_with("docs/") && path.ends_with(".md"))
+    {
+        let document = workspace.path(&relative);
+        let source = workspace.read(&relative)?;
+        // Parse Markdown rather than matching text in code examples. This also
+        // covers reference links, images, titles and balanced destination parentheses.
+        for event in pulldown_cmark::Parser::new(&source) {
+            let pulldown_cmark::Event::Start(
+                pulldown_cmark::Tag::Link { dest_url, .. }
+                | pulldown_cmark::Tag::Image { dest_url, .. },
+            ) = event
+            else {
+                continue;
+            };
+            if let Some(path) = local_path(&dest_url)
                 && !path.is_empty()
                 && !document
                     .parent()
@@ -63,7 +74,7 @@ fn check_links(workspace: &Workspace) -> Result<Vec<String>> {
                     .join(path)
                     .exists()
             {
-                errors.push(format!("{relative}: missing local link target: {target}"));
+                errors.push(format!("{relative}: missing local link target: {dest_url}"));
             }
         }
     }
