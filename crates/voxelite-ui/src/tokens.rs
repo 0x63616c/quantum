@@ -334,6 +334,12 @@ impl ControlSize {
 }
 /// Geometry shared across component implementations.
 pub mod metrics {
+    /// Small glyph inside a keycap or checkbox.
+    pub const ICON_TINY: f32 = 10.;
+    /// Compact checkbox side.
+    pub const ICON_DISCLOSURE: f32 = 14.;
+    /// Welcome action glyph.
+    pub const ICON_CHECK: f32 = 16.;
     /// Preserve the mirror tooltip anchor: four pixels of width change plus the new border.
     pub const MIRROR_HINT_X: f32 = 5.;
     /// First mirror tooltip's vertical correction after its button grows from 34 to 36.
