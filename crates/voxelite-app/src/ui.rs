@@ -36,7 +36,9 @@ use voxelite_core::{Palette, Pos};
 use voxelite_plugin_api::{PaletteAction, PalettePresentation};
 use voxelite_render::{PresetView, RenderOptions, View};
 use voxelite_ui::tokens::{focus_ring, metrics, radius, space, type_size};
-use voxelite_ui::{Button, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row};
+use voxelite_ui::{
+    Button, ButtonStyle, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row,
+};
 
 // Render sizing and native layout use the same shared logical-pixel metrics.
 use voxelite_ui::tokens::metrics::{
@@ -154,6 +156,18 @@ fn swatch_ink(color: [u8; 4]) -> Hsla {
         0.2126 * linear(color[0]) + 0.7152 * linear(color[1]) + 0.0722 * linear(color[2]);
     Theme::contrast_ink(luminance > 0.179)
 }
+// Explicit presentation; element identifiers are only identity, never style policy.
+#[derive(Clone, Copy)]
+enum ActionPresentation {
+    Button(ButtonStyle),
+    Icon(TooltipSide),
+    Rail,
+    Mirror(usize),
+    Segment,
+    Frame,
+    Search { style: ButtonStyle, compact: bool },
+}
+
 impl EditorView {
     pub fn new(
         mut editor: Editor,
@@ -665,6 +679,14 @@ impl EditorView {
         if self.capture_status(e, cx) {
             return;
         }
+        if self.save_flow.picker.waiting() {
+            if navigation_key(&e.keystroke) == Some("escape") {
+                self.cancel_save_picker(cx);
+                window.focus(&self.focus, cx);
+            }
+            cx.stop_propagation();
+            return;
+        }
         self.reconcile_palette_panel(window, cx);
         if self.save_flow.needs_confirmation() {
             self.pending_key(&e.keystroke, cx);
@@ -888,49 +910,52 @@ impl EditorView {
         name: &'static str,
         label: &'static str,
         op: Op,
+        presentation: ActionPresentation,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let theme = self.theme;
         let enabled = self.enabled(op);
-        // Frame is an action; the camera selector owns the persistent view state.
-        let selected = self.selected(op) && id != "view-fit";
-        let primary = id == "save";
+        // Frame is an action; the camera selector owns persistent view state.
+        let selected = self.selected(op) && !matches!(presentation, ActionPresentation::Frame);
         let disabled_reason = self.disabled_reason(op);
-        let variant = if primary {
-            ButtonVariant::Primary
-        } else if label.is_empty() {
-            ButtonVariant::Icon
-        } else {
-            ButtonVariant::Ghost
-        };
-        let mut button = Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
-            .variant(variant)
-            .disabled(!enabled)
-            .selected(selected);
-        if !name.is_empty() {
-            button = button.icon(name);
-        }
-        let element = if id.starts_with("rail-") {
-            let mut rail = IconButton::rail(id, op.icon(), op.label(), theme)
-                .disabled(!enabled)
-                .selected(selected);
-            if !label.is_empty() {
-                rail = rail.badge(label);
+        let element = match presentation {
+            ActionPresentation::Rail | ActionPresentation::Mirror(_) => {
+                let mut rail = IconButton::rail(id, op.icon(), op.label(), theme)
+                    .disabled(!enabled)
+                    .selected(selected);
+                if let ActionPresentation::Mirror(_) = presentation {
+                    rail = rail.badge(label);
+                }
+                rail.build()
             }
-            rail.build()
-        } else if matches!(id, "view-iso" | "view-front" | "view-right" | "view-top") {
-            Segment::new(id, label, theme)
+            ActionPresentation::Segment => Segment::new(id, label, theme)
                 .icon(name)
                 .disabled(!enabled)
                 .selected(selected)
-                .build()
-        } else if label.is_empty() && id != "commands" {
-            IconButton::new(id, name, op.label(), theme)
-                .disabled(!enabled)
-                .selected(selected)
-                .build()
-        } else {
-            button.build()
+                .build(),
+            ActionPresentation::Icon(_) | ActionPresentation::Frame => {
+                IconButton::new(id, name, op.label(), theme)
+                    .disabled(!enabled)
+                    .selected(selected)
+                    .build()
+            }
+            ActionPresentation::Button(style) | ActionPresentation::Search { style, .. } => {
+                let mut button =
+                    Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
+                        .legacy_style(style)
+                        .disabled(!enabled)
+                        .selected(selected);
+                if matches!(
+                    presentation,
+                    ActionPresentation::Search { compact: true, .. }
+                ) {
+                    button = button.variant(ButtonVariant::Icon);
+                }
+                if !name.is_empty() {
+                    button = button.icon(name);
+                }
+                button.build()
+            }
         };
         element
             .aria_keyshortcuts(op.shortcut())
@@ -942,18 +967,12 @@ impl EditorView {
                     format!("{} · {}", op.label(), disabled_reason).into()
                 },
                 theme,
-                if id.starts_with("rail-mirror-") {
-                    TooltipSide::Mirror(match op {
-                        Op::MirrorY => 1,
-                        Op::MirrorZ => 2,
-                        _ => 0,
-                    })
-                } else if id.starts_with("rail-") {
-                    TooltipSide::Right
-                } else if id.starts_with("view-") {
-                    TooltipSide::Above
-                } else {
-                    TooltipSide::Below
+                match presentation {
+                    ActionPresentation::Mirror(row) => TooltipSide::Mirror(row),
+                    ActionPresentation::Rail => TooltipSide::Right,
+                    ActionPresentation::Segment | ActionPresentation::Frame => TooltipSide::Above,
+                    ActionPresentation::Icon(side) => side,
+                    _ => TooltipSide::Below,
                 },
             )
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -1009,7 +1028,7 @@ impl EditorView {
                     ("rail-picker", Op::Picker),
                 ]
                 .into_iter()
-                .map(|(id, op)| self.button(id, op.icon(), "", op, cx)),
+                .map(|(id, op)| self.button(id, op.icon(), "", op, ActionPresentation::Rail, cx)),
             )
             .child(
                 div()
@@ -1025,7 +1044,17 @@ impl EditorView {
                     ("rail-mirror-z", "Z", Op::MirrorZ),
                 ]
                 .into_iter()
-                .map(|(id, label, op)| self.button(id, op.icon(), label, op, cx)),
+                .enumerate()
+                .map(|(index, (id, label, op))| {
+                    self.button(
+                        id,
+                        op.icon(),
+                        label,
+                        op,
+                        ActionPresentation::Mirror(index),
+                        cx,
+                    )
+                }),
             )
     }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
@@ -1083,6 +1112,10 @@ impl EditorView {
                     "search",
                     if compact { "" } else { "Search commands" },
                     Op::Commands,
+                    ActionPresentation::Search {
+                        style: ButtonStyle::Ghost,
+                        compact,
+                    },
                     cx,
                 )
                 .h(px(metrics::RAIL_BUTTON))
@@ -1158,9 +1191,23 @@ impl EditorView {
                     .bottom(px(space::PANEL))
                     .left(px(space::XXL))
                     .gap(px(space::XS))
-                    .child(self.button("view-settings", "settings", "", Op::Settings, cx))
+                    .child(self.button(
+                        "view-settings",
+                        "settings",
+                        "",
+                        Op::Settings,
+                        ActionPresentation::Icon(TooltipSide::Above),
+                        cx,
+                    ))
                     .when(self.preferences.navigation_hints, |d| {
-                        d.child(self.button("view-help", "keyboard", "", Op::Help, cx))
+                        d.child(self.button(
+                            "view-help",
+                            "keyboard",
+                            "",
+                            Op::Help,
+                            ActionPresentation::Icon(TooltipSide::Above),
+                            cx,
+                        ))
                     }),
             )
             .child(
@@ -1178,18 +1225,35 @@ impl EditorView {
                                     ("view-top", "Top", Op::Top),
                                 ]
                                 .map(|(id, label, op)| {
-                                    self.button(id, op.icon(), label, op, cx)
-                                        .border_b_2()
-                                        .border_color(transparent_black())
-                                        .when(self.camera_view == Some(op), |d| {
+                                    self.button(
+                                        id,
+                                        op.icon(),
+                                        label,
+                                        op,
+                                        ActionPresentation::Segment,
+                                        cx,
+                                    )
+                                    .border_b_2()
+                                    .border_color(transparent_black())
+                                    .when(
+                                        self.camera_view == Some(op),
+                                        |d| {
                                             d.bg(t.selected())
                                                 .text_color(t.accent())
                                                 .border_color(t.accent())
-                                        })
+                                        },
+                                    )
                                 }),
                             )
                             .child(ToolbarSeparator::line(t).mx(px(space::XS)))
-                            .child(self.button("view-fit", "fit", "", Op::Frame, cx)),
+                            .child(self.button(
+                                "view-fit",
+                                "fit",
+                                "",
+                                Op::Frame,
+                                ActionPresentation::Frame,
+                                cx,
+                            )),
                     ),
             )
             .on_mouse_move(cx.listener(Self::pointer_move))
@@ -1458,7 +1522,14 @@ impl EditorView {
                     .mb(px(if compact { space::XS } else { space::MD }))
                     .justify_between()
                     .child(section_title("Layers"))
-                    .child(self.button("add-layer", "plus", "", Op::AddLayer, cx)),
+                    .child(self.button(
+                        "add-layer",
+                        "plus",
+                        "",
+                        Op::AddLayer,
+                        ActionPresentation::Icon(TooltipSide::Below),
+                        cx,
+                    )),
             )
             .child(
                 div()
@@ -1624,8 +1695,22 @@ impl EditorView {
                     .child(
                         row()
                             .gap(px(space::XXS))
-                            .child(self.button("history-undo", "undo", "", Op::Undo, cx))
-                            .child(self.button("history-redo", "redo", "", Op::Redo, cx)),
+                            .child(self.button(
+                                "history-undo",
+                                "undo",
+                                "",
+                                Op::Undo,
+                                ActionPresentation::Icon(TooltipSide::Below),
+                                cx,
+                            ))
+                            .child(self.button(
+                                "history-redo",
+                                "redo",
+                                "",
+                                Op::Redo,
+                                ActionPresentation::Icon(TooltipSide::Below),
+                                cx,
+                            )),
                     ),
             )
             .child(
@@ -1672,6 +1757,7 @@ impl EditorView {
                                                     "",
                                                     "Keyboard guide",
                                                     Op::Help,
+                                                    ActionPresentation::Button(ButtonStyle::Ghost),
                                                     cx,
                                                 )
                                                 .mt(px(space::MD))
@@ -1854,7 +1940,35 @@ impl EditorView {
                     .items_center()
                     .justify_center()
                     .bg(t.app_scrim())
-                    .child(self.floating().p(px(space::XXL)).child(self.status.clone()))
+                    .child(
+                        self.floating()
+                            .p(px(space::XXL))
+                            .child(
+                                row()
+                                    .gap(px(space::SM))
+                                    .when(self.save_flow.picker.waiting(), |d| {
+                                        let reduced =
+                                            voxelite_app::reduce_motion::prefers_reduced_motion();
+                                        d.child(
+                                            voxelite_ui::Spinner::new("save-picker-spinner", t)
+                                                .reduced_motion(reduced),
+                                        )
+                                    })
+                                    .child(self.status.clone()),
+                            )
+                            .when(self.save_flow.picker.waiting(), |d| {
+                                d.child(
+                                    row().mt(px(space::XL)).child(
+                                        Button::new("cancel-save-picker", "Cancel", t)
+                                            .build()
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.cancel_save_picker(cx);
+                                                window.focus(&this.focus, cx);
+                                            })),
+                                    ),
+                                )
+                            }),
+                    )
                     .into_any_element(),
             );
         }

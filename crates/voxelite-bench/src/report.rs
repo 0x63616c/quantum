@@ -191,7 +191,7 @@ pub fn write_json(path: &Path, report: &impl Serialize) -> Result<()> {
     let mut data = serde_json::to_vec_pretty(report)?;
     data.push(b'\n');
     // Complete serialization before touching the old file.
-    std::fs::write(path, data)?;
+    voxelite_format::storage::safe_write(path, data)?;
     Ok(())
 }
 pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {

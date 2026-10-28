@@ -1,6 +1,6 @@
 //! Shared page metadata and crawl files, generated from the production origin.
 use serde_json::json;
-use std::{error::Error, fmt::Write as _, fs, path::Path};
+use std::{error::Error, fmt::Write as _, path::Path};
 
 use crate::{SITE_BASE_URL, escape};
 
@@ -76,8 +76,8 @@ pub fn write_crawl_files(root: &Path, paths: &[String]) -> Result<(), Box<dyn Er
         )?;
     }
     sitemap.push_str("</urlset>\n");
-    fs::write(root.join("sitemap.xml"), sitemap)?;
-    fs::write(
+    voxelite_format::storage::safe_write(root.join("sitemap.xml"), sitemap)?;
+    voxelite_format::storage::safe_write(
         root.join("robots.txt"),
         format!(
             "User-agent: *\nAllow: /\n\nSitemap: {SITE_BASE_URL}/sitemap.xml\n\n# Markdown documentation: {SITE_BASE_URL}/llms.txt\n# Complete documentation: {SITE_BASE_URL}/llms-full.txt\n"

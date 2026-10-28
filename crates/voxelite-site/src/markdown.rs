@@ -4,7 +4,7 @@ use htmd::{
     element_handler::Handlers,
     options::{BrStyle, Options},
 };
-use std::{error::Error, fmt::Write as _, fs, path::Path};
+use std::{error::Error, fmt::Write as _, path::Path};
 use url::Url;
 
 use crate::{DocPage, PAGES, SITE_BASE_URL, escape};
@@ -103,8 +103,8 @@ pub fn write_indexes(root: &Path, documents: &[(&DocPage, String)]) -> Result<()
         writeln!(index, "- [{}]({url}): {}", page.title, page.description)?;
         write!(full, "\n---\n\nSource: [{url}]({url})\n\n{markdown}")?;
     }
-    fs::write(root.join("llms.txt"), index)?;
-    fs::write(root.join("llms-full.txt"), full)?;
+    voxelite_format::storage::safe_write(root.join("llms.txt"), index)?;
+    voxelite_format::storage::safe_write(root.join("llms-full.txt"), full)?;
     Ok(())
 }
 

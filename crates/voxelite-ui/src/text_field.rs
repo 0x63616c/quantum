@@ -81,6 +81,8 @@ pub struct TextField {
     placeholder: SharedString,
     theme: Theme,
     embedded: bool,
+    design: bool,
+    error: Option<SharedString>,
     cells: Option<usize>,
     escape_policy: EscapePolicy,
     validate_commit: fn(&str) -> bool,
@@ -124,6 +126,8 @@ impl TextField {
             placeholder,
             theme: Theme::Dark,
             embedded: false,
+            design: false,
+            error: None,
             cells: None,
             escape_policy: EscapePolicy::Blur,
             validate_commit: |_| true,
@@ -144,6 +148,19 @@ impl TextField {
             autoscroll: None,
             subscriptions: Vec::new(),
         })
+    }
+    /// Create an editor with the new token-only frame; editing semantics are unchanged.
+    pub fn design(placeholder: impl Into<SharedString>, cx: &mut App) -> Entity<Self> {
+        let field = Self::new(placeholder, cx);
+        field.update(cx, |field, _| field.design = true);
+        field
+    }
+    /// Inline validation message, independent of the pure editing and commit policies.
+    pub fn error(&mut self, error: Option<SharedString>, cx: &mut Context<Self>) {
+        if self.error != error {
+            self.error = error;
+            cx.notify();
+        }
     }
     /// Current draft text.
     pub fn text(&self) -> &str {
@@ -704,14 +721,20 @@ impl Render for TextField {
         let entity = cx.entity();
         let focus = self.focus.clone();
         let focused = self.focused(window);
-        let mut frame = FieldFrame::new(t).focused(focused).embedded(self.embedded);
+        let design = self.design;
+        let mut frame = if design {
+            FieldFrame::design(t).invalid(self.error.is_some())
+        } else {
+            FieldFrame::new(t)
+        };
+        frame = frame.focused(focused).embedded(self.embedded);
         if let Some(cells) = self.cells {
             frame = frame.numeric(cells);
         }
         let menu = self
             .menu
             .map(|p| self.context_menu(p, cx).into_any_element());
-        frame
+        let field = frame
             .build()
             .id("text-field")
             .role(Role::TextInput)
@@ -721,9 +744,15 @@ impl Render for TextField {
             .tab_index(0)
             .track_focus(&self.focus)
             .key_context("TextField SharedTextInput")
-            .when(focused && !self.embedded, |d| {
+            .when(focused && !self.embedded && !design, |d| {
                 d.shadow(tokens::focus_ring(t))
             })
+            .when(design && !self.embedded, |d| {
+                d.focus_visible(move |d| {
+                    d.shadow(crate::presentation::ring(t, crate::ColorToken::Surface))
+                })
+            })
+            .when_some(self.error.clone(), |d, e| d.aria_description(e))
             .when(matches!(self.drag, Some(Drag::Scrub { .. })), |d| {
                 d.cursor(CursorStyle::ResizeLeftRight)
             })
@@ -785,14 +814,28 @@ impl Render for TextField {
                                 this.text().to_owned().into()
                             };
                             let style = window.text_style();
-                            let color = if this.text().is_empty() {
+                            let color = if design {
+                                t.color(if this.text().is_empty() {
+                                    crate::ColorToken::TextTertiary
+                                } else {
+                                    crate::ColorToken::TextPrimary
+                                })
+                            } else if this.text().is_empty() {
                                 t.muted()
                             } else {
                                 t.text()
                             };
                             let line = window.text_system().shape_line(
                                 content.clone(),
-                                px(type_size::BODY_LG),
+                                px(if design {
+                                    if this.cells.is_some() {
+                                        crate::TextSize::Mono.px()
+                                    } else {
+                                        crate::TextSize::Body.px()
+                                    }
+                                } else {
+                                    type_size::BODY_LG
+                                }),
                                 &[TextRun {
                                     len: content.len(),
                                     font: style.font(),
@@ -828,7 +871,14 @@ impl Render for TextField {
                                                     bounds.size.height,
                                                 ),
                                             ),
-                                            if a == b {
+                                            if design {
+                                                if a == b {
+                                                    t.color(crate::ColorToken::AccentText)
+                                                } else {
+                                                    t.color(crate::ColorToken::Accent)
+                                                        .opacity(crate::tokens::state::SELECTED)
+                                                }
+                                            } else if a == b {
                                                 t.accent()
                                             } else {
                                                 t.text_selection()
@@ -863,7 +913,27 @@ impl Render for TextField {
                 )
                 .size_full(),
             )
-            .children(menu)
+            .children(menu);
+        if design {
+            div()
+                .child(field)
+                .when_some(self.error.clone(), |d, error| {
+                    d.child(
+                        div()
+                            .id("field-error")
+                            .role(Role::Alert)
+                            .mt(px(crate::Space::S2.px()))
+                            .child(crate::InlineError::message(
+                                error,
+                                crate::FeedbackKind::Danger,
+                                t,
+                            )),
+                    )
+                })
+                .into_any_element()
+        } else {
+            field.into_any_element()
+        }
     }
 }
 

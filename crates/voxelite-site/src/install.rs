@@ -169,17 +169,17 @@ pub fn write_integrations(root: &Path) -> Result<(), Box<dyn Error>> {
     ] {
         let path = root.join(path);
         fs::create_dir_all(path.parent().expect("example directory"))?;
-        fs::write(
+        voxelite_format::storage::safe_write(
             path,
             format!("{}\n", serde_json::to_string_pretty(&config)?),
         )?;
     }
     fs::create_dir_all(root.join("codex"))?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("codex/config.toml"),
         format!("{}\n", manual.toml()),
     )?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("README.md"),
         format!(
             include_str!("../templates/integrations.md"),

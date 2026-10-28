@@ -1,7 +1,9 @@
 # Voxelite native editor
 
 A Rust/GPUI desktop shell for the shared Voxelite engine. With no file argument,
-it opens the welcome window; a `.voxl` path opens directly in the editor. The
+it opens the welcome window; a `.voxl` path opens directly in the editor. An
+invalid or unreadable path opens Welcome with an inline error naming the file.
+Failed opens inside the app show an error and preserve the current document. The
 Concept A shell uses bundled Geist fonts, pure black and white themes, a unified
 toolbar, a persistent left tool rail, compact palette previews, layers and real
 command history. The sidebar adapts at the 1024×640 minimum window size; large
@@ -141,7 +143,9 @@ quit protect unsaved changes; the built-in example has no write destination
 until Save As. Failed saves retain the document and dirty state. Open and Save
 perform file work on a background executor while editor input is blocked.
 “Save & continue” completes the pending New/Open/Quit only after a successful
-save; cancellation or failure keeps the project open.
+save; cancellation or failure keeps the project open. While waiting for a Save As
+file dialog, Cancel or Escape returns to the editor without saving or continuing
+the pending command. Late responses from an abandoned picker are ignored.
 
 Ordinary Save checks the destination against the bytes last opened/saved and
 rejects external edits or deletion. Save As can replace an explicitly selected
@@ -332,7 +336,15 @@ The standalone server retains those tools. This is a local session, not hosted
 multi-user collaboration or a durable recovery journal.
 
 `VOXELITE_DATA_DIR` overrides local palette/settings/socket storage for isolated runs.
-The default is `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`.
+On macOS the default is `~/Library/Application Support/voxelite`; other platforms
+use `$XDG_DATA_HOME/voxelite` or `$HOME/.local/share/voxelite`. Each JSON file migrates
+once from the legacy data directory when its new destination is absent. Migration
+never replaces an existing destination and records a `.migrated` marker to prevent
+legacy data from returning after recovery. Legacy files are left in place so an older build still finds them.
+Preferences, recent projects and the palette library use bounded `JsonStore` storage.
+Malformed JSON moves to a unique `*.corrupt` sibling before reporting an error
+(recent projects fall back to an empty list). All replacements stage beside the
+original, sync the file, rename, then sync the directory on Unix.
 `bash scripts/capture-native.sh` now also captures main/tools/palettes/
 comments/history/agent in both themes under `screenshots/polish-2/`. Its fixture
 client drives the real stdio bridge and checks edit receipts. It also checks

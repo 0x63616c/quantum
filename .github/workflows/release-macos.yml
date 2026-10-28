@@ -38,11 +38,8 @@ jobs:
           echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
       - name: Build app without signing credentials
         run: |
-          cargo_version=$(cargo metadata --no-deps --locked --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"] == "voxelite-app"))')
-          if [[ "${TAG#v}" != "$cargo_version" ]]; then
-            echo 'Release tag must match the voxelite-app Cargo version.' >&2
-            exit 1
-          fi
+          cargo build --release --locked -p xtask
+          target/release/xtask version --check-tag "$TAG"
           cargo build --release --locked -p voxelite-app --bin voxelite
           cargo build --release --locked -p voxelite-mcp
       - name: Sign and package
@@ -63,19 +60,19 @@ jobs:
               exit 1
             fi
           done
-          VERSION="${TAG#v}" scripts/package-macos.sh --skip-build
+          VERSION="${TAG#v}" target/release/xtask macos package --skip-build
       - name: Generate release notes
         run: |
-          python3 scripts/generate-macos-release-notes.py
+          target/release/xtask macos release-notes
       - name: Download previous update feed
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/fetch-macos-appcast.py dist/previous-appcast.xml
+        run: target/release/xtask macos fetch-appcast dist/previous-appcast.xml
       - name: Generate signed update feed
         id: appcast
         env:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
-        run: scripts/generate-macos-appcast.sh
+        run: target/release/xtask macos appcast
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

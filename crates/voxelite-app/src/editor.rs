@@ -43,6 +43,14 @@ pub enum EditorError {
     /// Filesystem error.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// A project could not be loaded; retains its path and underlying cause.
+    #[error("Could not open {path}: {source}")]
+    Open {
+        /// Requested project path.
+        path: PathBuf,
+        /// Loading or editor initialization failure.
+        source: Box<EditorError>,
+    },
     /// Invalid human gesture.
     #[error("{0}")]
     Gesture(String),
@@ -488,7 +496,14 @@ impl Editor {
     }
     /// Read a file without touching the current editor on failure.
     pub fn open(path: &Path) -> EditorResult<Self> {
-        Self::from_session(DocumentSession::open(path, Limits::default())?)
+        Self::load_session(path).and_then(Self::from_session)
+    }
+    /// Load a session with filename context, before replacing any live editor.
+    pub fn load_session(path: &Path) -> EditorResult<DocumentSession> {
+        DocumentSession::open(path, Limits::default()).map_err(|error| EditorError::Open {
+            path: path.to_owned(),
+            source: Box::new(error.into()),
+        })
     }
     /// Capture portable metadata and current content for a local MCP attachment.
     pub fn project(&self) -> Project {
