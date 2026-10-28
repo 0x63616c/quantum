@@ -178,3 +178,34 @@ fn repository_brand_consistency() {
     let errors = check(&Workspace::discover().unwrap()).unwrap();
     assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
+
+#[test]
+fn storage_checks_production_paths_and_env_even_with_unchanged_test_literals() {
+    let workspace = Workspace::discover().unwrap();
+    let source = workspace
+        .read("crates/voxelite-app/src/local_settings.rs")
+        .unwrap();
+    for (old, new) in [
+        (
+            "Library/Application Support/voxelite",
+            "Library/Application Support/quantum",
+        ),
+        (".join(\"voxelite\")", ".join(\"quantum\")"),
+        (".local/share", ".local/data"),
+        ("VOXELITE_DATA_DIR", "QUANTUM_DATA_DIR"),
+        ("XDG_DATA_HOME", "XDG_CONFIG_HOME"),
+    ] {
+        let mut audit = Audit {
+            workspace: &workspace,
+            inventory: read_toml(&workspace, "brand.toml").unwrap(),
+            errors: vec![],
+        };
+        audit.storage_source(&source).unwrap();
+        assert!(audit.errors.is_empty(), "{:?}", audit.errors);
+        // Replace only the production occurrence, preserving matching test literals.
+        let changed = source.replacen(old, new, 1);
+        assert_ne!(changed, source);
+        audit.storage_source(&changed).unwrap();
+        assert!(!audit.errors.is_empty(), "missed rename of {old}");
+    }
+}
