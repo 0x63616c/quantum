@@ -33,6 +33,10 @@ fn attribution(license: &str) -> String {
 fn licenses() -> Vec<(&'static str, &'static str)> {
     vec![
         (
+            "ascii-reveal · MIT",
+            include_str!("../../../voxelite-ui/NOTICE"),
+        ),
+        (
             "Geist · SIL Open Font License 1.1",
             include_str!("../../assets/fonts/OFL-Geist.txt"),
         ),
