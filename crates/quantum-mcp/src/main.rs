@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "--help" | "-h" => {
                 println!(
-                    "quantum-mcp [--root DIRECTORY]\nquantum-mcp --connect SOCKET\n\nServe voxelite.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
+                    "quantum-mcp [--root DIRECTORY]\nquantum-mcp --connect SOCKET\n\nServe quantum.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
                 );
                 return Ok(());
             }

@@ -18,3 +18,23 @@ fn tools_catalog_matches_server() {
         "MCP tool catalog drifted. Regenerate with: UPDATE_TOOLS_JSON=1 cargo test -p quantum-mcp --locked --test tools_catalog"
     );
 }
+
+#[test]
+fn compatibility_versions_describe_current_output_and_legacy_readers() {
+    let compatibility: serde_json::Value =
+        serde_json::from_str(include_str!("../../../spec/mcp/v1/compatibility.json")).unwrap();
+    assert_eq!(compatibility["api_version"], quantum_mcp::API_VERSION);
+    let aliases = compatibility["legacy_api_versions"].as_array().unwrap();
+    assert_eq!(aliases, &[serde_json::json!("voxelite.v1")]);
+    assert_ne!(aliases[0], quantum_mcp::API_VERSION);
+    for tool in serde_json::to_value(QuantumServer::tools())
+        .unwrap()
+        .as_array()
+        .unwrap()
+    {
+        assert_eq!(
+            tool["outputSchema"]["properties"]["api_version"]["const"],
+            quantum_mcp::API_VERSION
+        );
+    }
+}

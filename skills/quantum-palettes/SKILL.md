@@ -3,7 +3,7 @@ name: quantum-palettes
 description: Choose, create or apply Quantum palettes with readable material roles and stable slot mappings, without unintended recoloring.
 ---
 
-Requires Quantum MCP `voxelite.v1`. Discover capabilities and read
+Requires Quantum MCP `quantum.v1`. Discover capabilities and read
 `quantum_palette_list` before editing. Use captured epoch/revision and fresh
 operation UUIDs for mutations; check results before continuing.
 
