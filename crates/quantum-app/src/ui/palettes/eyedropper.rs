@@ -5,7 +5,6 @@ use block2::RcBlock;
 use futures_channel::oneshot;
 use objc2::{MainThreadMarker, runtime::AnyClass};
 use objc2_app_kit::{NSColor, NSColorSampler, NSColorSpace};
-use quantum_ui::Space;
 use std::cell::Cell;
 
 type Sample = Result<Option<[u8; 3]>, ()>;
