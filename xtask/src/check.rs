@@ -117,6 +117,7 @@ pub static CHECKS: &[Check] = &[
         "Branding inventory matches source and packaging",
         checks::brand::run,
     ),
+    Check::new("typos", "Spelling in source and documentation", typos_check),
     Check::new(
         "docs-links",
         "Local links in tracked docs Markdown",
@@ -155,6 +156,21 @@ pub static CHECKS: &[Check] = &[
     ),
     Check::cargo("machete", "Unused dependencies", &["machete"]),
 ];
+
+fn typos_check(context: &Context<'_>) -> Outcome {
+    let sh = match xshell::Shell::new() {
+        Ok(sh) => sh,
+        Err(error) => return Outcome::Fail(vec![error.to_string()]),
+    };
+    let command = cmd::Command::from(xshell::cmd!(sh, "typos --config _typos.toml --hidden"))
+        .current_dir(context.workspace.root());
+    match command.run(context.runner) {
+        Ok(()) => Outcome::Pass,
+        Err(error) => Outcome::Fail(vec![format!(
+            "typos: {error}; install typos-cli 1.51.1 with cargo install typos-cli --version 1.51.1 --locked"
+        )]),
+    }
+}
 
 fn appcast_check(context: &Context<'_>) -> Outcome {
     match crate::macos::validate(&context.workspace.path("site/appcast.xml"), true, None) {
