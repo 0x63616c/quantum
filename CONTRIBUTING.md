@@ -62,6 +62,11 @@ The [PR template](.github/pull_request_template.md) asks for:
 
 Keep the sections and their order so every PR reads the same way.
 
+Dependabot PRs are exempt from the linked-issue check. GitHub Actions updates
+use the accepted `ci:` commit-message prefix and one weekly group so related
+actions, including upload/download-artifact, are reviewed together. Keep action
+references SHA-pinned with exact version comments when reviewing that group.
+
 ### Screenshots for UI changes
 
 Any PR that changes what a user sees gets a **Screenshots** section with a
