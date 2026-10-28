@@ -159,22 +159,32 @@ pub fn read(reader: impl Read) -> FormatResult<(Value, BTreeMap<String, Volume>,
             Ok(n)
         }
     }
+    let mut de = serde_json::Deserializer::from_reader(std::io::BufReader::new(BoundedRead {
+        inner: reader,
+        read: 0,
+    }));
+    parse(&mut de)
+}
+pub fn from_slice(bytes: &[u8]) -> FormatResult<(Value, BTreeMap<String, Volume>, Extensions)> {
+    parse(&mut serde_json::Deserializer::from_slice(bytes))
+}
+// Both input adapters share the same bounded visitor, duplicate-key handling,
+// volume deserializer and trailing-input check. The caller bounds slice length.
+fn parse<'de, R: serde_json::de::Read<'de>>(
+    de: &mut serde_json::Deserializer<R>,
+) -> FormatResult<(Value, BTreeMap<String, Volume>, Extensions)> {
     let mut state = State {
         volumes: BTreeMap::new(),
         extensions: Extensions::default(),
         bytes: 0,
         voxel_count: 0,
     };
-    let mut de = serde_json::Deserializer::from_reader(std::io::BufReader::new(BoundedRead {
-        inner: reader,
-        read: 0,
-    }));
     let value = Seed {
         state: &mut state,
         path: String::new(),
         depth: 0,
     }
-    .deserialize(&mut de)?;
+    .deserialize(&mut *de)?;
     de.end()?;
     Ok((value, state.volumes, state.extensions))
 }
