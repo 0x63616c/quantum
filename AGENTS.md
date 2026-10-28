@@ -119,6 +119,13 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
 
 ## Build, test and lint
 
+`cargo xtask validate` runs the registered Rust gates: tidy, fmt, clippy (all
+targets), workspace tests, deny and machete. Missing tools skip with a reason;
+use `--strict` to fail instead. Use `cargo xtask check --list` to list checks,
+`cargo xtask check tidy fmt` for named checks, or `validate --only tidy fmt` /
+`validate --skip test` to select gates. Script and platform checks below remain
+separate. See [xtask/README.md](xtask/README.md) for the library and registry.
+
 Run from the repository root. These are the general macOS CI checks:
 
 ```sh
@@ -132,6 +139,9 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 
 | Purpose | Command |
 | --- | --- |
+| All registered Rust validation gates | `cargo xtask validate --strict` |
+| List / run named checks | `cargo xtask check --list` / `cargo xtask check tidy fmt` |
+| Preview / apply a stable version bump | `cargo xtask bump-version patch --dry-run` / `cargo xtask bump-version patch` |
 | Start native editor | `cargo run -p voxelite-app --bin voxelite` |
 | Open sample in light mode | `cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light` |
 | Standard workspace tests | `cargo test --workspace` |
@@ -143,7 +153,7 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
 | Dependency licenses, advisories and sources | `cargo deny check` |
 | Unused dependencies | `cargo machete` |
-| Render harness help | `cargo xtask --help` |
+| Task / render harness help | `cargo xtask --help` / `cargo xtask bench --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
 | Web build | `scripts/build-web.sh` |

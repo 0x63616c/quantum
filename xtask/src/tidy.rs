@@ -1,6 +1,14 @@
 //! Check tracked files without walking build outputs or other untracked files.
 
-use std::{collections::BTreeSet, path::Path, process::Command};
+use std::collections::BTreeSet;
+
+use crate::{
+    cmd::{Runner, SystemRunner},
+    workspace::Workspace,
+};
+
+#[cfg(test)]
+use crate::workspace::tracked_paths;
 
 const ROOT_ENTRIES: &[&str] = &[
     ".cargo",
@@ -37,42 +45,30 @@ const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024;
 const LARGE_FILES: &[&str] = &[];
 
 pub(super) fn run() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let output = Command::new("git")
-        .args(["ls-files", "-z"])
-        .current_dir(&root)
-        .output()
-        .map_err(|error| format!("cannot list tracked files: {error}"))?;
-    if !output.status.success() {
-        return Err(format!(
-            "git ls-files failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    let paths = tracked_paths(&output.stdout)
-        .map_err(|error| format!("tracked filename is not UTF-8: {error}"))?;
+    let workspace = Workspace::discover().map_err(|error| error.to_string())?;
+    check(&workspace, &SystemRunner::default())?;
+    println!("Repository hygiene checks passed.");
+    Ok(())
+}
+
+pub(super) fn check(workspace: &Workspace, runner: &dyn Runner) -> Result<(), String> {
+    let paths = workspace
+        .tracked_files(runner)
+        .map_err(|error| error.to_string())?;
     let mut errors = BTreeSet::new();
     for path in paths {
         // Measure the tracked symlink itself, not an untracked target.
-        let metadata = root
-            .join(path)
+        let metadata = workspace
+            .path(&path)
             .symlink_metadata()
             .map_err(|error| format!("cannot inspect tracked file {path:?}: {error}"))?;
-        errors.extend(check_file(path, metadata.len(), LARGE_FILES));
+        errors.extend(check_file(&path, metadata.len(), LARGE_FILES));
     }
     if errors.is_empty() {
-        println!("Repository hygiene checks passed.");
         Ok(())
     } else {
         Err(errors.into_iter().collect::<Vec<_>>().join("\n"))
     }
-}
-
-fn tracked_paths(output: &[u8]) -> Result<Vec<&str>, std::str::Utf8Error> {
-    Ok(std::str::from_utf8(output)?
-        .split('\0')
-        .filter(|path| !path.is_empty())
-        .collect())
 }
 
 fn check_file(path: &str, size: u64, large_files: &[&str]) -> Vec<String> {

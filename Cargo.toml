@@ -29,6 +29,7 @@ voxelite-plugin-mirror = { path = "crates/plugins/voxelite-plugin-mirror" }
 voxelite-plugin-palette = { path = "crates/plugins/voxelite-plugin-palette" }
 voxelite-plugin-shadows-lighting = { path = "crates/plugins/voxelite-plugin-shadows-lighting" }
 voxelite-plugin-tools = { path = "crates/plugins/voxelite-plugin-tools" }
+clap = { version = "4.5", default-features = false, features = ["derive", "std", "help", "usage", "error-context"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 semver = "1.0"
