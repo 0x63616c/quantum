@@ -1,4 +1,4 @@
-# voxelite.v1 — headless MCP stage contract
+# quantum.v1 — headless MCP stage contract
 
 The implemented catalog is [tools.json](tools.json): 38 sorted tools, descriptions,
 strict JSON Schema 2020-12 inputs, output envelopes, and annotations. The MCP
@@ -16,7 +16,7 @@ This contract describes the standalone **MCP stage** for `quantum-mcp`.
 See [product direction](../../../docs/adr/0003-product-direction.md) for the broader
 scope. Tool names follow the stage's document/voxels/layers naming and have the
 `quantum_` prefix. The response
-API version is `voxelite.v1`. It builds on core, format, render, the portable plugin
+API version is `quantum.v1`. It builds on core, format, render, the portable plugin
 API/host, built-in plugins and rmcp. Built-in exporters own GLB/PNG encoding;
 render feedback uses `png` directly. There is no GUI, HTTP listener, live editor attachment, plugin runtime,
 upload/artifact store, durable session journal, or recovery daemon in this stage.
@@ -165,7 +165,8 @@ explicit save is required for persistence across process exit.
 ## Product rename compatibility
 
 Quantum advertises server name `quantum` and discovers tools under `quantum_`.
-The response `api_version` remains `voxelite.v1` for external schema validators;
-it identifies the unchanged envelope contract, not the product display name.
+The response `api_version` is `quantum.v1`. `compatibility.json` lists the legacy
+alias for clients reading older responses; the envelope structure is unchanged.
 This value is output-only: no tool input or initialization parameter consumes it.
-Clients rediscover renamed tools through `tools/list`.
+Clients must accept the current version before upgrading and rediscover renamed
+tools through `tools/list`. Exact old-version validators need updating.

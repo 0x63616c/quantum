@@ -1,6 +1,6 @@
 # Quantum agent skills
 
-Four portable workflows for the implemented `voxelite.v1` MCP server:
+Four portable workflows for the implemented `quantum.v1` MCP server:
 
 | Skill | Use |
 | --- | --- |
@@ -52,7 +52,7 @@ Repeat for the other chosen folders and restart your host to discover the skills
 ## Verify, update, remove
 
 Ask the host to use the workflow, list MCP tools, and call
-`quantum_capabilities_get`. Expect API `voxelite.v1`, an epoch and CPU render availability.
+`quantum_capabilities_get`. Expect API `quantum.v1`, an epoch and CPU render availability.
 Try the included example request in a new 32³ project, inspect four real PNGs,
 and save. Host UI loading is not tested on this headless machine; stdio execution
 and the tutorial are independently verified by repository tests/scripts.
