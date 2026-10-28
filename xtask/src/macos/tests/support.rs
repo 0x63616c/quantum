@@ -67,6 +67,14 @@ impl FakeRunner {
     pub fn has(&self, name: &str) -> bool {
         self.flags.borrow().contains_key(name)
     }
+    fn create_dmg_fixture(&self, args: &[String], root: &Path) {
+        if self.has("capture_stage") {
+            let index = args.iter().position(|arg| arg == "-srcfolder").unwrap() + 1;
+            tree_copy(&root.join(&args[index]), &root.join("captured-stage"));
+        }
+        write(root.join(args.last().unwrap()), "fixture dmg");
+    }
+
     pub fn calls(&self, program: &str) -> Vec<Vec<String>> {
         self.events
             .borrow()
@@ -222,7 +230,7 @@ impl Runner for FakeRunner {
                     tree_copy(&path(&args[0]), &path(&args[1]));
                 }
             }
-            "hdiutil" => write(path(args.last().unwrap()), "fixture dmg"),
+            "hdiutil" => self.create_dmg_fixture(&args, root),
             "xcrun" if args.starts_with(&["notarytool".into(), "submit".into()]) => {
                 assert_private(&path(
                     &args[args.iter().position(|a| a == "--key").unwrap() + 1],

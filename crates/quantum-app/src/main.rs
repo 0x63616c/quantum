@@ -111,6 +111,8 @@ fn main() -> anyhow::Result<()> {
         return ui_snapshots::run();
     }
     quantum_app::local_settings::initialize_data_dir()?;
+    #[cfg(target_os = "macos")]
+    updater::migrate_data()?;
     install_diagnostics()?;
     let options = options(std::env::args().skip(1))?;
     if let Some(path) = options.viewport_png {

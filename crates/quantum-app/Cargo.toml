@@ -76,7 +76,7 @@ optional = true
 gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
 objc2.workspace = true
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSButton", "NSControl", "NSColor", "NSColorSpace", "NSColorSampler", "objc2-core-foundation", "NSPanel", "NSPopUpButton", "NSResponder", "NSSavePanel", "NSTextField", "NSView", "NSWindow", "block2", "objc2-uniform-type-identifiers"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSDictionary", "NSUserDefaults", "NSGeometry", "NSObject", "NSString", "NSURL"] }
 objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
 block2 = "0.6.2"
 libloading = "0.8.9"

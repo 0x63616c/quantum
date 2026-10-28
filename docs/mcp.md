@@ -120,7 +120,7 @@ block. Content-edit data includes these fields (UUID placeholders abbreviated):
 
 ```json
 {
-  "api_version": "voxelite.v1",
+  "api_version": "quantum.v1",
   "session_id": "<session UUID>",
   "epoch": "<epoch UUID>",
   "ok": true,
@@ -149,7 +149,7 @@ and an envelope such as:
 
 ```json
 {
-  "api_version":"voxelite.v1",
+  "api_version":"quantum.v1",
   "session_id":"<session UUID>",
   "epoch":"<epoch UUID>",
   "ok":false,

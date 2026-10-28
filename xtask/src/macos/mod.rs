@@ -20,6 +20,7 @@ mod files;
 pub mod package;
 pub mod release_notes;
 pub mod sign;
+mod update_compat;
 
 pub use feed::{Update, validate, validate_release};
 pub use files::sha256;
@@ -39,13 +40,14 @@ pub const REPOSITORY: &str = "0x63616c/quantum";
 /// Stable download URL prefix; preserve published asset names.
 pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
 
-// Retained for immutable signed feeds and the transition before issue #91.
+// Retained only for validating immutable signed release URLs.
+#[cfg(test)]
 pub(crate) const LEGACY_REPOSITORY: &str = "0x63616c/voxelite";
 pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
 
 fn release_repository(environment: &Environment) -> Result<&str> {
     let repository = environment.or("GITHUB_REPOSITORY", REPOSITORY);
-    if matches!(repository, REPOSITORY | LEGACY_REPOSITORY) {
+    if repository == REPOSITORY {
         Ok(repository)
     } else {
         Err(invalid("Invalid GitHub repository"))

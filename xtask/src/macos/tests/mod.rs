@@ -1,6 +1,6 @@
 mod appcast;
 mod packaging;
 mod release_notes;
-mod support;
+pub(super) mod support;
 
 mod workflow;

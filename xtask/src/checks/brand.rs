@@ -292,13 +292,13 @@ impl Audit<'_> {
                 source,
             })?;
         self.equal(
-            &format!("{path}: format const"),
-            schema["properties"]["format"]["const"].clone(),
+            &format!("{path}: canonical format"),
+            schema["properties"]["format"]["enum"][0].clone(),
             self.identifier("format_magic")?,
         );
         for (pattern, name) in [
             (r#"format:\s*"([^"]+)"\.into\(\)"#, "format_magic"),
-            (r#"wire\.format\s*!=\s*"([^"]+)""#, "format_magic"),
+            (r#"if\s*\(wire\.format\s*!=\s*"([^"]+)""#, "format_magic"),
             (
                 r#"const\s+MIME_TYPE\s*:\s*&str\s*=\s*"([^"]+)""#,
                 "format_mime_type",
