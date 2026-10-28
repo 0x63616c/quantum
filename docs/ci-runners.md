@@ -65,5 +65,6 @@ tail ~/Library/Logs/voxelite-sccache.log
 - CI Linux (fmt, Clippy, tests, tidy, cargo-deny, machete) and the Python script tests
   run on GitHub-hosted runners and do not queue.
 - CI macOS on the Mac mini runs Clippy and the workspace tests. PRs build the
-  release-profile DMG only when packaging inputs change; pushes to `main` always do.
+  release-profile DMG only when packaging inputs change; pushes to `main` skip it. A nightly
+  run on `main` (03:00 PT) builds the DMG and opens a `priority:p0` issue if anything fails.
 - Docs-only PRs skip the macOS build entirely.
