@@ -6,12 +6,12 @@ use gpui::{App, Bounds, Context, Entity, Pixels, Task, Window};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Default)]
-pub(super) struct Playback {
+pub(crate) struct Playback {
     pub start: Option<Instant>,
     pub elapsed: Option<Duration>,
 }
 
-pub(super) struct Clock {
+pub(crate) struct Clock {
     start: Instant,
     loading: bool,
     timer: Option<Task<()>>,
@@ -50,7 +50,7 @@ impl Clock {
 }
 
 /// Called during prepaint: a clipped element never arms another timer.
-pub(super) fn schedule(
+pub(crate) fn schedule(
     clock: &Entity<Clock>,
     bounds: Bounds<Pixels>,
     active: bool,

@@ -20,304 +20,6 @@ pub fn icon(name: impl AsRef<str>) -> Svg {
         .size(px(metrics::ICON))
         .flex_shrink_0()
 }
-/// Button visual hierarchy.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum ButtonVariant {
-    /// Strong primary action.
-    Primary,
-    /// Bordered secondary action.
-    #[default]
-    Secondary,
-    /// Quiet text action.
-    Ghost,
-    /// Square icon action.
-    Icon,
-    /// Destructive action.
-    Danger,
-}
-/// A labelled action with keyboard focus, selected and disabled states.
-/// Attach listeners and tooltips to `build()`; attach listeners only when enabled.
-#[derive(IntoElement)]
-pub struct Button {
-    id: ElementId,
-    label: SharedString,
-    theme: Theme,
-    variant: ButtonVariant,
-    size: ControlSize,
-    icon: Option<SharedString>,
-    disabled: bool,
-    selected: bool,
-    tab_index: isize,
-}
-impl Button {
-    /// Custom-content action frame. Inherits typography and layout from its parent;
-    /// callers add their content, dimensions and existing event/focus behavior.
-    /// This is useful for menu triggers, rich choices and document rows.
-    pub fn custom(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
-        row()
-            .id(id)
-            .role(Role::Button)
-            .aria_label(label)
-            .rounded(px(radius::CONTROL))
-            .cursor_pointer()
-    }
-    /// Block-content action for rich tiles. Existing card corner geometry is retained.
-    pub fn tile(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Stateful<Div> {
-        div()
-            .id(id)
-            .role(Role::Button)
-            .aria_label(label)
-            .rounded(px(radius::CONTROL))
-            .cursor_pointer()
-    }
-
-    /// Construct a secondary button. Labels also name icon-only buttons for accessibility.
-    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, theme: Theme) -> Self {
-        Self {
-            id: id.into(),
-            label: label.into(),
-            theme,
-            variant: ButtonVariant::Secondary,
-            size: ControlSize::Md,
-            icon: None,
-            disabled: false,
-            selected: false,
-            tab_index: 0,
-        }
-    }
-    /// Set the action hierarchy.
-    pub fn variant(mut self, variant: ButtonVariant) -> Self {
-        self.variant = variant;
-        self
-    }
-    /// Set the shared height.
-    pub fn size(mut self, size: ControlSize) -> Self {
-        self.size = size;
-        self
-    }
-    /// Add a leading icon from `icons/<name>.svg`.
-    pub fn icon(mut self, name: impl Into<SharedString>) -> Self {
-        self.icon = Some(name.into());
-        self
-    }
-    /// Remove the tab stop and use disabled colors.
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
-    /// Show persistent selection.
-    pub fn selected(mut self, selected: bool) -> Self {
-        self.selected = selected;
-        self
-    }
-    /// Set the tab order within the surrounding focus group.
-    pub fn tab_index(mut self, index: isize) -> Self {
-        self.tab_index = index;
-        self
-    }
-    /// Build a GPUI element, exposing native event, accessibility and tooltip hooks.
-    pub fn build(self) -> Stateful<Div> {
-        let t = self.theme;
-        let primary = self.variant == ButtonVariant::Primary;
-        let icon_only = self.variant == ButtonVariant::Icon;
-        let fg = if self.disabled {
-            t.disabled()
-        } else if primary {
-            t.background()
-        } else if self.variant == ButtonVariant::Danger {
-            t.danger()
-        } else if self.selected {
-            t.accent()
-        } else {
-            t.text()
-        };
-        Self::custom(self.id, self.label.clone())
-            .aria_selected(self.selected)
-            .h(px(self.size.height()))
-            .min_w(px(self.size.height()))
-            .flex_shrink_0()
-            .justify_center()
-            .px(px(if icon_only { space::SM } else { space::LG }))
-            .gap(px(space::MD))
-            .font_family(type_size::UI)
-            .text_size(px(type_size::BODY))
-            .text_color(fg)
-            .when(
-                self.variant == ButtonVariant::Secondary || self.variant == ButtonVariant::Danger,
-                |d| d.border_1().border_color(t.separator()).bg(t.control()),
-            )
-            .when(primary, |d| {
-                d.bg(if self.disabled { t.control() } else { t.text() })
-            })
-            .when(self.selected && !self.disabled, |d| d.bg(t.selected()))
-            .when(!self.disabled, |d| {
-                d.tab_index(self.tab_index)
-                    .cursor_pointer()
-                    .focus_visible(move |d| {
-                        d.bg(if primary {
-                            t.text()
-                        } else if self.selected {
-                            t.selected()
-                        } else {
-                            t.surface_raised()
-                        })
-                        .shadow(tokens::focus_ring(t))
-                    })
-                    .hover(move |d| {
-                        d.bg(if primary {
-                            t.text().opacity(0.88)
-                        } else {
-                            t.surface_raised()
-                        })
-                    })
-                    .active(move |d| d.bg(t.selected()).text_color(t.accent()))
-            })
-            .when(self.disabled, |d| {
-                d.tab_stop(false).aria_description("Unavailable")
-            })
-            .when_some(self.icon, |d, name| d.child(icon(name).text_color(fg)))
-            .when(!icon_only && !self.label.is_empty(), |d| {
-                d.child(
-                    div()
-                        .min_w(px(space::NONE))
-                        .overflow_hidden()
-                        .text_ellipsis()
-                        .child(self.label),
-                )
-            })
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-    }
-}
-impl RenderOnce for Button {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        self.build()
-    }
-}
-/// A square button with an accessible label and an optional overlaid corner badge.
-#[derive(IntoElement)]
-pub struct IconButton {
-    button: Button,
-    side: f32,
-    rail: bool,
-    badge: Option<SharedString>,
-}
-impl IconButton {
-    /// Square frame for caller-provided glyph content (for example independently colored icons).
-    pub fn custom(
-        id: impl Into<ElementId>,
-        label: impl Into<SharedString>,
-        size: ControlSize,
-    ) -> Stateful<Div> {
-        Button::custom(id, label)
-            .size(px(size.height()))
-            .justify_center()
-    }
-
-    /// Construct a square icon action. The label is accessible but not painted.
-    pub fn new(
-        id: impl Into<ElementId>,
-        name: impl Into<SharedString>,
-        label: impl Into<SharedString>,
-        theme: Theme,
-    ) -> Self {
-        Self {
-            button: Button::new(id, label, theme)
-                .variant(ButtonVariant::Icon)
-                .icon(name),
-            side: ControlSize::Md.height(),
-            rail: false,
-            badge: None,
-        }
-    }
-    /// Compatibility constructor, now returning an actual square `IconButton`.
-    pub fn button(
-        id: impl Into<ElementId>,
-        name: impl Into<SharedString>,
-        label: impl Into<SharedString>,
-        theme: Theme,
-    ) -> Self {
-        Self::new(id, name, label, theme)
-    }
-    /// A tool rail action with the same square geometry and border in every state.
-    pub fn rail(
-        id: impl Into<ElementId>,
-        name: impl Into<SharedString>,
-        label: impl Into<SharedString>,
-        theme: Theme,
-    ) -> Self {
-        Self {
-            side: metrics::RAIL_BUTTON,
-            rail: true,
-            ..Self::new(id, name, label, theme)
-        }
-    }
-    /// Set both dimensions together. Rail buttons always keep the rail metric.
-    pub fn size(mut self, size: ControlSize) -> Self {
-        if !self.rail {
-            self.side = size.height();
-        }
-        self
-    }
-    /// Overlay a small monospace badge without moving the centered glyph.
-    pub fn badge(mut self, text: impl Into<SharedString>) -> Self {
-        self.badge = Some(text.into());
-        self
-    }
-    /// Show persistent selection.
-    pub fn selected(mut self, selected: bool) -> Self {
-        self.button = self.button.selected(selected);
-        self
-    }
-    /// Disable keyboard traversal and action colors.
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.button = self.button.disabled(disabled);
-        self
-    }
-    /// Set keyboard traversal order.
-    pub fn tab_index(mut self, index: isize) -> Self {
-        self.button = self.button.tab_index(index);
-        self
-    }
-    /// Build a square frame; badges are absolutely positioned inside its border.
-    pub fn build(self) -> Stateful<Div> {
-        let t = self.button.theme;
-        let selected = self.button.selected;
-        self.button
-            .build()
-            .relative()
-            .size(px(self.side))
-            .min_w(px(self.side))
-            .max_w(px(self.side))
-            .min_h(px(self.side))
-            .max_h(px(self.side))
-            .px(px(space::NONE))
-            .gap(px(space::NONE))
-            .when(self.rail, |d| {
-                d.border_1().border_color(if selected {
-                    t.accent().opacity(0.4)
-                } else {
-                    t.background()
-                })
-            })
-            .when_some(self.badge, |d, badge| {
-                d.child(
-                    div()
-                        .absolute()
-                        .bottom(px(space::XXS))
-                        .right(px(space::XXS))
-                        .font_family(type_size::MONO)
-                        .text_size(px(type_size::BADGE))
-                        .line_height(px(type_size::BADGE))
-                        .child(badge),
-                )
-            })
-    }
-}
-impl RenderOnce for IconButton {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        self.build()
-    }
-}
 /// Compatibility name for callers grouping buttons. Prefer `SegmentedControl` for choices.
 pub type ButtonGroup = crate::SegmentedControl;
 /// Compatibility name; segments now have their own component.
@@ -326,10 +28,12 @@ pub type Segmented = crate::SegmentedControl;
 /// Presentation wrapper for a native editor entity or custom input content.
 /// The editor retains clipboard, IME, selection and focus ownership.
 pub struct FieldFrame {
-    theme: Theme,
-    focused: bool,
-    embedded: bool,
-    cells: Option<usize>,
+    pub(crate) theme: Theme,
+    pub(crate) focused: bool,
+    pub(crate) embedded: bool,
+    pub(crate) cells: Option<usize>,
+    pub(crate) design: bool,
+    pub(crate) invalid: bool,
 }
 impl FieldFrame {
     /// Standard field frame.
@@ -339,6 +43,8 @@ impl FieldFrame {
             focused: false,
             embedded: false,
             cells: None,
+            design: false,
+            invalid: false,
         }
     }
     /// Show the editor's current focus state.
@@ -358,6 +64,9 @@ impl FieldFrame {
     }
     /// Build the frame; insert the existing editor's canvas or entity as its child.
     pub fn build(self) -> Div {
+        if self.design {
+            return self.build_design();
+        }
         let t = self.theme;
         div()
             .h(px(ControlSize::Lg.height()))
@@ -415,11 +124,12 @@ impl FieldFrame {
 }
 /// Selectable square color with an inset edge and optional read-only badge.
 pub struct Swatch {
-    theme: Theme,
-    color: Hsla,
-    selected: bool,
-    locked: bool,
-    size: ControlSize,
+    pub(crate) theme: Theme,
+    pub(crate) color: Hsla,
+    pub(crate) selected: bool,
+    pub(crate) locked: bool,
+    pub(crate) size: ControlSize,
+    pub(crate) design: Option<crate::ControlHeight>,
 }
 impl Swatch {
     /// Left half of a previous/current color comparison. Only the exposed edge is rounded.
@@ -462,6 +172,7 @@ impl Swatch {
             selected: false,
             locked: false,
             size: ControlSize::Md,
+            design: None,
         }
     }
     /// Show the selected ring.
@@ -481,6 +192,9 @@ impl Swatch {
     }
     /// Build the square; interactive callers should add a label and tab stop.
     pub fn build(self) -> Div {
+        if let Some(height) = self.design {
+            return self.build_design(height);
+        }
         let t = self.theme;
         row()
             .relative()
@@ -911,7 +625,7 @@ pub fn tooltip(theme: Theme) -> Div {
 
 #[cfg(test)]
 mod geometry_tests {
-    use super::{Button, IconButton};
+    use crate::{Button, IconButton};
     use crate::{
         Segment, Tab, Theme,
         tokens::{ControlSize, metrics, radius},
