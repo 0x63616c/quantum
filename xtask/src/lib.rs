@@ -2,6 +2,7 @@
 
 pub mod check;
 pub mod cmd;
+pub mod macos;
 pub mod version;
 pub mod workspace;
 
@@ -13,6 +14,9 @@ use std::path::PathBuf;
 /// Errors shared by repository operations.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Restoration failed; this takes precedence over an interruption exit code.
+    #[error("{0}")]
+    Cleanup(String),
     /// A child command could not complete successfully.
     #[error(transparent)]
     Command(#[from] cmd::Error),

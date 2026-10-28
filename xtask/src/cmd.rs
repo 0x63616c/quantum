@@ -4,8 +4,15 @@ use std::{
     collections::BTreeMap,
     ffi::{OsStr, OsString},
     fmt, io,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+    thread,
+    time::Duration,
 };
 
 #[derive(Clone)]
@@ -22,6 +29,8 @@ pub struct Command {
     env: BTreeMap<OsString, Option<Value>>,
     directory: Option<PathBuf>,
     allow_in_dry_run: bool,
+    input: Option<Vec<u8>>,
+    during_cleanup: bool,
 }
 
 impl Command {
@@ -33,6 +42,8 @@ impl Command {
             env: BTreeMap::new(),
             directory: None,
             allow_in_dry_run: false,
+            input: None,
+            during_cleanup: false,
         }
     }
 
@@ -83,6 +94,25 @@ impl Command {
                 secret: true,
             }),
         );
+        self
+    }
+
+    /// Supply secret bytes over a pipe, never argv or the environment. Input is
+    /// omitted from Debug/Display and redacted from captured error diagnostics.
+    pub fn secret_stdin(mut self, input: impl Into<Vec<u8>>) -> Self {
+        self.input = Some(input.into());
+        self
+    }
+
+    /// Unredacted stdin for runner implementations. Never log these bytes.
+    pub fn input(&self) -> Option<&[u8]> {
+        self.input.as_deref()
+    }
+
+    /// Allow restoration commands to finish after cancellation was requested.
+    /// Only use for cleanup, such as deleting a temporary signing keychain.
+    pub fn during_cleanup(mut self) -> Self {
+        self.during_cleanup = true;
         self
     }
 
@@ -190,6 +220,14 @@ impl Command {
         for secret in secrets {
             text = text.replace(secret.as_ref(), "[REDACTED]");
         }
+        if let Some(input) = &self.input {
+            let input = String::from_utf8_lossy(input);
+            for value in [input.as_ref(), input.trim()] {
+                if !value.is_empty() {
+                    text = text.replace(value, "[REDACTED]");
+                }
+            }
+        }
         text
     }
 }
@@ -238,6 +276,9 @@ impl fmt::Display for Command {
                 quote(&value.value)
             }
         }));
+        if self.input.is_some() {
+            parts.push("< [REDACTED stdin]".into());
+        }
         f.write_str(&self.redact(&parts.join(" ")))
     }
 }
@@ -320,12 +361,18 @@ pub trait Runner {
     fn is_dry_run(&self) -> bool {
         false
     }
+
+    /// Requested interruption exit code, or zero while work may continue.
+    fn interruption_code(&self) -> usize {
+        0
+    }
 }
 
 /// Execute real processes, or print commands and return a configured dry-run result.
 #[derive(Default)]
 pub struct SystemRunner {
     dry_run_output: Option<Output>,
+    interruption: Option<Arc<AtomicUsize>>,
 }
 
 impl SystemRunner {
@@ -333,6 +380,7 @@ impl SystemRunner {
     pub fn dry_run() -> Self {
         Self {
             dry_run_output: Some(Output::default()),
+            interruption: None,
         }
     }
 
@@ -340,7 +388,15 @@ impl SystemRunner {
     pub fn with_dry_run_output(output: Output) -> Self {
         Self {
             dry_run_output: Some(output),
+            interruption: None,
         }
+    }
+
+    /// Stop starting work, kill and reap the active child when this flag is set
+    /// to an exit code (typically 130/143). Cleanup commands ignore the flag.
+    pub fn with_interruption(mut self, flag: Arc<AtomicUsize>) -> Self {
+        self.interruption = Some(flag);
+        self
     }
 }
 
@@ -351,6 +407,21 @@ impl Runner for SystemRunner {
         {
             eprintln!("[dry-run] {command}");
             return Ok(output.clone());
+        }
+        let interrupted = || {
+            if command.during_cleanup {
+                0
+            } else {
+                self.interruption
+                    .as_ref()
+                    .map_or(0, |flag| flag.load(Ordering::SeqCst))
+            }
+        };
+        if interrupted() != 0 {
+            return Ok(Output {
+                status: Status::from_code(interrupted() as i32),
+                ..Output::default()
+            });
         }
         let mut child = process::Command::new(command.program());
         child.args(command.arguments());
@@ -365,22 +436,76 @@ impl Runner for SystemRunner {
             }
         }
         if capture {
-            let output = child.output()?;
-            Ok(Output {
-                status: output.status.into(),
-                stdout: output.stdout,
-                stderr: output.stderr,
-            })
-        } else {
-            Ok(Output {
-                status: child.status()?.into(),
-                ..Output::default()
-            })
+            child
+                .stdout(process::Stdio::piped())
+                .stderr(process::Stdio::piped());
         }
+        if command.input.is_some() {
+            child.stdin(process::Stdio::piped());
+        }
+        let mut child = child.spawn()?;
+        // Drain both pipes and feed stdin concurrently, avoiding pipe-capacity
+        // deadlocks even when a tool writes before reading its input.
+        thread::scope(|scope| {
+            let stdout = child.stdout.take().map(|mut pipe| {
+                scope.spawn(move || {
+                    let mut bytes = Vec::new();
+                    pipe.read_to_end(&mut bytes).map(|_| bytes)
+                })
+            });
+            let stderr = child.stderr.take().map(|mut pipe| {
+                scope.spawn(move || {
+                    let mut bytes = Vec::new();
+                    pipe.read_to_end(&mut bytes).map(|_| bytes)
+                })
+            });
+            let stdin = child
+                .stdin
+                .take()
+                .zip(command.input())
+                .map(|(mut pipe, bytes)| scope.spawn(move || pipe.write_all(bytes)));
+            let status = loop {
+                if interrupted() != 0 {
+                    let _ = child.kill();
+                    child.wait()?;
+                    break Status::from_code(interrupted() as i32);
+                }
+                if let Some(status) = child.try_wait()? {
+                    break status.into();
+                }
+                thread::sleep(Duration::from_millis(20));
+            };
+            let join_error = || io::Error::other("command pipe worker panicked");
+            let stdout = stdout
+                .map(|h| h.join().map_err(|_| join_error())?)
+                .transpose()?
+                .unwrap_or_default();
+            let stderr = stderr
+                .map(|h| h.join().map_err(|_| join_error())?)
+                .transpose()?
+                .unwrap_or_default();
+            if let Some(input) = stdin {
+                let result = input.join().map_err(|_| join_error())?;
+                if status.success() {
+                    result?;
+                }
+            }
+            Ok(Output {
+                status,
+                stdout,
+                stderr,
+            })
+        })
     }
 
     fn is_dry_run(&self) -> bool {
         self.dry_run_output.is_some()
+    }
+
+    fn interruption_code(&self) -> usize {
+        self.interruption
+            .as_ref()
+            .map_or(0, |flag| flag.load(Ordering::SeqCst))
     }
 }
 

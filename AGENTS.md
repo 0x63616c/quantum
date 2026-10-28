@@ -120,7 +120,7 @@ cargo test -p xtask --locked checks::plugin_deps
 ## Build, test and lint
 
 `cargo xtask validate` runs the registered gates: tidy, plugin-deps, brand,
-docs-links, docs-assets, fmt, clippy (all targets), workspace tests, deny and
+docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
 machete. Missing tools skip with a reason; use `--strict` to fail instead.
 Use `cargo xtask check --list` to list checks,
 `cargo xtask check tidy fmt` for named checks, or `validate --only tidy fmt` /
@@ -134,7 +134,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo test --workspace --locked --no-fail-fast
 cargo xtask check plugin-deps
-python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
+cargo test -p xtask --locked
 ```
 
 | Purpose | Command |
@@ -161,11 +161,11 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Full site build | `scripts/build-site.sh` |
 | Site generator tests | `cargo test --locked -p voxelite-site` |
 | Built-site validation | `python3 scripts/check-site.py` |
-| Offline feed validation | `python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty` |
+| Offline feed validation | `cargo xtask macos check-appcast site/appcast.xml --allow-empty` |
 
 - Core/MCP, Python tests and site/web builds can run on Linux. Full workspace and
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
-- Run Metal/AppKit/Sparkle checks and `scripts/package-macos.sh` on macOS. CI uses
+- Run Metal/AppKit/Sparkle checks and `cargo xtask macos package` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
   from Linux checks or mocked packaging tools.
 - In the documented Linux harness workspace, use
@@ -316,8 +316,8 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   maintain them separately; their source is `crates/voxelite-site/src/install.rs`
   and its templates.
 - Generate signed appcasts through the release workflow and
-  `scripts/generate-macos-appcast.sh`; fetch release feeds with
-  `scripts/fetch-macos-appcast.py`. Preserve signed XML/HTML bytes. Never hand-edit
+  `cargo xtask macos appcast`; fetch release feeds with
+  `cargo xtask macos fetch-appcast <out>`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
 - Review built output and relative links. Keep generated site output,
   `web/dist/` and local benchmark outputs out of source commits.
@@ -357,7 +357,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
   prints redacted findings to stdout. Run it when relevant, review its report
   deliberately, and do not treat it as proof of no secrets.
   Keep private values out of logs and PRs.
-- Write release-worthy subjects: `scripts/generate-macos-release-notes.py`
+- Write release-worthy subjects: `cargo xtask macos release-notes`
   includes non-merge commit subjects in public release notes.
 
 ## Releases

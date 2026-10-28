@@ -230,18 +230,18 @@ fallback and signed-feed failure expiration also need testing before use.
    creates the DMG, and notarizes/staples that DMG. Only the final stapled bytes
    are hashed and signed for updates. The intermediate ZIP exists solely for app
    notarization; it is not a release asset or appcast enclosure. No deltas ship.
-2. `generate-macos-release-notes.py` writes `dist/RELEASE_NOTES.md` from non-merge
+2. `cargo xtask macos release-notes` writes `dist/RELEASE_NOTES.md` from non-merge
    commit subjects since the previous reachable stable tag, omitting authors and
    commit bodies. Run it after packaging: `dist/.notarized` selects
    `packaging/macos/RELEASE_NOTES.md`; without that marker it uses
    `packaging/macos/RELEASE_NOTES.unnotarized.md` with first-launch workarounds.
-   `fetch-macos-appcast.py dist/previous-appcast.xml` then retrieves
+   `cargo xtask macos fetch-appcast dist/previous-appcast.xml` then retrieves
    the highest numeric stable release with an appcast, across all API pages.
    Drafts/prereleases and older releases without feeds are excluded. It checks
    every enclosure and release-notes URL/length against published asset metadata.
    Only a confirmed absence of any release feed permits the empty initial feed;
    network, authentication, download, and malformed-feed errors fail the job.
-3. `generate-macos-appcast.sh` requires the private key, framework, history file,
+3. `cargo xtask macos appcast` requires the private key, framework, history file,
    notarization marker, matching tag, checksum, and stapled ticket. It seeds the
    output with the previous feed and invokes pinned `generate_appcast` with
    `--maximum-versions 0 --maximum-deltas 0`, preserving all historical items.
@@ -286,19 +286,57 @@ releasing. See [GitHub workflow_run semantics](https://docs.github.com/en/action
 Offline checks, without network access or credentials:
 
 ```sh
-python3 -B scripts/check-macos-appcast.py site/appcast.xml --allow-empty
+cargo xtask macos check-appcast site/appcast.xml --allow-empty
 # After generating a real release locally or in CI:
-python3 -B scripts/check-macos-appcast.py site/appcast.xml \
+cargo xtask macos check-appcast site/appcast.xml \
   --release-dir dist --previous dist/previous-appcast.xml
-python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
+cargo test -p xtask --locked
 ```
+
+### Release plans without Apple tools
+
+`cargo xtask macos package --dry-run` works on Linux and macOS. It prints the
+complete redacted command plan, including cleanup, without executing tools,
+downloading Sparkle, building the app or changing `dist/`. `--skip-build` omits
+the two app/server builds from that plan. Signing follows `MACOS_SIGNING_MODE`:
+`adhoc` ignores credentials; `auto` selects Developer ID only with both certificate
+variables, and notarizes only when all three Apple API variables are also set.
+
+Use fake values to inspect the signed plan without exposing real keys to Cargo:
+
+```sh
+cargo xtask macos package --dry-run
+MACOS_SIGNING_MODE=adhoc cargo xtask macos package --dry-run
+MACOS_SIGNING_MODE=auto \
+MACOS_CERTIFICATE_P12_BASE64=Zml4dHVyZQ== MACOS_CERTIFICATE_PASSWORD=fixture \
+APPLE_API_KEY_P8_BASE64=Zml4dHVyZQ== APPLE_API_KEY_ID=fixture APPLE_API_ISSUER_ID=fixture \
+cargo xtask macos package --dry-run
+TAG=v0.3.1 SPARKLE_ED_PRIVATE_KEY=fixture cargo xtask macos appcast --dry-run
+```
+
+The appcast dry run describes its artifact/history checks and prints both Sparkle
+commands, with private-key stdin redacted. It does not require a built release,
+write GitHub outputs or generate a feed. Complete Linux transcripts and the
+old-to-new external command mapping are in
+[xtask port verification](../xtask/macos-port-verification.md).
+
+For real credentials, first build with `cargo build --release --locked -p xtask`
+in an environment without signing secrets. Then invoke the prebuilt binary:
+`target/release/xtask macos package --skip-build` and
+`target/release/xtask macos appcast`. Release CI follows this ordering; it also
+uses `target/release/xtask version --check-tag "$TAG"` before building the app.
+xtask removes all seven signing variables from every child environment and sends
+the Sparkle key only on stdin. Temporary secrets use 0600 files in a 0700
+directory. Keychain deletion and search-list restoration run after failures,
+panics, SIGINT (130) and SIGTERM (143); failed cleanup returns 1 and invalidates
+`dist/.notarized`. Abrupt machine loss or SIGKILL cannot run process cleanup.
 
 ### Local end-to-end test with a throwaway key
 
 Use a disposable checkout and a separate macOS user account. Never use the
 production key or overwrite the production public key in your normal checkout.
 Download Sparkle **2.10.1** to an external temporary directory and verify the
-SHA-256 from `scripts/package-macos.sh` before extracting or executing it:
+SHA-256 from `xtask/src/macos/package.rs` before extracting or executing it:
 
 ```sh
 set +x
@@ -326,8 +364,8 @@ in that disposable plist; production must keep HTTPS. Unset the public-key
 override or set it to the throwaway public key.
 
 Build two packages using `VERSION=0.0.1 MACOS_SIGNING_MODE=adhoc
-scripts/package-macos.sh`, then `VERSION=0.0.2 MACOS_SIGNING_MODE=adhoc
-scripts/package-macos.sh`. Preserve each app outside `dist` before rebuilding
+cargo xtask macos package`, then `VERSION=0.0.2 MACOS_SIGNING_MODE=adhoc
+cargo xtask macos package`. Preserve each app outside `dist` before rebuilding
 (the packager clears `dist`). Copy the older app into a writable Applications
 folder. ZIP only the newer app into a separate HTTP directory; do not put the
 private key under the served directory:
@@ -382,10 +420,8 @@ files. Do not upload throwaway assets or keys to GitHub.
 Local static checks:
 
 ```sh
-bash -n scripts/package-macos.sh scripts/generate-macos-appcast.sh
-shellcheck scripts/package-macos.sh scripts/generate-macos-appcast.sh
 actionlint
-python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
+cargo test -p xtask --locked
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo check --workspace --locked

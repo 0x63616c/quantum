@@ -23,7 +23,7 @@ exported_utis = { current = [], stable = true }
 imported_utis = { current = [], stable = true }
 document_type_ids = { current = [], stable = true }
 
-# Cargo manifests and scripts/package-macos.sh. Keep installed paths/CLI invocations
+# Cargo manifests and xtask/src/macos/package.rs. Keep installed paths/CLI invocations
 # working; changing the display name does not require changing these paths.
 app_binary = { current = "voxelite", stable = true }
 mcp_binary = { current = "voxelite-mcp", stable = true }
@@ -48,7 +48,7 @@ format_spec = { current = "spec/voxl/1.0", stable = true }
 format_mime_type = { current = "application/vnd.voxelite.project+json", stable = true }
 document_label = { current = "Quantum Project (.voxl)", stable = false }
 
-# SUFeedURL is injected into the built Info.plist by scripts/package-macos.sh.
+# SUFeedURL is injected into the built Info.plist by cargo xtask macos package.
 sparkle_appcast_url = { current = "https://voxelite.worldwidewebb.co/appcast.xml", stable = true }
 # SITE_BASE_URL in crates/voxelite-site/src/main.rs is the site configuration.
 site_domain = { current = "voxelite.worldwidewebb.co", stable = true }

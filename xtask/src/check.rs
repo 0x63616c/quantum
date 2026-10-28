@@ -109,6 +109,11 @@ pub static CHECKS: &[Check] = &[
         "Documentation images and capture ignore policy",
         checks::docs::assets,
     ),
+    Check::new(
+        "appcast",
+        "Offline stable feed validation (empty initial feed allowed)",
+        appcast_check,
+    ),
     Check::cargo("fmt", "Rust formatting", &["fmt", "--all", "--", "--check"]),
     Check::cargo(
         "clippy",
@@ -135,6 +140,13 @@ pub static CHECKS: &[Check] = &[
     ),
     Check::cargo("machete", "Unused dependencies", &["machete"]),
 ];
+
+fn appcast_check(context: &Context<'_>) -> Outcome {
+    match crate::macos::validate(&context.workspace.path("site/appcast.xml"), true, None) {
+        Ok(_) => Outcome::Pass,
+        Err(error) => Outcome::Fail(vec![format!("Invalid appcast: {error}")]),
+    }
+}
 
 fn tidy_check(context: &Context<'_>) -> Outcome {
     match tidy::check(context.workspace, context.runner) {
