@@ -259,7 +259,8 @@ their stage-specific introduction predates the current shell and plugin work.
 ## Tests and checks
 
 The standard workspace test command is `cargo test --workspace`. The exact
-format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) are:
+format, lint and test invocations in [CI Linux](.github/workflows/ci-linux.yml) and
+[CI macOS](.github/workflows/ci-macos.yml) are:
 
 ```sh
 cargo fmt --all -- --check
