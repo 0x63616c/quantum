@@ -150,3 +150,36 @@ impl RenderOnce for ModalDialog {
         self.overlay()
     }
 }
+
+// AppKit requires the main thread; the platform-backed builder checks run headless
+// on Linux. Native Escape/Tab routing is also exercised in the gallery.
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+    use core::prelude::v1::test;
+
+    #[test]
+    fn dialog_actions_use_explicit_hierarchy_and_body_type_is_inherited() {
+        gpui_platform::headless().run(|cx| {
+            for theme in [Theme::Dark, Theme::Light] {
+                let focus = cx.focus_handle();
+                let dialog = Dialog::design("confirm", "Confirm", theme, &focus, |_, _| {})
+                    .danger(Button::design("keep", "Keep", theme))
+                    .primary(Button::design("discard", "Discard", theme));
+                let mut primary = dialog.primary.unwrap().build();
+                let mut danger = dialog.danger.unwrap().build();
+                assert_eq!(
+                    primary.style().background,
+                    Some(theme.color(C::Accent).into())
+                );
+                assert_eq!(primary.style().size.height, Some(px(32.).into()));
+                assert_eq!(danger.style().text.color, Some(theme.color(C::Danger)));
+                let mut empty = Dialog::design("empty", "Title", theme, &focus, |_, _| {}).build();
+                assert_eq!(empty.style().text.font_size, Some(px(13.).into()));
+                assert_eq!(empty.style().corner_radii.top_left, Some(px(14.).into()));
+            }
+            // Quit after the Linux event loop starts (run resets its stop signal).
+            cx.spawn(async |cx| cx.update(|cx| cx.quit())).detach();
+        });
+    }
+}

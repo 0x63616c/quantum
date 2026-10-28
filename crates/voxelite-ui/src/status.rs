@@ -214,6 +214,25 @@ mod tests {
         fixed_slot_aligned,
     };
     #[test]
+    fn design_status_values_keep_fixed_slots_for_signs_missing_values_and_overflow() {
+        use super::StatusBarItem;
+        use crate::Theme;
+        use gpui::{Styled, px};
+        for (value, expected) in [
+            (Some(42), "\u{00a0}\u{00a0}\u{00a0}42"),
+            (Some(-42), "\u{00a0}\u{00a0}-42"),
+            (Some(i32::MAX), "2147+"),
+            (None, "\u{00a0}\u{00a0}\u{00a0}\u{00a0}—"),
+        ] {
+            let item = StatusBarItem::new("Count", value, 5, Theme::Dark);
+            assert_eq!(item.value, expected);
+            assert_eq!(item.cells, 5);
+            let mut row = item.build();
+            assert_eq!(row.style().size.height, Some(px(24.).into()));
+            assert_eq!(row.style().flex_shrink, Some(0.));
+        }
+    }
+    #[test]
     fn coordinates_keep_the_same_cells_for_sign_extremes_and_placeholders() {
         for value in (i32::MIN..i32::MIN + 4096)
             .chain(-10000..10000)

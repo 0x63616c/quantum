@@ -75,12 +75,23 @@ impl Swatch {
                 d.shadow(presentation::ring(self.theme, C::Surface))
             })
             .when(self.locked, |d| {
-                d.child(
-                    presentation::glyph("lock")
-                        .text_color(Theme::contrast_ink(gpui::Rgba::from(self.color).r > 0.5)),
-                )
+                d.child(presentation::glyph("lock").text_color(swatch_ink(self.theme, self.color)))
             })
     }
+}
+
+fn swatch_ink(theme: Theme, color: Hsla) -> Hsla {
+    // Swatches contain document colors. Choose ink using WCAG relative luminance,
+    // including all three channels and the surface beneath translucent samples.
+    let color = Rgba::from(theme.color(C::Surface).blend(color));
+    let [r, g, b] = [color.r, color.g, color.b].map(|v| {
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
+    });
+    Theme::contrast_ink(0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179)
 }
 
 #[cfg(test)]
@@ -108,5 +119,16 @@ mod tests {
         assert_eq!(plain.style().background, selected.style().background);
         assert_eq!(plain.style().border_widths, selected.style().border_widths);
         assert!(selected.style().box_shadow.is_some());
+    }
+    #[test]
+    fn locked_swatch_ink_uses_luminance_instead_of_the_red_channel() {
+        for theme in [Theme::Dark, Theme::Light] {
+            for color in [0x00ff00, 0x00ffff, 0xffffff] {
+                assert_eq!(swatch_ink(theme, rgb(color).into()), black());
+            }
+            for color in [0x0000ff, 0x800000, 0x000000] {
+                assert_eq!(swatch_ink(theme, rgb(color).into()), white());
+            }
+        }
     }
 }

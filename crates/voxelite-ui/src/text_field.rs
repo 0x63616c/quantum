@@ -827,8 +827,12 @@ impl Render for TextField {
                             };
                             let line = window.text_system().shape_line(
                                 content.clone(),
-                                px(if design && this.cells.is_some() {
-                                    crate::TextSize::Mono.px()
+                                px(if design {
+                                    if this.cells.is_some() {
+                                        crate::TextSize::Mono.px()
+                                    } else {
+                                        crate::TextSize::Body.px()
+                                    }
                                 } else {
                                     type_size::BODY_LG
                                 }),
@@ -868,13 +872,12 @@ impl Render for TextField {
                                                 ),
                                             ),
                                             if design {
-                                                t.color(crate::ColorToken::AccentText).opacity(
-                                                    if a == b {
-                                                        1.
-                                                    } else {
-                                                        crate::tokens::state::SELECTED
-                                                    },
-                                                )
+                                                if a == b {
+                                                    t.color(crate::ColorToken::AccentText)
+                                                } else {
+                                                    t.color(crate::ColorToken::Accent)
+                                                        .opacity(crate::tokens::state::SELECTED)
+                                                }
                                             } else if a == b {
                                                 t.accent()
                                             } else {

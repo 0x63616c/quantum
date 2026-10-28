@@ -47,8 +47,7 @@ impl EditorView {
         let voxels: usize = snapshot.layers.iter().map(|layer| layer.voxels.len()).sum();
         let layer = snapshot
             .layers
-            .iter()
-            .find(|layer| layer.id == self.editor.layer)
+            .by_uuid(self.editor.layer)
             .map_or("No layer", |layer| layer.name.as_str());
         let (hover, box_start) = (self.hover, self.editor.box_start);
         #[cfg(target_os = "linux")]

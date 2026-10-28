@@ -72,7 +72,7 @@ surface used for the focus offset; menus, segments and dialogs supply it automat
 | Swatch | `Swatch::design(theme, document_color)`; selection changes the outer ring only |
 | StatusBarItem | Proportional label, fixed-width tabular value, overflow/padding, optional separator |
 | Toast / InlineError | `message(text, FeedbackKind::{Info, Success, Danger}, theme)`; glyph plus color |
-| Spinner / Shimmer | Inline keyed spinner with reduced-motion/snapshot controls; `Shimmer` aliases the existing `AsciiSkeleton` |
+| Spinner / Shimmer | Eight-dot inline spinner; automatically respects GPUI reduced motion, with additional host-preference/snapshot controls; `Shimmer` aliases the existing `AsciiSkeleton` |
 
 Use the builder's guarded `on_click` for new controls. Adding a callback directly
 to a raw `build()` result transfers disabled/loading enforcement to the caller.

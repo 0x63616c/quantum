@@ -54,10 +54,9 @@ mod tests {
     use super::*;
     use voxelite_plugin_api::Contribution;
 
-    #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(ExamplePlugin));
-    }
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        ExamplePlugin
+    ));
 
     #[test]
     fn declares_one_example_command_without_builtin_enablement() {

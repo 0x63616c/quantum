@@ -365,4 +365,15 @@ mod tests {
         let mut built = empty.build();
         assert_eq!(built.style().padding.top, Some(px(48.).into()));
     }
+    #[test]
+    fn settings_and_section_labels_use_distinct_type() {
+        for theme in [Theme::Dark, Theme::Light] {
+            let mut settings = SettingsRow::row("Title", "Description", div(), theme);
+            let mut section = SectionLabel::label("Group", theme);
+            assert_eq!(settings.style().text.font_size, Some(px(13.).into()));
+            assert_eq!(settings.style().text.line_height, Some(px(20.).into()));
+            assert_eq!(section.style().text.font_size, Some(px(11.).into()));
+            assert_eq!(section.style().text.font_weight, Some(FontWeight::MEDIUM));
+        }
+    }
 }

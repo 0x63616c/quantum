@@ -201,6 +201,16 @@ mod tests {
     use super::*;
     use core::prelude::v1::test;
     #[test]
+    fn shortcut_uses_caption_type_and_tooltip_uses_small_type() {
+        for theme in [Theme::Dark, Theme::Light] {
+            let mut chip = Kbd::design("⇧⌘S", theme);
+            assert_eq!(chip.style().text.font_size, Some(px(11.).into()));
+            assert_eq!(chip.style().border_widths.top, Some(px(1.).into()));
+            let mut tooltip = Tooltip::content("Save as", Some("⇧⌘S".into()), theme);
+            assert_eq!(tooltip.style().text.font_size, Some(px(12.).into()));
+        }
+    }
+    #[test]
     fn press_leave_and_overlay_open_cancel_pending_and_visible_tooltips() {
         let mut dwell = Dwell::default();
         let ticket = dwell.hover(true, true).unwrap();

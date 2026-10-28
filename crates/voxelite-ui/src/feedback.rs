@@ -64,7 +64,7 @@ pub struct Spinner {
     elapsed: Option<Duration>,
 }
 impl Spinner {
-    /// Create a stable keyed spinner. Set reduced motion from the app preference.
+    /// Create a stable keyed spinner that respects GPUI's reduced-motion preference.
     pub fn new(id: impl Into<ElementId>, theme: Theme) -> Self {
         Self {
             id: id.into(),
@@ -79,7 +79,8 @@ impl Spinner {
         self.color = color;
         self
     }
-    /// Freeze the indicator without scheduling repaint timers.
+    /// Additionally freeze the indicator for a host preference. `false` never
+    /// overrides GPUI's reduced-motion preference.
     pub fn reduced_motion(mut self, reduced: bool) -> Self {
         self.reduced = reduced;
         self
@@ -88,6 +89,16 @@ impl Spinner {
     pub fn elapsed(mut self, elapsed: Duration) -> Self {
         self.elapsed = Some(elapsed);
         self
+    }
+
+    fn frame(&self, elapsed_ms: f64, system_reduced: bool) -> (usize, bool) {
+        let reduced = self.reduced || system_reduced;
+        let phase = if reduced {
+            0
+        } else {
+            (elapsed_ms / 100.) as usize % 8
+        };
+        (phase, !reduced && self.elapsed.is_none())
     }
 }
 impl RenderOnce for Spinner {
@@ -104,11 +115,7 @@ impl RenderOnce for Spinner {
                 false,
             )
         });
-        let phase = if self.reduced {
-            0
-        } else {
-            (elapsed / 100.) as usize % 8
-        };
+        let (phase, animate) = self.frame(elapsed, cx.reduce_motion());
         div()
             .id(self.id)
             .aria_label("Loading")
@@ -117,13 +124,7 @@ impl RenderOnce for Spinner {
             .child(
                 canvas(
                     move |bounds, window, cx| {
-                        schedule(
-                            &clock,
-                            bounds,
-                            !self.reduced && self.elapsed.is_none(),
-                            window,
-                            cx,
-                        );
+                        schedule(&clock, bounds, animate, window, cx);
                     },
                     move |bounds, _, window, _| {
                         // Optical construction: eight equally spaced dots in a 16px box.
@@ -153,3 +154,56 @@ impl RenderOnce for Spinner {
 }
 /// The existing ASCII shimmer is the block-loading component; no second renderer.
 pub type Shimmer = crate::AsciiSkeleton;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::prelude::v1::test;
+
+    #[test]
+    fn spinner_freezes_for_either_motion_preference_and_never_schedules_snapshots() {
+        for system in [false, true] {
+            for host in [false, true] {
+                let spinner = Spinner::new("loading", Theme::Dark).reduced_motion(host);
+                for (ms, phase) in [(0., 0), (99., 0), (100., 1), (799., 7), (800., 0)] {
+                    assert_eq!(
+                        spinner.frame(ms, system),
+                        if system || host {
+                            (0, false)
+                        } else {
+                            (phase, true)
+                        }
+                    );
+                }
+                let snapshot = spinner.elapsed(Duration::from_millis(350));
+                assert_eq!(
+                    snapshot.frame(350., system),
+                    (if system || host { 0 } else { 3 }, false)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn feedback_has_distinct_severity_cues_and_only_toasts_cast_shadows() {
+        for theme in [Theme::Dark, Theme::Light] {
+            for (kind, color, glyph) in [
+                (FeedbackKind::Info, C::AccentText, "circle"),
+                (FeedbackKind::Success, C::Success, "check"),
+                (FeedbackKind::Danger, C::Danger, "close"),
+            ] {
+                let mut inline = InlineError::message("Message", kind, theme);
+                assert_eq!(inline.style().text.color, Some(theme.color(color)));
+                assert_eq!(inline.style().text.font_size, Some(px(12.).into()));
+                assert!(inline.style().box_shadow.is_none());
+                assert_eq!(kind.glyph(), glyph);
+                let mut toast = Toast::message("Message", kind, theme);
+                assert_eq!(
+                    toast.style().background,
+                    Some(theme.color(C::Overlay).into())
+                );
+                assert!(toast.style().box_shadow.is_some());
+            }
+        }
+    }
+}
