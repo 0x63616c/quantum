@@ -442,7 +442,7 @@ impl EditorView {
                 })
                 .when(!preview, |d| {
                     d.child(self.discussion.text.clone()).child(
-                        self.control(
+                        self.styled_control(
                             "post-comment",
                             "send",
                             if thread.is_some() {
@@ -450,6 +450,7 @@ impl EditorView {
                             } else {
                                 "Post comment"
                             },
+                            ButtonStyle::Primary,
                             cx,
                             |this, window, cx| {
                                 this.post_comment(cx);
