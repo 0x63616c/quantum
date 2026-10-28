@@ -1341,6 +1341,7 @@ mod tests {
             .map(|i| dir.path().join(format!("{i}.voxl")))
             .collect();
         cx.update(|cx| {
+            crate::actions::install(cx);
             super::settings::init_at(
                 None,
                 Ok(Default::default()),
@@ -1499,6 +1500,18 @@ mod tests {
             .unwrap();
         // Tab wraps from the list to New; arrows there must leave list selection alone.
         keys(cx, handle, "tab down tab tab enter");
+        handle
+            .update(cx, |view, window, _| {
+                assert_eq!(view.selected_item(), Selection::Sample(Sample::Autumn));
+                assert!(view.list_focus.is_focused(window));
+            })
+            .unwrap();
+        keys(cx, handle, "down");
+        keys(
+            cx,
+            handle,
+            &crate::shortcuts::ShortcutPlatform::current().binding_key("secondary-shift-o"),
+        );
         handle
             .update(cx, |view, window, _| {
                 assert_eq!(view.selected_item(), Selection::Sample(Sample::Autumn));
