@@ -11,6 +11,10 @@ struct Fixture {
     model: Value,
 }
 impl Fixture {
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn new() -> Self {
         let root = tempfile::tempdir().unwrap();
         let server = VoxeliteServer::new(root.path(), mcp_host).unwrap();
@@ -37,6 +41,10 @@ impl Fixture {
             model,
         }
     }
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn call(&self, name: &str, args: Value) -> Value {
         let tool = format!("voxelite_{name}");
         let result = self.server.call(&tool, args).unwrap();

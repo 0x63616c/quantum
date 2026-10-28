@@ -16,6 +16,10 @@ pub(crate) struct Spec {
 pub(crate) static CATALOG: LazyLock<Vec<Spec>> = LazyLock::new(crate::tools::specs);
 
 impl Spec {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: built-in input schema"
+    )]
     pub fn new<T: Input>(
         name: &'static str,
         description: &'static str,
@@ -43,10 +47,16 @@ impl Spec {
         let mut tool = Tool::new(
             format!("voxelite_{name}"),
             description,
-            schema.as_object().unwrap().clone(),
+            schema
+                .as_object()
+                .expect("schema generator returns a JSON object")
+                .clone(),
         );
         tool.output_schema = Some(Arc::new(
-            output_schema(output, scope).as_object().unwrap().clone(),
+            output_schema(output, scope)
+                .as_object()
+                .expect("output schema generator returns a JSON object")
+                .clone(),
         ));
         let writes = mutation || matches!(output, Output::Save | Output::Glb | Output::Png);
         tool.annotations = Some(

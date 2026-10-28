@@ -124,6 +124,7 @@ shortcut_symbols! {
 
 /// Tokenize a GPUI binding without consulting the environment. The source
 /// binding supplies both the actual modifiers and every user-facing hint.
+#[expect(clippy::expect_used, reason = "internal invariant: valid shortcut")]
 pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<ShortcutToken> {
     use ShortcutSymbol as S;
     use ShortcutToken::{Symbol, Text};

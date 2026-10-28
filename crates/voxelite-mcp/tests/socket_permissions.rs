@@ -13,6 +13,10 @@ use voxelite_core::{Document, Uuid};
 use voxelite_format::Project;
 use voxelite_mcp::attached::AttachedSession;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn bind(root: &Path, path: &Path) -> io::Result<AttachedSession> {
     AttachedSession::bind(
         root,
@@ -96,6 +100,10 @@ const MAX_SOCKET_PATH: usize = 103;
 #[cfg(not(target_os = "macos"))]
 const MAX_SOCKET_PATH: usize = 107;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn parent_with_length(root: &Path, length: usize) -> std::path::PathBuf {
     let parent = root.join("p".repeat(length - root.as_os_str().len() - 1));
     fs::create_dir(&parent).unwrap();

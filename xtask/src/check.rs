@@ -82,8 +82,21 @@ impl Check {
     }
 }
 
+/// Checks selected by the strict `cargo xtask lint` entry point.
+pub const LINT_CHECKS: &[&str] = &["boundaries", "source-lints", "clippy"];
+
 /// Registered checks in execution order: cheap local checks before builds and audits.
 pub static CHECKS: &[Check] = &[
+    Check::new(
+        "boundaries",
+        "Portable crate transitive dependency boundaries",
+        checks::boundaries::run,
+    ),
+    Check::new(
+        "source-lints",
+        "Styling, string dispatch and source size ratchets",
+        checks::source_lints::run,
+    ),
     Check::new(
         "tidy",
         "Tracked root entries, size limits and junk files",

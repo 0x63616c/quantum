@@ -29,6 +29,10 @@ impl Manifest {
     ///
     /// # Panics
     /// Panics with the plugin ID if the ID or semantic version is invalid.
+    #[expect(
+        clippy::panic,
+        reason = "built-in manifest constants must be valid; invalid declarations are programming errors"
+    )]
     pub fn builtin(id: &str, key_prefix: &str, version: &str) -> Self {
         Self {
             id: PluginId::new(id)

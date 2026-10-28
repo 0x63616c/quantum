@@ -2,6 +2,10 @@
 use voxelite_core::*;
 use voxelite_render::RenderOptions;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn fixture() -> Snapshot {
     let mut document = Document::new(Uuid::from_u128(1), Uuid::from_u128(2));
     for rgba in [[255, 80, 20, 255], [10, 120, 255, 255]] {
@@ -111,6 +115,10 @@ fn pre_plugin_export_bytes() {
 
 /// libm differences across platforms may move linearised colours by one ulp; everything else is exact.
 #[allow(clippy::chunks_exact_to_as_chunks)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn assert_glb_matches(actual: &[u8], expected: &[u8], name: &str) {
     assert_eq!(actual.len(), expected.len(), "{name} length");
     // GLB header (12) + JSON chunk header (8) + JSON; the BIN chunk follows.

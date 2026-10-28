@@ -30,6 +30,10 @@ pub(crate) struct DocumentCx<'a> {
     pub write: &'a WriteCommon,
 }
 impl DocumentCx<'_> {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: change and tool extras are constructed as JSON objects"
+    )]
     fn edit(&mut self, command: Command, extras: Value) -> ToolResult {
         let engine = &mut self.doc.engine;
         let operation_id = self.write.identity.operation_id.get()?;
@@ -46,8 +50,13 @@ impl DocumentCx<'_> {
         })?;
         let mut data = change(&receipt);
         data.as_object_mut()
-            .unwrap()
-            .extend(extras.as_object().unwrap().clone());
+            .expect("change and tool extras are constructed as JSON objects")
+            .extend(
+                extras
+                    .as_object()
+                    .expect("change and tool extras are constructed as JSON objects")
+                    .clone(),
+            );
         data["operation_id"] = json!(operation_id);
         data["head_id"] = json!(engine.head());
         read(engine, data)

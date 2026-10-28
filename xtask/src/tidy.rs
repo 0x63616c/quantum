@@ -25,6 +25,7 @@ const ROOT_ENTRIES: &[&str] = &[
     "README.md",
     "bench",
     "brand.toml",
+    "clippy.toml",
     "crates",
     "deny.toml",
     "design",
@@ -46,6 +47,7 @@ const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024;
 // No tracked files currently exceed 5 MiB. Add only reviewed, exact paths here.
 const LARGE_FILES: &[&str] = &[];
 
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub(super) fn run() -> Result<(), String> {
     let workspace = Workspace::discover().map_err(|error| error.to_string())?;
     check(&workspace, &SystemRunner::default())?;

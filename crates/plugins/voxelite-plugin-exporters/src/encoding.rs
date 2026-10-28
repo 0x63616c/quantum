@@ -42,6 +42,10 @@ pub fn glb(snapshot: &Snapshot) -> ExportResult<Vec<u8>> {
 }
 /// Stream expanded GLB attributes and indices after bounded mesh preflight.
 /// No external buffers, textures, URIs or extension execution are emitted.
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: mesh validates slots"
+)]
 pub fn write_glb(snapshot: &Snapshot, mut writer: impl Write) -> ExportResult<()> {
     let mesh = greedy_mesh(snapshot)?;
     if mesh.quads.is_empty() {

@@ -174,3 +174,14 @@ fn screenshots_ci_arguments_are_forwarded() {
         assert_eq!(task.args, args);
     }
 }
+
+#[test]
+fn lint_command_parses_without_optional_or_skip_flags() {
+    assert!(matches!(
+        parse_cli(["xtask", "lint"].map(OsString::from))
+            .unwrap()
+            .command,
+        Some(Task::Lint)
+    ));
+    assert!(parse_cli(["xtask", "lint", "--skip", "clippy"].map(OsString::from)).is_err());
+}

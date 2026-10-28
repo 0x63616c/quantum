@@ -4,6 +4,10 @@ use voxelite_core::*;
 fn id(n: u128) -> Uuid {
     Uuid::from_u128(n)
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn engine() -> Engine {
     Engine::new(Document::new(id(1), id(2))).unwrap()
 }
@@ -28,6 +32,10 @@ fn set(p: Pos, slot: u16) -> Command {
         mirror: Mirror::default(),
     }
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn run(e: &mut Engine, n: u128, c: Command) -> Receipt {
     e.execute(tx(e, n, c)).unwrap()
 }

@@ -2,6 +2,23 @@
 #[cfg(target_os = "macos")]
 use super::*;
 
+// Keep worker initialization and its failure handling out of frame scheduling.
+#[cfg(target_os = "macos")]
+fn gpu_worker(
+    renderer: &mut Option<voxelite_render::gpu::Worker>,
+) -> voxelite_render::RenderResult<&mut voxelite_render::gpu::Worker> {
+    if renderer.is_none() {
+        let registry_id =
+            gpui_apple::metal_renderer::surface_device_registry_id().ok_or_else(|| {
+                voxelite_render::RenderError::Invalid("GPUI Metal device unavailable".into())
+            })?;
+        *renderer = Some(voxelite_render::gpu::Worker::new(registry_id)?);
+    }
+    renderer.as_mut().ok_or_else(|| {
+        voxelite_render::RenderError::Invalid("GPU worker initialization missing".into())
+    })
+}
+
 pub(super) struct State {
     pub enabled: bool,
     // A surface-size failure only suspends GPU rendering at this physical size.
@@ -158,19 +175,9 @@ impl EditorView {
         };
         cx.spawn(async move |this, cx| {
             let result = async {
-                if renderer.is_none() {
-                    let registry_id = gpui_apple::metal_renderer::surface_device_registry_id()
-                        .ok_or_else(|| {
-                            voxelite_render::RenderError::Invalid(
-                                "GPUI Metal device unavailable".into(),
-                            )
-                        })?;
-                    renderer = Some(voxelite_render::gpu::Worker::new(registry_id)?);
-                }
-                renderer.as_mut().unwrap().set_diagnostics(diagnostics);
-                renderer
-                    .as_mut()
-                    .unwrap()
+                let worker = gpu_worker(&mut renderer)?;
+                worker.set_diagnostics(diagnostics);
+                worker
                     .render(
                         snapshot,
                         bounds,

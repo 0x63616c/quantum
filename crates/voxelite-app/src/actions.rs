@@ -93,6 +93,10 @@ struct ShellCommands {
 }
 
 impl ShellCommands {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: built-in command has an Op"
+    )]
     fn from_host(host: &Host) -> Self {
         let mut entries: Vec<_> = host
             .registry()
@@ -106,6 +110,10 @@ impl ShellCommands {
         Self { entries }
     }
 
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: command is enabled in the app host"
+    )]
     fn command(&self, op: Op) -> &CommandContribution {
         &self
             .entries

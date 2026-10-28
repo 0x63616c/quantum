@@ -506,6 +506,7 @@ impl SettingsView {
                 .map(|(_, setting)| setting.clone())
         })
     }
+    #[expect(clippy::expect_used, reason = "internal invariant: bounded AO slider")]
     fn content(&self, section: Section, t: Theme, cx: &Context<Self>) -> Div {
         let p = &cx.global::<SettingsState>().values;
         match section {
@@ -1227,6 +1228,10 @@ impl EditorView {
         }
         cx.notify();
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: declared boolean grid setting"
+    )]
     pub(super) fn sync_preferences(&mut self, window: &Window, cx: &mut Context<Self>) {
         let next = cx.global::<SettingsState>().values.clone();
         let next_theme = theme(next.appearance, window);

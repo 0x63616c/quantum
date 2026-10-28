@@ -11,6 +11,10 @@ fn tool_catalog() {
 
 // Only the session identity/epoch are nondeterministic. Keep the actual text
 // content, structured envelope and image bytes, including their key order.
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn capture(server: &VoxeliteServer, name: &str, args: Value) -> Value {
     let result = server.call(&format!("voxelite_{name}"), args).unwrap();
     let envelope = result.structured_content.as_ref().unwrap();

@@ -11,6 +11,10 @@ use xtask::{
 };
 
 const WORKFLOW: &str = include_str!("../../.github/workflows/release-macos.yml");
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn workflow_step(name: &str) -> String {
     let lines: Vec<_> = WORKFLOW.lines().collect();
     let start = lines
@@ -30,6 +34,10 @@ fn workflow_step(name: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn tool() -> &'static Path {
     static TOOL: OnceLock<tempfile::TempDir> = OnceLock::new();
     TOOL.get_or_init(|| {
@@ -50,6 +58,10 @@ fn tool() -> &'static Path {
     })
     .path()
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn fixture() -> tempfile::TempDir {
     let temp = tempfile::tempdir().unwrap();
     fs::create_dir(temp.path().join("tools")).unwrap();
@@ -65,6 +77,10 @@ fn fixture() -> tempfile::TempDir {
     }
     temp
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn shell(root: &Path, step: &str) -> Command {
     let mut command = Command::new("bash");
     command
@@ -365,6 +381,18 @@ fn interruption_stops_descendants_holding_output_pipes() {
 }
 
 #[cfg(unix)]
+#[expect(
+    clippy::expect_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
+#[expect(
+    clippy::panic,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn check_descendant_interruption(tool_name: &str, parent_exits: bool) {
     let root = fixture();
     let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));

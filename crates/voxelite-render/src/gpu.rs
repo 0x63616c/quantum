@@ -159,11 +159,16 @@ impl Viewport {
         let errors = Arc::new(Mutex::new(None));
         let sink = errors.clone();
         device.on_uncaptured_error(Arc::new(move |error| {
-            *sink.lock().unwrap() = Some(error.to_string());
+            *sink
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(error.to_string());
         }));
         let sink = errors.clone();
         device.set_device_lost_callback(move |reason, message| {
-            *sink.lock().unwrap() = Some(format!("device lost ({reason:?}): {message}"));
+            *sink
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                Some(format!("device lost ({reason:?}): {message}"));
         });
         let message = format!(
             "Voxelite GPU viewport: {:?} / {} / full resolution / 4x MSAA / exact voxel shadows",
@@ -290,7 +295,11 @@ impl Viewport {
         self.check_error()
     }
     fn check_error(&self) -> RenderResult<()> {
-        if let Some(message) = &*self.errors.lock().unwrap() {
+        if let Some(message) = &*self
+            .errors
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
             Err(error(message))
         } else {
             Ok(())
@@ -298,6 +307,10 @@ impl Viewport {
     }
     /// Render an engine-validated snapshot using prepared chunk changes.
     /// Meshing may run on a worker; camera motion supplies an empty update list.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: fallback initialized before shadow-map rendering; internal invariant: occupancy upload initializes its bind group; internal invariant: render target initialized before encoding"
+    )]
     async fn render(
         &mut self,
         camera: Camera,
@@ -387,7 +400,10 @@ impl Viewport {
                 self.transient,
             ));
         }
-        let target = self.targets.as_ref().unwrap();
+        let target = self
+            .targets
+            .as_ref()
+            .expect("render target initialized before encoding");
         let eye = Vec3::from_array(camera.eye.map(|v| v as f32));
         let center = Vec3::from_array(camera.target.map(|v| v as f32));
         let up = Vec3::from_array(camera.up.map(|v| v as f32));
@@ -454,7 +470,10 @@ impl Viewport {
                 label: Some("voxel viewport"),
             });
         if redraw_shadow {
-            let fallback = self.fallback.as_ref().unwrap();
+            let fallback = self
+                .fallback
+                .as_ref()
+                .expect("fallback initialized before shadow-map rendering");
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("fallback voxel shadow"),
                 timestamp_writes: self.timer.as_ref().map(|t| t.writes(0, 1)),
@@ -493,7 +512,12 @@ impl Viewport {
             });
             let (pipeline, bind) = match &self.fallback {
                 Some(fallback) => (&fallback.main_pipeline, &fallback.shadow_bind),
-                None => (&self.main_pipeline, self.occupancy_bind.as_ref().unwrap()),
+                None => (
+                    &self.main_pipeline,
+                    self.occupancy_bind
+                        .as_ref()
+                        .expect("occupancy upload initializes its bind group"),
+                ),
             };
             pass.set_pipeline(pipeline);
             pass.set_bind_group(0, &self.globals, &[]);
@@ -544,6 +568,10 @@ impl Viewport {
     }
     /// Writes only dirty brick words and their mask words. Errors are scoped so
     /// an occupancy-specific allocation/upload failure can use the map fallback.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: occupancy allocated before upload"
+    )]
     async fn upload_occupancy(&mut self, occ: &mut Occupancy) -> RenderResult<()> {
         let bytes = std::mem::size_of_val(occ.words()) as u64;
         let limits = self.device.limits();
@@ -576,21 +604,29 @@ impl Viewport {
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.occupancy_bind = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("voxel occupancy"),
-                layout: &self.occupancy_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.occupancy.as_ref().unwrap().as_entire_binding(),
-                }],
-            }));
+            self.occupancy_bind = Some(
+                self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("voxel occupancy"),
+                    layout: &self.occupancy_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self
+                            .occupancy
+                            .as_ref()
+                            .expect("occupancy allocated before upload")
+                            .as_entire_binding(),
+                    }],
+                }),
+            );
         }
         for range in ranges {
             if let Some(stats) = &mut self.stats {
                 stats.upload_bytes += (range.len() * 4) as u64;
             }
             self.queue.write_buffer(
-                self.occupancy.as_ref().unwrap(),
+                self.occupancy
+                    .as_ref()
+                    .expect("occupancy allocated before upload"),
                 (range.start * 4) as u64,
                 bytemuck::cast_slice(&occ.words()[range]),
             );

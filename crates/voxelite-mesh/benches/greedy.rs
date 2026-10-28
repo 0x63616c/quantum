@@ -11,6 +11,10 @@ fn main() {
     divan::main();
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn snapshot(voxels: Vec<Voxel>) -> Snapshot {
     let layer = Uuid::from_u128(2);
     let mut document = Document::new(Uuid::from_u128(1), layer);
@@ -37,6 +41,10 @@ fn snapshot(voxels: Vec<Voxel>) -> Snapshot {
     engine.document().content.clone()
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn measure(bencher: Bencher, voxels: Vec<Voxel>) {
     let count = voxels.len();
     let snapshot = snapshot(voxels);

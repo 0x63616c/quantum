@@ -19,6 +19,10 @@ fn rust_child() {
     std::process::exit(std::env::var("XTASK_TEST_EXIT").unwrap().parse().unwrap());
 }
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn child(directory: &std::path::Path, code: i32) -> Command {
     Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "rust_child", "--nocapture"])

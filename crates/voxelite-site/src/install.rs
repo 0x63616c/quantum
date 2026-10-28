@@ -47,6 +47,7 @@ impl<'a> ServerConfig<'a> {
         }
     }
 
+    #[expect(clippy::expect_used, reason = "internal invariant: server JSON")]
     fn named_json(self) -> String {
         serde_json::to_string(&NamedServerConfig {
             name: NAME,
@@ -80,6 +81,7 @@ fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: server JSON")]
 fn cursor_link() -> String {
     let encoded = STANDARD.encode(serde_json::to_string(&SERVER).expect("server JSON"));
     format!("cursor://anysphere.cursor-deeplink/mcp/install?name={NAME}&config={encoded}")
@@ -103,6 +105,7 @@ fn code(language: &str, text: &str) -> String {
     )
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: server JSON")]
 pub fn block() -> String {
     format!(
         include_str!("../templates/install.html"),
@@ -159,6 +162,7 @@ pub fn skill_list() -> Result<String, Box<dyn Error>> {
 }
 
 /// The build script refreshes the repository examples and downloadable copies.
+#[expect(clippy::expect_used, reason = "internal invariant: example directory")]
 pub fn write_integrations(root: &Path) -> Result<(), Box<dyn Error>> {
     let manual = SERVER.with_root("<project dir>");
     for (path, config) in [

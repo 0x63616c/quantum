@@ -1,6 +1,10 @@
 //! Camera validation, raster visibility, alpha and reproducibility contracts.
 use voxelite_core::*;
 use voxelite_render::*;
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn scene() -> Snapshot {
     let mut e = Engine::new(Document::new(Uuid::from_u128(1), Uuid::from_u128(2))).unwrap();
     e.execute(Transaction {

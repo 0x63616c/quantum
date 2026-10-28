@@ -5,9 +5,17 @@ use voxelite_core::*;
 use voxelite_format::*;
 const INPUT: &[u8] = include_bytes!("../../../spec/voxl/1.0/fixtures/populated.input.voxl");
 const GOLDEN: &[u8] = include_bytes!("../../../spec/voxl/1.0/fixtures/populated.canonical.voxl");
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn input() -> Value {
     serde_json::from_slice(INPUT).unwrap()
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn parse(v: Value) -> FormatResult<Project> {
     from_bytes(&serde_json::to_vec(&v).unwrap())
 }
