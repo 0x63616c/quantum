@@ -8,7 +8,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    io::{BufReader, BufWriter},
+    io::BufReader,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -117,17 +117,15 @@ pub fn write_png(path: &Path, size: [u32; 2], rgba: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let mut encoder = png::Encoder::new(
-        BufWriter::new(std::fs::File::create(path)?),
-        size[0],
-        size[1],
-    );
+    let mut bytes = Vec::new();
+    let mut encoder = png::Encoder::new(&mut bytes, size[0], size[1]);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
     let mut writer = encoder.write_header()?;
     writer.write_image_data(rgba)?;
     writer.finish()?;
+    voxelite_format::storage::safe_write(path, &bytes)?;
     Ok(())
 }
 pub fn read_png(path: &Path) -> Result<([u32; 2], Vec<u8>)> {
@@ -468,7 +466,7 @@ pub fn run(options: &Options) -> Result<bool> {
         results: entries,
     };
     report::write_json(&options.out.join("report.json"), &report)?;
-    std::fs::write(options.out.join("report.md"), markdown(&report))?;
+    voxelite_format::storage::safe_write(options.out.join("report.md"), markdown(&report))?;
     for path in &report.changed_files {
         println!("changed: {path}");
     }

@@ -25,7 +25,7 @@ fn run() -> Result<bool> {
                 if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
                     std::fs::create_dir_all(parent)?;
                 }
-                std::fs::write(path, compare::summary(&report))?;
+                voxelite_format::storage::safe_write(path, compare::summary(&report))?;
             }
             let (markdown, failed) = if let Some(compare) = &options.compare {
                 let path = compare.as_ref().unwrap_or(&baseline);
@@ -39,7 +39,7 @@ fn run() -> Result<bool> {
                 if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
                     std::fs::create_dir_all(parent)?;
                 }
-                std::fs::write(path, &markdown)?;
+                voxelite_format::storage::safe_write(path, &markdown)?;
             }
             if options.update_baseline {
                 report::write_json(&baseline, &report)?;

@@ -109,7 +109,7 @@ fn main() -> anyhow::Result<()> {
             snapshot: editor.snapshot(),
             render_view: &voxelite_app::editor::render_view(&options),
         }))?;
-        std::fs::write(path, bytes)?;
+        voxelite_format::storage::safe_write(path, bytes)?;
         return Ok(());
     }
     let (editor, open_error) = if options.example {
