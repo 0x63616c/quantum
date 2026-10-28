@@ -148,7 +148,7 @@ on `main` retries a failed post-release deployment without replacing any assets.
 
 The workflow publishes the built files at the root of `site-dist`, excluding this
 README and `content/` sources. It preserves deployment history and skips unchanged
-output. Set Vercel's production branch to `site-dist`, framework
-preset to **Other**, Build Command override to empty, and output directory to `.`
-([static build settings](https://vercel.com/docs/builds/configure-a-build#skip-build-step)).
-Vercel deploys that branch; GitHub needs no Vercel secrets.
+output. The workflow then deploys the same built artifact to Vercel with the
+configured `VERCEL_TOKEN` secret. The Vercel project has no Git integration;
+pushing `site-dist` alone does not deploy it. Without the token, the workflow
+publishes the branch and reports that Vercel deployment was skipped.

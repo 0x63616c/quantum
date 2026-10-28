@@ -19,6 +19,17 @@ technical conventions.
 - Put the issue in a milestone and on the board. Board status follows the work:
   Backlog → Next → In progress → In review → Done (or Later).
 
+Every open issue carries exactly one model label:
+
+- `model:sol`: everyday work: CI config, lint setup, small fixes, straightforward
+  refactors and docs. Run `codex exec -m gpt-6.1-sol`.
+- `model:astra`: hard work: UI/design-heavy tasks, complex refactors, spikes and
+  ports of someone else's code. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
+
+In the issue body's `## Dependencies` section, put one `Blocked by #N` line per
+blocker between `<!-- deps:start -->` and `<!-- deps:end -->` markers. Keep
+`status:blocked` while any blocker is open; remove it when the last one closes.
+
 ## 2. Branches
 
 Name branches `<type>/<issue#>-<slug>`, for example `refactor/84-split-ui-rs` or
@@ -43,10 +54,28 @@ The [PR template](.github/pull_request_template.md) asks for:
 
 - `Closes #N` (or `Fixes #N`; `Refs #N` for partial work). CI rejects PRs that
   link no issue.
-- A short summary of the problem and the resulting behavior.
-- Test evidence: commands run and their result, plus untested platforms.
-- Before/after screenshots for any UI change (both themes where relevant), and
+- **Summary**: the problem and the resulting behavior, in plain English.
+- **Changes**: bullets, most important first.
+- **Testing**: commands run and their result, plus untested platforms;
   before/after numbers for performance changes.
+- **Checklist**, including the UI items for UI changes.
+
+Keep the sections and their order so every PR reads the same way.
+
+### Screenshots for UI changes
+
+Any PR that changes what a user sees gets a **Screenshots** section with a
+captioned Before | After table of the key screens (Welcome window, editor in dark
+and light themes). It is generated, never pasted by hand:
+
+```sh
+cargo xtask screenshots              # local preview in target/pr-screenshots/
+cargo xtask screenshots --publish 123  # fill the Screenshots section of PR #123
+```
+
+The **PR screenshots** CI job runs the publish step for PRs touching UI paths, and
+non-UI PRs get no Screenshots section. Details, adding screens and troubleshooting:
+[ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
 ## 5. One focus per PR
 

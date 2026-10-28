@@ -1,27 +1,24 @@
 //! Serialized document authority and bounded operation receipts.
 use crate::{
     API_VERSION,
+    arguments::{NewCommon, ReadCommon, WriteCommon},
     catalog::Spec,
-    comments, edit,
-    error::{Args, Failure, Result},
-    exports, files, images, palettes,
+    edit,
+    error::{Failure, Result},
+    exports, files, images,
+    tools::{DocumentCx, Handler, Query},
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use rmcp::model::{CallToolResult, ContentBlock};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf};
 use voxelite_core::*;
-use voxelite_format::{
-    Project,
-    session::{DocumentSession, SavePolicy},
-};
-use voxelite_plugin_api::{CommentLayer, CommentsAction, CommentsQuery};
+use voxelite_format::{Project, session::DocumentSession};
 
 const MAX_RECEIPTS: usize = 4096;
 const MAX_RECEIPT_BYTES: usize = 8 * 1024 * 1024;
 const RECEIPT_RESERVATION: usize = 65536;
 const MAX_RESULT_BYTES: usize = 12 * 1024 * 1024;
-const MAX_EXPLICIT_VOXELS: usize = 65536;
 
 /// Immutable render work captured on the authority thread and executed off-thread.
 pub(crate) struct RenderTask {
@@ -30,13 +27,13 @@ pub(crate) struct RenderTask {
     model: Uuid,
     revision: u64,
     pub snapshot: std::sync::Arc<Snapshot>,
-    args: Value,
+    args: images::RenderInput,
     passes: voxelite_render::RenderPlan,
 }
 impl RenderTask {
     pub fn run(self) -> CallToolResult {
         let result = (|| -> Result<CallToolResult> {
-            let images = images::render(&self.snapshot, &Args(&self.args), &self.passes)?;
+            let images = images::render(&self.snapshot, &self.args, &self.passes)?;
             let mut data = images.metadata;
             data["model_id"] = json!(self.model);
             data["revision"] = json!(self.revision.to_string());
@@ -112,14 +109,14 @@ impl Session {
                 e.kind()
             )));
         }
-        let a = Args(&args);
-        let model = a.get("model_id")?;
+        let a = ReadCommon::from(&args);
+        let model = a.model_id.get()?;
         let doc = self
             .documents
             .get(&model)
             .ok_or_else(|| Failure::new("model_not_found", "model is not open in this session"))?;
         let revision = doc.engine.revision();
-        if let Some(expected) = a.optional::<String>("revision")? {
+        if let Some(expected) = a.revision.optional()? {
             let expected = expected
                 .parse::<u64>()
                 .map_err(|_| Failure::invalid("revision exceeds u64"))?;
@@ -139,7 +136,7 @@ impl Session {
             model,
             revision,
             snapshot: std::sync::Arc::new(doc.engine.document().content.clone()),
-            args,
+            args: images::RenderInput::from(&args),
         })
     }
     pub fn error(&self, e: Failure) -> CallToolResult {
@@ -190,10 +187,11 @@ impl Session {
             .name
             .strip_prefix("voxelite_")
             .expect("catalog prefix");
-        let a = Args(args);
+        let a = WriteCommon::from(args);
+        let mutation = NewCommon::from(args);
         let mut identity = None;
         if spec.mutation {
-            let id: Uuid = a.get("operation_id")?;
+            let id: Uuid = mutation.identity.operation_id.get()?;
             let signature =
                 files::hash(&serde_json::to_vec(&json!([name, args])).expect("JSON arguments"));
             if let Some((previous, result)) = self.receipts.get(&id) {
@@ -206,14 +204,14 @@ impl Session {
                     ))
                 };
             }
-            let epoch: Uuid = a.get("expected_epoch")?;
+            let epoch: Uuid = mutation.identity.expected_epoch.get()?;
             if epoch != self.epoch {
                 return Err(Failure::new(
                     "epoch_conflict",
                     "session epoch changed; inspect capabilities and document state before retrying",
                 ));
             }
-            if let Some(label) = a.optional::<String>("label")?
+            if let Some(label) = mutation.label.optional()?
                 && (label.len() > 80 || validate_name(&label).is_err())
             {
                 return Err(Failure::invalid(
@@ -224,22 +222,18 @@ impl Session {
             self.reserve_receipt(name, &a)?;
             identity = Some((id, signature));
         }
-        let (data, images) = match name {
-            "capabilities_get" => (
-                json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":exports::extensions(host),"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(info).collect::<Vec<_>>()}),
-                vec![],
-            ),
-            "document_create" | "document_open" => (self.open(name, &a)?, vec![]),
-            _ => {
-                let model_id: Uuid = a.get("model_id")?;
+        let (data, images) = match spec.handler {
+            Handler::Session(handler) => handler(self, args, host)?,
+            Handler::Document(handler) => {
+                let model_id = ReadCommon::from(args).model_id.get()?;
                 let doc = self.documents.get_mut(&model_id).ok_or_else(|| {
                     Failure::new("model_not_found", "model is not open in this session")
                 })?;
                 let revision = doc.engine.revision();
-                let expected: Option<String> = if spec.mutation {
-                    Some(a.get("expected_revision")?)
+                let expected = if spec.mutation {
+                    Some(a.expected_revision.get()?)
                 } else {
-                    a.optional("revision")?
+                    ReadCommon::from(args).revision.optional()?
                 };
                 if let Some(expected) = expected {
                     let expected = expected
@@ -254,7 +248,17 @@ impl Session {
                         return Err(e);
                     }
                 }
-                dispatch(&self.root, self.id, doc, name, &a, host)?
+                handler(
+                    &mut DocumentCx {
+                        root: &self.root,
+                        client_id: self.id,
+                        doc,
+                        host,
+                        name,
+                        write: &a,
+                    },
+                    args,
+                )?
             }
         };
         let result = self.success(data, images);
@@ -275,13 +279,13 @@ impl Session {
         }
         Ok(result)
     }
-    fn reserve_receipt(&self, name: &str, a: &Args<'_>) -> Result<()> {
+    fn reserve_receipt(&self, name: &str, a: &WriteCommon) -> Result<()> {
         // An edit must leave room to save every open document, including a
         // document about to be created. A save may consume its own reservation,
         // but cannot spend the capacity needed by other dirty documents. This
         // also prevents repeated saves of a clean document starving dirty ones.
         let saves = if name == "document_save" {
-            let target: Uuid = a.get("model_id")?;
+            let target: Uuid = a.model_id.get()?;
             self.documents
                 .iter()
                 .filter(|(id, doc)| **id != target && doc.needs_save())
@@ -301,7 +305,19 @@ impl Session {
         }
         Ok(())
     }
-    fn open(&mut self, name: &str, a: &Args<'_>) -> Result<Value> {
+    pub(crate) fn capabilities(
+        &self,
+        host: &voxelite_plugin_host::Host,
+    ) -> Result<(Value, Vec<ContentBlock>)> {
+        Ok((
+            json!({"api_version":API_VERSION,"protocol_versions":["2025-11-25","2026-07-28"],"limits":{"open_documents":8,"request_bytes":16777216,"result_bytes":MAX_RESULT_BYTES,"batch_operations":256,"explicit_voxels":65536,"read_voxels":10000,"work_units":MAX_WORK,"operation_receipts":MAX_RECEIPTS,"receipt_bytes":MAX_RECEIPT_BYTES},"renderer":"cpu","formats":exports::extensions(host),"presets":["pico8","endesga32","sweetie16","grayscale","neutral","warm","vivid"],"durability":"memory","documents":self.documents.values().map(info).collect::<Vec<_>>()}),
+            vec![],
+        ))
+    }
+    pub(crate) fn install(
+        &mut self,
+        create: impl FnOnce(&std::path::Path, Limits) -> Result<DocumentSession>,
+    ) -> Result<Value> {
         if self.documents.len() >= 8 {
             return Err(Failure::new(
                 "limit_exceeded",
@@ -312,20 +328,7 @@ impl Session {
             history_bytes: 16 * 1024 * 1024,
             ..Default::default()
         };
-        let document = if name == "document_open" {
-            let path = files::path(&self.root, &a.get::<String>("path")?)?;
-            DocumentSession::open(&path, limits)?
-        } else {
-            let mut document = Document::new(
-                a.default("model_id", Uuid::new_v4())?,
-                a.default("layer_id", Uuid::new_v4())?,
-            );
-            // Construction precedes engine installation; subsequent content
-            // edits can only pass through Transaction/Command.
-            document.content.name = a.get("name")?;
-            document.content.bounds = a.default("bounds", Region::default())?;
-            DocumentSession::new(Project::new(document)?, None, limits)?
-        };
+        let document = create(&self.root, limits)?;
         let id = document.engine.document().id;
         if self.documents.contains_key(&id) {
             return Err(Failure::new(
@@ -338,335 +341,24 @@ impl Session {
         Ok(data)
     }
 }
-fn layers(engine: &Engine) -> Vec<Value> {
+pub(crate) fn layers(engine: &Engine) -> Vec<Value> {
     engine.document().content.layers.iter().map(|l|json!({"id":l.id,"name":l.name,"visible":l.visible,"locked":l.locked,"voxel_count":l.voxels.len()})).collect()
 }
-fn info(session: &DocumentSession) -> Value {
+pub(crate) fn info(session: &DocumentSession) -> Value {
     let engine = &session.engine;
     let d = engine.document();
     json!({"model_id":d.id,"revision":engine.revision().to_string(),"name":d.content.name,"bounds":d.content.bounds,"dirty":session.needs_save(),"layers":layers(engine),"voxel_count":d.content.layers.iter().map(|l|l.voxels.len()).sum::<usize>(),"palette_slots":d.content.palette.slots.len(),"comments":d.content.comments.len(),"versions":d.versions.len(),"head_id":engine.head(),"redo_id":engine.redo_head()})
 }
-fn change(receipt: &Receipt) -> Value {
+pub(crate) fn change(receipt: &Receipt) -> Value {
     json!({"revision":receipt.revision.to_string(),"undo_entry_id":receipt.entry,"changed_voxels":receipt.changes.voxel_count(),"added":receipt.changes.added,"removed":receipt.changes.removed,"recolored":receipt.changes.recolored,"changed_bounds":receipt.changes.bounds,"changed_layers":receipt.changes.layers,"palette_changed":receipt.changes.palette_changed,"metadata_changed":receipt.changes.metadata_changed,"work_units":receipt.work_units,"durability":"memory"})
 }
-fn dispatch(
-    root: &std::path::Path,
-    client_id: Uuid,
-    doc: &mut DocumentSession,
-    name: &str,
-    a: &Args<'_>,
-    host: &mut voxelite_plugin_host::Host,
-) -> Result<(Value, Vec<ContentBlock>)> {
-    if name == "document_info" {
-        return Ok((info(doc), vec![]));
-    }
-    if name == "document_save" {
-        let path = files::path(root, &a.get::<String>("path")?)?;
-        let saved = doc
-            .prepare_save(&path, SavePolicy::CreateOrTracked)
-            .write()?;
-        let data = json!({"model_id":doc.engine.document().id,"revision":doc.engine.revision().to_string(),"path":a.get::<String>("path")?,"sha256":saved.fingerprint(),"bytes":saved.bytes(),"dirty":false});
-        doc.finish_save(saved);
-        return Ok((data, vec![]));
-    }
-    let engine = &mut doc.engine;
-    let s = &engine.document().content;
-    if matches!(name, "comments_add" | "comments_reply") && a.get::<String>("text")?.len() > 4096 {
-        return Err(Failure::invalid("comment text exceeds 4096 UTF-8 bytes").at("/text"));
-    }
-    let mut extras = json!({});
-    let command = match name {
-        "layers_list" => return read(engine, json!({"layers":layers(engine)})),
-        "palette_list" => {
-            return read(
-                engine,
-                json!({"palette":s.palette,"presets":palettes::presets(host)?}),
-            );
-        }
-        "palette_export" => {
-            let format: String = a.get("format")?;
-            let bytes = exports::snapshot(host, &format, s)?;
-            let text = String::from_utf8(bytes)
-                .map_err(|e| Failure::new("export_failed", e.to_string()))?;
-            return read(engine, json!({"format":format,"text":text}));
-        }
-        "voxels_get" => {
-            let id = edit::layer(s, &a.get::<String>("layer")?)?;
-            let l = s.layer(id)?;
-            let positions: Vec<Pos> = a.get("positions")?;
-            let mut voxels = Vec::new();
-            for at in positions {
-                if !s.bounds.contains(at) {
-                    return Err(Error::OutOfBounds(at).into());
-                }
-                voxels.push(json!({"at":at,"slot":l.voxels.get(at)}));
-            }
-            return read(engine, json!({"layer_id":id,"voxels":voxels}));
-        }
-        "query" => return read(engine, query(s, a)?),
-        "voxels_set" => edit::voxel_command(s, "set", a)?,
-        "voxels_erase_region" => edit::voxel_command(s, "erase_region", a)?,
-        "voxels_fill" => edit::voxel_command(s, "fill", a)?,
-        "voxels_box" => edit::voxel_command(s, "box", a)?,
-        "voxels_batch" => {
-            let operations: Vec<Value> = a.get("operations")?;
-            let mut commands = Vec::new();
-            let mut explicit_voxels = 0;
-            for (index, v) in operations.iter().enumerate() {
-                explicit_voxels += v
-                    .get("voxels")
-                    .and_then(Value::as_array)
-                    .map_or(0, Vec::len);
-                if explicit_voxels > MAX_EXPLICIT_VOXELS {
-                    let mut error = Failure::new("limit_exceeded", "a request may contain at most 65,536 explicit voxel entries across all batch operations")
-                        .at(format!("/operations/{index}/voxels"));
-                    error.command_index = Some(index);
-                    return Err(error);
-                }
-                let parsed = edit::voxel_command(s, &Args(v).get::<String>("kind")?, &Args(v))
-                    .map_err(|mut e| {
-                        e.command_index = Some(index);
-                        e.path = Some(format!("/operations/{index}{}", e.path.unwrap_or_default()));
-                        e
-                    })?;
-                commands.push(parsed);
-            }
-            Command::Batch(commands)
-        }
-        "layers_add" => {
-            let id = a.default("layer_id", Uuid::new_v4())?;
-            extras = json!({"layer_id":id});
-            Command::Layer(LayerEdit::Create {
-                id,
-                name: a.get("name")?,
-                index: a.default("index", s.layers.len())?,
-            })
-        }
-        "layers_remove" => Command::Layer(LayerEdit::Delete(edit::layer(
-            s,
-            &a.get::<String>("layer")?,
-        )?)),
-        "layers_reorder" => {
-            let order: Vec<String> = a.get("order")?;
-            Command::Layer(LayerEdit::Reorder(
-                order
-                    .iter()
-                    .map(|l| edit::layer(s, l))
-                    .collect::<Result<_>>()?,
-            ))
-        }
-        "layers_rename" | "layers_visibility" | "layers_lock" => {
-            Command::Layer(LayerEdit::Update {
-                id: edit::layer(s, &a.get::<String>("layer")?)?,
-                name: a.optional("name")?,
-                visible: a.optional("visible")?,
-                locked: a.optional("locked")?,
-            })
-        }
-        "palette_set_slot" | "palette_apply_preset" | "palette_import" => {
-            use voxelite_plugin_api::PaletteAction;
-            let action = match name {
-                "palette_set_slot" => PaletteAction::SetSlot {
-                    slot: a.get("slot")?,
-                    color: Swatch {
-                        rgba: a.get("rgba")?,
-                        name: a.optional("name")?,
-                    },
-                },
-                "palette_apply_preset" => PaletteAction::AppendPreset(a.get("preset")?),
-                _ => PaletteAction::AppendImport {
-                    format: a.get("format")?,
-                    text: a.get("text")?,
-                },
-            };
-            let outcome = palettes::dispatch(host, &s.palette, action)?;
-            if name != "palette_set_slot" {
-                extras = json!({"slot_mapping": outcome.slot_mapping.iter().map(|(source, slot)| json!({"source":source,"slot":slot})).collect::<Vec<_>>()});
-            }
-            // Preserve the original command nesting and history serialization.
-            let mut commands = outcome.commands;
-            if name == "palette_set_slot" {
-                commands.remove(0)
-            } else {
-                Command::Batch(commands)
-            }
-        }
-        "comments_list" => {
-            let data = comments::list(
-                host,
-                s,
-                CommentsQuery {
-                    state: a.default("state", "all".into())?,
-                    offset: a.default("offset", 0)?,
-                    limit: a.default("limit", 50)?,
-                    message_offset: a.default("message_offset", 0)?,
-                    message_limit: a.default("message_limit", 50)?,
-                },
-            )?;
-            return read(engine, data);
-        }
-        "comments_add" => {
-            let id = a.default("thread_id", Uuid::new_v4())?;
-            let message = a.default("message_id", Uuid::new_v4())?;
-            extras = json!({"thread_id":id,"message_id":message});
-            comments::command(
-                host,
-                s,
-                CommentsAction::Create {
-                    id,
-                    message,
-                    anchor: a.get("anchor")?,
-                    layer: CommentLayer::Explicit(
-                        a.optional::<String>("layer")?
-                            .map(|l| edit::layer(s, &l))
-                            .transpose()?,
-                    ),
-                    text: a.get("text")?,
-                },
-            )?
-        }
-        "comments_reply" => {
-            let message = a.default("message_id", Uuid::new_v4())?;
-            extras = json!({"thread_id":a.get::<Uuid>("thread_id")?,"message_id":message});
-            comments::command(
-                host,
-                s,
-                CommentsAction::Reply {
-                    id: a.get("thread_id")?,
-                    message,
-                    text: a.get("text")?,
-                },
-            )?
-        }
-        "comments_resolve" | "comments_reopen" => comments::command(
-            host,
-            s,
-            CommentsAction::Resolve {
-                id: a.get("thread_id")?,
-                resolved: name == "comments_resolve",
-            },
-        )?,
-        "history_read" => {
-            let entries: Vec<_> = engine.history().collect();
-            let offset: usize = a.default("offset", 0)?;
-            let limit: usize = a.default("limit", 50)?;
-            let page:Vec<_>=entries.iter().skip(offset).take(limit).map(|e|json!({"entry_id":e.id,"origin":e.actor.origin,"tool":e.actor.tool,"label":e.label,"base_revision":e.base_revision.to_string(),"result_revision":e.result_revision.to_string(),"added":e.changes.added,"removed":e.changes.removed,"recolored":e.changes.recolored,"changed_bounds":e.changes.bounds})).collect();
-            let next = (offset + page.len() < entries.len()).then_some(offset + page.len());
-            return read(
-                engine,
-                json!({"entries":page,"total":entries.len(),"next_offset":next,"head_id":engine.head(),"redo_id":engine.redo_head(),"initial_retained":engine.initial_retained(),"history_bytes":engine.history_bytes()}),
-            );
-        }
-        "history_undo" | "history_redo" => {
-            let receipt = if name == "history_undo" {
-                engine.undo(engine.revision(), a.get("entry_id")?)?
-            } else {
-                engine.redo(engine.revision(), a.get("entry_id")?)?
-            };
-            let mut data = change(&receipt);
-            data["operation_id"] = a.0["operation_id"].clone();
-            data["head_id"] = json!(engine.head());
-            data["redo_id"] = json!(engine.redo_head());
-            return read(engine, data);
-        }
-        "versions_list" => {
-            return read(
-                engine,
-                json!({"versions":engine.versions().map(|v|json!({"id":v.id,"name":v.name,"parent_id":v.parent,"origin":v.origin,"content_hash":v.content_hash})).collect::<Vec<_>>()}),
-            );
-        }
-        "versions_save" => {
-            let id = a.default("version_id", Uuid::new_v4())?;
-            extras = json!({"version_id":id});
-            Command::SaveVersion {
-                id,
-                name: a.get("name")?,
-                parent: a.optional("parent_id")?,
-            }
-        }
-        "versions_restore" => Command::RestoreVersion {
-            id: a.get("version_id")?,
-            expected_head: a.get("expected_head_id")?,
-        },
-        "render" | "export_png" => {
-            // Export can only emit a single image; validate before expensive work.
-            if name == "export_png"
-                && a.default::<String>("image_mode", "contact_sheet".into())? == "both"
-            {
-                return Err(Failure::invalid(
-                    "export_png needs one PNG; use contact_sheet or one individual view",
-                ));
-            }
-            let images = if name == "export_png" {
-                images::export(s, a, host)?
-            } else {
-                images::render(s, a, &host.render_plan())?
-            };
-            if name == "export_png" {
-                if images.pngs.len() != 1 {
-                    return Err(Failure::invalid(
-                        "export_png needs one PNG; use contact_sheet or one individual view",
-                    ));
-                }
-                let path = files::path(root, &a.get::<String>("path")?)?;
-                let bytes = &images.pngs[0];
-                files::write(&path, bytes)?;
-                let mut data = images.metadata;
-                data["path"] = a.0["path"].clone();
-                data["sha256"] = json!(files::hash(bytes));
-                data["bytes"] = json!(bytes.len());
-                return read(engine, data);
-            }
-            let mut data = images.metadata;
-            data["model_id"] = json!(engine.document().id);
-            data["revision"] = json!(engine.revision().to_string());
-            return Ok((
-                data,
-                images
-                    .pngs
-                    .iter()
-                    .map(|png| ContentBlock::image(STANDARD.encode(png), "image/png"))
-                    .collect(),
-            ));
-        }
-        "export_glb" => {
-            let path = files::path(root, &a.get::<String>("path")?)?;
-            let bytes = exports::snapshot(host, "glb", s)?;
-            files::write(&path, &bytes)?;
-            return read(
-                engine,
-                json!({"path":a.0["path"],"sha256":files::hash(&bytes),"bytes":bytes.len(),"mime_type":"model/gltf-binary"}),
-            );
-        }
-        _ => return Err(Failure::invalid("unimplemented catalog entry")),
-    };
-    let operation_id = a.get("operation_id")?;
-    let receipt = engine.execute(Transaction {
-        expected_revision: engine.revision(),
-        id: operation_id,
-        actor: Actor {
-            origin: Origin::Agent,
-            client_id,
-            tool: format!("voxelite_{name}"),
-        },
-        label: a.default("label", name.replace('_', " "))?,
-        command,
-    })?;
-    let mut data = change(&receipt);
-    data.as_object_mut()
-        .unwrap()
-        .extend(extras.as_object().unwrap().clone());
-    data["operation_id"] = json!(operation_id);
-    data["head_id"] = json!(engine.head());
-    read(engine, data)
-}
-fn read(engine: &Engine, mut data: Value) -> Result<(Value, Vec<ContentBlock>)> {
+pub(crate) fn read(engine: &Engine, mut data: Value) -> Result<(Value, Vec<ContentBlock>)> {
     data["model_id"] = json!(engine.document().id);
     data["revision"] = json!(engine.revision().to_string());
     Ok((data, vec![]))
 }
-fn query(s: &Snapshot, a: &Args<'_>) -> Result<Value> {
-    let region = a.default("region", s.bounds)?;
+pub(crate) fn query(s: &Snapshot, a: &Query) -> Result<Value> {
+    let region = a.region.default(s.bounds)?;
     region.validate()?;
     if !s.bounds.contains_region(region) {
         return Err(Failure::new(
@@ -674,9 +366,10 @@ fn query(s: &Snapshot, a: &Args<'_>) -> Result<Value> {
             "query region exceeds document bounds",
         ));
     }
-    let view: String = a.default("view", "layers".into())?;
+    let view: String = a.view.default("layers".into())?;
     let target = a
-        .optional::<String>("layer")?
+        .layer
+        .optional()?
         .map(|l| edit::layer(s, &l))
         .transpose()?;
     if view == "composite" && target.is_some() {
@@ -719,14 +412,14 @@ fn query(s: &Snapshot, a: &Args<'_>) -> Result<Value> {
             });
         }
     }
-    let kind: String = a.get("kind")?;
+    let kind: String = a.kind.get()?;
     let mut data = json!({"bounds":s.bounds,"region":region,"occupied_bounds":bounds,"voxel_count":cells.len(),"view":view});
     if kind == "counts" {
         data["slots"] = json!(slots);
     }
     if kind == "voxels" {
-        let offset: usize = a.default("offset", 0)?;
-        let limit: usize = a.default("limit", 1000)?;
+        let offset: usize = a.offset.default(0)?;
+        let limit: usize = a.limit.default(1000)?;
         let page: Vec<_> = cells
             .iter()
             .skip(offset)
