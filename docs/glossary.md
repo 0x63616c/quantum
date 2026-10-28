@@ -52,7 +52,7 @@ A voxel is an occupied integer cell in a layer, carrying a palette-slot referenc
 [crates/voxelite-core/src/model.rs](../crates/voxelite-core/src/model.rs), and `Volume`
 stores cells in [crates/voxelite-core/src/chunk.rs](../crates/voxelite-core/src/chunk.rs).
 The `Voxel` struct in
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs) is an
+[crates/voxelite-core/src/command/types.rs](../crates/voxelite-core/src/command/types.rs) is an
 explicit `at`/`slot` write, including slot zero to erase through `SetVoxels`.
 “Cell” is the grid term and may also mean air; avoid “pixel” or treating a voxel as
 an RGB color independent of its palette.
@@ -64,7 +64,7 @@ history-entry UUID, actor and label in
 [crates/voxelite-core/src/engine.rs](../crates/voxelite-core/src/engine.rs).
 Execution prepares and validates privately, then commits atomically with one
 history entry unless it is a no-op, including when the command is a `Batch` from
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs).
+[crates/voxelite-core/src/command/types.rs](../crates/voxelite-core/src/command/types.rs).
 Use “edit transaction”; avoid equating it with a UI action, a disk save or an MCP
 request, which can also perform reads and lifecycle operations.
 
@@ -161,7 +161,7 @@ Labels, icons, shortcuts and menu membership come from the enabled command regis
 only change UI state.
 “UI action” and “app command” are aliases; distinguish these from the typed
 document-edit `Command` in
-[crates/voxelite-core/src/command.rs](../crates/voxelite-core/src/command.rs) and MCP's
+[crates/voxelite-core/src/command/types.rs](../crates/voxelite-core/src/command/types.rs) and MCP's
 `operation_id` retry identity.
 
 ### UI component library
