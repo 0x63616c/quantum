@@ -447,3 +447,11 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
 | [UI library](crates/quantum-ui/README.md), [UI rules](crates/quantum-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |
+
+Run `cargo xtask check brand typos` before submitting changes (install the pinned
+spelling checker with `cargo install typos-cli --version 1.51.1 --locked`). The
+brand check scans tracked text and paths, including binary filenames. Add legacy
+exceptions only in `brand.toml` under `compatibility`: use a specific file, the
+smallest required literal, and a compatibility reason. Unused entries fail; remove
+them when retiring compatibility. Fix spelling errors; reserve `_typos.toml`
+word entries for justified domain terms and exclusions for upstream/generated assets.
