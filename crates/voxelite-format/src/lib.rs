@@ -5,6 +5,7 @@
 //! is inert, bounded, preserved, and never interpreted as a URL or executable.
 mod build_history;
 pub mod session;
+pub mod storage;
 mod stream;
 pub use build_history::{BuildHistory, BuildStep};
 use serde::{Deserialize, Serialize};
@@ -133,11 +134,11 @@ impl Project {
         if semantic {
             metadata
                 .as_object_mut()
-                .expect("root object")
+                .ok_or_else(|| FormatError::Invalid("output root is not an object".into()))?
                 .remove("view");
             metadata
                 .as_object_mut()
-                .expect("root object")
+                .ok_or_else(|| FormatError::Invalid("output root is not an object".into()))?
                 .remove("build_history");
         }
         validate_metadata(&metadata, &self.document.extensions)?;

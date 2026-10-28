@@ -132,6 +132,10 @@ impl voxelite_plugin_api::ExportCx for Pixels<'_> {
     }
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: camera and projection are constructed with JSON object literals"
+)]
 fn render_with_encoder(
     s: &Snapshot,
     a: &RenderInput,
@@ -260,8 +264,13 @@ fn render_with_encoder(
             json!({"eye":image.camera.eye,"target":image.camera.target,"up":image.camera.up});
         camera
             .as_object_mut()
-            .unwrap()
-            .extend(projection.as_object().unwrap().clone());
+            .expect("camera and projection are constructed with JSON object literals")
+            .extend(
+                projection
+                    .as_object()
+                    .expect("camera and projection are constructed with JSON object literals")
+                    .clone(),
+            );
         views.push(json!({"view":name,"width":width,"height":height,"camera":camera,"sha256":files::hash(&png),"bytes":png.len()}));
         if sheet {
             let ox = (i as u32 % columns) * width;

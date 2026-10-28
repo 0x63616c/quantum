@@ -32,6 +32,14 @@ struct History {
 pub struct Recents {
     path: PathBuf,
 }
+impl Default for History {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            projects: Vec::new(),
+        }
+    }
+}
 impl Recents {
     /// Use an explicit settings directory, including isolated test directories.
     pub fn new(directory: &Path) -> Self {
@@ -42,11 +50,10 @@ impl Recents {
 
     /// Read newest first, tolerating corrupt/unknown versions and dropping missing files.
     pub fn load(&self) -> EditorResult<Vec<RecentProject>> {
-        let Some(bytes) = local_settings::read_local(&self.path)? else {
-            return Ok(Vec::new());
-        };
-        let Ok(history) = serde_json::from_slice::<History>(&bytes) else {
-            return Ok(Vec::new());
+        let history = match local_settings::json_store::<History>(&self.path)?.load() {
+            Ok(history) => history,
+            Err(error) if error.kind() == std::io::ErrorKind::InvalidData => History::default(),
+            Err(error) => return Err(error.into()),
         };
         if history.version != 1 {
             return Ok(Vec::new());
@@ -108,12 +115,12 @@ impl Recents {
                 project.modified = SystemTime::UNIX_EPOCH;
             }
         }
-        let bytes = serde_json::to_vec_pretty(&History {
-            version: 1,
-            projects,
-        })
-        .map_err(|error| crate::editor::EditorError::Gesture(error.to_string()))?;
-        local_settings::write_local(&self.path, &bytes)
+        Ok(
+            local_settings::json_store::<History>(&self.path)?.save(&History {
+                version: 1,
+                projects,
+            })?,
+        )
     }
 }
 

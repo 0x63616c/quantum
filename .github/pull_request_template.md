@@ -4,6 +4,14 @@ Keep the sections and their order. Write for someone who has not seen the issue.
 UI changes: don't paste screenshots by hand. Run `cargo xtask screenshots --publish <PR#>`
 (the "PR screenshots" CI job does it for UI paths) and it adds a "Screenshots" section
 with a Before | After table above "Testing". Non-UI PRs get no Screenshots section.
+Default captures: welcome, editor-dark, editor-light. For migrations, add one plain
+column-zero line outside this comment and the generated section, for example:
+  Screens: panels-* settings-general-*
+Those selectors add to the defaults. Exact names and trailing * prefixes work;
+no shell syntax or quotes. Select every affected surface in both themes.
+Push or dispatch PR screenshots after changing the line; body edits alone do not
+rerun captures. Dispatch's optional screens field overrides the extras for that run.
+Only changed/new/removed images are pushed; unchanged screens are listed as text.
 -->
 
 Closes #

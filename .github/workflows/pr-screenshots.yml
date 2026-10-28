@@ -23,10 +23,12 @@ on:
         description: Pull request number to (re)generate screenshots for
         required: true
         type: string
+      screens:
+        description: Extra screen names or trailing * prefixes (space-separated); blank uses the PR's Screens line
+        required: false
+        type: string
 
-permissions:
-  contents: write # push PNGs to the pr-assets branch
-  pull-requests: write # edit the PR description
+permissions: {}
 
 concurrency:
   group: pr-screenshots-${{ github.event.pull_request.number || inputs.pr }}
@@ -34,6 +36,9 @@ concurrency:
 
 jobs:
   screenshots:
+    permissions:
+      contents: write # push PNGs to the pr-assets branch
+      pull-requests: write # edit the PR description
     # Same-repository PRs only: fork PRs get a read-only token.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
@@ -64,13 +69,27 @@ jobs:
           key: pr-screenshots
 
       - name: Capture and publish before/after screenshots
+        env:
+          SCREEN_INPUT: ${{ inputs.screens }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898333+github-actions[bot]@users.noreply.github.com'
           base_ref="$(gh pr view "$PR" --json baseRefName -q .baseRefName)"
           git fetch --quiet origin "$base_ref"
           base="$(git merge-base HEAD FETCH_HEAD)"
-          cargo xtask screenshots --remote origin --base "$base" --head HEAD --publish "$PR"
+          # Treat the body/dispatch input as data, never shell code. xtask validates
+          # each selector against SCREENS before capturing anything.
+          body_file="$RUNNER_TEMP/screenshot-pr-body.md"
+          if [[ -n "$SCREEN_INPUT" ]]; then
+            if [[ "$SCREEN_INPUT" == *$'\n'* || "$SCREEN_INPUT" == *$'\r'* ]]; then
+              echo 'screens must be a single space-separated line' >&2
+              exit 1
+            fi
+            printf 'Screens: %s\n' "$SCREEN_INPUT" > "$body_file"
+          else
+            gh pr view "$PR" --json body -q .body > "$body_file"
+          fi
+          cargo xtask screenshots --remote origin --base "$base" --head HEAD --publish "$PR" --pr-body "$body_file"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

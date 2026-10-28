@@ -3,6 +3,10 @@ use serde_json::{Value, json};
 use voxelite_core::*;
 use voxelite_format::*;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn small_build() -> Project {
     let layer = Uuid::from_u128(2);
     let mut engine = Engine::new(Document::new(Uuid::from_u128(1), layer)).unwrap();

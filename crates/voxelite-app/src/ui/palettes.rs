@@ -121,6 +121,15 @@ fn selected_rgb(view: &PaletteView) -> [u8; 3] {
         })
 }
 impl EditorView {
+    pub(super) fn capture_palette_delete(&mut self) {
+        self.palettes.delete_confirmation = true;
+    }
+
+    pub(super) fn capture_palette_menu(&mut self) {
+        self.palettes.menu = true;
+        self.palettes.menu_index = 0;
+    }
+
     pub(super) fn reconcile_palette_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.editor.palette_enabled() {
             let focused = self.palette_focus.is_focused(window)
@@ -552,12 +561,19 @@ impl EditorView {
         cx: &Context<Self>,
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
+        self.styled_control(id, name, text, ButtonStyle::Ghost, cx, callback)
+    }
+    pub(super) fn styled_control(
+        &self,
+        id: impl Into<ElementId>,
+        name: &'static str,
+        text: impl Into<SharedString>,
+        style: ButtonStyle,
+        cx: &Context<Self>,
+        callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) -> Stateful<Div> {
         let t = self.theme;
-        let mut button = Button::new(id, text, t).variant(if name == "send" {
-            ButtonVariant::Primary
-        } else {
-            ButtonVariant::Ghost
-        });
+        let mut button = Button::new(id, text, t).legacy_style(style);
         if !name.is_empty() {
             button = button.icon(name);
         }

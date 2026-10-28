@@ -44,10 +44,12 @@ while IFS=$'\t' read -r name title width height args; do
     # xtask seeds one history with real projects for both revisions.
     cp "$PR_SHOTS_HOME/../welcome-data/recents.json" "$VOXELITE_DATA_DIR/recents.json"
   fi
+  # A private cwd keeps the displayed relative socket path stable across captures.
+  cd "$VOXELITE_DATA_DIR"
   # shellcheck disable=SC2086 # args are a space-separated list by design
   env HOME="$PR_SHOTS_HOME" XDG_CACHE_HOME="$XDG_RUNTIME_DIR/cache-$name" \
     XDG_CONFIG_HOME="$XDG_RUNTIME_DIR/config-$name" XDG_DATA_HOME="$XDG_RUNTIME_DIR/share-$name" \
-    "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/$name.sock" \
+    "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "./session.sock" \
     >"$XDG_RUNTIME_DIR/$name.log" 2>&1 </dev/null &
   app_pid=$!
   window=''

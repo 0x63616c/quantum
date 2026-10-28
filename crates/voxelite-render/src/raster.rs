@@ -162,7 +162,9 @@ impl RasterCache {
             .map_err(|_| RenderError::Invalid("raster occupancy cache poisoned".into()))?;
         cache.sync(snapshot)?;
         // This cache has no GPU consumer; do not retain upload bookkeeping.
-        cache.grid_mut().unwrap().clear_dirty();
+        if let Some(grid) = cache.grid_mut() {
+            grid.clear_dirty();
+        }
         render_with_occupancy(snapshot, options, cache.grid())
     }
     /// An owned task for a background executor; the cache survives worker changes.
@@ -181,43 +183,16 @@ impl RasterCache {
 pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<RenderedImage> {
     render_with_occupancy(snapshot, options, None)
 }
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: exact shadow rendering initializes occupancy"
+)]
 fn render_with_occupancy(
     snapshot: &Snapshot,
     options: &RenderOptions,
     occupancy: Option<&Occupancy>,
 ) -> RenderResult<RenderedImage> {
-    let samples = u64::from(options.width)
-        * u64::from(options.height)
-        * u64::from(options.supersampling).pow(2);
-    if options.width == 0
-        || options.height == 0
-        || options.width > 1024
-        || options.height > 1024
-        || !(1..=4).contains(&options.supersampling)
-        || samples > 4_194_304
-    {
-        return Err(RenderError::Limit(
-            "render requires 1..=1024 pixels/axis, 1..=4 AA, at most 4,194,304 samples".into(),
-        ));
-    }
-    let mut camera = match options.view {
-        View::Camera(c) => {
-            c.validate()?;
-            c
-        }
-        View::Preset {
-            direction,
-            perspective,
-        } => Camera::fit(
-            snapshot,
-            direction,
-            f64::from(options.width) / f64::from(options.height),
-            perspective,
-        )?,
-    };
-    if options.thumbnail {
-        camera = thumbnail::frame(snapshot, camera, options);
-    }
+    let camera = render_camera(snapshot, options)?;
     let mesh = greedy_mesh(snapshot)?;
     let ss = usize::from(options.supersampling);
     let width = options.width as usize * ss;
@@ -304,11 +279,7 @@ fn render_with_occupancy(
         })
         .collect();
     let background = options.background;
-    let bg = [
-        linear(background[0]),
-        linear(background[1]),
-        linear(background[2]),
-    ];
+    let bg = [background[0], background[1], background[2]].map(linear);
     let bg_alpha = f64::from(background[3]) / 255.0;
     let mut rgba = vec![0; options.width as usize * options.height as usize * 4];
     for y in 0..options.height as usize {
@@ -348,7 +319,9 @@ fn render_with_occupancy(
                             let shadow = options.shadows
                                 && diffuse > 0.0
                                 && trace_shadow(
-                                    occupancy.as_ref().unwrap(),
+                                    occupancy
+                                        .as_ref()
+                                        .expect("exact shadow rendering initializes occupancy"),
                                     std::array::from_fn(|a| {
                                         f.world[a] - snapshot.bounds.min[a] as f32
                                             + n[a] as f32 * SHADOW_EPSILON
@@ -416,9 +389,9 @@ fn render_with_occupancy(
 }
 fn clip(poly: &[Vertex], plane: f64, near: bool) -> Vec<Vertex> {
     let mut out = Vec::new();
-    if poly.is_empty() {
+    let Some(&last) = poly.last() else {
         return out;
-    }
+    };
     let inside = |v: Vertex| {
         if near {
             v.view.z >= plane
@@ -426,7 +399,7 @@ fn clip(poly: &[Vertex], plane: f64, near: bool) -> Vec<Vertex> {
             v.view.z <= plane
         }
     };
-    let mut previous = *poly.last().unwrap();
+    let mut previous = last;
     for &current in poly {
         if inside(current) != inside(previous) {
             let t = (plane - previous.view.z) / (current.view.z - previous.view.z);
@@ -583,4 +556,40 @@ fn srgb(c: f64) -> u8 {
         1.055 * c.powf(1.0 / 2.4) - 0.055
     };
     (v * 255.0).round().clamp(0.0, 255.0) as u8
+}
+
+fn render_camera(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Camera> {
+    let samples = u64::from(options.width)
+        * u64::from(options.height)
+        * u64::from(options.supersampling).pow(2);
+    if options.width == 0
+        || options.height == 0
+        || options.width > 1024
+        || options.height > 1024
+        || !(1..=4).contains(&options.supersampling)
+        || samples > 4_194_304
+    {
+        return Err(RenderError::Limit(
+            "render requires 1..=1024 pixels/axis, 1..=4 AA, at most 4,194,304 samples".into(),
+        ));
+    }
+    let mut camera = match options.view {
+        View::Camera(c) => {
+            c.validate()?;
+            c
+        }
+        View::Preset {
+            direction,
+            perspective,
+        } => Camera::fit(
+            snapshot,
+            direction,
+            f64::from(options.width) / f64::from(options.height),
+            perspective,
+        )?,
+    };
+    if options.thumbnail {
+        camera = thumbnail::frame(snapshot, camera, options);
+    }
+    Ok(camera)
 }

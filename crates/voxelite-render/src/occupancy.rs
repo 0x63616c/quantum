@@ -254,6 +254,10 @@ pub(crate) struct OccupancyCache {
 impl OccupancyCache {
     /// Synchronize immutable chunks and layer membership. Only actual changed
     /// cells are sampled; shared chunks and hidden-layer edits are skipped.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: sync initializes the grid before incremental updates"
+    )]
     pub(crate) fn sync(&mut self, snapshot: &Snapshot) -> RenderResult<()> {
         if self
             .grid
@@ -285,7 +289,10 @@ impl OccupancyCache {
                     changed.extend(previous.voxels.iter().map(|(p, _)| p));
                 }
             }
-            let grid = self.grid.as_mut().unwrap();
+            let grid = self
+                .grid
+                .as_mut()
+                .expect("sync initializes the grid before incremental updates");
             for p in changed {
                 grid.set(p, snapshot.sample(p).is_some());
             }

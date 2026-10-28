@@ -21,6 +21,10 @@ pub enum Preset {
 }
 impl Preset {
     /// Construct exact opaque source colors without assigning slot zero.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: validated built-in palette"
+    )]
     pub fn palette(self) -> Palette {
         let hex = match self {
             Self::Pico8 => {

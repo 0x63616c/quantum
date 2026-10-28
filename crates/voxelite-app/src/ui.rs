@@ -8,6 +8,8 @@ mod command_palette;
 mod comments;
 mod history;
 mod keyboard_guide;
+pub(crate) mod launch;
+mod loading;
 mod viewport;
 use keyboard_guide::keyboard_guide;
 mod debug_overlay;
@@ -37,7 +39,9 @@ use voxelite_core::{Palette, Pos};
 use voxelite_plugin_api::{PaletteAction, PalettePresentation};
 use voxelite_render::{PresetView, RenderOptions, View};
 use voxelite_ui::tokens::{focus_ring, metrics, radius, space, type_size};
-use voxelite_ui::{Button, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row};
+use voxelite_ui::{
+    Button, ButtonStyle, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row,
+};
 
 // Render sizing and native layout use the same shared logical-pixel metrics.
 use voxelite_ui::tokens::metrics::{
@@ -66,6 +70,7 @@ fn check_for_updates() {
 }
 
 pub struct EditorView {
+    capture_state: Option<launch::LaunchState>,
     palettes: palettes::PaletteManager,
     discussion: comments::Discussion,
     panel: SidebarTab,
@@ -74,6 +79,7 @@ pub struct EditorView {
     editor: Editor,
     theme: Theme,
     preferences: voxelite_app::preferences::Preferences,
+    reduced_motion: bool,
     settings_window: Option<WindowHandle<settings::SettingsView>>,
     palette_focus: FocusHandle,
     modal_focus: FocusHandle,
@@ -155,7 +161,23 @@ fn swatch_ink(color: [u8; 4]) -> Hsla {
         0.2126 * linear(color[0]) + 0.7152 * linear(color[1]) + 0.0722 * linear(color[2]);
     Theme::contrast_ink(luminance > 0.179)
 }
+// Explicit presentation; element identifiers are only identity, never style policy.
+#[derive(Clone, Copy)]
+enum ActionPresentation {
+    Button(ButtonStyle),
+    Icon(TooltipSide),
+    Rail,
+    Mirror(usize),
+    Segment,
+    Frame,
+    Search { style: ButtonStyle, compact: bool },
+}
+
 impl EditorView {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: constant keystroke; internal invariant: declared boolean grid setting"
+    )]
     pub fn new(
         mut editor: Editor,
         override_theme: Option<Theme>,
@@ -196,6 +218,7 @@ impl EditorView {
             .unwrap_or(true)
         });
         cx.observe_window_activation(window, |this, window, cx| {
+            this.reduced_motion = voxelite_app::reduce_motion::prefers_reduced_motion();
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;
@@ -246,6 +269,8 @@ impl EditorView {
         #[cfg(target_os = "macos")]
         Self::monitor_gpu(cx);
         Self {
+            capture_state: None,
+            reduced_motion: voxelite_app::reduce_motion::prefers_reduced_motion(),
             agent,
             palettes,
             discussion: comments::Discussion::new(window, cx),
@@ -314,6 +339,10 @@ impl EditorView {
         }
         cx.notify();
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: declared boolean grid setting"
+    )]
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.cancel_camera_animation();
         {
@@ -337,7 +366,7 @@ impl EditorView {
         if let Some(old) = self.agent.capture.take() {
             self.agent
                 .retired
-                .extend(old.views.into_iter().map(|v| v.2));
+                .extend(old.views.into_iter().map(|v| v.2.image));
         }
         editor.comments_state.region = self.editor.comments_state.region;
         editor.comments_state.filter = self.editor.comments_state.filter;
@@ -509,15 +538,8 @@ impl EditorView {
                 }
             },
             Op::Open => self.open_dialog(cx),
-            Op::OpenSample => {
-                cx.defer(|cx| { match welcome::show(cx) {
-                    Ok(handle) => { let _ = handle.update(cx, |view, window, cx| view.focus_samples(window, cx)); }
-                    Err(error) => eprintln!("Could not open sample picker: {error}"),
-                } });
-            }
-            Op::OpenRecent | Op::Welcome => {
-                cx.defer(|cx| { if let Err(error) = welcome::show(cx) { eprintln!("Could not open welcome window: {error}"); } });
-            }
+            Op::OpenSample => welcome::show_deferred(true, cx),
+            Op::OpenRecent | Op::Welcome => welcome::show_deferred(false, cx),
             Op::ClearRecents => welcome::clear(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
@@ -900,49 +922,52 @@ impl EditorView {
         name: &'static str,
         label: &'static str,
         op: Op,
+        presentation: ActionPresentation,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let theme = self.theme;
         let enabled = self.enabled(op);
-        // Frame is an action; the camera selector owns the persistent view state.
-        let selected = self.selected(op) && id != "view-fit";
-        let primary = id == "save";
+        // Frame is an action; the camera selector owns persistent view state.
+        let selected = self.selected(op) && !matches!(presentation, ActionPresentation::Frame);
         let disabled_reason = self.disabled_reason(op);
-        let variant = if primary {
-            ButtonVariant::Primary
-        } else if label.is_empty() {
-            ButtonVariant::Icon
-        } else {
-            ButtonVariant::Ghost
-        };
-        let mut button = Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
-            .variant(variant)
-            .disabled(!enabled)
-            .selected(selected);
-        if !name.is_empty() {
-            button = button.icon(name);
-        }
-        let element = if id.starts_with("rail-") {
-            let mut rail = IconButton::rail(id, op.icon(), op.label(), theme)
-                .disabled(!enabled)
-                .selected(selected);
-            if !label.is_empty() {
-                rail = rail.badge(label);
+        let element = match presentation {
+            ActionPresentation::Rail | ActionPresentation::Mirror(_) => {
+                let mut rail = IconButton::rail(id, op.icon(), op.label(), theme)
+                    .disabled(!enabled)
+                    .selected(selected);
+                if let ActionPresentation::Mirror(_) = presentation {
+                    rail = rail.badge(label);
+                }
+                rail.build()
             }
-            rail.build()
-        } else if matches!(id, "view-iso" | "view-front" | "view-right" | "view-top") {
-            Segment::new(id, label, theme)
+            ActionPresentation::Segment => Segment::new(id, label, theme)
                 .icon(name)
                 .disabled(!enabled)
                 .selected(selected)
-                .build()
-        } else if label.is_empty() && id != "commands" {
-            IconButton::new(id, name, op.label(), theme)
-                .disabled(!enabled)
-                .selected(selected)
-                .build()
-        } else {
-            button.build()
+                .build(),
+            ActionPresentation::Icon(_) | ActionPresentation::Frame => {
+                IconButton::new(id, name, op.label(), theme)
+                    .disabled(!enabled)
+                    .selected(selected)
+                    .build()
+            }
+            ActionPresentation::Button(style) | ActionPresentation::Search { style, .. } => {
+                let mut button =
+                    Button::new(id, if label.is_empty() { op.label() } else { label }, theme)
+                        .legacy_style(style)
+                        .disabled(!enabled)
+                        .selected(selected);
+                if matches!(
+                    presentation,
+                    ActionPresentation::Search { compact: true, .. }
+                ) {
+                    button = button.variant(ButtonVariant::Icon);
+                }
+                if !name.is_empty() {
+                    button = button.icon(name);
+                }
+                button.build()
+            }
         };
         element
             .aria_keyshortcuts(op.shortcut())
@@ -954,18 +979,12 @@ impl EditorView {
                     format!("{} · {}", op.label(), disabled_reason).into()
                 },
                 theme,
-                if id.starts_with("rail-mirror-") {
-                    TooltipSide::Mirror(match op {
-                        Op::MirrorY => 1,
-                        Op::MirrorZ => 2,
-                        _ => 0,
-                    })
-                } else if id.starts_with("rail-") {
-                    TooltipSide::Right
-                } else if id.starts_with("view-") {
-                    TooltipSide::Above
-                } else {
-                    TooltipSide::Below
+                match presentation {
+                    ActionPresentation::Mirror(row) => TooltipSide::Mirror(row),
+                    ActionPresentation::Rail => TooltipSide::Right,
+                    ActionPresentation::Segment | ActionPresentation::Frame => TooltipSide::Above,
+                    ActionPresentation::Icon(side) => side,
+                    _ => TooltipSide::Below,
                 },
             )
             .on_click(cx.listener(move |this, _, window, cx| {
@@ -1021,7 +1040,7 @@ impl EditorView {
                     ("rail-picker", Op::Picker),
                 ]
                 .into_iter()
-                .map(|(id, op)| self.button(id, op.icon(), "", op, cx)),
+                .map(|(id, op)| self.button(id, op.icon(), "", op, ActionPresentation::Rail, cx)),
             )
             .child(
                 div()
@@ -1037,7 +1056,17 @@ impl EditorView {
                     ("rail-mirror-z", "Z", Op::MirrorZ),
                 ]
                 .into_iter()
-                .map(|(id, label, op)| self.button(id, op.icon(), label, op, cx)),
+                .enumerate()
+                .map(|(index, (id, label, op))| {
+                    self.button(
+                        id,
+                        op.icon(),
+                        label,
+                        op,
+                        ActionPresentation::Mirror(index),
+                        cx,
+                    )
+                }),
             )
     }
     fn toolbar(&self, compact: bool, cx: &Context<Self>) -> Stateful<Div> {
@@ -1095,6 +1124,10 @@ impl EditorView {
                     "search",
                     if compact { "" } else { "Search commands" },
                     Op::Commands,
+                    ActionPresentation::Search {
+                        style: ButtonStyle::Ghost,
+                        compact,
+                    },
                     cx,
                 )
                 .h(px(metrics::RAIL_BUTTON))
@@ -1113,21 +1146,11 @@ impl EditorView {
             .overflow_hidden()
             .cursor_crosshair()
             .child(surface)
-            .child(
-                div()
-                    .absolute()
-                    .top(px(space::PANEL))
-                    .left(px(space::XXL))
-                    .child(row().gap(px(space::INSET)).text_color(t.muted()).child(
-                        match self.camera_view {
-                            Some(Op::Front) => "Front",
-                            Some(Op::Right) => "Right",
-                            Some(Op::Top) => "Top",
-                            Some(Op::Frame) => "Isometric",
-                            _ => "Orthographic",
-                        },
-                    )),
+            .when(
+                !self.viewport.has_frame() && self.viewport.rendering(),
+                |d| d.child(self.scene_loading()),
             )
+            .child(self.scene_heading())
             .children(self.comment_pins(cx))
             .when(self.editor.preview.is_some(), |d| {
                 d.child(
@@ -1170,9 +1193,23 @@ impl EditorView {
                     .bottom(px(space::PANEL))
                     .left(px(space::XXL))
                     .gap(px(space::XS))
-                    .child(self.button("view-settings", "settings", "", Op::Settings, cx))
+                    .child(self.button(
+                        "view-settings",
+                        "settings",
+                        "",
+                        Op::Settings,
+                        ActionPresentation::Icon(TooltipSide::Above),
+                        cx,
+                    ))
                     .when(self.preferences.navigation_hints, |d| {
-                        d.child(self.button("view-help", "keyboard", "", Op::Help, cx))
+                        d.child(self.button(
+                            "view-help",
+                            "keyboard",
+                            "",
+                            Op::Help,
+                            ActionPresentation::Icon(TooltipSide::Above),
+                            cx,
+                        ))
                     }),
             )
             .child(
@@ -1190,18 +1227,35 @@ impl EditorView {
                                     ("view-top", "Top", Op::Top),
                                 ]
                                 .map(|(id, label, op)| {
-                                    self.button(id, op.icon(), label, op, cx)
-                                        .border_b_2()
-                                        .border_color(transparent_black())
-                                        .when(self.camera_view == Some(op), |d| {
+                                    self.button(
+                                        id,
+                                        op.icon(),
+                                        label,
+                                        op,
+                                        ActionPresentation::Segment,
+                                        cx,
+                                    )
+                                    .border_b_2()
+                                    .border_color(transparent_black())
+                                    .when(
+                                        self.camera_view == Some(op),
+                                        |d| {
                                             d.bg(t.selected())
                                                 .text_color(t.accent())
                                                 .border_color(t.accent())
-                                        })
+                                        },
+                                    )
                                 }),
                             )
                             .child(ToolbarSeparator::line(t).mx(px(space::XS)))
-                            .child(self.button("view-fit", "fit", "", Op::Frame, cx)),
+                            .child(self.button(
+                                "view-fit",
+                                "fit",
+                                "",
+                                Op::Frame,
+                                ActionPresentation::Frame,
+                                cx,
+                            )),
                     ),
             )
             .on_mouse_move(cx.listener(Self::pointer_move))
@@ -1308,6 +1362,7 @@ impl EditorView {
                 cx.stop_propagation();
             }))
     }
+    #[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
     fn palette_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let palette = self.active_palette();
@@ -1470,7 +1525,14 @@ impl EditorView {
                     .mb(px(if compact { space::XS } else { space::MD }))
                     .justify_between()
                     .child(section_title("Layers"))
-                    .child(self.button("add-layer", "plus", "", Op::AddLayer, cx)),
+                    .child(self.button(
+                        "add-layer",
+                        "plus",
+                        "",
+                        Op::AddLayer,
+                        ActionPresentation::Icon(TooltipSide::Below),
+                        cx,
+                    )),
             )
             .child(
                 div()
@@ -1636,8 +1698,22 @@ impl EditorView {
                     .child(
                         row()
                             .gap(px(space::XXS))
-                            .child(self.button("history-undo", "undo", "", Op::Undo, cx))
-                            .child(self.button("history-redo", "redo", "", Op::Redo, cx)),
+                            .child(self.button(
+                                "history-undo",
+                                "undo",
+                                "",
+                                Op::Undo,
+                                ActionPresentation::Icon(TooltipSide::Below),
+                                cx,
+                            ))
+                            .child(self.button(
+                                "history-redo",
+                                "redo",
+                                "",
+                                Op::Redo,
+                                ActionPresentation::Icon(TooltipSide::Below),
+                                cx,
+                            )),
                     ),
             )
             .child(
@@ -1684,6 +1760,7 @@ impl EditorView {
                                                     "",
                                                     "Keyboard guide",
                                                     Op::Help,
+                                                    ActionPresentation::Button(ButtonStyle::Ghost),
                                                     cx,
                                                 )
                                                 .mt(px(space::MD))
@@ -1849,6 +1926,7 @@ impl EditorView {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }
 
+    #[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
     fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
         if self.agent.open && !self.save_flow.dialog_open() {
@@ -1858,40 +1936,7 @@ impl EditorView {
             return Some(self.palette_manager(cx));
         }
         if self.save_flow.dialog_open() {
-            return Some(
-                div()
-                    .absolute()
-                    .size_full()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .bg(t.app_scrim())
-                    .child(
-                        self.floating()
-                            .p(px(space::XXL))
-                            .child(
-                                row()
-                                    .gap(px(space::SM))
-                                    .when(self.save_flow.picker.waiting(), |d| {
-                                        d.child(voxelite_ui::Spinner::new("save-picker-spinner", t))
-                                    })
-                                    .child(self.status.clone()),
-                            )
-                            .when(self.save_flow.picker.waiting(), |d| {
-                                d.child(
-                                    row().mt(px(space::XL)).child(
-                                        Button::new("cancel-save-picker", "Cancel", t)
-                                            .build()
-                                            .on_click(cx.listener(|this, _, window, cx| {
-                                                this.cancel_save_picker(cx);
-                                                window.focus(&this.focus, cx);
-                                            })),
-                                    ),
-                                )
-                            }),
-                    )
-                    .into_any_element(),
-            );
+            return Some(self.working_dialog(cx));
         }
         if self.save_flow.needs_confirmation() {
             return Some(

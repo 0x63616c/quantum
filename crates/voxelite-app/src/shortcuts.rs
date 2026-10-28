@@ -125,6 +125,16 @@ shortcut_symbols! {
 /// Tokenize a GPUI binding without consulting the environment. The source
 /// binding supplies both the actual modifiers and every user-facing hint.
 pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<ShortcutToken> {
+    tokens(binding, platform, false)
+}
+
+/// Compact keycaps omit separators and use Shift/Return glyphs on every platform.
+pub fn compact_shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<ShortcutToken> {
+    tokens(binding, platform, true)
+}
+
+#[expect(clippy::expect_used, reason = "internal invariant: valid shortcut")]
+fn tokens(binding: &str, platform: ShortcutPlatform, compact: bool) -> Vec<ShortcutToken> {
     use ShortcutSymbol as S;
     use ShortcutToken::{Symbol, Text};
 
@@ -139,7 +149,7 @@ pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<Shortcu
         (modifiers.platform, S::Command, "Super"),
     ] {
         if pressed {
-            parts.push(if apple {
+            parts.push(if apple || (compact && symbol == S::Shift) {
                 Symbol(symbol)
             } else {
                 Text(name.into())
@@ -151,7 +161,7 @@ pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<Shortcu
     }
     let key = match stroke.key.as_str() {
         "escape" if apple => Symbol(S::Escape),
-        "enter" if apple => Symbol(S::Return),
+        "enter" if apple || compact => Symbol(S::Return),
         "tab" if apple => Symbol(S::Tab),
         // GPUI calls the Mac's Delete key `backspace`; `delete` is forward delete.
         "backspace" if apple => Symbol(S::Backspace),
@@ -185,7 +195,7 @@ pub fn shortcut_tokens(binding: &str, platform: ShortcutPlatform) -> Vec<Shortcu
         }),
     };
     parts.push(key);
-    if apple {
+    if apple || compact {
         parts
     } else {
         let mut separated = Vec::new();
@@ -209,6 +219,35 @@ pub fn format_shortcut(binding: &str, platform: ShortcutPlatform) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn compact_keycaps_keep_platform_modifiers_and_semantic_navigation_glyphs() {
+        use super::{
+            ShortcutPlatform, ShortcutSymbol as S, ShortcutToken as T, compact_shortcut_tokens,
+        };
+        for (platform, modifier) in [
+            (ShortcutPlatform::Apple, T::Symbol(S::Command)),
+            (ShortcutPlatform::WindowsLinux, T::Text("Ctrl".into())),
+        ] {
+            assert_eq!(
+                compact_shortcut_tokens("secondary-shift-o", platform),
+                match platform {
+                    ShortcutPlatform::Apple =>
+                        vec![T::Symbol(S::Shift), modifier, T::Text("O".into())],
+                    ShortcutPlatform::WindowsLinux =>
+                        vec![modifier, T::Symbol(S::Shift), T::Text("O".into())],
+                }
+            );
+            assert_eq!(
+                compact_shortcut_tokens("enter", platform),
+                vec![T::Symbol(S::Return)]
+            );
+            assert_eq!(
+                compact_shortcut_tokens("up", platform),
+                vec![T::Symbol(S::Up)]
+            );
+        }
+    }
     use super::*;
 
     #[test]

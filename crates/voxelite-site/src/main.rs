@@ -80,6 +80,7 @@ fn escape(text: &str) -> String {
 
 /// Index authored second-level headings, using the same anchors as the article.
 /// Content is trusted build-time HTML; no runtime parsing or script is needed.
+#[expect(clippy::expect_used, reason = "internal invariant: string write")]
 fn section_links(content: &str) -> String {
     let mut links = String::new();
     for heading in content.split("<h2 id=\"").skip(1) {
@@ -101,6 +102,7 @@ fn section_links(content: &str) -> String {
     links
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: string write")]
 fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
     let (markdown_metadata, markdown_actions) = PAGES
         .iter()
@@ -144,7 +146,7 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {metadata}{markdown_metadata}
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){{(window.vaq=window.vaq||[]).push(arguments)}};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){{(window.siq=window.siq||[]).push(arguments)}};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
-<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><img src="/assets/mark.svg" width="25" height="25" alt="">Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">Quantum documentation</p>{navigation}</nav><main class="docs-content" id="main"><h1>{title}</h1>{markdown_actions}<p class="build-note">This development build uses API <code>voxelite.v1</code>.</p>{content}<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
 "##,
         github_link = GITHUB_LINK.trim(),
@@ -254,6 +256,7 @@ fn article_body(page: &DocPage, tools: &[Value]) -> Result<String, Box<dyn Error
     Ok(body)
 }
 
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn main() -> Result<(), Box<dyn Error>> {
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);
@@ -269,7 +272,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site/appcast.xml"),
         root,
     )?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("index.html"),
         format!(
             include_str!("../templates/index.html"),
@@ -279,7 +282,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ),
     )?;
     fs::create_dir_all(root.join("download"))?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("download/index.html"),
         format!(
             include_str!("../templates/download.html"),
@@ -291,7 +294,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             github_link = GITHUB_LINK.trim(),
         ),
     )?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("assets/mcp-tools.json"),
         format!("{}\n", serde_json::to_string_pretty(&tools)?),
     )?;
@@ -305,20 +308,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             &format!("{}: Quantum docs", page.title),
             page.description,
         );
-        fs::write(
+        voxelite_format::storage::safe_write(
             directory.join("index.html"),
             layout(page.slug, page.title, &metadata, &body),
         )?;
         let markdown = markdown::render(page, &body)?;
-        fs::write(
+        voxelite_format::storage::safe_write(
             root.join(page.markdown_path().trim_start_matches('/')),
             &markdown,
         )?;
-        fs::write(directory.join("index.md"), &markdown)?;
+        voxelite_format::storage::safe_write(directory.join("index.md"), &markdown)?;
         documents.push((page, markdown));
     }
     markdown::write_indexes(root, &documents)?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("404.html"),
         layout(
             "404",

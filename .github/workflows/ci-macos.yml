@@ -4,13 +4,18 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Always check nightly, even without new commits: runner and toolchain drift
+  # can break packaging without a source change.
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-macos-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-macos-${{ github.ref }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'nightly' || 'change' }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
 
 jobs:
   changes:
@@ -18,7 +23,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read
       pull-requests: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -33,7 +37,11 @@ jobs:
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
             echo 'code=true' >> "$GITHUB_OUTPUT"
-            echo 'package=true' >> "$GITHUB_OUTPUT"
+            package=false
+            if [[ "$GITHUB_REF" == refs/heads/main && ( "$GITHUB_EVENT_NAME" == schedule || "$GITHUB_EVENT_NAME" == workflow_dispatch ) ]]; then
+              package=true
+            fi
+            echo "package=$package" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
@@ -43,7 +51,7 @@ jobs:
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
             # The release-profile DMG build takes ~6 min, so PRs only run it when
-            # packaging inputs change. Every push to main still builds it.
+            # packaging inputs change. Nightly and manual main runs also build it.
             case "$file" in
               packaging/*|xtask/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|crates/voxelite-app/Cargo.toml|.github/workflows/ci-macos.yml|.github/workflows/release-macos.yml) package=true ;;
             esac
@@ -67,14 +75,21 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - name: Check plugin dependency rule
         run: |
           cargo xtask check plugin-deps
+      - name: Install nextest
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.150
       - name: Test packaging tasks
-        run: cargo test -p xtask --locked
+        run: cargo nextest run -p xtask --locked --profile ci
+      - name: Test doctests (-p xtask)
+        if: ${{ !cancelled() }}
+        run: cargo test --doc -p xtask --locked
 
   macos:
     needs: changes
@@ -84,11 +99,12 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, xcode]
     timeout-minutes: 60
     env:
+      CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       MACOS_SIGNING_MODE: adhoc
       SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - name: Set up runner tools
@@ -137,8 +153,17 @@ jobs:
       # Formatting runs in CI Linux; the scripts job runs the portable task checks.
       - name: Clippy
         run: cargo clippy --workspace --locked --features voxelite-app/test-support -- -D warnings
+      - name: Install nextest
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.150
+
       - name: Test workspace
-        run: cargo test --workspace --locked --features voxelite-app/test-support --no-fail-fast
+        run: cargo nextest run --workspace --locked --features voxelite-app/test-support --profile ci
+
+      - name: Test doctests (--workspace)
+        if: ${{ !cancelled() }}
+        run: cargo test --doc --workspace --locked --features voxelite-app/test-support
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         run: cargo xtask macos package
@@ -147,7 +172,7 @@ jobs:
         run: sccache --show-stats || true
       - name: Upload unsigned DMG
         if: needs.changes.outputs.package == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Voxelite-macos-arm64-unsigned
           path: |
@@ -155,3 +180,34 @@ jobs:
             dist/Voxelite.dmg.sha256
           if-no-files-found: error
           retention-days: 3
+
+  report-nightly-failure:
+    needs: [changes, scripts, macos]
+    if: always() && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (needs.changes.result != 'success' || needs.scripts.result != 'success' || needs.macos.result != 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update nightly failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          SCRIPTS_RESULT: ${{ needs.scripts.result }}
+          MACOS_RESULT: ${{ needs.macos.result }}
+        run: |
+          set -euo pipefail
+          title='ci: CI macOS nightly checks failed'
+          body="Nightly checks did not complete successfully: $RUN_URL
+
+          Changes: $CHANGES_RESULT; scripts: $SCRIPTS_RESULT; macOS: $MACOS_RESULT.
+          Check the run logs and restore the full checks and release-profile DMG build."
+          issue=$(gh issue list --state open --search "$title in:title" --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [[ -n "$issue" ]]; then
+            gh issue edit "$issue" --add-label 'type:ci,area:ci,priority:p0'
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label 'type:ci,area:ci,priority:p0'
+          fi

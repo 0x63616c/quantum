@@ -82,12 +82,30 @@ impl Check {
     }
 }
 
+/// Checks selected by the strict `cargo xtask lint` entry point.
+pub const LINT_CHECKS: &[&str] = &["boundaries", "source-lints", "clippy"];
+
 /// Registered checks in execution order: cheap local checks before builds and audits.
 pub static CHECKS: &[Check] = &[
+    Check::new(
+        "boundaries",
+        "Portable crate transitive dependency boundaries",
+        checks::boundaries::run,
+    ),
+    Check::new(
+        "source-lints",
+        "Styling, string dispatch and source size ratchets",
+        checks::source_lints::run,
+    ),
     Check::new(
         "tidy",
         "Tracked root entries, size limits and junk files",
         tidy_check,
+    ),
+    Check::new(
+        "workflows",
+        "SHA-pinned workflow actions and explicit default permissions",
+        checks::workflows::run,
     ),
     Check::new(
         "plugin-deps",
@@ -101,7 +119,7 @@ pub static CHECKS: &[Check] = &[
     ),
     Check::new(
         "docs-links",
-        "Local glossary and product direction links",
+        "Local links in tracked docs Markdown",
         checks::docs::links,
     ),
     Check::new(
@@ -114,6 +132,7 @@ pub static CHECKS: &[Check] = &[
         "Offline stable feed validation (empty initial feed allowed)",
         appcast_check,
     ),
+    Check::new("icons", "Reproducible Quantize brand assets", icons_check),
     Check::cargo("fmt", "Rust formatting", &["fmt", "--all", "--", "--check"]),
     Check::cargo(
         "clippy",
@@ -128,11 +147,7 @@ pub static CHECKS: &[Check] = &[
             "warnings",
         ],
     ),
-    Check::cargo(
-        "test",
-        "Workspace tests",
-        &["test", "--workspace", "--locked"],
-    ),
+    Check::new("test", "Workspace tests and doctests", workspace_tests),
     Check::cargo(
         "deny",
         "Dependency licenses, advisories and sources",
@@ -148,10 +163,58 @@ fn appcast_check(context: &Context<'_>) -> Outcome {
     }
 }
 
+fn icons_check(context: &Context<'_>) -> Outcome {
+    match crate::icons::generate(context.workspace, true, None) {
+        Ok(()) => Outcome::Pass,
+        Err(error) => Outcome::Fail(vec![error.to_string()]),
+    }
+}
+
 fn tidy_check(context: &Context<'_>) -> Outcome {
     match tidy::check(context.workspace, context.runner) {
         Ok(()) => Outcome::Pass,
         Err(error) => Outcome::Fail(error.lines().map(str::to_owned).collect()),
+    }
+}
+
+fn workspace_tests(context: &Context<'_>) -> Outcome {
+    let available = match context
+        .workspace
+        .cargo()
+        .arg("--list")
+        .allow_in_dry_run()
+        .read(context.runner)
+    {
+        Ok(available) => available,
+        Err(error) => return Outcome::Fail(vec![error.to_string()]),
+    };
+    if !available
+        .lines()
+        .any(|line| line.split_whitespace().next() == Some("nextest"))
+    {
+        return run_cargo(context, &["test", "--workspace", "--locked"]);
+    }
+    // Run doctests even if ordinary tests fail: nextest does not execute them.
+    let tests = run_cargo(
+        context,
+        &[
+            "nextest",
+            "run",
+            "--workspace",
+            "--locked",
+            "--profile",
+            "ci",
+        ],
+    );
+    let docs = run_cargo(context, &["test", "--doc", "--workspace", "--locked"]);
+    match (tests, docs) {
+        (Outcome::Pass, Outcome::Pass) => Outcome::Pass,
+        (Outcome::Fail(mut tests), Outcome::Fail(docs)) => {
+            tests.extend(docs);
+            Outcome::Fail(tests)
+        }
+        (Outcome::Fail(errors), _) | (_, Outcome::Fail(errors)) => Outcome::Fail(errors),
+        (Outcome::Skip(reason), _) | (_, Outcome::Skip(reason)) => Outcome::Skip(reason),
     }
 }
 

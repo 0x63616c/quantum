@@ -18,6 +18,14 @@ struct Client {
     modern: bool,
 }
 impl Client {
+    #[expect(
+        clippy::expect_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn start(root: &std::path::Path, modern: bool) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_voxelite-mcp"))
             .arg("--root")
@@ -57,11 +65,19 @@ impl Client {
     fn send(&mut self, v: Value) {
         self.raw(&format!("{v}\n"));
     }
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn raw(&mut self, s: &str) {
         let input = self.input.as_mut().unwrap();
         input.write_all(s.as_bytes()).unwrap();
         input.flush().unwrap();
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn receive(&self) -> Value {
         self.output
             .recv_timeout(Duration::from_secs(30))
@@ -79,6 +95,10 @@ impl Client {
         assert_eq!(result["jsonrpc"], "2.0");
         result
     }
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn call(&mut self, name: &str, args: Value) -> Value {
         let wire = self.rpc(
             "tools/call",
@@ -98,6 +118,14 @@ impl Client {
         }
         result
     }
+    #[expect(
+        clippy::panic,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test fixture or assertion helper reports invalid setup by panicking"
+    )]
     fn exit(mut self) {
         self.input.take();
         for _ in 0..100 {
@@ -127,6 +155,10 @@ fn edit(c: &mut Client, name: &str, model: &Value, epoch: &Value, mut args: Valu
     args["expected_revision"] = info["revision"].clone();
     data(&c.call(name, args))
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn workflow(modern: bool) {
     let root = tempfile::tempdir().unwrap();
     let mut c = Client::start(root.path(), modern);

@@ -2,7 +2,9 @@
 
 pub mod check;
 pub mod cmd;
+pub mod icons;
 pub mod macos;
+pub mod release;
 pub mod screenshot_fixtures;
 pub mod version;
 pub mod workspace;

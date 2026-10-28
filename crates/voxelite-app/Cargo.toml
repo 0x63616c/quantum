@@ -19,6 +19,10 @@ name = "voxelite"
 path = "src/main.rs"
 required-features = ["native"]
 
+[[example]]
+name = "ascii_loading"
+required-features = ["native"]
+
 [dependencies]
 futures-channel.workspace = true
 voxelite-mcp.workspace = true
@@ -53,7 +57,13 @@ unsafe_code = "deny"
 missing_docs = "warn"
 
 [lints.clippy]
-all = "warn"
+all = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
 
 [dependencies.env_logger]
 version = "0.11"

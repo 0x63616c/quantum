@@ -139,6 +139,7 @@ impl Build {
     }
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: defined glazing")]
 pub fn build() -> FormatResult<Project> {
     let mut build = Build {
         engine: Engine::new(Document::new(id(1), id(2)))?,

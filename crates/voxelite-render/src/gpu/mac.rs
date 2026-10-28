@@ -73,7 +73,10 @@ impl Worker {
                                     if let Err(error) =
                                         objc2::rc::autoreleasepool(|_| renderer.check_health())
                                     {
-                                        *sink.lock().unwrap() = Some(error.to_string());
+                                        *sink
+                                            .lock()
+                                            .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                                            Some(error.to_string());
                                         break;
                                     }
                                 }
@@ -105,7 +108,9 @@ impl Worker {
                                 if occupancy.bounds() != request.bounds {
                                     return Err(error("snapshot bounds mismatch"));
                                 }
-                                let renderer = renderer.as_mut().unwrap();
+                                let renderer = renderer
+                                    .as_mut()
+                                    .ok_or_else(|| error("renderer initialization missing"))?;
                                 renderer.set_diagnostics(request.diagnostics);
                                 let frame = renderer
                                     .render(
@@ -119,7 +124,7 @@ impl Worker {
                                     .await?;
                                 let frame = presenter
                                     .as_mut()
-                                    .unwrap()
+                                    .ok_or_else(|| error("presenter initialization missing"))?
                                     .present(
                                         &renderer.device,
                                         &renderer.queue,
@@ -136,7 +141,10 @@ impl Worker {
                         });
                         let failed = result.is_err();
                         if let Err(error) = &result {
-                            *sink.lock().unwrap() = Some(error.to_string());
+                            *sink
+                                .lock()
+                                .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                                Some(error.to_string());
                         }
                         let _ = request.reply.send(result);
                         if failed {
@@ -149,7 +157,10 @@ impl Worker {
                     });
                 }));
                 if result.is_err() {
-                    *sink.lock().unwrap() = Some("Metal worker panicked".into());
+                    *sink
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                        Some("Metal worker panicked".into());
                 }
             })
             .map_err(error)?;
@@ -163,7 +174,11 @@ impl Worker {
 
     /// Read worker health without polling Metal on the UI thread.
     pub fn check_health(&self) -> RenderResult<()> {
-        match &*self.failure.lock().unwrap() {
+        match &*self
+            .failure
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
             Some(message) => Err(error(message)),
             None => Ok(()),
         }
@@ -368,7 +383,9 @@ impl Surfaces {
             let mut raw = ptr::null_mut();
             let code = CVPixelBufferPool::create_pixel_buffer_with_aux_attributes(
                 None,
-                self.pool.as_ref().unwrap(),
+                self.pool
+                    .as_ref()
+                    .ok_or_else(|| error("pixel buffer pool not initialized"))?,
                 Some(attributes.as_opaque()),
                 NonNull::from(&mut raw),
             );
@@ -548,7 +565,10 @@ impl Surfaces {
         while !complete.load(Ordering::Acquire) {
             Self::yield_and_poll(device, errors, deadline).await?;
         }
-        if let Some(message) = &*errors.lock().unwrap() {
+        if let Some(message) = &*errors
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
             return Err(error(message));
         }
         Ok(Frame(buffer))
@@ -562,7 +582,10 @@ impl Surfaces {
         // polling, allocation or driver teardown occurs on the UI thread.
         futures_timer::Delay::new(Duration::from_millis(2)).await;
         device.poll(wgpu::PollType::Poll).map_err(error)?;
-        if let Some(message) = &*errors.lock().unwrap() {
+        if let Some(message) = &*errors
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
             return Err(error(message));
         }
         if Instant::now() >= deadline {

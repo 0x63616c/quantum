@@ -9,6 +9,10 @@ const GOLDEN: &[u8] = include_bytes!("../../../spec/voxl/1.0/fixtures/populated.
 const RAW: &str = r#"{ "payload" : {"z":1e-03,"a":"\u0061","nested":{"voxels":[0,255]}},
   "encoding":"json", "schema_version": 7, "future": true }"#;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn with_sections(sections: &str) -> Vec<u8> {
     format!(
         "{{\"extensions\":{sections},{}",

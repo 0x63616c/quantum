@@ -1,6 +1,6 @@
 //! Concept A presentation using shared UI components and geometry tokens.
 use crate::{
-    shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
+    shortcuts::{ShortcutPlatform, ShortcutToken, compact_shortcut_tokens},
     theme::Theme,
 };
 use gpui::{prelude::*, *};
@@ -13,19 +13,9 @@ pub(super) use voxelite_ui::tokens::metrics::welcome::*;
 
 pub(super) fn caps(binding: &str, theme: Theme) -> Div {
     row().gap(px(space::COMPACT)).flex_shrink_0().children(
-        shortcut_tokens(binding, ShortcutPlatform::current())
+        compact_shortcut_tokens(binding, ShortcutPlatform::current())
             .into_iter()
-            .filter(|token| token.text() != "+")
             .map(|token| {
-                let token = match token {
-                    ShortcutToken::Text(ref text) if text == "Shift" => {
-                        ShortcutToken::Symbol(ShortcutSymbol::Shift)
-                    }
-                    ShortcutToken::Text(ref text) if text == "Enter" => {
-                        ShortcutToken::Symbol(ShortcutSymbol::Return)
-                    }
-                    token => token,
-                };
                 let cap = Kbd::frame(theme.muted())
                     .min_w(px(space::SECTION))
                     .h(px(space::SECTION))

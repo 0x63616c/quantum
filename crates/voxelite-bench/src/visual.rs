@@ -8,7 +8,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    io::{BufReader, BufWriter},
+    io::BufReader,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -80,7 +80,12 @@ pub fn heatmap(golden: &[u8], actual: &[u8]) -> Result<Vec<u8>> {
         .iter()
         .zip(actual.as_chunks::<4>().0)
         .flat_map(|(g, a)| {
-            let delta = g.iter().zip(a).map(|(g, a)| g.abs_diff(*a)).max().unwrap();
+            let delta = g
+                .iter()
+                .zip(a)
+                .map(|(g, a)| g.abs_diff(*a))
+                .max()
+                .unwrap_or(0);
             if delta == 0 {
                 *a
             } else {
@@ -117,17 +122,15 @@ pub fn write_png(path: &Path, size: [u32; 2], rgba: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let mut encoder = png::Encoder::new(
-        BufWriter::new(std::fs::File::create(path)?),
-        size[0],
-        size[1],
-    );
+    let mut bytes = Vec::new();
+    let mut encoder = png::Encoder::new(&mut bytes, size[0], size[1]);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
     let mut writer = encoder.write_header()?;
     writer.write_image_data(rgba)?;
     writer.finish()?;
+    voxelite_format::storage::safe_write(path, &bytes)?;
     Ok(())
 }
 pub fn read_png(path: &Path) -> Result<([u32; 2], Vec<u8>)> {
@@ -243,6 +246,7 @@ fn fresh(snapshot: &Snapshot, camera: Camera) -> Result<voxelite_render::gpu::He
         true,
     ))?)
 }
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn run(options: &Options) -> Result<bool> {
     let start = Instant::now();
     let mut gpu = block_on(Headless::new(HeadlessOptions::default()))?;
@@ -356,7 +360,13 @@ pub fn run(options: &Options) -> Result<bool> {
                             .filter(|f| f.size == frame.size)
                             .and_then(|f| f.rgba.as_deref());
                         artifacts(&options.out, &mut entry, frame.size, &actual, other)?;
-                        eprintln!("{scene}/{still}: {}", entry.error.as_deref().unwrap());
+                        eprintln!(
+                            "{scene}/{still}: {}",
+                            entry
+                                .error
+                                .as_deref()
+                                .unwrap_or("unknown visual comparison error")
+                        );
                         entries.push(entry);
                         continue;
                     }
@@ -468,7 +478,7 @@ pub fn run(options: &Options) -> Result<bool> {
         results: entries,
     };
     report::write_json(&options.out.join("report.json"), &report)?;
-    std::fs::write(options.out.join("report.md"), markdown(&report))?;
+    voxelite_format::storage::safe_write(options.out.join("report.md"), markdown(&report))?;
     for path in &report.changed_files {
         println!("changed: {path}");
     }

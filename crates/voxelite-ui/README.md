@@ -79,10 +79,18 @@ shaped run per layer, never a tree of glyph elements. Its wave uses the same
 16 clipped strips as upstream. Text and image glyphs reuse cached shaping and
 stack-local decoration runs. One pending 33 ms timer per component requests
 the next redraw; there is no vsync loop or catch-up work. Finished, static,
-reduced skeletons and elapsed snapshots do not schedule. Clipped or inactive
-windows do not rearm timers; a previously queued timer may wake once. For long
-lists use `animate(false)`. Existing shared controls and app screens are unchanged
-apart from the added acknowledgement.
+reduced skeletons and elapsed snapshots do not schedule. Clipped or hidden
+windows do not rearm timers; a previously queued timer may wake once. Visible
+windows animate even without keyboard focus. A visibility subscription resumes
+an unfinished animation after hiding and is removed on completion. For long
+lists use `animate(false)`.
+
+Quantum uses these components for recent-project previews, project opening,
+the first viewport frame, save/export I/O, and agent inspection images. Preview
+pixels and both theme grids are prepared in background jobs; ordinary camera
+changes and status updates do not replay a reveal. Run the native preset gallery
+with `cargo run -p voxelite-app --example ascii_loading --locked` (Space replays;
+`-- --light` or `-- --reduced-motion` selects those modes).
 
 ### Deviations from the original
 
@@ -290,3 +298,16 @@ for this script. They affect only the readout, never voxel tool input or documen
 state. `statusbar-stability.png` compares positive, negative, three-digit, i32
 extreme and placeholder values; `statusbar-separators.json` records the painted
 separator columns so identical positions can be checked independently of text.
+
+App callers are checked by `cargo xtask lint`: literal `px`, hex `rgb`/`rgba`,
+literal `hsl`/`hsla`, string patterns and literal string equality have a
+shrink-only baseline. Add shared tokens/components and typed dispatch rather
+than new exceptions. The shared UI crate owns styling and is exempt from the
+app patterns. All Rust files/functions retain the 1,000/100-line size budgets.
+See [the exact lint rules](../../xtask/README.md) for scope and baseline updates.
+
+## Typed design system (#133)
+
+See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
+overlay lifecycle, headless tests and interactive dark/light gallery. Existing
+constructors retain their screen appearance until the #134 migration.

@@ -96,18 +96,18 @@ pub fn greedy_mesh_with_limit(snapshot: &Snapshot, max_quads: usize) -> MeshResu
         occupied: cells.len(),
         exposed_faces: 0,
     };
-    if cells.is_empty() {
+    let Some(first) = cells.keys().next().copied() else {
         return Ok(mesh);
-    }
+    };
     // Per-axis slices avoid retaining an unbounded six-face staging map. At most
     // one 256² mask and one copy of occupied coordinates exist at a time.
     for axis in 0..3 {
         let u = (axis + 1) % 3;
         let v = (axis + 2) % 3;
-        let min_u = cells.keys().map(|p| p[u]).min().expect("nonempty");
-        let min_v = cells.keys().map(|p| p[v]).min().expect("nonempty");
-        let width = (cells.keys().map(|p| p[u]).max().unwrap() - min_u + 1) as usize;
-        let height = (cells.keys().map(|p| p[v]).max().unwrap() - min_v + 1) as usize;
+        let min_u = cells.keys().fold(first[u], |min, p| min.min(p[u]));
+        let min_v = cells.keys().fold(first[v], |min, p| min.min(p[v]));
+        let width = (cells.keys().fold(first[u], |max, p| max.max(p[u])) - min_u + 1) as usize;
+        let height = (cells.keys().fold(first[v], |max, p| max.max(p[v])) - min_v + 1) as usize;
         let mut slices: BTreeMap<i32, Vec<(Pos, u16)>> = BTreeMap::new();
         for (&p, &slot) in &cells {
             slices.entry(p[axis]).or_default().push((p, slot));

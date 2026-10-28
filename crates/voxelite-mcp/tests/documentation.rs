@@ -4,6 +4,14 @@ use voxelite_core::Uuid;
 use voxelite_mcp::VoxeliteServer;
 use voxelite_plugins_builtin::mcp_host;
 
+#[expect(
+    clippy::expect_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn call(server: &VoxeliteServer, tool: &str, arguments: Value) -> Value {
     let response = server.call(tool, arguments).expect("known tool");
     assert_eq!(response.is_error, Some(false), "{response:?}");

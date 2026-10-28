@@ -19,7 +19,9 @@ struct Options {
     exit_after: Option<u64>,
     viewport_png: Option<PathBuf>,
     session_socket: Option<PathBuf>,
+    show: Option<ui::launch::LaunchState>,
 }
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     let mut options = Options {
         path: None,
@@ -28,11 +30,22 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
         exit_after: None,
         viewport_png: None,
         session_socket: None,
+        show: None,
     };
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--example" => options.example = true,
+            "--show" => {
+                anyhow::ensure!(options.show.is_none(), "--show may only be specified once");
+                options.show = Some(ui::launch::LaunchState::parse(&args.next().ok_or_else(
+                    || {
+                        anyhow::anyhow!(
+                            "--show requires a capture state; see crates/voxelite-app/README.md"
+                        )
+                    },
+                )?)?);
+            }
             "--session-socket" => {
                 options.session_socket = Some(
                     args.next()
@@ -82,8 +95,13 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
         !options.example || options.path.is_none(),
         "--example cannot be combined with a project path"
     );
+    anyhow::ensure!(
+        options.show.is_none() || (options.path.is_none() && options.viewport_png.is_none()),
+        "--show uses the bundled example and cannot be combined with a project path or --viewport-png"
+    );
     Ok(options)
 }
+#[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let options = options(std::env::args().skip(1))?;
@@ -109,10 +127,10 @@ fn main() -> anyhow::Result<()> {
             snapshot: editor.snapshot(),
             render_view: &voxelite_app::editor::render_view(&options),
         }))?;
-        std::fs::write(path, bytes)?;
+        voxelite_format::storage::safe_write(path, bytes)?;
         return Ok(());
     }
-    let (editor, open_error) = if options.example {
+    let (editor, open_error) = if options.example || options.show.is_some() {
         (Some(Editor::example()?), None)
     } else {
         voxelite_app::startup::open(options.path.as_deref())
@@ -133,7 +151,12 @@ fn main() -> anyhow::Result<()> {
             actions::install(cx);
             ui::welcome::init(options.theme, options.session_socket, preferences, cx);
             let result = if let Some(editor) = editor {
-                ui::welcome::open_editor(editor, cx)
+                ui::welcome::open_editor(editor, cx).and_then(|()| {
+                    if let Some(state) = options.show {
+                        ui::welcome::show_capture(state, cx)?;
+                    }
+                    Ok(())
+                })
             } else if open_error.is_some() {
                 // A failed launch path always lands on Welcome so the error is
                 // visible, even when "Show at launch" is off.
@@ -169,7 +192,7 @@ fn main() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Options, Theme, options};
+    use super::{Options, Theme, options, ui};
     use std::path::PathBuf;
 
     fn parse(args: &[&str]) -> anyhow::Result<Options> {
@@ -188,6 +211,33 @@ mod tests {
         assert_eq!(example.theme, Some(Theme::Dark));
         assert!(parse(&["--example", "scene.voxl"]).is_err());
         assert!(parse(&["scene.voxl", "other.voxl"]).is_err());
+    }
+
+    #[test]
+    fn capture_states_are_explicit_and_reject_ambiguous_launches() {
+        assert!(parse(&[]).unwrap().show.is_none());
+        for (name, state) in ui::launch::LaunchState::ALL {
+            assert_eq!(
+                parse(&["--show", name, "--theme", "light"]).unwrap().show,
+                Some(*state)
+            );
+        }
+        for args in [
+            vec!["--show"],
+            vec!["--show", "unknown"],
+            vec!["--show", "dialogs-about", "scene.voxl"],
+            vec!["--show", "dialogs-about", "--viewport-png", "preview.png"],
+            vec!["--show", "dialogs-about", "--show", "panels-history"],
+        ] {
+            assert!(parse(&args).is_err(), "{args:?}");
+        }
+        assert!(
+            parse(&["--show", "unknown"])
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("unknown --show state")
+        );
     }
 
     #[test]

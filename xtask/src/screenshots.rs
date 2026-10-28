@@ -14,8 +14,10 @@ use std::{
 
 type Result<T> = std::result::Result<T, String>;
 
-/// Key screens, in display order. Each one is rendered from a fixed fixture at a fixed size.
+/// Capture surfaces, in display order, with fixed fixtures and sizes.
+#[derive(Debug)]
 struct Screen {
+    key: bool,
     name: &'static str,
     caption: &'static str,
     title: &'static str,
@@ -23,49 +25,127 @@ struct Screen {
     args: &'static str,
 }
 
-const SCREENS: &[Screen] = &[
-    Screen {
-        name: "welcome",
-        caption: "Welcome window, dark theme (no recent projects)",
-        title: "Quantum",
-        size: (760, 620),
-        args: "--theme dark",
-    },
-    Screen {
-        name: "welcome-light",
-        caption: "Welcome window, light theme (no recent projects)",
-        title: "Quantum",
-        size: (760, 620),
-        args: "--theme light",
-    },
-    Screen {
-        name: "welcome-recents-dark",
-        caption: "Welcome window, dark theme (five recent projects)",
-        title: "Quantum",
-        size: (760, 620),
-        args: "--theme dark",
-    },
-    Screen {
-        name: "welcome-recents-light",
-        caption: "Welcome window, light theme (five recent projects)",
-        title: "Quantum",
-        size: (760, 620),
-        args: "--theme light",
-    },
-    Screen {
-        name: "editor-dark",
-        caption: "Editor, dark theme (Autumn Workshop example)",
-        title: "Autumn Workshop",
-        size: (1440, 900),
-        args: "--example --theme dark",
-    },
-    Screen {
-        name: "editor-light",
-        caption: "Editor, light theme (Autumn Workshop example)",
-        title: "Autumn Workshop",
-        size: (1440, 900),
-        args: "--example --theme light",
-    },
+// Each launch state expands into both themes, with identical geometry and title matching.
+macro_rules! screens {
+    ($($title:literal, ($width:literal, $height:literal) => [
+        $(($state:literal, $caption:literal)),* $(,)?
+    ]),* $(,)?) => {
+        &[
+            Screen {
+                key: true,
+                name: "welcome",
+                caption: "Welcome window (no recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme dark",
+            },
+            Screen {
+                key: true,
+                name: "editor-dark",
+                caption: "Editor, dark theme (Autumn Workshop example)",
+                title: "Autumn Workshop",
+                size: (1440, 900),
+                args: "--example --theme dark",
+            },
+            Screen {
+                key: true,
+                name: "editor-light",
+                caption: "Editor, light theme (Autumn Workshop example)",
+                title: "Autumn Workshop",
+                size: (1440, 900),
+                args: "--example --theme light",
+            },
+            Screen {
+                key: false,
+                name: "welcome-light",
+                caption: "Welcome window, light theme (no recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme light",
+            },
+            Screen {
+                key: false,
+                name: "welcome-recents-dark",
+                caption: "Welcome window, dark theme (five recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme dark",
+            },
+            Screen {
+                key: false,
+                name: "welcome-recents-light",
+                caption: "Welcome window, light theme (five recent projects)",
+                title: "Quantum",
+                size: (760, 620),
+                args: "--theme light",
+            },
+            $($(
+                Screen {
+                    key: false,
+                    name: concat!($state, "-dark"),
+                    caption: concat!($caption, " (dark)"),
+                    title: $title,
+                    size: ($width, $height),
+                    args: concat!("--show ", $state, " --theme dark"),
+                },
+                Screen {
+                    key: false,
+                    name: concat!($state, "-light"),
+                    caption: concat!($caption, " (light)"),
+                    title: $title,
+                    size: ($width, $height),
+                    args: concat!("--show ", $state, " --theme light"),
+                },
+            )*)*
+        ]
+    };
+}
+
+const SCREENS: &[Screen] = screens![
+    "Autumn Workshop", (1440, 900) => [
+        ("chrome-menu-file", "File menu"),
+        ("chrome-menu-edit", "Edit menu"),
+        ("chrome-menu-view", "View menu"),
+        ("chrome-menu-tools", "Tools menu"),
+        ("chrome-menu-palette", "Palette menu"),
+        ("chrome-menu-layers", "Layers menu"),
+        ("chrome-menu-agent", "Agent menu"),
+        ("chrome-menu-extensions", "Extensions menu"),
+        ("chrome-menu-window", "Window menu"),
+        ("chrome-menu-help", "Help menu"),
+        ("panels-palette", "Focused palette sidebar"),
+        ("panels-history", "History and named versions"),
+        ("panels-history-preview", "History preview and restore controls"),
+        ("panels-comments-empty", "Empty resolved comments"),
+        ("panels-comments", "Comments and model pins"),
+        ("panels-comment-thread", "Comment thread"),
+        ("panels-comment-draft", "New comment composer"),
+        ("panels-agent", "Expanded agent activity"),
+        ("panels-agent-inspection", "Agent inspection thumbnails"),
+        ("popovers-connect-agent", "Connect agent"),
+        ("dialogs-about", "About Quantum"),
+        ("dialogs-acknowledgements", "Acknowledgements"),
+        ("dialogs-keyboard-guide", "Keyboard guide"),
+        ("dialogs-commands", "Command search"),
+        ("dialogs-tools", "Tool search"),
+        ("dialogs-extensions", "Extensions"),
+        ("dialogs-unsaved-changes", "Unsaved changes"),
+        ("dialogs-save-waiting", "Save dialog waiting surface"),
+        ("popovers-palette-chooser", "Palette chooser"),
+        ("dialogs-palettes", "Palette manager and color editor"),
+        ("popovers-palette-menu", "Palette import/export menu"),
+        ("dialogs-palette-delete", "Delete custom palette confirmation"),
+        ("overlays-debug", "Debug overlay"),
+    ],
+    "^Quantum Settings$", (880, 640) => [
+        ("settings-general", "Settings: General"),
+        ("settings-appearance", "Settings: Appearance"),
+        ("settings-viewport", "Settings: Viewport / Rendering"),
+        ("settings-shortcuts", "Settings: Shortcuts"),
+        ("settings-agent", "Settings: Agent"),
+        ("settings-updates", "Settings: Updates"),
+        ("settings-advanced", "Settings: Advanced"),
+    ],
 ];
 
 const ASSETS_BRANCH: &str = "pr-assets";
@@ -76,10 +156,13 @@ const CELL_WIDTH: u32 = 440;
 /// Fraction of pixels allowed to differ (after a 2% colour fuzz) before a screen counts as changed.
 const CHANGED_FRACTION: f64 = 0.0005;
 
-pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen NAME ...] [--out DIR] [--publish PR] [--remote NAME]
+pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen SELECTOR ...] [--pr-body FILE] [--out DIR] [--publish PR] [--remote NAME]
   --base     before ref (default: merge-base of HEAD and <remote>/main)
   --head     after ref (default: the current working tree, uncommitted changes included)
-  --screen   limit to these screens (welcome, welcome-light, welcome-recents-dark, welcome-recents-light, editor-dark, editor-light); default all
+  --screen   exact name or trailing * prefix (quote patterns); repeat to combine, '*' selects all
+             default: welcome, editor-dark, editor-light; other surfaces are opt-in
+  --pr-body  add selectors from one 'Screens: panels-* settings-general-*' line in FILE to the key set
+             --publish reads the PR body automatically unless --screen or --pr-body is supplied
   --out      output directory (default: target/pr-screenshots)
   --publish  push PNGs to the pr-assets branch and fill the PR's Screenshots section
   --remote   git remote for the base default and publishing (default: origin, else the only remote)
@@ -89,6 +172,7 @@ struct Options {
     base: Option<String>,
     head: Option<String>,
     screens: Vec<String>,
+    pr_body: Option<PathBuf>,
     out: Option<PathBuf>,
     publish: Option<u64>,
     remote: Option<String>,
@@ -110,6 +194,15 @@ pub fn run(args: &[String]) -> Result<()> {
         .parent()
         .ok_or("no workspace root")?
         .to_path_buf();
+    let body = match (&options.pr_body, options.publish) {
+        (Some(file), _) => {
+            Some(fs::read_to_string(file).map_err(|e| format!("read {}: {e}", file.display()))?)
+        }
+        (None, Some(pr)) if options.screens.is_empty() => Some(pr_body(&root, pr)?),
+        _ => None,
+    };
+    // Validate untrusted selectors before cleaning output, building or publishing.
+    let screens = selected_screens(&options.screens, body.as_deref())?;
     let remote = match options.remote.clone() {
         Some(remote) => remote,
         None => default_remote(&root)?,
@@ -118,34 +211,21 @@ pub fn run(args: &[String]) -> Result<()> {
         .out
         .clone()
         .unwrap_or_else(|| root.join("target/pr-screenshots"));
-    let screens: Vec<&Screen> = if options.screens.is_empty() {
-        SCREENS.iter().collect()
-    } else {
-        options
-            .screens
+    eprintln!(
+        "selected {} screens: {}",
+        screens.len(),
+        screens
             .iter()
-            .map(|name| {
-                SCREENS
-                    .iter()
-                    .find(|s| s.name == name)
-                    .ok_or_else(|| format!("unknown screen {name:?}"))
-            })
-            .collect::<Result<_>>()?
-    };
+            .map(|s| s.name)
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
     if out.exists() {
         fs::remove_dir_all(&out).map_err(|e| format!("clean {}: {e}", out.display()))?;
     }
     fs::create_dir_all(out.join("bin")).map_err(|e| e.to_string())?;
     let spec = out.join("screens.tsv");
-    let mut spec_text = String::new();
-    for s in &screens {
-        let _ = writeln!(
-            spec_text,
-            "{}\t{}\t{}\t{}\t{}",
-            s.name, s.title, s.size.0, s.size.1, s.args
-        );
-    }
-    fs::write(&spec, spec_text).map_err(|e| e.to_string())?;
+    write_spec(&spec, &screens)?;
     let base_ref = match options.base.clone() {
         Some(base) => base,
         None => git(&root, &["merge-base", "HEAD", &format!("{remote}/main")])?,
@@ -189,17 +269,7 @@ pub fn run(args: &[String]) -> Result<()> {
             )
         }
     };
-    if screens
-        .iter()
-        .any(|screen| screen.name.starts_with("welcome-recents-"))
-    {
-        xtask::screenshot_fixtures::prepare_welcome(
-            &root,
-            &out.join("home"),
-            &out.join("welcome-data"),
-        )
-        .map_err(|error| error.to_string())?;
-    }
+    prepare_fixtures(&root, &out, &screens)?;
     let script = root.join("scripts/capture-pr-screens.sh");
     for (side, bin) in [(&base, &base_bin), (&head, &head_bin)] {
         eprintln!("capturing {} ({})", side.label, side.id);
@@ -215,7 +285,7 @@ pub fn run(args: &[String]) -> Result<()> {
         .collect();
 
     let urls = match options.publish {
-        Some(pr) => {
+        Some(pr) if results.iter().any(|r| r.state.has_assets()) => {
             let repo = gh(
                 &root,
                 &[
@@ -227,7 +297,7 @@ pub fn run(args: &[String]) -> Result<()> {
                     ".nameWithOwner",
                 ],
             )?;
-            let assets = publish_assets(&root, &remote, pr, &base, &head, &screens)?;
+            let assets = publish_assets(&root, &remote, pr, &base, &head, &results)?;
             Urls::Remote {
                 prefix: format!(
                     "https://raw.githubusercontent.com/{repo}/{assets}/pr-{pr}/{}",
@@ -235,7 +305,7 @@ pub fn run(args: &[String]) -> Result<()> {
                 ),
             }
         }
-        None => Urls::Local,
+        _ => Urls::Local,
     };
     let markdown = render(&results, &base, &head, &base_ref, &urls);
     fs::write(out.join("screenshots.md"), &markdown).map_err(|e| e.to_string())?;
@@ -255,6 +325,7 @@ fn parse(args: &[String]) -> Result<Options> {
         base: None,
         head: None,
         screens: Vec::new(),
+        pr_body: None,
         out: None,
         publish: None,
         remote: None,
@@ -270,6 +341,7 @@ fn parse(args: &[String]) -> Result<Options> {
             "--base" => options.base = Some(value()?),
             "--head" => options.head = Some(value()?),
             "--screen" => options.screens.push(value()?),
+            "--pr-body" => options.pr_body = Some(value()?.into()),
             "--out" => options.out = Some(value()?.into()),
             "--remote" => options.remote = Some(value()?),
             "--publish" => {
@@ -283,7 +355,65 @@ fn parse(args: &[String]) -> Result<Options> {
             _ => return Err(format!("unknown argument {arg:?}\n{USAGE}")),
         }
     }
+    if options.pr_body.is_some() && !options.screens.is_empty() {
+        return Err("--screen and --pr-body cannot be combined".into());
+    }
     Ok(options)
+}
+
+/// Resolve selectors to registry entries, deduplicated in registry order. Only a
+/// trailing `*` is supported; no shell expansion or user-provided app args exist.
+fn selected_screens(selectors: &[String], body: Option<&str>) -> Result<Vec<&'static Screen>> {
+    let extras = body.map(body_selectors).transpose()?.unwrap_or_default();
+    let mut selected: Vec<bool> = SCREENS
+        .iter()
+        .map(|s| selectors.is_empty() && s.key)
+        .collect();
+    for selector in selectors.iter().chain(&extras) {
+        let prefix = selector.strip_suffix('*');
+        let stem = prefix.unwrap_or(selector);
+        if selector.is_empty()
+            || !stem
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        {
+            return Err(format!(
+                "invalid screen selector {selector:?}: use an exact name or trailing * prefix"
+            ));
+        }
+        let mut matched = false;
+        for (screen, selected) in SCREENS.iter().zip(&mut selected) {
+            if prefix.map_or(screen.name == selector, |prefix| {
+                screen.name.starts_with(prefix)
+            }) {
+                *selected = true;
+                matched = true;
+            }
+        }
+        if !matched {
+            return Err(format!(
+                "unknown screen selector {selector:?}: matched no screens"
+            ));
+        }
+    }
+    Ok(SCREENS
+        .iter()
+        .zip(selected)
+        .filter_map(|(s, selected)| selected.then_some(s))
+        .collect())
+}
+
+/// A deliberately small line format, not Markdown or shell syntax. The directive
+/// must start at column zero; indented examples and inline mentions are ignored.
+fn body_selectors(body: &str) -> Result<Vec<String>> {
+    let mut lines = body
+        .lines()
+        .filter_map(|line| line.strip_prefix("Screens:"));
+    let selectors = lines.next().unwrap_or_default();
+    if lines.next().is_some() {
+        return Err("use only one Screens: line in the PR body".into());
+    }
+    Ok(selectors.split_whitespace().map(str::to_string).collect())
 }
 
 fn build_at_commit(root: &Path, out: &Path, sha: &str, label: &str) -> Result<PathBuf> {
@@ -341,6 +471,10 @@ enum State {
 }
 
 impl State {
+    fn has_assets(&self) -> bool {
+        matches!(self, Self::Changed | Self::Added | Self::Removed)
+    }
+
     fn word(&self) -> &'static str {
         match self {
             State::Changed => "changed",
@@ -502,14 +636,14 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
     };
     let _ = writeln!(
         md,
-        "<sub>Before <code>{}</code>{base_name} → after <code>{}</code>. {} of {} key screens changed. Linux, Mesa lavapipe, fixed window sizes; generated by <code>cargo xtask screenshots</code>.</sub>\n",
+        "<sub>Before <code>{}</code>{base_name} → after <code>{}</code>. {} of {} selected screens changed or unavailable. Linux, Mesa lavapipe, fixed window sizes; generated by <code>cargo xtask screenshots</code>.</sub>\n",
         base.id,
         head.id,
         changed.len(),
         results.len()
     );
     if changed.is_empty() {
-        md.push_str("No visible change on the key screens.\n\n");
+        md.push_str("No visible change on the selected screens.\n\n");
     }
     for r in &changed {
         let s = r.screen;
@@ -554,18 +688,39 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
             "<details><summary>Unchanged screens ({})</summary>\n",
             same.len()
         );
-        let _ = writeln!(md, "| Screen | After |\n| :--- | :---: |");
         for r in &same {
-            let _ = writeln!(
-                md,
-                "| {} | {} |",
-                r.screen.caption,
-                img(urls, head, r.screen, 300)
-            );
+            let _ = writeln!(md, "- {} (`{}`)", r.screen.caption, r.screen.name);
         }
         md.push_str("\n</details>\n");
     }
     md
+}
+
+/// Publish only images referenced by changed/new/removed rows, including useful
+/// zooms. Unchanged captures remain local or in CI artifacts, never in Git.
+fn asset_files(results: &[Comparison], base: &Side, head: &Side) -> Vec<(PathBuf, String)> {
+    let mut files = Vec::new();
+    for r in results.iter().filter(|r| r.state.has_assets()) {
+        for side in [base, head] {
+            if (r.state == State::Added && side.label == base.label)
+                || (r.state == State::Removed && side.label == head.label)
+            {
+                continue;
+            }
+            let name = r.screen.name;
+            files.push((
+                side.dir.join(format!("{name}.png")),
+                format!("{}/{name}.png", side.label),
+            ));
+            if r.zoom.is_some() {
+                files.push((
+                    side.dir.join(format!("{name}-zoom.png")),
+                    format!("{}/{name}-zoom.png", side.label),
+                ));
+            }
+        }
+    }
+    files
 }
 
 /// Commit the PNGs on top of the `pr-assets` branch with plumbing commands (no checkout,
@@ -576,23 +731,12 @@ fn publish_assets(
     pr: u64,
     base: &Side,
     head: &Side,
-    screens: &[&Screen],
+    results: &[Comparison],
 ) -> Result<String> {
     let mut blobs = Vec::new();
-    for side in [base, head] {
-        for name in screens
-            .iter()
-            .flat_map(|s| [s.name.to_string(), format!("{}-zoom", s.name)])
-        {
-            let file = side.dir.join(format!("{name}.png"));
-            if file.exists() {
-                let blob = git(root, &["hash-object", "-w", &file.to_string_lossy()])?;
-                blobs.push((
-                    format!("pr-{pr}/{}/{}/{name}.png", head.id, side.label),
-                    blob,
-                ));
-            }
-        }
+    for (file, path) in asset_files(results, base, head) {
+        let blob = git(root, &["hash-object", "-w", &file.to_string_lossy()])?;
+        blobs.push((format!("pr-{pr}/{}/{path}", head.id), blob));
     }
     let index = std::env::temp_dir().join(format!("pr-assets-index-{}", std::process::id()));
     for attempt in 1..=5 {
@@ -649,12 +793,17 @@ fn publish_assets(
     unreachable!()
 }
 
-fn update_pr_body(root: &Path, pr: u64, markdown: &str) -> Result<()> {
+fn pr_body(root: &Path, pr: u64) -> Result<String> {
     let number = pr.to_string();
-    let body = gh(
+    gh(
         root,
         &["pr", "view", &number, "--json", "body", "-q", ".body"],
-    )?;
+    )
+}
+
+fn update_pr_body(root: &Path, pr: u64, markdown: &str) -> Result<()> {
+    let number = pr.to_string();
+    let body = pr_body(root, pr)?;
     let new = splice_body(&body, markdown);
     let file = std::env::temp_dir().join(format!("pr-{pr}-body.md"));
     fs::write(&file, new).map_err(|e| e.to_string())?;
@@ -739,47 +888,32 @@ fn status(command: &mut Command) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod tests;
 
-    #[test]
-    fn splice_replaces_marked_block() {
-        let body =
-            format!("Closes #1\n\n## Screenshots\n\n{START}\nold\n{END}\n\n## Testing\n\nok\n");
-        let new = splice_body(&body, "new\n");
-        assert!(new.contains(&format!("{START}\nnew\n{END}")));
-        assert!(!new.contains("old"));
-        assert_eq!(new.matches("## Screenshots").count(), 1);
+fn prepare_fixtures(root: &Path, out: &Path, screens: &[&Screen]) -> Result<()> {
+    if screens
+        .iter()
+        .any(|screen| screen.name.starts_with("welcome-recents-"))
+    {
+        xtask::screenshot_fixtures::prepare_welcome(
+            root,
+            &out.join("home"),
+            &out.join("welcome-data"),
+        )
+        .map_err(|error| error.to_string())?;
     }
+    Ok(())
+}
 
-    #[test]
-    fn splice_adds_section_before_testing() {
-        let new = splice_body(
-            "Closes #1\n\n## Changes\n\n- x\n\n## Testing\n\nok\n",
-            "shots\n",
+fn write_spec(spec: &Path, screens: &[&Screen]) -> Result<()> {
+    let mut spec_text = String::new();
+    for s in screens {
+        let _ = writeln!(
+            spec_text,
+            "{}\t{}\t{}\t{}\t{}",
+            s.name, s.title, s.size.0, s.size.1, s.args
         );
-        let shots = new.find("## Screenshots").unwrap();
-        assert!(new.find("## Changes").unwrap() < shots);
-        assert!(shots < new.find("## Testing").unwrap());
     }
-
-    #[test]
-    fn splice_appends_without_testing_heading() {
-        let new = splice_body("Closes #1\r\n", "shots\n");
-        assert!(new.starts_with("Closes #1\n\n## Screenshots"));
-        assert!(new.trim_end().ends_with(END));
-    }
-
-    #[test]
-    fn parse_publish_accepts_hash() {
-        let options = parse(&[
-            "--publish".into(),
-            "#42".into(),
-            "--screen".into(),
-            "welcome".into(),
-        ])
-        .unwrap();
-        assert_eq!(options.publish, Some(42));
-        assert_eq!(options.screens, ["welcome"]);
-    }
+    fs::write(spec, spec_text).map_err(|e| e.to_string())?;
+    Ok(())
 }

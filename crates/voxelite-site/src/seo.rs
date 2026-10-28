@@ -1,6 +1,6 @@
 //! Shared page metadata and crawl files, generated from the production origin.
 use serde_json::json;
-use std::{error::Error, fmt::Write as _, fs, path::Path};
+use std::{error::Error, fmt::Write as _, path::Path};
 
 use crate::{SITE_BASE_URL, escape};
 
@@ -36,7 +36,9 @@ pub fn metadata(path: &str, title: &str, description: &str) -> String {
 <meta name="twitter:description" content="{description}">
 <meta name="twitter:image" content="{image}">
 <meta name="twitter:image:alt" content="{IMAGE_ALT}">
-<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/assets/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/GeistMono.woff2" as="font" type="font/woff2" crossorigin>"#
     )
@@ -76,8 +78,8 @@ pub fn write_crawl_files(root: &Path, paths: &[String]) -> Result<(), Box<dyn Er
         )?;
     }
     sitemap.push_str("</urlset>\n");
-    fs::write(root.join("sitemap.xml"), sitemap)?;
-    fs::write(
+    voxelite_format::storage::safe_write(root.join("sitemap.xml"), sitemap)?;
+    voxelite_format::storage::safe_write(
         root.join("robots.txt"),
         format!(
             "User-agent: *\nAllow: /\n\nSitemap: {SITE_BASE_URL}/sitemap.xml\n\n# Markdown documentation: {SITE_BASE_URL}/llms.txt\n# Complete documentation: {SITE_BASE_URL}/llms-full.txt\n"

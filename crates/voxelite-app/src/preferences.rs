@@ -1,8 +1,5 @@
 //! Portable application preferences, separate from project documents.
-use crate::{
-    editor::{EditorError, EditorResult},
-    local_settings,
-};
+use crate::{editor::EditorResult, local_settings};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use voxelite_render::AmbientOcclusionStrength;
@@ -73,16 +70,11 @@ impl Preferences {
 
     /// Load preferences; missing and newly introduced fields use defaults.
     pub fn load(path: &Path) -> EditorResult<Self> {
-        let Some(bytes) = local_settings::read_local(path)? else {
-            return Ok(Self::default());
-        };
-        serde_json::from_slice(&bytes).map_err(|e| EditorError::Gesture(e.to_string()))
+        Ok(local_settings::json_store::<Self>(path)?.load()?)
     }
     /// Persist settings atomically in a local file.
     pub fn save(&self, path: &Path) -> EditorResult<()> {
-        let bytes =
-            serde_json::to_vec_pretty(self).map_err(|e| EditorError::Gesture(e.to_string()))?;
-        local_settings::write_local(path, &bytes)
+        Ok(local_settings::json_store::<Self>(path)?.save(self)?)
     }
 }
 
@@ -152,7 +144,10 @@ mod tests {
         std::fs::write(&path, b"not json").unwrap();
         assert!(Preferences::load(&path).is_err());
         assert!(Preferences::default().save(dir.path()).is_err());
-        assert_eq!(std::fs::read(&path).unwrap(), b"not json");
+        assert_eq!(
+            std::fs::read(path.with_extension("json.corrupt")).unwrap(),
+            b"not json"
+        );
     }
 
     #[test]
