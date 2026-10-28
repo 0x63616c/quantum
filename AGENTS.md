@@ -267,6 +267,34 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/before.json
 cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compare target/bench/before.json --markdown target/bench/comparison.md
 ```
 
+## Design review (impeccable)
+
+- Project-local impeccable is pinned to **4.8.0** for Codex, Claude and Cursor.
+  Always set `IMPECCABLE_NO_TELEMETRY=1 DO_NOT_TRACK=1` when running it or npx;
+  shared `.impeccable/config.json` also sets `"telemetry": false`.
+- Agents and Codex jobs run `/impeccable critique` then `/impeccable polish`
+  before opening UI PRs: inspect the locally served site per [site/README.md](site/README.md)
+  for site changes, and PR screenshots from `cargo xtask screenshots` for GPUI
+  and future SwiftUI changes. Reviewers run critique on the Before | After images.
+- Read [DESIGN.md](DESIGN.md) and [ART-CHECKLIST.md](design/ART-CHECKLIST.md)
+  first; they override impeccable defaults, including pure black and Geist warnings.
+  Native work uses `adapt.native.md`, `audit.native.md` and `ios.md` in the
+  vendored skill reference directory; critique judges native screenshots.
+- Skill-only installation: hooks are off. Enabling provider hooks requires
+  Calum's approval. Never install globally into provider home directories.
+- Install or update from this worktree using the following exact command (replace
+  the exact version for an approved update), then review the entire diff:
+
+  ```sh
+  IMPECCABLE_NO_TELEMETRY=1 DO_NOT_TRACK=1 npx -y impeccable@4.8.0 install --providers=codex,claude,cursor --scope=project --yes --no-hooks
+  ```
+
+- For bundled launchers, set `IMPECCABLE_HOME="$PWD/.impeccable"` so fallback
+  engine downloads stay in the ignored project cache. Verify `telemetry status`
+  from the project root both with the two opt-out variables unset and set.
+- Keep vendored impeccable files verbatim. Their JS/shell helpers are a
+  vendored-skill exception, not permission to add first-party scripts.
+
 ## Shared UI and text editing
 
 - Use [quantum-ui](crates/quantum-ui/README.md) for buttons, icon buttons,
