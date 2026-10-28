@@ -43,6 +43,8 @@ futures-channel = "0.3"
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false }
 objc2 = "0.6.5"
 tempfile = "3"
+insta = { version = "1.49", default-features = false, features = ["json"] }
+schemars = "1.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
