@@ -2,18 +2,18 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent skills: Quantum docs</title>
 <meta name="description" content="Give your AI agent reusable Quantum skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.">
-<link rel="canonical" href="https://voxelite.worldwidewebb.co/docs/skills/">
+<link rel="canonical" href="https://quantum.worldwidewebb.co/docs/skills/">
 <meta property="og:title" content="Agent skills: Quantum docs">
 <meta property="og:description" content="Give your AI agent reusable Quantum skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.">
-<meta property="og:url" content="https://voxelite.worldwidewebb.co/docs/skills/">
-<meta property="og:image" content="https://voxelite.worldwidewebb.co/assets/session-dark.png">
+<meta property="og:url" content="https://quantum.worldwidewebb.co/docs/skills/">
+<meta property="og:image" content="https://quantum.worldwidewebb.co/assets/session-dark.png">
 <meta property="og:image:alt" content="Quantum editor showing the Autumn Workshop model, palette, layers, and agent activity.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Quantum">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Agent skills: Quantum docs">
 <meta name="twitter:description" content="Give your AI agent reusable Quantum skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.">
-<meta name="twitter:image" content="https://voxelite.worldwidewebb.co/assets/session-dark.png">
+<meta name="twitter:image" content="https://quantum.worldwidewebb.co/assets/session-dark.png">
 <meta name="twitter:image:alt" content="Quantum editor showing the Autumn Workshop model, palette, layers, and agent activity.">
 <link rel="icon" href="/assets/favicon-16.png" type="image/png" sizes="16x16">
 <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
@@ -30,29 +30,29 @@
 <div class="install-block" data-install>
 <section id="install-cursor" data-install-panel="Cursor">
 <h3>Cursor</h3>
-<p><a class="cursor-install" href="cursor://anysphere.cursor-deeplink/mcp/install?name=voxelite&amp;config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9Wb3hlbGl0ZS5hcHAvQ29udGVudHMvTWFjT1Mvdm94ZWxpdGUtbWNwIiwiYXJncyI6WyItLXJvb3QiLCIke3dvcmtzcGFjZUZvbGRlcn0iXX0=" aria-label="Add to Cursor"><img class="badge-dark" src="/assets/badges/mcp-install-dark.svg" width="126" height="28" alt="Add to Cursor"><img class="badge-light" src="/assets/badges/mcp-install-light.svg" width="126" height="28" alt="" aria-hidden="true"></a></p>
+<p><a class="cursor-install" href="cursor://anysphere.cursor-deeplink/mcp/install?name=quantum&amp;config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9RdWFudHVtLmFwcC9Db250ZW50cy9NYWNPUy9xdWFudHVtLW1jcCIsImFyZ3MiOlsiLS1yb290IiwiJHt3b3Jrc3BhY2VGb2xkZXJ9Il19" aria-label="Add to Cursor"><img class="badge-dark" src="/assets/badges/mcp-install-dark.svg" width="126" height="28" alt="Add to Cursor"><img class="badge-light" src="/assets/badges/mcp-install-light.svg" width="126" height="28" alt="" aria-hidden="true"></a></p>
 <p>Review and confirm the server in Cursor. The file root is <code>${workspaceFolder}</code>, your open project folder. <a href="/assets/integrations/cursor/mcp.json">View mcp.json</a> for manual setup.</p>
 </section>
 <section id="install-claude" data-install-panel="Claude Code">
 <h3>Claude Code</h3>
 <p>Run from your project directory; <code>"$PWD"</code> sets the file root to that directory.</p>
-<pre><code class="language-sh">claude mcp add voxelite -- &#39;/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp&#39; --root &quot;$PWD&quot;</code></pre>
+<pre><code class="language-sh">claude mcp add quantum -- &#39;/Applications/Quantum.app/Contents/MacOS/quantum-mcp&#39; --root &quot;$PWD&quot;</code></pre>
 <p>To make the server available across projects, add <code>--scope user</code> after <code>claude mcp add</code>. Its file root still points to the directory where you ran the command.</p>
 </section>
 <section id="install-codex" data-install-panel="Codex">
 <h3>Codex</h3>
 <p>Run from your project directory; <code>"$PWD"</code> sets the file root to that directory.</p>
-<pre><code class="language-sh">codex mcp add voxelite -- &#39;/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp&#39; --root &quot;$PWD&quot;</code></pre>
+<pre><code class="language-sh">codex mcp add quantum -- &#39;/Applications/Quantum.app/Contents/MacOS/quantum-mcp&#39; --root &quot;$PWD&quot;</code></pre>
 <p>Or merge this into <code>~/.codex/config.toml</code> (or your trusted project's <code>.codex/config.toml</code>). Replace <code>&lt;project dir&gt;</code> with an existing absolute path.</p>
-<pre><code class="language-toml">[mcp_servers.voxelite]
-command = &quot;/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp&quot;
+<pre><code class="language-toml">[mcp_servers.quantum]
+command = &quot;/Applications/Quantum.app/Contents/MacOS/quantum-mcp&quot;
 args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
 </section>
 <section id="install-vscode" data-install-panel="VS Code">
 <h3>VS Code</h3>
-<p><a class="button small" href="vscode:mcp/install?%7B%22name%22%3A%22voxelite%22%2C%22command%22%3A%22%2FApplications%2FVoxelite.app%2FContents%2FMacOS%2Fvoxelite-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D">Install in VS Code</a></p>
+<p><a class="button small" href="vscode:mcp/install?%7B%22name%22%3A%22quantum%22%2C%22command%22%3A%22%2FApplications%2FQuantum.app%2FContents%2FMacOS%2Fquantum-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D">Install in VS Code</a></p>
 <p>Review and confirm the server in VS Code, or run this CLI command. Both use <code>${workspaceFolder}</code> for the file root, resolved by VS Code in your open project.</p>
-<pre><code class="language-sh">code --add-mcp &#39;{&quot;name&quot;:&quot;voxelite&quot;,&quot;command&quot;:&quot;/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp&quot;,&quot;args&quot;:[&quot;--root&quot;,&quot;${workspaceFolder}&quot;]}&#39;</code></pre>
+<pre><code class="language-sh">code --add-mcp &#39;{&quot;name&quot;:&quot;quantum&quot;,&quot;command&quot;:&quot;/Applications/Quantum.app/Contents/MacOS/quantum-mcp&quot;,&quot;args&quot;:[&quot;--root&quot;,&quot;${workspaceFolder}&quot;]}&#39;</code></pre>
 <p><a href="/assets/integrations/vscode/mcp.json">View .vscode/mcp.json</a> for manual setup.</p>
 </section>
 <section id="install-other" data-install-panel="Other">
@@ -60,8 +60,8 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
 <p>For Claude Desktop, Windsurf and other MCP hosts, merge this entry into the host's MCP settings. Preserve existing servers and replace <code>&lt;project dir&gt;</code> with an existing absolute path.</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
-    &quot;voxelite&quot;: {
-      &quot;command&quot;: &quot;/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp&quot;,
+    &quot;quantum&quot;: {
+      &quot;command&quot;: &quot;/Applications/Quantum.app/Contents/MacOS/quantum-mcp&quot;,
       &quot;args&quot;: [
         &quot;--root&quot;,
         &quot;&lt;project dir&gt;&quot;
@@ -73,14 +73,14 @@ args = [&quot;--root&quot;,&quot;&lt;project dir&gt;&quot;]</code></pre>
 </div>
 <h2 id="install-skills">Install skills</h2>
 <p>Install all skills from the repository's <code>skills/</code> directory with the open Agent Skills CLI. This installs workflow instructions; configure MCP above to give them tools.</p>
-<pre><code class="language-sh">npx skills add 0x63616c/voxelite</code></pre>
+<pre><code class="language-sh">npx skills add 0x63616c/quantum</code></pre>
 <p>Add <code>--skill &lt;name&gt;</code> for one skill, <code>-g</code> for a global install, or <code>-a claude-code</code>, <code>-a cursor</code> or <code>-a codex</code> to pick an agent. <a href="/docs/skills/#available-skills">Choose an individual skill</a>.</p>
-<p>For a manual install, <a href="/assets/voxelite-skills.zip" download>download the skill folders</a> or use a repository checkout. Copy each <code>skills/&lt;name&gt;/</code> folder into <code>.cursor/skills/</code>, <code>.claude/skills/</code>, or <code>~/.codex/skills/</code>. <a href="/assets/skills/README.md">Install, update and removal notes</a>.</p>
+<p>For a manual install, <a href="/assets/quantum-skills.zip" download>download the skill folders</a> or use a repository checkout. Copy each <code>skills/&lt;name&gt;/</code> folder into <code>.cursor/skills/</code>, <code>.claude/skills/</code>, or <code>~/.codex/skills/</code>. <a href="/assets/skills/README.md">Install, update and removal notes</a>.</p>
 <h2 id="what-you-get">What you get</h2>
 <p>MCP gives your agent voxel editing tools, palettes, real PNG renders, and project save/export. Skills teach it to compose, inspect and refine a model. Each standalone server owns its own session; save <code>.voxl</code> files before disconnecting. To edit the live native canvas, <a href="/docs/getting-started/#connect">copy the connection configuration from the app</a>.</p>
 <h2 id="verify-install">Verify it works</h2>
-<ol><li>Restart or reconnect your host and list its MCP tools.</li><li>Call <code>voxelite_capabilities_get</code> with <code>{}</code>. Expect API <code>voxelite.v1</code>, an epoch and available document IDs.</li><li>Confirm the installed skills appear in your host, then ask it to use <code>voxelite-workflow</code> for your first model.</li></ol>
+<ol><li>Restart or reconnect your host and list its MCP tools.</li><li>Call <code>quantum_capabilities_get</code> with <code>{}</code>. Expect API <code>voxelite.v1</code>, an epoch and available document IDs.</li><li>Confirm the installed skills appear in your host, then ask it to use <code>quantum-workflow</code> for your first model.</li></ol>
 
-<h2 id="available-skills">Choose a skill</h2><section><h3 id="voxelite-palettes">voxelite-palettes</h3><p>Choose, create or apply Voxelite palettes with readable material roles and stable slot mappings, without unintended recoloring.</p><pre><code class="language-sh">npx skills add 0x63616c/voxelite --skill voxelite-palettes</code></pre><p><a href="/assets/skills/voxelite-palettes/SKILL.md">Read skill instructions</a></p></section><section><h3 id="voxelite-primitives">voxelite-primitives</h3><p>Build Voxelite subjects from integer primitive masses, mirrored boxes and bounded explicit voxel batches for curved shapes.</p><pre><code class="language-sh">npx skills add 0x63616c/voxelite --skill voxelite-primitives</code></pre><p><a href="/assets/skills/voxelite-primitives/SKILL.md">Read skill instructions</a></p></section><section><h3 id="voxelite-render-review">voxelite-render-review</h3><p>Inspect real Voxelite MCP renders from multiple angles, identify spatial flaws, and verify repairs at a consistent document revision.</p><pre><code class="language-sh">npx skills add 0x63616c/voxelite --skill voxelite-render-review</code></pre><p><a href="/assets/skills/voxelite-render-review/SKILL.md">Read skill instructions</a></p></section><section><h3 id="voxelite-workflow">voxelite-workflow</h3><p>Create or refine voxel art through Voxelite MCP, with atomic edits, visual review, named versions and portable exports.</p><pre><code class="language-sh">npx skills add 0x63616c/voxelite --skill voxelite-workflow</code></pre><p><a href="/assets/skills/voxelite-workflow/SKILL.md">Read skill instructions</a></p></section>
-<h2 id="try">Give it a first brief</h2><blockquote><p>Use the Quantum workflow to build a warm brass lantern within 32 × 32 × 32 cells. Save a blockout version, inspect iso/front/right/back renders, repair the handle silhouette, then save .voxl and GLB.</p></blockquote><p>The render-review skill uses <code>voxelite_render</code> for real PNG feedback. There is no screenshot-named MCP tool in this build. Primitive guidance also stays within today's catalog: boxes and explicit voxel batches, without invented cylinder or ellipsoid calls.</p><h2 id="verify">Know when it worked</h2><p>The agent should report the model revision, views it actually inspected, and saved output paths. A successful render call is not visual inspection, and exporting an image is not saving a project. These distinctions are part of every workflow.</p>
-<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main><aside class="docs-toc"><p class="nav-label">On this page</p><nav aria-label="Page sections"><a href="#install-mcp">Install MCP</a><a href="#install-skills">Install skills</a><a href="#what-you-get">What you get</a><a href="#verify-install">Verify it works</a><a href="#available-skills">Choose a skill</a><a href="#try">Give it a first brief</a><a href="#verify">Know when it worked</a></nav></aside></div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a><a class="github-link" href="https://github.com/0x63616c/voxelite"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a></nav></footer></body></html>
+<h2 id="available-skills">Choose a skill</h2><section><h3 id="quantum-palettes">quantum-palettes</h3><p>Choose, create or apply Quantum palettes with readable material roles and stable slot mappings, without unintended recoloring.</p><pre><code class="language-sh">npx skills add 0x63616c/quantum --skill quantum-palettes</code></pre><p><a href="/assets/skills/quantum-palettes/SKILL.md">Read skill instructions</a></p></section><section><h3 id="quantum-primitives">quantum-primitives</h3><p>Build Quantum subjects from integer primitive masses, mirrored boxes and bounded explicit voxel batches for curved shapes.</p><pre><code class="language-sh">npx skills add 0x63616c/quantum --skill quantum-primitives</code></pre><p><a href="/assets/skills/quantum-primitives/SKILL.md">Read skill instructions</a></p></section><section><h3 id="quantum-render-review">quantum-render-review</h3><p>Inspect real Quantum MCP renders from multiple angles, identify spatial flaws, and verify repairs at a consistent document revision.</p><pre><code class="language-sh">npx skills add 0x63616c/quantum --skill quantum-render-review</code></pre><p><a href="/assets/skills/quantum-render-review/SKILL.md">Read skill instructions</a></p></section><section><h3 id="quantum-workflow">quantum-workflow</h3><p>Create or refine voxel art through Quantum MCP, with atomic edits, visual review, named versions and portable exports.</p><pre><code class="language-sh">npx skills add 0x63616c/quantum --skill quantum-workflow</code></pre><p><a href="/assets/skills/quantum-workflow/SKILL.md">Read skill instructions</a></p></section>
+<h2 id="try">Give it a first brief</h2><blockquote><p>Use the Quantum workflow to build a warm brass lantern within 32 × 32 × 32 cells. Save a blockout version, inspect iso/front/right/back renders, repair the handle silhouette, then save .voxl and GLB.</p></blockquote><p>The render-review skill uses <code>quantum_render</code> for real PNG feedback. There is no screenshot-named MCP tool in this build. Primitive guidance also stays within today's catalog: boxes and explicit voxel batches, without invented cylinder or ellipsoid calls.</p><h2 id="verify">Know when it worked</h2><p>The agent should report the model revision, views it actually inspected, and saved output paths. A successful render call is not visual inspection, and exporting an image is not saving a project. These distinctions are part of every workflow.</p>
+<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main><aside class="docs-toc"><p class="nav-label">On this page</p><nav aria-label="Page sections"><a href="#install-mcp">Install MCP</a><a href="#install-skills">Install skills</a><a href="#what-you-get">What you get</a><a href="#verify-install">Verify it works</a><a href="#available-skills">Choose a skill</a><a href="#try">Give it a first brief</a><a href="#verify">Know when it worked</a></nav></aside></div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a><a class="github-link" href="https://github.com/0x63616c/quantum"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a></nav></footer></body></html>

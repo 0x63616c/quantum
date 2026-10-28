@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://voxelite.worldwidewebb.co/sitemap.xml
+Sitemap: https://quantum.worldwidewebb.co/sitemap.xml
 
-# Markdown documentation: https://voxelite.worldwidewebb.co/llms.txt
-# Complete documentation: https://voxelite.worldwidewebb.co/llms-full.txt
+# Markdown documentation: https://quantum.worldwidewebb.co/llms.txt
+# Complete documentation: https://quantum.worldwidewebb.co/llms-full.txt

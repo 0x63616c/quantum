@@ -2,24 +2,24 @@
 
 Coordinates in. Models out. Real visual feedback.
 
-This reference is generated from the Rust server's live discovery catalog, API `voxelite.v1`. Download the [complete JSON catalog](https://voxelite.worldwidewebb.co/assets/mcp-tools.json). Run `voxelite-mcp --schema` to inspect the catalog for your own build.
+This reference is generated from the Rust server's live discovery catalog, API `voxelite.v1`. Download the [complete JSON catalog](https://quantum.worldwidewebb.co/assets/mcp-tools.json). Run `quantum-mcp --schema` to inspect the catalog for your own build.
 
 ## Install MCP
 
-[Install Quantum for Mac](https://voxelite.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://voxelite.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
+[Install Quantum for Mac](https://quantum.worldwidewebb.co/download/) in Applications first. The app includes the MCP server. Open your project folder in your host, then choose an install method below. For [source builds](https://quantum.worldwidewebb.co/docs/getting-started/#build) or a different app location, use the manual configuration with your executable's absolute path.
 
 ### Cursor
 
-[Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=voxelite&config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9Wb3hlbGl0ZS5hcHAvQ29udGVudHMvTWFjT1Mvdm94ZWxpdGUtbWNwIiwiYXJncyI6WyItLXJvb3QiLCIke3dvcmtzcGFjZUZvbGRlcn0iXX0=)
+[Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=quantum&config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9RdWFudHVtLmFwcC9Db250ZW50cy9NYWNPUy9xdWFudHVtLW1jcCIsImFyZ3MiOlsiLS1yb290IiwiJHt3b3Jrc3BhY2VGb2xkZXJ9Il19)
 
-Review and confirm the server in Cursor. The file root is `${workspaceFolder}`, your open project folder. [View mcp.json](https://voxelite.worldwidewebb.co/assets/integrations/cursor/mcp.json) for manual setup.
+Review and confirm the server in Cursor. The file root is `${workspaceFolder}`, your open project folder. [View mcp.json](https://quantum.worldwidewebb.co/assets/integrations/cursor/mcp.json) for manual setup.
 
 ### Claude Code
 
 Run from your project directory; `"$PWD"` sets the file root to that directory.
 
 ```sh
-claude mcp add voxelite -- '/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp' --root "$PWD"
+claude mcp add quantum -- '/Applications/Quantum.app/Contents/MacOS/quantum-mcp' --root "$PWD"
 ```
 
 To make the server available across projects, add `--scope user` after `claude mcp add`. Its file root still points to the directory where you ran the command.
@@ -29,28 +29,28 @@ To make the server available across projects, add `--scope user` after `claude m
 Run from your project directory; `"$PWD"` sets the file root to that directory.
 
 ```sh
-codex mcp add voxelite -- '/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp' --root "$PWD"
+codex mcp add quantum -- '/Applications/Quantum.app/Contents/MacOS/quantum-mcp' --root "$PWD"
 ```
 
 Or merge this into `~/.codex/config.toml` (or your trusted project's `.codex/config.toml`). Replace `<project dir>` with an existing absolute path.
 
 ```toml
-[mcp_servers.voxelite]
-command = "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp"
+[mcp_servers.quantum]
+command = "/Applications/Quantum.app/Contents/MacOS/quantum-mcp"
 args = ["--root","<project dir>"]
 ```
 
 ### VS Code
 
-[Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22voxelite%22%2C%22command%22%3A%22%2FApplications%2FVoxelite.app%2FContents%2FMacOS%2Fvoxelite-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D)
+[Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22quantum%22%2C%22command%22%3A%22%2FApplications%2FQuantum.app%2FContents%2FMacOS%2Fquantum-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D)
 
 Review and confirm the server in VS Code, or run this CLI command. Both use `${workspaceFolder}` for the file root, resolved by VS Code in your open project.
 
 ```sh
-code --add-mcp '{"name":"voxelite","command":"/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp","args":["--root","${workspaceFolder}"]}'
+code --add-mcp '{"name":"quantum","command":"/Applications/Quantum.app/Contents/MacOS/quantum-mcp","args":["--root","${workspaceFolder}"]}'
 ```
 
-[View .vscode/mcp.json](https://voxelite.worldwidewebb.co/assets/integrations/vscode/mcp.json) for manual setup.
+[View .vscode/mcp.json](https://quantum.worldwidewebb.co/assets/integrations/vscode/mcp.json) for manual setup.
 
 ### Other
 
@@ -59,8 +59,8 @@ For Claude Desktop, Windsurf and other MCP hosts, merge this entry into the host
 ```json
 {
   "mcpServers": {
-    "voxelite": {
-      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
+    "quantum": {
+      "command": "/Applications/Quantum.app/Contents/MacOS/quantum-mcp",
       "args": [
         "--root",
         "<project dir>"
@@ -75,34 +75,34 @@ For Claude Desktop, Windsurf and other MCP hosts, merge this entry into the host
 Install all skills from the repository's `skills/` directory with the open Agent Skills CLI. This installs workflow instructions; configure MCP above to give them tools.
 
 ```sh
-npx skills add 0x63616c/voxelite
+npx skills add 0x63616c/quantum
 ```
 
-Add `--skill <name>` for one skill, `-g` for a global install, or `-a claude-code`, `-a cursor` or `-a codex` to pick an agent. [Choose an individual skill](https://voxelite.worldwidewebb.co/docs/skills/#available-skills).
+Add `--skill <name>` for one skill, `-g` for a global install, or `-a claude-code`, `-a cursor` or `-a codex` to pick an agent. [Choose an individual skill](https://quantum.worldwidewebb.co/docs/skills/#available-skills).
 
-For a manual install, [download the skill folders](https://voxelite.worldwidewebb.co/assets/voxelite-skills.zip) or use a repository checkout. Copy each `skills/<name>/` folder into `.cursor/skills/`, `.claude/skills/`, or `~/.codex/skills/`. [Install, update and removal notes](https://voxelite.worldwidewebb.co/assets/skills/README.md).
+For a manual install, [download the skill folders](https://quantum.worldwidewebb.co/assets/quantum-skills.zip) or use a repository checkout. Copy each `skills/<name>/` folder into `.cursor/skills/`, `.claude/skills/`, or `~/.codex/skills/`. [Install, update and removal notes](https://quantum.worldwidewebb.co/assets/skills/README.md).
 
 ## What you get
 
-MCP gives your agent voxel editing tools, palettes, real PNG renders, and project save/export. Skills teach it to compose, inspect and refine a model. Each standalone server owns its own session; save `.voxl` files before disconnecting. To edit the live native canvas, [copy the connection configuration from the app](https://voxelite.worldwidewebb.co/docs/getting-started/#connect).
+MCP gives your agent voxel editing tools, palettes, real PNG renders, and project save/export. Skills teach it to compose, inspect and refine a model. Each standalone server owns its own session; save `.voxl` files before disconnecting. To edit the live native canvas, [copy the connection configuration from the app](https://quantum.worldwidewebb.co/docs/getting-started/#connect).
 
 ## Verify it works
 
 1.  Restart or reconnect your host and list its MCP tools.
-2.  Call `voxelite_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
-3.  Confirm the installed skills appear in your host, then ask it to use `voxelite-workflow` for your first model.
+2.  Call `quantum_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+3.  Confirm the installed skills appear in your host, then ask it to use `quantum-workflow` for your first model.
 
 ## Shared contract
 
 *   Stdio uses one JSON-RPC message per line. Stdout contains protocol messages only; diagnostics go to stderr.
 *   Supported protocol profiles: `2025-11-25` (initialize and initialized notification) and `2026-07-28` (per-request protocol metadata).
-*   Discover the epoch with `voxelite_capabilities_get`. Writes use captured `expected_epoch`, a decimal-string `expected_revision` where required, and a fresh UUID `operation_id`.
+*   Discover the epoch with `quantum_capabilities_get`. Writes use captured `expected_epoch`, a decimal-string `expected_revision` where required, and a fresh UUID `operation_id`.
 *   Coordinate order is `[x, y, z]`, right-handed, Y up. Regions include `min` and exclude `max`. Slots are stable IDs, not display positions; zero means air only where the schema allows it.
 *   Prefer layer UUIDs and stable slot numbers. Names must resolve uniquely. Unknown fields are rejected, including nested fields.
 *   Atomic batches commit one undo entry or nothing. Content-edit results report revision, changed bounds/counts and history IDs. Check the result before updating your local state.
 *   The same success JSON appears in `structuredContent` and the first text block. It contains `api_version`, `session_id`, `epoch`, `ok`, and `data` or `error`.
 
-The attached native catalog omits `document_create`, `document_open`, and `document_save`. Use the native UI for file lifecycle. No screenshot-named tool or ellipsoid/cylinder tool is currently exposed: use `voxelite_render` for model images and explicit voxel batches for other shapes.
+The attached native catalog omits `document_create`, `document_open`, and `document_save`. Use the native UI for file lifecycle. No screenshot-named tool or ellipsoid/cylinder tool is currently exposed: use `quantum_render` for model images and explicit voxel batches for other shapes.
 
 ## Render feedback
 
@@ -130,48 +130,48 @@ File tools are confined to `--root`. New files are create-only. Saving over a pr
 
 ## All 38 tools
 
-Generated directly from `VoxeliteServer::tools()`. Expand a schema for nested properties, defaults, limits, conditional requirements and the output envelope. A property marked optional may still be required by a schema condition.
+Generated directly from `QuantumServer::tools()`. Expand a schema for nested properties, defaults, limits, conditional requirements and the output envelope. A property marked optional may still be required by a schema condition.
 
-- [capabilities\_get](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_capabilities_get)
-- [comments\_add](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_comments_add)
-- [comments\_list](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_comments_list)
-- [comments\_reopen](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_comments_reopen)
-- [comments\_reply](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_comments_reply)
-- [comments\_resolve](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_comments_resolve)
-- [document\_create](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_document_create)
-- [document\_info](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_document_info)
-- [document\_open](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_document_open)
-- [document\_save](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_document_save)
-- [export\_glb](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_export_glb)
-- [export\_png](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_export_png)
-- [history\_read](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_history_read)
-- [history\_redo](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_history_redo)
-- [history\_undo](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_history_undo)
-- [layers\_add](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_add)
-- [layers\_list](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_list)
-- [layers\_lock](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_lock)
-- [layers\_remove](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_remove)
-- [layers\_rename](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_rename)
-- [layers\_reorder](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_reorder)
-- [layers\_visibility](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_layers_visibility)
-- [palette\_apply\_preset](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_palette_apply_preset)
-- [palette\_export](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_palette_export)
-- [palette\_import](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_palette_import)
-- [palette\_list](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_palette_list)
-- [palette\_set\_slot](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_palette_set_slot)
-- [query](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_query)
-- [render](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_render)
-- [versions\_list](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_versions_list)
-- [versions\_restore](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_versions_restore)
-- [versions\_save](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_versions_save)
-- [voxels\_batch](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_batch)
-- [voxels\_box](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_box)
-- [voxels\_erase\_region](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_erase_region)
-- [voxels\_fill](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_fill)
-- [voxels\_get](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_get)
-- [voxels\_set](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_voxels_set)
+- [capabilities\_get](https://quantum.worldwidewebb.co/docs/mcp/#quantum_capabilities_get)
+- [comments\_add](https://quantum.worldwidewebb.co/docs/mcp/#quantum_comments_add)
+- [comments\_list](https://quantum.worldwidewebb.co/docs/mcp/#quantum_comments_list)
+- [comments\_reopen](https://quantum.worldwidewebb.co/docs/mcp/#quantum_comments_reopen)
+- [comments\_reply](https://quantum.worldwidewebb.co/docs/mcp/#quantum_comments_reply)
+- [comments\_resolve](https://quantum.worldwidewebb.co/docs/mcp/#quantum_comments_resolve)
+- [document\_create](https://quantum.worldwidewebb.co/docs/mcp/#quantum_document_create)
+- [document\_info](https://quantum.worldwidewebb.co/docs/mcp/#quantum_document_info)
+- [document\_open](https://quantum.worldwidewebb.co/docs/mcp/#quantum_document_open)
+- [document\_save](https://quantum.worldwidewebb.co/docs/mcp/#quantum_document_save)
+- [export\_glb](https://quantum.worldwidewebb.co/docs/mcp/#quantum_export_glb)
+- [export\_png](https://quantum.worldwidewebb.co/docs/mcp/#quantum_export_png)
+- [history\_read](https://quantum.worldwidewebb.co/docs/mcp/#quantum_history_read)
+- [history\_redo](https://quantum.worldwidewebb.co/docs/mcp/#quantum_history_redo)
+- [history\_undo](https://quantum.worldwidewebb.co/docs/mcp/#quantum_history_undo)
+- [layers\_add](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_add)
+- [layers\_list](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_list)
+- [layers\_lock](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_lock)
+- [layers\_remove](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_remove)
+- [layers\_rename](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_rename)
+- [layers\_reorder](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_reorder)
+- [layers\_visibility](https://quantum.worldwidewebb.co/docs/mcp/#quantum_layers_visibility)
+- [palette\_apply\_preset](https://quantum.worldwidewebb.co/docs/mcp/#quantum_palette_apply_preset)
+- [palette\_export](https://quantum.worldwidewebb.co/docs/mcp/#quantum_palette_export)
+- [palette\_import](https://quantum.worldwidewebb.co/docs/mcp/#quantum_palette_import)
+- [palette\_list](https://quantum.worldwidewebb.co/docs/mcp/#quantum_palette_list)
+- [palette\_set\_slot](https://quantum.worldwidewebb.co/docs/mcp/#quantum_palette_set_slot)
+- [query](https://quantum.worldwidewebb.co/docs/mcp/#quantum_query)
+- [render](https://quantum.worldwidewebb.co/docs/mcp/#quantum_render)
+- [versions\_list](https://quantum.worldwidewebb.co/docs/mcp/#quantum_versions_list)
+- [versions\_restore](https://quantum.worldwidewebb.co/docs/mcp/#quantum_versions_restore)
+- [versions\_save](https://quantum.worldwidewebb.co/docs/mcp/#quantum_versions_save)
+- [voxels\_batch](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_batch)
+- [voxels\_box](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_box)
+- [voxels\_erase\_region](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_erase_region)
+- [voxels\_fill](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_fill)
+- [voxels\_get](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_get)
+- [voxels\_set](https://quantum.worldwidewebb.co/docs/mcp/#quantum_voxels_set)
 
-### voxelite\_capabilities\_get
+### quantum\_capabilities\_get
 
 Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.
 
@@ -572,7 +572,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_comments\_add
+### quantum\_comments\_add
 
 Create a persistent voxel/region anchored thread. Author is always agent, never caller-supplied. Text is plain text, max 4096 UTF-8 bytes. Returns thread/message IDs; undoable and saved in .voxl.
 
@@ -969,7 +969,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_comments\_list
+### quantum\_comments\_list
 
 List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Thread and message pages default to 50, max 200. message\_offset applies per thread; bind pages with revision.
 
@@ -1361,7 +1361,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_comments\_reopen
+### quantum\_comments\_reopen
 
 Reopen a resolved discussion; idempotent if already open. Preserves messages and anchor; undoable.
 
@@ -1666,7 +1666,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_comments\_reply
+### quantum\_comments\_reply
 
 Append an agent-attributed plain-text reply to a thread, resolved or open. One undoable edit; returns message ID.
 
@@ -1993,7 +1993,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_comments\_resolve
+### quantum\_comments\_resolve
 
 Resolve an anchored discussion; idempotent if already resolved. Preserves messages and anchor; undoable.
 
@@ -2298,7 +2298,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_document\_create
+### quantum\_document\_create
 
 Create a revision-zero document and visible unlocked Base layer. Default bounds \[0,0,0\]..\[32,32,32\]. Returns model/layer IDs. Up to eight documents per session; never replaces an open model.
 
@@ -2648,7 +2648,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_document\_info
+### quantum\_document\_info
 
 Read document identity, bounds, layers, counts, dirty state and current revision. Optional revision must equal the live revision; no UI state is used.
 
@@ -2939,7 +2939,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_document\_open
+### quantum\_document\_open
 
 Open a canonical .voxl file relative to the configured project root, preserving IDs, comments, versions and unknown metadata. Validation finishes before installation. Duplicate model IDs reject.
 
@@ -3245,7 +3245,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_document\_save
+### quantum\_document\_save
 
 Atomically save .voxl under the project root. New paths must not exist; overwriting the same opened/saved path checks its last SHA-256. Does not create an undo entry. Changes stay in memory until saved.
 
@@ -3452,7 +3452,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_export\_glb
+### quantum\_export\_glb
 
 Export deterministic GLB of the highest visible layer at each occupied coordinate. Atomically write a new path under project root; existing paths reject. Returns size and SHA-256; document/history unchanged.
 
@@ -3638,7 +3638,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_export\_png
+### quantum\_export\_png
 
 Render and atomically write one PNG under project root. Default contact sheet; for individual image use one view. Existing paths reject. Returns size, SHA-256 and camera metadata; document/history unchanged.
 
@@ -4257,7 +4257,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_history\_read
+### quantum\_history\_read
 
 Read chronological applied history with agent origins, tool names, labels and change summaries. Includes exact undo/redo entry IDs. Default page 50, max 200; history is bounded and resets on reopen.
 
@@ -4592,7 +4592,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_history\_redo
+### quantum\_history\_redo
 
 Redo exactly the expected redo entry. Requires captured epoch/revision/entry\_id. A new edit clears the redo branch; stale IDs reject.
 
@@ -4909,7 +4909,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_history\_undo
+### quantum\_history\_undo
 
 Undo exactly the expected top entry. Requires captured epoch/revision/entry\_id; intervening edits reject. Revision increases monotonically; original entry retains its agent attribution.
 
@@ -5226,7 +5226,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_add
+### quantum\_layers\_add
 
 Insert an empty layer at bottom-to-top index (default append). Optional layer\_id supports deterministic references. Maximum 64 layers.
 
@@ -5550,7 +5550,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_list
+### quantum\_layers\_list
 
 List stable layer IDs, exact names, visibility, lock state and stored voxel counts in bottom-to-top order.
 
@@ -5749,7 +5749,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_lock
+### quantum\_layers\_lock
 
 Set lock explicitly. Clear the lock in a separate operation before voxel editing; all mutations share the core lock rules and history.
 
@@ -6062,7 +6062,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_remove
+### quantum\_layers\_remove
 
 Delete one unlocked layer and its voxels as one undoable edit. Final-layer deletion rejects; anchored comments remain and may become orphaned.
 
@@ -6370,7 +6370,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_rename
+### quantum\_layers\_rename
 
 Rename a layer without changing its stable ID. Duplicate names are allowed, but future name-based access must be unambiguous.
 
@@ -6687,7 +6687,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_reorder
+### quantum\_layers\_reorder
 
 Set an exact bottom-to-top permutation of all layer IDs/names. The highest visible layer wins at overlaps; omitted or duplicate layers reject.
 
@@ -7000,7 +7000,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_layers\_visibility
+### quantum\_layers\_visibility
 
 Set visibility explicitly. Hidden cells stay stored and cannot be edited until made visible. Metadata changes are undoable.
 
@@ -7313,7 +7313,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_palette\_apply\_preset
+### quantum\_palette\_apply\_preset
 
 Append exact preset colors into unused slots without recoloring existing voxels. Returns source-to-new slot mapping. Rejects atomically if capacity would exceed 256; originals are immutable.
 
@@ -7652,7 +7652,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_palette\_export
+### quantum\_palette\_export
 
 Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.
 
@@ -7835,7 +7835,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_palette\_import
+### quantum\_palette\_import
 
 Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.
 
@@ -8177,7 +8177,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_palette\_list
+### quantum\_palette\_list
 
 List stable palette slots, names, RGBA colors, display order and exact preset names. Slot 0 is reserved for air.
 
@@ -8421,7 +8421,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_palette\_set\_slot
+### quantum\_palette\_set\_slot
 
 Add or replace stable slot 1..256 with opaque RGBA. Existing references change appearance, including locked layers. Omitted name creates an unnamed swatch. One undoable edit.
 
@@ -8764,7 +8764,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_query
+### quantum\_query
 
 Query bounds, counts or paged occupied voxels within a half-open region. view=layers (default) counts overlaps separately; composite uses highest visible layer. Optional layer restricts stored-layer queries. limit defaults 1000, max 10000. Use returned revision with next\_offset to prevent mixed pages.
 
@@ -9185,7 +9185,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_render
+### quantum\_render
 
 Render CPU PNG image content from one immutable revision. Default four views \[iso,front,right,back\] at 512², transparent background, orthographic, 2x AA, labeled contact sheet. Up to six views or one explicit camera; <=4,194,304 combined image/sheet pixels. image\_mode=contact\_sheet|individual|both. Returns camera metadata and hashes; no GPU/display required.
 
@@ -9752,7 +9752,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_versions\_list
+### quantum\_versions\_list
 
 List named version IDs, names, parent IDs, origin and immutable content hashes. Persistent across save/open; independent of undo retention. Never includes full voxel snapshots.
 
@@ -9962,7 +9962,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_versions\_restore
+### quantum\_versions\_restore
 
 Restore named content as a new undoable edit, keeping the version library. Requires expected\_head\_id (null for empty history) in addition to revision/epoch. Core validates current locks before installation.
 
@@ -10280,7 +10280,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_versions\_save
+### quantum\_versions\_save
 
 Persist current content as a named immutable snapshot with agent attribution and content hash. Up to 64 versions, no recursive libraries. One undoable library edit; save document to retain across process restarts.
 
@@ -10603,7 +10603,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_batch
+### quantum\_voxels\_batch
 
 Apply 1..256 ordered voxel operations atomically to one model: set, erase\_region, fill, box. Each operation names its own layer/mirror; nesting and I/O are forbidden. Later operations see earlier edits; any failure rolls back all; one revision and undo entry.
 
@@ -11352,7 +11352,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_box
+### quantum\_voxels\_box
 
 Build an integer half-open solid box or one-cell shell (hollow=true). Default mode=place, hollow=false, mirror=none. slot required for place/paint, forbidden for erase. One atomic undo entry.
 
@@ -11779,7 +11779,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_erase\_region
+### quantum\_voxels\_erase\_region
 
 Erase occupied cells in min-inclusive/max-exclusive region. Mirror is explicit per call; omitted means none. Invalid/hidden/locked targets reject without partial edits.
 
@@ -12155,7 +12155,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_fill
+### quantum\_voxels\_fill
 
 Six-connected flood fill of the seed's slot, including air. Region defaults to document bounds; cap defaults to 1,048,576 visited cells. Cap exhaustion rejects atomically. Mirror never inherits UI state.
 
@@ -12565,7 +12565,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_get
+### quantum\_voxels\_get
 
 Read explicit integer coordinates on one layer, including air as slot 0. Returns values in request order. Out-of-bounds coordinates reject the entire read.
 
@@ -12785,7 +12785,7 @@ Complete output schema
 }
 ```
 
-### voxelite\_voxels\_set
+### quantum\_voxels\_set
 
 Atomically place or paint explicit cells, at most 65,536. Slot 0 erases; paint affects occupied cells only. Last duplicate wins before mirror expansion; mirror conflicts reject. Omitted mode=place, mirror=none. One undo entry.
 

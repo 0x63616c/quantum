@@ -1,6 +1,6 @@
 ---
-name: voxelite-primitives
-description: Build Voxelite subjects from integer primitive masses, mirrored boxes and bounded explicit voxel batches for curved shapes.
+name: quantum-primitives
+description: Build Quantum subjects from integer primitive masses, mirrored boxes and bounded explicit voxel batches for curved shapes.
 ---
 
 Requires a connected `voxelite.v1` MCP server. Inspect capabilities, current
@@ -32,7 +32,7 @@ and work budgets; do not assume the UI's selected mirror applies to MCP calls.
 
 Use separate named layers where they improve later editing, but avoid hiding
 parts to conceal broken geometry. Save a blockout version and inspect iso/front/
-right/back using `voxelite_render`. Add details only after proportions work from
+right/back using `quantum_render`. Add details only after proportions work from
 all angles. Re-read on a conflict; a failed batch applies nothing.
 
 Example request: “Block out a 32-cell robot from a torso box, a head box and

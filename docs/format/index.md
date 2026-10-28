@@ -2,13 +2,13 @@
 
 One project. One readable JSON file.
 
-`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `voxelite-format` and the validated core model in this development build. Media type: `application/vnd.voxelite.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
+`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `quantum-format` and the validated core model in this development build. Media type: `application/vnd.voxelite.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
 
 ## Top-level structure
 
 | Field               | Contract                                                                                                                |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `format`            | Required literal `"voxelite"`.                                                                                          |
+| `format`            | Required literal `"quantum"`.                                                                                           |
 | `version`           | Required `major` and `minor` unsigned 16-bit integers. Major must be 1. A newer minor is preserved.                     |
 | `required_features` | Required array of strings. Only an empty array is currently supported.                                                  |
 | `document`          | Required `id`, `name`, `bounds`.                                                                                        |
@@ -71,7 +71,7 @@ Bounded unknown optional fields are preserved as inert data and merged by stable
 
 ```json
 "extensions": {
-  "dev.voxelite.example": {
+  "dev.quantum.example": {
     "state": {"schema_version": 2, "encoding": "json", "payload": {"scale": 1.25}},
     "cache": {"schema_version": 1, "encoding": "bytes", "payload": [0, 255, 128]}
   }
@@ -84,11 +84,11 @@ The namespace shares the existing 4 MiB non-comment metadata budget, counting ra
 
 Enabled owners declare their schema versions and forward migration callbacks. The host stages migrations and validation through `DataCx`, which reads/writes only that owner's declared sections. Missing paths, newer stored versions or callback errors reject without modifying the document. Successful changes form one undoable edit and are saved only on a subsequent save.
 
-The format remains 1.0. Old files without extensions load unchanged; an empty namespace is omitted and preserves existing canonical output. Older builds do not guarantee raw-byte retention. Existing core comments and palette data stay in place. Extensions are project data outside named voxel snapshots; runtime history and build-recipe replay preserve them. See [Plugins](https://voxelite.worldwidewebb.co/docs/plugins/#data) for declarations, lifecycle and host integration.
+The format remains 1.0. Old files without extensions load unchanged; an empty namespace is omitted and preserves existing canonical output. Older builds do not guarantee raw-byte retention. Existing core comments and palette data stay in place. Extensions are project data outside named voxel snapshots; runtime history and build-recipe replay preserve them. See [Plugins](https://quantum.worldwidewebb.co/docs/plugins/#data) for declarations, lifecycle and host integration.
 
 ## A complete example
 
-[Download a valid one-voxel project](https://voxelite.worldwidewebb.co/assets/minimal.voxl). The site crate tests this fixture against the actual format reader and verifies canonical byte equality.
+[Download a valid one-voxel project](https://quantum.worldwidewebb.co/assets/minimal.voxl). The site crate tests this fixture against the actual format reader and verifies canonical byte equality.
 
 ```json
 {
@@ -112,4 +112,4 @@ The format remains 1.0. Old files without extensions load unchanged; an empty na
 }
 ```
 
-This displayed example is compacted for readability. The downloadable file uses canonical whitespace. Open it in the editor or with `voxelite_document_open` to validate it; the app preserves the existing document if an open fails.
+This displayed example is compacted for readability. The downloadable file uses canonical whitespace. Open it in the editor or with `quantum_document_open` to validate it; the app preserves the existing document if an open fails.

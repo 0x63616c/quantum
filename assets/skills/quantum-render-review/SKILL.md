@@ -1,11 +1,11 @@
 ---
-name: voxelite-render-review
-description: Inspect real Voxelite MCP renders from multiple angles, identify spatial flaws, and verify repairs at a consistent document revision.
+name: quantum-render-review
+description: Inspect real Quantum MCP renders from multiple angles, identify spatial flaws, and verify repairs at a consistent document revision.
 ---
 
-Requires Voxelite `voxelite.v1` with `voxelite_render`. Discover the catalog and
+Requires Quantum `voxelite.v1` with `quantum_render`. Discover the catalog and
 read document info first. The current server has no tool named screenshot;
-`voxelite_render` is the supported model-image feedback tool. It works headlessly.
+`quantum_render` is the supported model-image feedback tool. It works headlessly.
 A separate host screenshot tool may inspect native UI when available, but is not
 required and must not substitute a fabricated image for an MCP render.
 

@@ -2,8 +2,8 @@
 
 Install Quantum. Connect your agent. Make your first model.
 
-- [Download for Mac](https://voxelite.worldwidewebb.co/download/)
-- [Connect MCP](https://voxelite.worldwidewebb.co/docs/getting-started/#connect)
+- [Download for Mac](https://quantum.worldwidewebb.co/download/)
+- [Connect MCP](https://quantum.worldwidewebb.co/docs/getting-started/#connect)
 
 ## Build from source
 
@@ -12,11 +12,11 @@ Install Rust with rustup, then run from a repository checkout. The pinned toolch
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo build --locked --release \
-  -p voxelite-app -p voxelite-mcp
-./target/release/voxelite
+  -p quantum-app -p quantum-mcp
+./target/release/quantum
 ```
 
-[Download the native Mac app](https://voxelite.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
+[Download the native Mac app](https://quantum.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
 
 Linux build and desktop dependencies (Debian / Ubuntu)
 
@@ -30,8 +30,8 @@ sudo apt-get install build-essential pkg-config clang libclang-dev \
 A display server and a desktop portal are needed for native windows and file dialogs. Headless MCP builds need no display or GPU:
 
 ```sh
-cargo build --locked --release -p voxelite-mcp
-cargo test -p voxelite-app --no-default-features
+cargo build --locked --release -p quantum-mcp
+cargo test -p quantum-app --no-default-features
 ```
 
 ## Build the website
@@ -54,19 +54,19 @@ The desktop welcome window shows recent projects with previews. Use Tab to focus
 
 ## Connect your agent
 
-The Mac app includes the MCP server. For source builds, build `voxelite-mcp` first. Each standalone process owns its own in-memory documents.
+The Mac app includes the MCP server. For source builds, build `quantum-mcp` first. Each standalone process owns its own in-memory documents.
 
 ### Headless: create and save independently
 
-[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://voxelite.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `voxelite_capabilities_get`; expect API `voxelite.v1`. [Install agent skills](https://voxelite.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
+[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://quantum.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `quantum_capabilities_get`; expect API `voxelite.v1`. [Install agent skills](https://quantum.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
 
 ### Native: work in the same document
 
 ```sh
-./target/release/voxelite examples/autumn-workshop.voxl --session-socket /tmp/voxelite-session.sock
+./target/release/quantum examples/autumn-workshop.voxl --session-socket /tmp/quantum-session.sock
 ```
 
-Use the MCP executable from the install guide, replacing its arguments with `["--connect", "/tmp/voxelite-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.
+Use the MCP executable from the install guide, replacing its arguments with `["--connect", "/tmp/quantum-session.sock"]`. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.
 
 Watch committed calls in Session, pause new writes, and undo or edit by hand. The attached catalog excludes document create/open/save: the native editor owns file lifecycle. Save through the app.
 
@@ -80,7 +80,7 @@ A minimal call sequence follows. These are tool argument objects, not full JSON-
 
 ### 1\. Discover, then create
 
-Call `voxelite_capabilities_get` with `{}`, then `voxelite_document_create`:
+Call `quantum_capabilities_get` with `{}`, then `quantum_document_create`:
 
 ```json
 {
@@ -93,7 +93,7 @@ Call `voxelite_capabilities_get` with `{}`, then `voxelite_document_create`:
 
 ### 2\. Batch the blockout
 
-Call `voxelite_voxels_batch`. A new project has a Base layer and clay at slot 1.
+Call `quantum_voxels_batch`. A new project has a Base layer and clay at slot 1.
 
 ```json
 {
@@ -115,7 +115,7 @@ Call `voxelite_voxels_batch`. A new project has a Base layer and clay at slot 1.
 
 ### 3\. Inspect real pixels
 
-Call `voxelite_render` and inspect the returned image block:
+Call `quantum_render` and inspect the returned image block:
 
 ```json
 {
@@ -129,7 +129,7 @@ Call `voxelite_render` and inspect the returned image block:
 
 ### 4\. Save the result
 
-Call `voxelite_document_save` with the latest captured revision:
+Call `quantum_document_save` with the latest captured revision:
 
 ```json
 {
@@ -141,7 +141,7 @@ Call `voxelite_document_save` with the latest captured revision:
 }
 ```
 
-Then call [voxelite\_export\_glb](https://voxelite.worldwidewebb.co/docs/mcp/#voxelite_export_glb). Exports use `revision`, without mutation guards or operation IDs:
+Then call [quantum\_export\_glb](https://quantum.worldwidewebb.co/docs/mcp/#quantum_export_glb). Exports use `revision`, without mutation guards or operation IDs:
 
 ```json
 {
@@ -155,12 +155,12 @@ Save before disconnecting: edits and undo history live in memory. Existing expor
 
 ## When a call fails
 
-Check `isError` and the structured envelope's `ok` flag. On a revision conflict, read current state and rebase. On a lost response, retry only the identical request with the same operation ID in the same session. Never guess whether an edit committed. [Read the error guide](https://voxelite.worldwidewebb.co/docs/mcp/#errors) before retrying.
+Check `isError` and the structured envelope's `ok` flag. On a revision conflict, read current state and rebase. On a lost response, retry only the identical request with the same operation ID in the same session. Never guess whether an edit committed. [Read the error guide](https://quantum.worldwidewebb.co/docs/mcp/#errors) before retrying.
 
 ## Crash reports and feedback privacy
 
-Quantum has no analytics, telemetry or third-party crash service. A Rust panic writes a local report under `~/Library/Application Support/voxelite/crashes/` on macOS (on Linux, the app data directory under `$XDG_DATA_HOME/voxelite` or `~/.local/share/voxelite`). Reports contain the app version, operating-system name/version, architecture, panic message, source location, backtrace, UTC timestamp and up to 20 recent warning/error log lines. Home-directory prefixes become `~` and email-like text is redacted before storage and again before preview. Other paths, filenames or details in diagnostics may remain: review the complete preview. Scene contents and document metadata are never collected by this flow. Fatal signals, aborts, stack overflow and allocation failures may not produce a report.
+Quantum has no analytics, telemetry or third-party crash service. A Rust panic writes a local report under `~/Library/Application Support/quantum/crashes/` on macOS (on Linux, the app data directory under `$XDG_DATA_HOME/quantum` or `~/.local/share/quantum`). Reports contain the app version, operating-system name/version, architecture, panic message, source location, backtrace, UTC timestamp and up to 20 recent warning/error log lines. Home-directory prefixes become `~` and email-like text is redacted before storage and again before preview. Other paths, filenames or details in diagnostics may remain: review the complete preview. Scene contents and document metadata are never collected by this flow. Fatal signals, aborts, stack overflow and allocation failures may not produce a report.
 
 On the next launch, including Welcome, you can review the full report, add context, keep it for later, copy or save the redacted preview, or delete the local report. Nothing is sent automatically. **Help → Send feedback…** uses the same preview and confirmation flow for bug reports or feature requests, with version and OS information. Editing your description or report kind invalidates the preview until you update it.
 
-**Continue to GitHub…** opens a prefilled issue form in your browser at `github.com/0x63616c/voxelite`, using the Bug or Feature template and matching label. This sends the preview to GitHub as part of the URL (and may leave it in browser history). A GitHub account and a separate Submit action there are required to publish the issue. Issues are public. No relay endpoint is configured, so private email contact and scene attachments are unavailable; there is no app token. For a report too large for a browser link, copy or save the full preview and paste it into a new issue yourself. Opening the browser does not prove submission, so crash reports remain local until you explicitly delete them. Pending reports have no automatic expiry; delete them in the prompt or remove their local files.
+**Continue to GitHub…** opens a prefilled issue form in your browser at `github.com/0x63616c/quantum`, using the Bug or Feature template and matching label. This sends the preview to GitHub as part of the URL (and may leave it in browser history). A GitHub account and a separate Submit action there are required to publish the issue. Issues are public. No relay endpoint is configured, so private email contact and scene attachments are unavailable; there is no app token. For a report too large for a browser link, copy or save the full preview and paste it into a new issue yourself. Opening the browser does not prove submission, so crash reports remain local until you explicitly delete them. Pending reports have no automatic expiry; delete them in the prompt or remove their local files.

@@ -1,6 +1,6 @@
 [
   {
-    "name": "voxelite_capabilities_get",
+    "name": "quantum_capabilities_get",
     "description": "Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.",
     "inputSchema": {
       "type": "object",
@@ -394,7 +394,7 @@
     }
   },
   {
-    "name": "voxelite_comments_add",
+    "name": "quantum_comments_add",
     "description": "Create a persistent voxel/region anchored thread. Author is always agent, never caller-supplied. Text is plain text, max 4096 UTF-8 bytes. Returns thread/message IDs; undoable and saved in .voxl.",
     "inputSchema": {
       "type": "object",
@@ -774,7 +774,7 @@
     }
   },
   {
-    "name": "voxelite_comments_list",
+    "name": "quantum_comments_list",
     "description": "List anchored threads including messages, agent/human roles, resolved state and anchor status. Optional state=open|resolved|all (default all). Thread and message pages default to 50, max 200. message_offset applies per thread; bind pages with revision.",
     "inputSchema": {
       "type": "object",
@@ -1152,7 +1152,7 @@
     }
   },
   {
-    "name": "voxelite_comments_reopen",
+    "name": "quantum_comments_reopen",
     "description": "Reopen a resolved discussion; idempotent if already open. Preserves messages and anchor; undoable.",
     "inputSchema": {
       "type": "object",
@@ -1444,7 +1444,7 @@
     }
   },
   {
-    "name": "voxelite_comments_reply",
+    "name": "quantum_comments_reply",
     "description": "Append an agent-attributed plain-text reply to a thread, resolved or open. One undoable edit; returns message ID.",
     "inputSchema": {
       "type": "object",
@@ -1756,7 +1756,7 @@
     }
   },
   {
-    "name": "voxelite_comments_resolve",
+    "name": "quantum_comments_resolve",
     "description": "Resolve an anchored discussion; idempotent if already resolved. Preserves messages and anchor; undoable.",
     "inputSchema": {
       "type": "object",
@@ -2048,7 +2048,7 @@
     }
   },
   {
-    "name": "voxelite_document_create",
+    "name": "quantum_document_create",
     "description": "Create a revision-zero document and visible unlocked Base layer. Default bounds [0,0,0]..[32,32,32]. Returns model/layer IDs. Up to eight documents per session; never replaces an open model.",
     "inputSchema": {
       "type": "object",
@@ -2384,7 +2384,7 @@
     }
   },
   {
-    "name": "voxelite_document_info",
+    "name": "quantum_document_info",
     "description": "Read document identity, bounds, layers, counts, dirty state and current revision. Optional revision must equal the live revision; no UI state is used.",
     "inputSchema": {
       "type": "object",
@@ -2666,7 +2666,7 @@
     }
   },
   {
-    "name": "voxelite_document_open",
+    "name": "quantum_document_open",
     "description": "Open a canonical .voxl file relative to the configured project root, preserving IDs, comments, versions and unknown metadata. Validation finishes before installation. Duplicate model IDs reject.",
     "inputSchema": {
       "type": "object",
@@ -2961,7 +2961,7 @@
     }
   },
   {
-    "name": "voxelite_document_save",
+    "name": "quantum_document_save",
     "description": "Atomically save .voxl under the project root. New paths must not exist; overwriting the same opened/saved path checks its last SHA-256. Does not create an undo entry. Changes stay in memory until saved.",
     "inputSchema": {
       "type": "object",
@@ -3155,7 +3155,7 @@
     }
   },
   {
-    "name": "voxelite_export_glb",
+    "name": "quantum_export_glb",
     "description": "Export deterministic GLB of the highest visible layer at each occupied coordinate. Atomically write a new path under project root; existing paths reject. Returns size and SHA-256; document/history unchanged.",
     "inputSchema": {
       "type": "object",
@@ -3331,7 +3331,7 @@
     }
   },
   {
-    "name": "voxelite_export_png",
+    "name": "quantum_export_png",
     "description": "Render and atomically write one PNG under project root. Default contact sheet; for individual image use one view. Existing paths reject. Returns size, SHA-256 and camera metadata; document/history unchanged.",
     "inputSchema": {
       "type": "object",
@@ -3932,7 +3932,7 @@
     }
   },
   {
-    "name": "voxelite_history_read",
+    "name": "quantum_history_read",
     "description": "Read chronological applied history with agent origins, tool names, labels and change summaries. Includes exact undo/redo entry IDs. Default page 50, max 200; history is bounded and resets on reopen.",
     "inputSchema": {
       "type": "object",
@@ -4256,7 +4256,7 @@
     }
   },
   {
-    "name": "voxelite_history_redo",
+    "name": "quantum_history_redo",
     "description": "Redo exactly the expected redo entry. Requires captured epoch/revision/entry_id. A new edit clears the redo branch; stale IDs reject.",
     "inputSchema": {
       "type": "object",
@@ -4560,7 +4560,7 @@
     }
   },
   {
-    "name": "voxelite_history_undo",
+    "name": "quantum_history_undo",
     "description": "Undo exactly the expected top entry. Requires captured epoch/revision/entry_id; intervening edits reject. Revision increases monotonically; original entry retains its agent attribution.",
     "inputSchema": {
       "type": "object",
@@ -4864,7 +4864,7 @@
     }
   },
   {
-    "name": "voxelite_layers_add",
+    "name": "quantum_layers_add",
     "description": "Insert an empty layer at bottom-to-top index (default append). Optional layer_id supports deterministic references. Maximum 64 layers.",
     "inputSchema": {
       "type": "object",
@@ -5173,7 +5173,7 @@
     }
   },
   {
-    "name": "voxelite_layers_list",
+    "name": "quantum_layers_list",
     "description": "List stable layer IDs, exact names, visibility, lock state and stored voxel counts in bottom-to-top order.",
     "inputSchema": {
       "type": "object",
@@ -5363,7 +5363,7 @@
     }
   },
   {
-    "name": "voxelite_layers_lock",
+    "name": "quantum_layers_lock",
     "description": "Set lock explicitly. Unlock in a separate operation before voxel editing; all mutations share the core lock rules and history.",
     "inputSchema": {
       "type": "object",
@@ -5662,7 +5662,7 @@
     }
   },
   {
-    "name": "voxelite_layers_remove",
+    "name": "quantum_layers_remove",
     "description": "Delete one unlocked layer and its voxels as one undoable edit. Final-layer deletion rejects; anchored comments remain and may become orphaned.",
     "inputSchema": {
       "type": "object",
@@ -5957,7 +5957,7 @@
     }
   },
   {
-    "name": "voxelite_layers_rename",
+    "name": "quantum_layers_rename",
     "description": "Rename a layer without changing its stable ID. Duplicate names are allowed, but future name-based access must be unambiguous.",
     "inputSchema": {
       "type": "object",
@@ -6260,7 +6260,7 @@
     }
   },
   {
-    "name": "voxelite_layers_reorder",
+    "name": "quantum_layers_reorder",
     "description": "Set an exact bottom-to-top permutation of all layer IDs/names. The highest visible layer wins at overlaps; omitted or duplicate layers reject.",
     "inputSchema": {
       "type": "object",
@@ -6560,7 +6560,7 @@
     }
   },
   {
-    "name": "voxelite_layers_visibility",
+    "name": "quantum_layers_visibility",
     "description": "Set visibility explicitly. Hidden cells stay stored and cannot be edited until made visible. Metadata changes are undoable.",
     "inputSchema": {
       "type": "object",
@@ -6859,7 +6859,7 @@
     }
   },
   {
-    "name": "voxelite_palette_apply_preset",
+    "name": "quantum_palette_apply_preset",
     "description": "Append exact preset colors into unused slots without recoloring existing voxels. Returns source-to-new slot mapping. Rejects atomically if capacity would exceed 256; originals are immutable.",
     "inputSchema": {
       "type": "object",
@@ -7185,7 +7185,7 @@
     }
   },
   {
-    "name": "voxelite_palette_export",
+    "name": "quantum_palette_export",
     "description": "Return palette as .hex, .gpl or JASC-PAL .pal text in display order; GPL preserves representable names. Read-only, no filesystem side effects.",
     "inputSchema": {
       "type": "object",
@@ -7358,7 +7358,7 @@
     }
   },
   {
-    "name": "voxelite_palette_import",
+    "name": "quantum_palette_import",
     "description": "Append colors from bounded .hex, .gpl or JASC-PAL .pal text into unused slots; no implicit geometry recoloring. Returns source-to-new mapping; malformed input or insufficient capacity leaves palette unchanged.",
     "inputSchema": {
       "type": "object",
@@ -7686,7 +7686,7 @@
     }
   },
   {
-    "name": "voxelite_palette_list",
+    "name": "quantum_palette_list",
     "description": "List stable palette slots, names, RGBA colors, display order and exact preset names. Slot 0 is reserved for air.",
     "inputSchema": {
       "type": "object",
@@ -7921,7 +7921,7 @@
     }
   },
   {
-    "name": "voxelite_palette_set_slot",
+    "name": "quantum_palette_set_slot",
     "description": "Add or replace stable slot 1..256 with opaque RGBA. Existing references change appearance, including locked layers. Omitted name creates an unnamed swatch. One undoable edit.",
     "inputSchema": {
       "type": "object",
@@ -8249,7 +8249,7 @@
     }
   },
   {
-    "name": "voxelite_query",
+    "name": "quantum_query",
     "description": "Query bounds, counts or paged occupied voxels within a half-open region. view=layers (default) counts overlaps separately; composite uses highest visible layer. Optional layer restricts stored-layer queries. limit defaults 1000, max 10000. Use returned revision with next_offset to prevent mixed pages.",
     "inputSchema": {
       "type": "object",
@@ -8655,7 +8655,7 @@
     }
   },
   {
-    "name": "voxelite_render",
+    "name": "quantum_render",
     "description": "Render CPU PNG image content from one immutable revision. Default four views [iso,front,right,back] at 512², transparent background, orthographic, 2x AA, labeled contact sheet. Up to six views or one explicit camera; <=4,194,304 combined image/sheet pixels. image_mode=contact_sheet|individual|both. Returns camera metadata and hashes; no GPU/display required.",
     "inputSchema": {
       "type": "object",
@@ -9205,7 +9205,7 @@
     }
   },
   {
-    "name": "voxelite_versions_list",
+    "name": "quantum_versions_list",
     "description": "List named version IDs, names, parent IDs, origin and immutable content hashes. Persistent across save/open; independent of undo retention. Never includes full voxel snapshots.",
     "inputSchema": {
       "type": "object",
@@ -9406,7 +9406,7 @@
     }
   },
   {
-    "name": "voxelite_versions_restore",
+    "name": "quantum_versions_restore",
     "description": "Restore named content as a new undoable edit, keeping the version library. Requires expected_head_id (null for empty history) in addition to revision/epoch. Core validates current locks before installation.",
     "inputSchema": {
       "type": "object",
@@ -9710,7 +9710,7 @@
     }
   },
   {
-    "name": "voxelite_versions_save",
+    "name": "quantum_versions_save",
     "description": "Persist current content as a named immutable snapshot with agent attribution and content hash. Up to 64 versions, no recursive libraries. One undoable library edit; save document to retain across process restarts.",
     "inputSchema": {
       "type": "object",
@@ -10018,7 +10018,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_batch",
+    "name": "quantum_voxels_batch",
     "description": "Apply 1..256 ordered voxel operations atomically to one model: set, erase_region, fill, box. Each operation names its own layer/mirror; nesting and I/O are forbidden. Later operations see earlier edits; any failure rolls back all; one revision and undo entry.",
     "inputSchema": {
       "type": "object",
@@ -10754,7 +10754,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_box",
+    "name": "quantum_voxels_box",
     "description": "Build an integer half-open solid box or one-cell shell (hollow=true). Default mode=place, hollow=false, mirror=none. slot required for place/paint, forbidden for erase. One atomic undo entry.",
     "inputSchema": {
       "type": "object",
@@ -11163,7 +11163,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_erase_region",
+    "name": "quantum_voxels_erase_region",
     "description": "Erase occupied cells in min-inclusive/max-exclusive region. Mirror is explicit per call; omitted means none. Invalid/hidden/locked targets reject without partial edits.",
     "inputSchema": {
       "type": "object",
@@ -11524,7 +11524,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_fill",
+    "name": "quantum_voxels_fill",
     "description": "Six-connected flood fill of the seed's slot, including air. Region defaults to document bounds; cap defaults to 1,048,576 visited cells. Cap exhaustion rejects atomically. Mirror never inherits UI state.",
     "inputSchema": {
       "type": "object",
@@ -11916,7 +11916,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_get",
+    "name": "quantum_voxels_get",
     "description": "Read explicit integer coordinates on one layer, including air as slot 0. Returns values in request order. Out-of-bounds coordinates reject the entire read.",
     "inputSchema": {
       "type": "object",
@@ -12125,7 +12125,7 @@
     }
   },
   {
-    "name": "voxelite_voxels_set",
+    "name": "quantum_voxels_set",
     "description": "Atomically place or paint explicit cells, at most 65,536. Slot 0 erases; paint affects occupied cells only. Last duplicate wins before mirror expansion; mirror conflicts reject. Omitted mode=place, mirror=none. One undo entry.",
     "inputSchema": {
       "type": "object",
