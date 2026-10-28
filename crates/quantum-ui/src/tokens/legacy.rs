@@ -138,7 +138,7 @@ impl Theme {
     }
 }
 
-/// Legacy spacing aliases and optical exceptions; migrate in #134.
+/// Compatibility spacing aliases and shared optical exceptions.
 pub mod space {
     /// No inset; also useful for flexible layout minimums and coordinate origins.
     pub const NONE: f32 = 0.;
@@ -177,7 +177,7 @@ pub mod space {
     /// Thirty-two pixels.
     pub const XXXL: f32 = 32.;
 }
-/// Legacy radius aliases; migrate in #134.
+/// Compatibility radius aliases for shared layout geometry.
 pub mod radius {
     /// The corner radius of buttons, tabs, segments and square rail controls.
     pub const CONTROL: f32 = MD;
@@ -217,7 +217,7 @@ pub mod radius {
         }
     }
 }
-/// Legacy typography and shared font families; migrate sizes in #134.
+/// Shared font families and compatibility typography aliases.
 pub mod type_size {
     /// ASCII skeleton paragraph line height, matching upstream's 1.3em.
     pub const ASCII_LINE_EM: f32 = 1.3;
@@ -270,7 +270,7 @@ pub mod type_size {
     /// Geist Mono advance, in em units (from the bundled font's metrics).
     pub const MONO_ADVANCE: f32 = 0.6;
 }
-/// Legacy 24/32/40 control sizes; migrate to `ControlHeight` in #134.
+/// Compatibility 24/32/40 control sizes; new controls use `ControlHeight`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ControlSize {
     /// Compact 24-pixel control.
@@ -291,7 +291,7 @@ impl ControlSize {
         }
     }
 }
-/// Legacy application geometry; migrate control metrics in #134.
+/// Shared application geometry, independent of control presentation.
 pub mod metrics {
     /// Diagnostics window width, accommodating explicit consent actions.
     pub const REPORT_WIDTH: f32 = 880.0;

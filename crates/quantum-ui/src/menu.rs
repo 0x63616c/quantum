@@ -185,7 +185,7 @@ impl RenderOnce for Submenu {
     }
 }
 impl Menu {
-    /// New menu surface with 28px `MenuItem` rows. Legacy `panel` is frozen for #134.
+    /// Menu surface with 28px `MenuItem` rows; `panel` delegates here.
     pub fn design(id: impl Into<ElementId>, theme: Theme) -> Stateful<Div> {
         crate::Popover::design(theme)
             .id(id)

@@ -329,7 +329,7 @@ impl RenderOnce for EmptyState {
 }
 
 impl crate::SidebarItem {
-    /// Opt into the shared ListRow API; legacy `row` preserves existing screen pixels.
+    /// Opt into the shared ListRow API and its complete interaction states.
     pub fn design(
         id: impl Into<ElementId>,
         title: impl Into<SharedString>,
@@ -339,7 +339,7 @@ impl crate::SidebarItem {
     }
 }
 impl crate::FormRow {
-    /// New settings-row presentation; legacy `row` remains frozen until #134.
+    /// Settings-row presentation with shared typography and horizontal insets.
     pub fn design(
         title: impl Into<SharedString>,
         description: impl Into<SharedString>,

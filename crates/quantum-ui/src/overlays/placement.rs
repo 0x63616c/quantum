@@ -145,7 +145,7 @@ impl Element for PlacedOverlay {
     }
 }
 impl Popover {
-    /// Token-only floating surface; legacy constructors retain existing pixels.
+    /// Token-only floating surface with the shared overlay palette and corners.
     pub fn design(theme: Theme) -> Div {
         presentation::surface(theme, C::Overlay, Radius::Md)
             .occlude()

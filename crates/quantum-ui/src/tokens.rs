@@ -1,5 +1,5 @@
 //! The design system's sole palette, type and geometry scales.
-//! Old screens use explicitly documented compatibility aliases until #134.
+//! Compatibility aliases retain shared layout metrics for existing callers.
 mod legacy;
 use gpui::{FontWeight, Hsla, Styled, px, rgb};
 pub use legacy::*;
