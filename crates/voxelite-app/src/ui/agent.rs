@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use voxelite_mcp::attached::{AttachedSession, SessionEvent};
 pub(super) struct CapturedViews {
     pub revision: u64,
-    pub views: Vec<(String, PresetView, Arc<RenderImage>)>,
+    pub views: Vec<(String, PresetView, loading::Preview)>,
     pub selected: usize,
 }
 #[derive(Default)]
@@ -297,7 +297,7 @@ impl EditorView {
                         .border_color(if i == capture.selected {t.accent()} else {t.line()})
                         .cursor_pointer().hover(move |d|d.bg(t.hover()))
                         .tooltip(hint(format!("{} view · captured at r{} · click to orient the live camera", name, capture.revision),t))
-                        .child(img(image.clone()).w(px(metrics::APP_ICON)).h(px(metrics::CAPTURE_IMAGE_HEIGHT)).object_fit(ObjectFit::Contain))
+                        .child(image.reveal(("agent-image", i), name.clone(), t, self.reduced_motion))
                         .child(row().gap(px(space::XS)).text_size(px(type_size::BODY)).text_color(t.muted())
                             .child(icon("camera").size(px(space::LG)).text_color(t.muted()))
                             .child(name[..1].to_uppercase() + &name[1..]))
@@ -309,7 +309,11 @@ impl EditorView {
                         }))
                 })))
             })
-            .when(self.agent.capturing, |d|d.child(div().text_size(px(type_size::BODY)).text_color(t.muted()).child("Capturing views…")))
+            .when(self.agent.capturing, |d|d.child(
+                voxelite_ui::AsciiReveal::new("agent-capturing", "Capturing views…", t)
+                    .loading(true).reduced_motion(self.reduced_motion)
+            ).child(voxelite_ui::AsciiSkeleton::new("agent-previews-loading", t)
+                .rows(6).reduced_motion(self.reduced_motion)))
     }
 
     fn set_agent_view(&mut self, view: PresetView, cx: &mut Context<Self>) {
@@ -351,7 +355,7 @@ impl EditorView {
             views
                 .into_iter()
                 .map(|(name, view)| {
-                    let mut frame = voxelite_render::render(
+                    let frame = voxelite_render::render(
                         &snapshot,
                         &RenderOptions {
                             passes: passes.clone(),
@@ -366,18 +370,22 @@ impl EditorView {
                             ..Default::default()
                         },
                     )?;
-                    for pixel in frame.rgba.as_chunks_mut::<4>().0 {
-                        pixel.swap(0, 2);
-                    }
                     let buffer = image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba)
                         .expect("thumbnail dimensions");
                     Ok((
                         name,
                         view,
-                        Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])),
+                        loading::PreparedPreview::new(
+                            buffer,
+                            [
+                                metrics::APP_ICON as u32,
+                                metrics::CAPTURE_IMAGE_HEIGHT as u32,
+                            ],
+                            Theme::background,
+                        )?,
                     ))
                 })
-                .collect::<Result<Vec<_>, voxelite_render::RenderError>>()
+                .collect::<anyhow::Result<Vec<_>>>()
         });
         cx.spawn(async move |this, cx| {
             let result = work.await;
@@ -391,11 +399,14 @@ impl EditorView {
                         if let Some(old) = this.agent.capture.take() {
                             this.agent
                                 .retired
-                                .extend(old.views.into_iter().map(|v| v.2));
+                                .extend(old.views.into_iter().map(|v| v.2.image));
                         }
                         this.agent.capture = Some(CapturedViews {
                             revision,
-                            views,
+                            views: views
+                                .into_iter()
+                                .map(|(name, view, preview)| (name, view, preview.ready()))
+                                .collect(),
                             selected: 0,
                         });
                     }
