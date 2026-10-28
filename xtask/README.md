@@ -5,6 +5,7 @@ from the current directory (including subdirectories), so shared Cargo build
 artifacts do not redirect checks to the worktree where xtask was compiled.
 
 ```sh
+cargo xtask lint
 cargo xtask validate --strict
 cargo xtask check --list
 cargo xtask check tidy fmt
@@ -74,12 +75,23 @@ Filters accept multiple names or repeated flags. `tidy` remains a standalone
 command. Remaining site and PII scan script checks, GPU checks and macOS qualification
 remain separate.
 
+`lint` runs `boundaries`, `source-lints` and workspace/all-target Clippy with
+`--locked -- -D warnings`. It fails if Clippy is missing. These checks are also
+registered in `validate`, which runs Clippy only once.
+
 The repository checks run in-process from `src/checks/`:
 
 - `workflows`: parse every workflow YAML file, require explicit top-level
   permissions and full commit SHAs for action/reusable workflow references. Local
   actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
   and in `validate`.
+- `boundaries`: locked `cargo metadata --all-features` graph traversal from
+  `voxelite-core`, `voxelite-format` and `voxelite-mesh`. Rejects direct/transitive
+  dependencies on `gpui`, its published package `gpui-unofficial`, or
+  `voxelite-app`, including dev/build/optional and target-specific edges.
+  Errors show the dependency path; cycles terminate.
+- `source-lints`: syntax-aware rules described below.
+
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
   metadata offline first and retries online if that command fails. Preserves the
@@ -98,6 +110,45 @@ The repository checks run in-process from `src/checks/`:
 - `docs-assets`: local image links in the root guides, docs and crate READMEs;
   images must exist outside `screenshots/`. Checks Git ignores captures while
   keeping `docs/images/*.png` available.
+
+Source rules use `syn` and token trees, including inactive platform code and
+inline tests. Comments and string contents are not source violations. All tracked
+Rust files under `crates/`, `xtask/` and `examples/` have a 1,000-line file budget
+and a 100-line function budget (signature through closing brace, including blank
+lines/comments). Free functions, methods and default trait methods count;
+closures and macro-generated functions do not have separate function budgets.
+Qualified module/impl/function names identify functions; mutually exclusive cfg
+implementations with the same name share their maximum size budget.
+
+In `crates/voxelite-app/src/`, including submodules, the styling rules count:
+
+- `px` calls with numeric literal, negated or parenthesized literal arguments;
+- `rgb`/`rgba` calls with hexadecimal literal arguments, and `hsl`/`hsla` calls
+  with numeric literal arguments;
+- string literal patterns, including match arms, `if let` and `matches!`, and
+  string literal `==`/`!=` comparisons. This deliberately includes protocol and
+  setting dispatch as well as element/action IDs: use typed enums/IDs for new code.
+
+Qualified calls and styling inside macro tokens count. Macro string dispatch is
+checked for literal arms/alternatives and equality comparisons; `matches!` checks
+all string literals. Arbitrary generated macro expansions and renamed imports
+are not expanded. Dynamic document colors and `px(metrics::TOKEN)` are permitted;
+put new control styling in `voxelite-ui` components/tokens. Shared UI owns styling
+and is exempt from the app styling rules, but retains the source size budgets.
+
+`xtask/lint-allowlist.json` records existing debt by file/rule and qualified
+function. Every entry must exactly match the remaining count or oversized line
+count: growth and new entries fail; fixes also fail until the entry is reduced or
+removed. Do not regenerate or increase the baseline. Stage new files before
+running checks because the scope is Git's tracked files. The initial baseline
+preserves current screens while #134 migrates them to shared components.
+
+The baseline itself is checked against `HEAD` locally, or `LINT_BASE_REF` when
+set. CI supplies the PR base SHA (previous revision for pushes), using full Git
+history, so increasing the baseline alongside new violations fails. Only the
+initial introduction may bootstrap when the base revision has no baseline file.
+An invalid/missing base revision fails. To reproduce the full PR comparison:
+`LINT_BASE_REF=<base-sha> cargo xtask lint`.
 
 Run their fixture and parsing tests with `cargo test -p xtask --locked checks::`.
 Tests inject the shared command runner for Cargo metadata and Git ignore output;

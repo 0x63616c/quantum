@@ -120,7 +120,20 @@ cargo test -p xtask --locked checks::plugin_deps
 
 ## Build, test and lint
 
-`cargo xtask validate` runs the registered gates: tidy, workflows, plugin-deps, brand,
+Run `cargo xtask lint` for strict workspace Clippy, transitive core/format/mesh
+isolation, and the app styling/string-dispatch and Rust size ratchets. See
+[xtask rules](xtask/README.md) for exact syntax, scopes and baseline updates.
+New Rust files are limited to 1,000 lines and functions to 100 lines. Existing
+debt in `xtask/lint-allowlist.json` may only shrink; reduce/remove entries when
+fixing violations. Stage new files before checking. Put app styling in shared UI
+tokens/components and use typed IDs/enums instead of new string dispatch.
+The six strict Clippy lints also apply to the app/render local lint tables;
+keep those tables aligned with the workspace while preserving scoped FFI rules.
+Tests may unwrap/expect/panic via `clippy.toml`. Production exceptions require a
+narrow `#[expect(..., reason = "...")]` documenting a verified invariant or CLI
+output contract, never a blanket library allowance.
+
+`cargo xtask validate` runs the registered gates: boundaries, source-lints, tidy, workflows, plugin-deps, brand,
 docs-links, docs-assets, appcast, fmt, clippy (all targets), workspace tests, deny and
 machete. Missing tools skip with a reason; use `--strict` to fail instead.
 Use `cargo xtask check --list` to list checks,

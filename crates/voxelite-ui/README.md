@@ -296,3 +296,9 @@ separator columns so identical positions can be checked independently of text.
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
 overlay lifecycle, headless tests and interactive dark/light gallery. Existing
 constructors retain their screen appearance until the #134 migration.
+App callers are checked by `cargo xtask lint`: literal `px`, hex `rgb`/`rgba`,
+literal `hsl`/`hsla`, string patterns and literal string equality have a
+shrink-only baseline. Add shared tokens/components and typed dispatch rather
+than new exceptions. The shared UI crate owns styling and is exempt from the
+app patterns. All Rust files/functions retain the 1,000/100-line size budgets.
+See [the exact lint rules](../../xtask/README.md) for scope and baseline updates.

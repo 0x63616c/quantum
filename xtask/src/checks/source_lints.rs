@@ -339,6 +339,62 @@ mod tests {
         counts
     }
     #[test]
+    fn base_revision_fixture_bootstraps_only_an_absent_file() {
+        use crate::{cmd::Output, testing::RecordingRunner, workspace::Workspace};
+        let workspace = Workspace::discover().unwrap();
+        for (tree, contents, expected) in [
+            ("", None, None),
+            (
+                ALLOWLIST,
+                Some(r#"{"old:raw-px":2}"#),
+                Some(Counts::from([("old:raw-px".into(), 2)])),
+            ),
+        ] {
+            let runner = RecordingRunner::stdout(b"base-sha\n");
+            runner.results.borrow_mut().push_back(Ok(Output {
+                stdout: tree.as_bytes().to_vec(),
+                ..Output::default()
+            }));
+            if let Some(contents) = contents {
+                runner.results.borrow_mut().push_back(Ok(Output {
+                    stdout: contents.as_bytes().to_vec(),
+                    ..Output::default()
+                }));
+            }
+            let context = Context {
+                workspace: &workspace,
+                runner: &runner,
+                strict: true,
+            };
+            assert_eq!(previous_baseline(&context, "pr-base").unwrap(), expected);
+            runner.assert_args(0, &["rev-parse", "--verify", "pr-base^{commit}"]);
+            runner.assert_args(1, &["ls-tree", "--name-only", "base-sha", "--", ALLOWLIST]);
+        }
+        let runner = RecordingRunner::default();
+        runner
+            .results
+            .borrow_mut()
+            .push_back(Err(std::io::Error::other("missing base revision")));
+        let context = Context {
+            workspace: &workspace,
+            runner: &runner,
+            strict: true,
+        };
+        assert!(previous_baseline(&context, "missing").is_err());
+    }
+    #[test]
+    fn oversized_function_fixes_require_reducing_the_baseline() {
+        let source = |n| format!("fn big() {{\n{}}}", "// line\n".repeat(n));
+        let old = scan(&source(110));
+        let smaller = scan(&source(105));
+        assert!(ratchet(&old, &old).is_empty());
+        assert!(!ratchet(&smaller, &old).is_empty());
+        assert!(ratchet(&smaller, &smaller).is_empty());
+        assert!(!ratchet(&scan(&source(115)), &old).is_empty());
+        assert!(scan(&source(98)).is_empty());
+        assert!(!ratchet(&scan(&source(98)), &old).is_empty());
+    }
+    #[test]
     fn allowlist_cannot_be_expanded_with_source_changes() {
         let previous = Counts::from([("file:raw-px".into(), 3)]);
         assert!(no_growth(&previous, &previous).is_empty());
@@ -353,27 +409,6 @@ mod tests {
             r#"fn ui() { custom! { px(4.0); match action { "save" => (), _ => () } } matches!(action, "open" | "quit"); }"#,
         );
         assert_eq!(counts.values().sum::<usize>(), 4);
-    }
-    #[test]
-    #[ignore]
-    fn capture_initial_baseline() {
-        let workspace = crate::workspace::Workspace::discover().unwrap();
-        let runner = crate::cmd::SystemRunner::default();
-        let mut counts = Counts::new();
-        for path in workspace.tracked_files(&runner).unwrap() {
-            if path.ends_with(".rs")
-                && (path.starts_with("crates/")
-                    || path.starts_with("xtask/")
-                    || path.starts_with("examples/"))
-            {
-                inspect(&path, &workspace.read(&path).unwrap(), &mut counts).unwrap();
-            }
-        }
-        std::fs::write(
-            workspace.path(ALLOWLIST),
-            serde_json::to_string_pretty(&counts).unwrap() + "\n",
-        )
-        .unwrap();
     }
     #[test]
     fn styling_and_dispatch_fixture() {

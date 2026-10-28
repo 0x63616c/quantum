@@ -119,6 +119,30 @@ mod tests {
         json!({"packages":packages,"resolve":{"nodes":nodes}}).to_string()
     }
     #[test]
+    fn runner_uses_locked_complete_metadata_and_propagates_bad_output() {
+        use crate::{testing::RecordingRunner, workspace::Workspace};
+        let workspace = Workspace::discover().unwrap();
+        for (json, passes) in [(fixture(&[]), true), ("{}".into(), false)] {
+            let runner = RecordingRunner::stdout(json.as_bytes());
+            let context = Context {
+                workspace: &workspace,
+                runner: &runner,
+                strict: true,
+            };
+            assert_eq!(matches!(run(&context), Outcome::Pass), passes);
+            runner.assert_args(
+                0,
+                &[
+                    "metadata",
+                    "--format-version",
+                    "1",
+                    "--all-features",
+                    "--locked",
+                ],
+            );
+        }
+    }
+    #[test]
     fn portable_graph_passes() {
         assert!(violations(&fixture(&[])).unwrap().is_empty());
     }
