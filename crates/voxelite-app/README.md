@@ -136,7 +136,9 @@ canonical-path deduplication and missing files filtered out. The `thumbnails/`
 cache stores 640 × 480 CPU-rendered PNGs of saved documents, keyed by canonical path
 and file modification time/length plus renderer version. Saves update the preview; missing/stale previews are
 rendered lazily in the background while Welcome shows a placeholder. Preview
-failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
+failures do not prevent opening or saving. Cache hits are decoded within a fixed
+preview budget; damaged entries regenerate without touching the project.
+`VOXELITE_DATA_DIR` isolates both stores.
 The same sample cards appear in a two-column grid for an empty history and a
 four-column strip pinned below recents and a divider. The compact cards show
 only titles; the empty-history grid also shows voxel and layer counts.

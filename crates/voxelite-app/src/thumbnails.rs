@@ -71,7 +71,7 @@ impl ThumbnailCache {
     pub fn cached(&self, path: &Path) -> EditorResult<Option<PathBuf>> {
         let path = path.canonicalize()?;
         let destination = self.destination(&path, &Stamp::read(&path)?);
-        Ok(destination.is_file().then_some(destination))
+        Ok(valid_preview(&destination).then_some(destination))
     }
 
     /// Reuse or generate a preview from the saved document, without replaying history.
@@ -82,7 +82,7 @@ impl ThumbnailCache {
         let path = path.canonicalize()?;
         let stamp = Stamp::read(&path)?;
         let destination = self.destination(&path, &stamp);
-        if destination.is_file() {
+        if valid_preview(&destination) {
             return Ok(destination);
         }
         let bytes = voxelite_format::session::read(&path)?;
@@ -116,7 +116,7 @@ impl ThumbnailCache {
             .join(format!("{VERSION}-{}.png", fingerprint(bytes)));
         let project = voxelite_format::from_bytes(bytes)?;
         let content = &project.document.content;
-        if !destination.is_file() {
+        if !valid_preview(&destination) {
             local_settings::write_local(&destination, &render_png(content)?)?;
         }
         Ok(SamplePreview {
@@ -136,6 +136,32 @@ pub struct SamplePreview {
     pub voxels: usize,
     /// Number of document layers.
     pub layers: usize,
+}
+
+// A disposable cache entry may be truncated or replaced independently of its
+// source. Decode within the fixed preview budget before accepting a cache hit;
+// otherwise GPUI would keep showing a broken image until the document changed.
+fn valid_preview(path: &Path) -> bool {
+    const PIXELS: usize = (WIDTH * HEIGHT * 4) as usize;
+    let valid = || -> Option<()> {
+        let file = std::fs::File::open(path).ok()?;
+        if file.metadata().ok()?.len() > (PIXELS * 2) as u64 {
+            return None;
+        }
+        let mut decoder = png::Decoder::new(std::io::BufReader::new(file));
+        decoder.set_limits(png::Limits { bytes: PIXELS * 2 });
+        let mut reader = decoder.read_info().ok()?;
+        let info = reader.info();
+        if (info.width, info.height, info.color_type, info.bit_depth)
+            != (WIDTH, HEIGHT, png::ColorType::Rgba, png::BitDepth::Eight)
+            || reader.output_buffer_size()? != PIXELS
+        {
+            return None;
+        }
+        reader.next_frame(&mut vec![0; PIXELS]).ok()?;
+        Some(())
+    };
+    valid().is_some()
 }
 
 fn render_png(snapshot: &voxelite_core::Snapshot) -> EditorResult<Vec<u8>> {
@@ -275,6 +301,45 @@ mod tests {
             cache.ensure(&a).unwrap(),
             cache.ensure(&dir.path().join("a/./project.voxl")).unwrap()
         );
+    }
+
+    #[test]
+    fn damaged_or_oversized_cache_entries_are_replaced_without_changing_the_project() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project.voxl");
+        crate::editor::Editor::blank().unwrap().save(&path).unwrap();
+        let source = fs::read(&path).unwrap();
+        let cache = ThumbnailCache::new(dir.path());
+        let preview = cache.ensure(&path).unwrap();
+        let expected = fs::read(&preview).unwrap();
+        for damage in [b"invalid".as_slice(), &expected[..expected.len() / 2]] {
+            fs::write(&preview, damage).unwrap();
+            assert!(cache.cached(&path).unwrap().is_none());
+            assert_eq!(cache.ensure(&path).unwrap(), preview);
+            assert_eq!(fs::read(&preview).unwrap(), expected);
+        }
+        fs::File::options()
+            .write(true)
+            .open(&preview)
+            .unwrap()
+            .set_len(u64::from(WIDTH * HEIGHT * 8) + 1)
+            .unwrap();
+        assert!(cache.cached(&path).unwrap().is_none());
+        cache.ensure(&path).unwrap();
+        assert_eq!(fs::read(&preview).unwrap(), expected);
+        assert_eq!(fs::read(&path).unwrap(), source);
+    }
+
+    #[test]
+    fn damaged_sample_artwork_is_regenerated() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = ThumbnailCache::new(dir.path());
+        let sample = crate::samples::Sample::Snow;
+        let preview = cache.sample(sample).unwrap();
+        let expected = fs::read(&preview.path).unwrap();
+        fs::write(&preview.path, b"truncated").unwrap();
+        assert_eq!(cache.sample(sample).unwrap().path, preview.path);
+        assert_eq!(fs::read(&preview.path).unwrap(), expected);
     }
 
     #[test]
