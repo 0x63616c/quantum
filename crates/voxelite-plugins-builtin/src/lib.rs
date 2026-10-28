@@ -28,3 +28,52 @@ pub fn mcp_host() -> Host {
         Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
     ])
 }
+
+#[cfg(test)]
+mod tests {
+    use voxelite_plugin_api::{API_VERSION, Plugin, Version};
+
+    #[test]
+    fn optional_builtin_manifests_keep_their_ids_keys_and_policy() {
+        let cases: [(Box<dyn Plugin>, &str); 8] = [
+            (Box::new(voxelite_plugin_agent::AgentPlugin), "agent"),
+            (
+                Box::new(voxelite_plugin_comments::CommentsPlugin),
+                "comments",
+            ),
+            (
+                Box::new(voxelite_plugin_exporters::ExportersPlugin),
+                "exporters",
+            ),
+            (
+                Box::new(voxelite_plugin_gizmo_grid::GizmoGridPlugin),
+                "gizmo-grid",
+            ),
+            (Box::new(voxelite_plugin_mirror::MirrorPlugin), "mirror"),
+            (Box::new(voxelite_plugin_palette::PalettePlugin), "palette"),
+            (
+                Box::new(voxelite_plugin_shadows_lighting::ShadowsLightingPlugin),
+                "shadows-lighting",
+            ),
+            (Box::new(voxelite_plugin_tools::ToolsPlugin), "tools"),
+        ];
+        for (plugin, slug) in cases {
+            let manifest = plugin.manifest();
+            assert_eq!(manifest.id.as_str(), format!("dev.voxelite.{slug}"));
+            assert_eq!(manifest.name_key, format!("plugins.{slug}.name"));
+            assert_eq!(
+                manifest.description_key,
+                format!("plugins.{slug}.description")
+            );
+            assert_eq!(
+                manifest.version,
+                Version::parse(env!("CARGO_PKG_VERSION")).unwrap()
+            );
+            assert_eq!(manifest.api_version, API_VERSION);
+            assert!(
+                manifest.builtin && manifest.default_enabled && manifest.can_disable,
+                "{slug}"
+            );
+        }
+    }
+}

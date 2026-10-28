@@ -19,16 +19,7 @@ pub struct CommentsPlugin;
 
 impl Plugin for CommentsPlugin {
     fn manifest(&self) -> Manifest {
-        Manifest {
-            id: PluginId::new(PLUGIN_ID).unwrap(),
-            name_key: "plugins.comments.name".into(),
-            description_key: "plugins.comments.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-            api_version: API_VERSION,
-            builtin: true,
-            default_enabled: true,
-            can_disable: true,
-        }
+        Manifest::builtin(PLUGIN_ID, "plugins.comments", env!("CARGO_PKG_VERSION"))
     }
 
     fn comments_panel(&self, id: &str) -> Option<&dyn CommentsPanel> {
@@ -82,9 +73,12 @@ impl Plugin for CommentsPlugin {
 mod tests {
     use super::*;
 
+    voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+        CommentsPlugin
+    ));
+
     #[test]
-    fn conforms_to_plugin_contract() {
-        voxelite_plugin_host::conformance::check(|| Box::new(CommentsPlugin));
+    fn declares_plugin_specific_capabilities() {
         let mut host = voxelite_plugin_host::Host::new(vec![Box::new(CommentsPlugin)]);
         assert!(host.has_comments_panel(PANEL_ID).unwrap());
         assert!(host.has_tool(TOOL_ID).unwrap());

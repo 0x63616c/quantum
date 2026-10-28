@@ -1,0 +1,40 @@
+name: Spike
+description: "Time-boxed investigation that ends in a recommendation."
+title: "spike: "
+labels: ["type:spike"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why"
+      description: "The question to answer and the decision it unblocks."
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: "Model"
+      description: "Maps to the model:astra / model:sol label. Maintainers apply the label."
+      options:
+        - "sol (everyday: fixes, CI, docs, simple refactors)"
+        - "astra (hard: UI/design, complex refactors, spikes, ports)"
+      default: 1
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: "Plan"
+      description: "What to prototype or measure, and the time box."
+    validations:
+      required: false
+  - type: textarea
+    id: done
+    attributes:
+      label: "Done when"
+      description: "Observable outcomes. Each one is checked against the merged PR before closing."
+      value: |
+        - [ ] 
+        - [ ] Tests or evidence linked in the PR
+    validations:
+      required: true

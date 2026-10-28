@@ -13,10 +13,9 @@ fn fixture() -> Snapshot {
     .unwrap()
 }
 
-#[test]
-fn conforms_to_plugin_contract() {
-    voxelite_plugin_host::conformance::check(|| Box::new(ShadowsLightingPlugin));
-}
+voxelite_plugin_host::plugin_conformance_test!(conforms_to_plugin_contract, || Box::new(
+    ShadowsLightingPlugin
+));
 
 #[test]
 fn enabled_and_ambient_golden_images_and_cached_reenable() {
