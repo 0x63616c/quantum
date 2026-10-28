@@ -4,7 +4,10 @@ use quantum_core::{Document, Region, Snapshot};
 pub use quantum_render::{RenderError, RenderResult};
 
 // Exercise private production geometry without exposing a benchmark API.
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "the private production module includes fields and test helpers unused by this harness"
+)]
 #[path = "../src/chunk_mesh.rs"]
 mod chunk_mesh;
 

@@ -1,5 +1,10 @@
 # Chunk meshing benchmark results
 
+**Review status:** the performance acceptance item in #95 is not yet met.
+Fresh current-main comparisons below reproduce small-batch gains but do not
+establish the required absence of regression for larger batches. Earlier
+acceptance conclusions were too strong for the measured uncertainty.
+
 ## Revisions and method
 
 Issue #95 replaces per-sync scoped threads with a reusable private Rayon pool.
@@ -65,9 +70,9 @@ of the twenty per-round percentage changes (10,000 resamples, fixed seed 95) giv
 solid 8 −7.3 to −1.4%, sparse 4 −16.6 to −6.3%, sparse 8 −14.8 to −4.2%.
 
 The largest slower full-series median is 2.5% (sparse 3, an unchanged serial path).
-There is no material regression beyond the measured spread. In particular, sparse
+This does not establish absence of a material regression. In particular, sparse
 128 is +2.2%, with a paired interval of −1.4 to +10.5%; do not claim it speeds up.
-These measurements support retaining the four-chunk threshold; serial operation
+These measurements demonstrate small-batch gains; serial operation
 below four and the bounded, reused pool remain unchanged from the candidate.
 A separate twenty-pair solid-one-chunk check was 0.975 → 0.983 ms (+0.8%, ranges
 0.932–1.302 and 0.959–1.330), unlike the initial noisy 22% apparent regression.
@@ -109,7 +114,7 @@ A separate twenty-pair solid-one-chunk check was 0.975 → 0.983 ms (+0.8%, rang
 Same binaries/settings/order; four rounds per revision, 100 samples per fixture.
 This independent series confirms improvements in every solid parallel fixture and
 sparse 4/8/32. Sparse 128 and single-chunk timings still vary; overlapping ranges
-and the longer series above do not support changing the algorithm for those cases.
+leave their regression status unresolved.
 
 | Fixture | Chunks | Main ms | Rayon ms | Change |
 | --- | ---: | ---: | ---: | ---: |
@@ -207,3 +212,107 @@ Fresh Linux validation after the merge: `cargo xtask validate --strict` passes
 `cargo xtask lint` passes all three gates. The new spelling gate required
 excluding compressed `.git` metadata; authored source remains checked. A stale
 shared-target xtask library was rebuilt from this checkout before verification.
+
+## Senior review: fresh current-main comparison
+
+Main `523138e` versus reviewed candidate `4afe98a161e458f0518b350d0232d7cfff485ef9`, built from the fresh clone
+with the same fixture and settings above. The candidate adds explicit one-, two-
+and eight-worker determinism checks, serial fallback coverage, and budget/recovery
+coverage across the parallel threshold. Production scheduling remains unchanged.
+The benchmark-only dead-code allowance is now a documented expectation.
+
+Twenty paired rounds per revision, 100 samples per fixture; reverse revision
+order on alternate rounds. No task-owned builds or tests overlap measurements.
+Linux x86-64, eight-core Intel Xeon VM, Rust 1.99.1; one-minute load ranged
+5.36–10.16. This is a shared machine, not an idle reference.
+
+Immutable executable SHA-256 values:
+
+- Baseline: `f8ab17fef8087b8c2414786d5fe3815d036418f698578e16ab2fd282e42ee8b8`
+- Candidate: `6e194d79af3355903351cc1ef39e83333513304718c1c15d82897175dc23dc4a`
+
+Milliseconds are median (minimum–maximum) of twenty run medians. The last column
+is the median paired percentage change and its bootstrap 95% interval (10,000
+resamples of paired changes, seed 95). Negative change is faster.
+
+| Fixture | Chunks | Main ms | Rayon ms | Aggregate change | Paired change (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Solid | 1 | 0.859 (0.795–0.886) | 0.863 (0.792–0.937) | +0.5% | +1.5% (+0.5 to +2.0) |
+| Solid | 3 | 2.210 (2.076–2.334) | 2.237 (2.135–2.543) | +1.2% | +0.9% (-0.3 to +2.3) |
+| Solid | 4 | 1.070 (0.884–1.643) | 0.891 (0.831–1.506) | -16.7% | -10.7% (-18.7 to -7.1) |
+| Solid | 8 | 1.570 (0.952–1.828) | 1.503 (0.896–2.006) | -4.2% | -3.8% (-5.3 to +3.7) |
+| Solid | 32 | 3.175 (2.874–4.136) | 3.463 (2.745–4.184) | +9.1% | +3.8% (-2.5 to +6.3) |
+| Solid | 128 | 9.623 (8.462–19.370) | 10.034 (8.771–14.300) | +4.3% | +0.6% (-9.3 to +5.2) |
+| Sparse | 1 | 0.492 (0.449–0.509) | 0.493 (0.451–0.536) | +0.3% | +0.0% (-1.3 to +0.9) |
+| Sparse | 3 | 1.597 (1.496–1.721) | 1.623 (1.473–1.759) | +1.7% | +1.9% (+0.4 to +2.1) |
+| Sparse | 4 | 0.805 (0.639–1.118) | 0.629 (0.556–1.174) | -21.9% | -17.5% (-27.0 to -8.9) |
+| Sparse | 8 | 1.227 (0.726–1.949) | 1.158 (0.600–1.237) | -5.6% | -6.3% (-12.1 to -5.1) |
+| Sparse | 32 | 3.442 (3.093–4.041) | 3.306 (3.126–4.058) | -3.9% | -1.9% (-5.1 to +3.0) |
+| Sparse | 128 | 12.215 (11.310–15.540) | 13.455 (11.640–19.570) | +10.2% | +2.6% (-1.3 to +9.6) |
+
+Four-chunk solid/sparse batches improve 16.7%/21.9%. However, solid 32 is +9.1%
+and sparse 128 is +10.2% by aggregate medians. Their paired intervals include
+zero, but also allow material slowdowns. Overlap with zero is not evidence of
+non-regression. The unchanged serial paths move by up to 1.7%, which does not
+justify dismissing the larger-case differences as noise.
+
+A separate twenty-round, three-way diagnostic compared main, the reviewed
+candidate, and a temporary `with_max_len(1)` variant. Each round rotated and
+reversed revision order; all twelve fixtures used 100 samples. This tested
+whether finer work splitting would improve balancing. It did not resolve the
+sparse-128 slowdown, so the variant was discarded and is not in the PR.
+One-minute load ranged
+4.73–9.13. Median of run medians (ms):
+
+| Fixture | Chunks | Main | Reviewed Rayon | Finer splitting | Variant vs main | Paired variant change (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Solid | 1 | 0.868 | 0.870 | 0.873 | +0.5% | +1.6% (-0.3 to +5.3) |
+| Solid | 3 | 2.263 | 2.248 | 2.260 | -0.1% | +1.0% (-0.1 to +1.6) |
+| Solid | 4 | 1.129 | 1.045 | 1.080 | -4.3% | -10.0% (-15.4 to +0.1) |
+| Solid | 8 | 1.362 | 1.484 | 1.481 | +8.7% | -4.5% (-6.6 to +13.1) |
+| Solid | 32 | 3.292 | 3.223 | 3.192 | -3.0% | +0.2% (-5.2 to +3.7) |
+| Solid | 128 | 8.856 | 9.296 | 9.363 | +5.7% | +1.6% (-1.8 to +6.8) |
+| Sparse | 1 | 0.497 | 0.506 | 0.499 | +0.5% | +0.3% (-0.9 to +1.6) |
+| Sparse | 3 | 1.623 | 1.631 | 1.647 | +1.5% | +1.3% (-0.2 to +3.0) |
+| Sparse | 4 | 0.804 | 0.648 | 0.666 | -17.1% | -15.9% (-20.9 to -11.5) |
+| Sparse | 8 | 1.030 | 0.919 | 0.857 | -16.8% | -10.1% (-19.4 to -5.1) |
+| Sparse | 32 | 3.279 | 3.264 | 3.219 | -1.8% | -2.3% (-3.8 to -0.3) |
+| Sparse | 128 | 12.285 | 12.660 | 12.840 | +4.5% | +4.8% (+0.3 to +6.0) |
+
+The second series still has a slower reviewed sparse-128 median (12.285 →
+12.660 ms, +3.1%); the finer variant is slower again (12.840 ms, +4.5%).
+Neither series satisfies the issue's no-regression requirement. Obtain a
+controlled comparison with sufficiently narrow uncertainty before checking that
+acceptance item; do not adjust thresholds or weaken checks to accept these results.
+
+<details>
+<summary>Fresh paired comparison: per-run medians in milliseconds</summary>
+
+| Fixture | Revision | Runs 1–20 |
+| --- | --- | --- |
+| solid 1 | baseline | 0.8861, 0.8516, 0.8738, 0.8595, 0.8704, 0.8619, 0.8361, 0.8541, 0.8469, 0.8388, 0.8658, 0.8592, 0.8532, 0.8095, 0.8593, 0.8632, 0.8674, 0.8705, 0.7946, 0.8134 |
+| solid 1 | candidate | 0.9372, 0.8632, 0.8931, 0.875, 0.8716, 0.872, 0.8498, 0.8597, 0.8519, 0.8563, 0.8672, 0.8635, 0.8714, 0.8627, 0.875, 0.85, 0.8847, 0.8633, 0.7919, 0.8572 |
+| solid 3 | baseline | 2.237, 2.258, 2.334, 2.208, 2.178, 2.133, 2.197, 2.198, 2.19, 2.21, 2.192, 2.318, 2.184, 2.236, 2.211, 2.244, 2.264, 2.214, 2.076, 2.229 |
+| solid 3 | candidate | 2.234, 2.229, 2.257, 2.225, 2.237, 2.202, 2.543, 2.246, 2.244, 2.176, 2.242, 2.204, 2.236, 2.225, 2.252, 2.245, 2.273, 2.202, 2.135, 2.254 |
+| solid 4 | baseline | 1.173, 1.144, 0.9627, 0.8843, 0.9127, 0.8887, 0.9155, 1.013, 1.479, 0.9185, 1.643, 1.383, 1.299, 1.045, 1.061, 1.078, 1.109, 1.147, 1.034, 1.103 |
+| solid 4 | candidate | 0.9396, 0.8691, 0.9316, 0.8674, 0.8312, 0.8372, 0.834, 0.9696, 0.8476, 1.037, 1.506, 1.315, 1.116, 0.863, 0.8473, 0.912, 0.8582, 1.006, 0.9397, 0.8678 |
+| solid 8 | baseline | 0.9672, 1.068, 1.6, 1.58, 0.9515, 1.002, 1.572, 1.587, 1.01, 1.41, 1.628, 1.828, 1.577, 1.568, 1.615, 1.644, 1.615, 1.033, 1.247, 1.115 |
+| solid 8 | candidate | 0.9438, 0.8962, 1.514, 1.521, 1.377, 1.398, 1.513, 1.526, 1.494, 1.493, 1.548, 1.546, 1.516, 0.921, 1.532, 1.478, 1.68, 0.9312, 1.289, 2.006 |
+| solid 32 | baseline | 3.203, 3.453, 3.775, 3.113, 2.882, 2.934, 3.461, 2.916, 2.874, 4.136, 3.708, 3.694, 3.31, 3.459, 3.263, 3.068, 2.997, 3.146, 3.013, 3.088 |
+| solid 32 | candidate | 3.392, 3.46, 3.51, 4.184, 3.067, 3.04, 3.601, 3.88, 3.53, 3.367, 4.052, 3.631, 3.489, 3.221, 3.466, 3.909, 3.002, 2.961, 2.745, 2.985 |
+| solid 128 | baseline | 8.736, 9.64, 9.407, 11.66, 8.462, 12.34, 10.91, 8.919, 10.99, 11.25, 19.37, 8.671, 10.88, 10.08, 9.499, 8.725, 8.535, 9.606, 8.653, 10.89 |
+| solid 128 | candidate | 10.57, 10.9, 8.784, 9.421, 10.2, 10.22, 9.404, 8.828, 11.24, 10.22, 14.3, 10.57, 8.875, 10.5, 8.771, 9.079, 8.884, 10.21, 9.651, 9.868 |
+| sparse 1 | baseline | 0.489, 0.4604, 0.4956, 0.4684, 0.4962, 0.4957, 0.4768, 0.4892, 0.5042, 0.4826, 0.5022, 0.4947, 0.4515, 0.4489, 0.4765, 0.4977, 0.4807, 0.5041, 0.5088, 0.4954 |
+| sparse 1 | candidate | 0.493, 0.4511, 0.5002, 0.4711, 0.4936, 0.4999, 0.4696, 0.4894, 0.4983, 0.5009, 0.5357, 0.4866, 0.4564, 0.4962, 0.4568, 0.4885, 0.4639, 0.5035, 0.5088, 0.5036 |
+| sparse 3 | baseline | 1.6, 1.496, 1.61, 1.559, 1.58, 1.655, 1.6, 1.591, 1.603, 1.579, 1.721, 1.63, 1.586, 1.638, 1.528, 1.593, 1.583, 1.628, 1.613, 1.574 |
+| sparse 3 | candidate | 1.612, 1.473, 1.641, 1.605, 1.625, 1.625, 1.629, 1.623, 1.635, 1.635, 1.759, 1.634, 1.594, 1.618, 1.558, 1.605, 1.624, 1.665, 1.564, 1.574 |
+| sparse 4 | baseline | 0.8319, 0.9934, 0.639, 0.7627, 0.6719, 1.02, 1.118, 1.027, 0.6721, 0.6554, 0.8024, 0.9969, 0.8879, 0.7779, 0.6988, 0.8913, 0.8083, 0.7379, 0.6916, 0.8164 |
+| sparse 4 | candidate | 0.7954, 0.9151, 0.5761, 0.9943, 0.5556, 0.5949, 0.808, 0.6434, 0.5674, 0.6099, 1.174, 0.7165, 0.5718, 0.6138, 0.5755, 0.6565, 0.6484, 0.8682, 0.6106, 0.5801 |
+| sparse 8 | baseline | 1.24, 1.016, 0.7761, 1.329, 1.232, 1.241, 1.227, 1.139, 1.255, 1.226, 1.949, 0.911, 0.726, 0.7439, 0.7262, 1.248, 0.9857, 1.25, 1.271, 0.7702 |
+| sparse 8 | candidate | 1.168, 0.7555, 1.112, 1.168, 1.174, 1.128, 1.148, 1, 1.185, 1.237, 1.23, 0.6748, 0.8486, 0.5996, 0.639, 1.209, 0.8861, 1.176, 1.192, 1.173 |
+| sparse 32 | baseline | 3.232, 3.217, 3.093, 3.874, 3.442, 3.225, 3.701, 3.449, 3.883, 3.37, 3.464, 3.82, 3.291, 3.324, 3.185, 3.441, 3.494, 4.041, 3.425, 3.653 |
+| sparse 32 | candidate | 3.126, 3.211, 3.139, 3.689, 3.702, 3.419, 3.382, 3.191, 4.058, 3.184, 3.2, 3.231, 3.196, 3.214, 3.17, 3.878, 3.851, 3.724, 3.589, 3.616 |
+| sparse 128 | baseline | 11.42, 11.68, 11.67, 14.92, 11.39, 11.31, 12.02, 15.54, 13.23, 14.4, 14.3, 12.67, 11.88, 13.75, 12.25, 14.32, 14.57, 11.6, 12.18, 11.67 |
+| sparse 128 | candidate | 11.76, 11.83, 13.95, 19.57, 11.64, 11.97, 15.47, 15.4, 12.56, 12.31, 13.95, 13.93, 12.34, 13.52, 13.39, 13.82, 13.28, 14.46, 13.56, 11.91 |
+
+</details>
