@@ -90,6 +90,7 @@ const SCREENS: &[Screen] = screens![
         ("panels-comment-thread", "Comment thread"),
         ("panels-comment-draft", "New comment composer"),
         ("panels-agent", "Expanded agent activity"),
+        ("panels-agent-inspection", "Agent inspection thumbnails"),
         ("popovers-connect-agent", "Connect agent"),
         ("dialogs-about", "About Quantum"),
         ("dialogs-acknowledgements", "Acknowledgements"),

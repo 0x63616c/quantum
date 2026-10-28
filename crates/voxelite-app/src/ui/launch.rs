@@ -14,6 +14,7 @@ pub(crate) enum LaunchState {
     CommentThread,
     CommentDraft,
     AgentActivity,
+    AgentInspection,
     ConnectAgent,
     About,
     Acknowledgements,
@@ -51,6 +52,7 @@ impl LaunchState {
         ("panels-comment-thread", Self::CommentThread),
         ("panels-comment-draft", Self::CommentDraft),
         ("panels-agent", Self::AgentActivity),
+        ("panels-agent-inspection", Self::AgentInspection),
         ("popovers-connect-agent", Self::ConnectAgent),
         ("dialogs-about", Self::About),
         ("dialogs-acknowledgements", Self::Acknowledgements),
@@ -142,7 +144,7 @@ impl EditorView {
                 }
                 self.request_render(cx);
             }
-            LaunchState::AgentActivity => {
+            LaunchState::AgentActivity | LaunchState::AgentInspection => {
                 // Reuse a real committed example entry so the expanded Revert control
                 // points to an actual transaction. The second event exercises failure UI.
                 let entry = self
@@ -179,13 +181,17 @@ impl EditorView {
                         inspection: None,
                         views: Vec::new(),
                     });
-                self.agent.expanded = Some(0);
-                self.capture_agent_views(
-                    Arc::new(self.editor.snapshot().clone()),
-                    ["iso", "front", "right"].map(str::to_owned).into(),
-                    self.editor.engine.revision(),
-                    cx,
-                );
+                // The newest event is painted first. Keep its expanded controls visible.
+                self.agent.events.swap(0, 1);
+                self.agent.expanded = Some(1);
+                if state == LaunchState::AgentInspection {
+                    self.capture_agent_views(
+                        Arc::new(self.editor.snapshot().clone()),
+                        ["iso", "front", "right"].map(str::to_owned).into(),
+                        self.editor.engine.revision(),
+                        cx,
+                    );
+                }
             }
             LaunchState::ConnectAgent => self.invoke(Op::Agent, window, cx),
             LaunchState::About => self.invoke(Op::About, window, cx),

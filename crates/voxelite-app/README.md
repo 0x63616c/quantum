@@ -45,7 +45,7 @@ Each full state below is a prefix plus one suffix. Its screenshot names are
 | Prefix | Suffixes |
 | --- | --- |
 | `chrome-menu-` | `file`, `edit`, `view`, `tools`, `palette`, `layers`, `agent`, `extensions`, `window`, `help` |
-| `panels-` | `palette`, `history`, `history-preview`, `comments-empty`, `comments`, `comment-thread`, `comment-draft`, `agent` |
+| `panels-` | `palette`, `history`, `history-preview`, `comments-empty`, `comments`, `comment-thread`, `comment-draft`, `agent`, `agent-inspection` |
 | `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
 | `popovers-` | `connect-agent`, `palette-chooser`, `palette-menu` |
 | `overlays-` | `debug` |
@@ -60,8 +60,9 @@ an editor overlay, not a separate window.
 History fixtures add an empty layer and a named version through the editor;
 preview uses an immutable snapshot. Comments use the normal plugin transactions.
 The empty comments state selects the example’s empty Resolved filter. The agent
-feed reuses a committed example entry, adds a fixed rejected request and renders
-three inspection thumbnails; the palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
+feed reuses a committed example entry and adds a fixed rejected request. Its
+inspection state also renders three thumbnails; separate captures keep the expanded
+event controls visible. The palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
 save-waiting fixture holds the app-owned waiting/cancel surface with a static
 spinner, without opening a desktop portal. Capture states omit live frame cadence in the status bar and debug overlay.
 
