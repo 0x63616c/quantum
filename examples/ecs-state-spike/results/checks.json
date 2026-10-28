@@ -1,0 +1,102 @@
+[
+  {
+    "check": "spike-fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--manifest-path",
+      "examples/ecs-state-spike/Cargo.toml",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "direct-clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--manifest-path",
+      "examples/ecs-state-spike/Cargo.toml",
+      "-p",
+      "ecs-state-spike",
+      "--all-targets",
+      "--locked",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "ecs-clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--manifest-path",
+      "examples/ecs-state-spike/Cargo.toml",
+      "-p",
+      "ecs-state-spike",
+      "--all-targets",
+      "--features",
+      "ecs",
+      "--locked",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "direct-test",
+    "command": [
+      "cargo",
+      "test",
+      "--manifest-path",
+      "examples/ecs-state-spike/Cargo.toml",
+      "-p",
+      "ecs-state-spike",
+      "--locked"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "ecs-test",
+    "command": [
+      "cargo",
+      "test",
+      "--manifest-path",
+      "examples/ecs-state-spike/Cargo.toml",
+      "-p",
+      "ecs-state-spike",
+      "--features",
+      "ecs",
+      "--locked"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "plugin-rule",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/check-plugin-deps.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "check": "plugin-rule-tests",
+    "command": [
+      "python3",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-p",
+      "test_plugin_deps.py"
+    ],
+    "exit_code": 0
+  }
+]

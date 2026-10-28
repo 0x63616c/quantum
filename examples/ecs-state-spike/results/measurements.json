@@ -1,0 +1,1235 @@
+{
+  "machine": "Linux-6.12.94+-x86_64-with-glibc2.41",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "jobs": 4,
+  "cargo_home_config": "[build]\nincremental = false\n\n[profile.dev]\ndebug = \"line-tables-only\"\n\n[profile.dev.package.\"*\"]\ndebug = false\n",
+  "source_sha256": {
+    "src/direct.rs": "aed6555272806af2b9dda58048884001ed16314c06de7947306359a2d4a1a912",
+    "src/ecs.rs": "20a326f78fe9bdecaf4f3b522824e2de7acb6b8cdc0ce4528fb695ae854f2835",
+    "src/main.rs": "bbd0edde40e66bda47321f92a436e2497d1a7ea61d5244287b5d5f92b90e7042",
+    "src/model.rs": "e0f29d4df9295f3f7ab4f465669e204521015a2d39151e7496c4b98a499e621a",
+    "src/tests.rs": "a6eb80904e609b9a2bdad5f7a9e0b7b579619a1ae1706e271e64fba1117a091d"
+  },
+  "builds": [
+    {
+      "profile": "dev",
+      "trial": 0,
+      "backend": "direct",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 4.567282707022969,
+      "load_before": [
+        2.90478515625,
+        3.56591796875,
+        4.2587890625
+      ],
+      "load_after": [
+        3.07275390625,
+        3.58984375,
+        4.26318359375
+      ]
+    },
+    {
+      "profile": "dev",
+      "trial": 0,
+      "backend": "ecs",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 15.330384366039652,
+      "load_before": [
+        3.07275390625,
+        3.58984375,
+        4.26318359375
+      ],
+      "load_after": [
+        4.21533203125,
+        3.80810546875,
+        4.32373046875
+      ]
+    },
+    {
+      "profile": "dev",
+      "trial": 1,
+      "backend": "ecs",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 20.862144659040496,
+      "load_before": [
+        4.21533203125,
+        3.80810546875,
+        4.32373046875
+      ],
+      "load_after": [
+        6.83154296875,
+        4.43505859375,
+        4.52001953125
+      ]
+    },
+    {
+      "profile": "dev",
+      "trial": 1,
+      "backend": "direct",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 5.391254312999081,
+      "load_before": [
+        6.83154296875,
+        4.43505859375,
+        4.52001953125
+      ],
+      "load_after": [
+        7.88623046875,
+        4.69384765625,
+        4.603515625
+      ]
+    },
+    {
+      "profile": "dev",
+      "trial": 2,
+      "backend": "direct",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 5.277824890043121,
+      "load_before": [
+        7.88623046875,
+        4.69384765625,
+        4.603515625
+      ],
+      "load_after": [
+        7.73486328125,
+        4.7158203125,
+        4.611328125
+      ]
+    },
+    {
+      "profile": "dev",
+      "trial": 2,
+      "backend": "ecs",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 13.498820994980633,
+      "load_before": [
+        7.73486328125,
+        4.7158203125,
+        4.611328125
+      ],
+      "load_after": [
+        7.171875,
+        4.74462890625,
+        4.62353515625
+      ]
+    },
+    {
+      "profile": "release",
+      "trial": 0,
+      "backend": "direct",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 11.537332232983317,
+      "load_before": [
+        7.171875,
+        4.74462890625,
+        4.62353515625
+      ],
+      "load_after": [
+        6.97216796875,
+        4.78515625,
+        4.63818359375
+      ]
+    },
+    {
+      "profile": "release",
+      "trial": 0,
+      "backend": "ecs",
+      "kind": "cold-target-warm-source-cache",
+      "seconds": 28.68865697295405,
+      "load_before": [
+        6.97216796875,
+        4.78515625,
+        4.63818359375
+      ],
+      "load_after": [
+        5.8896484375,
+        4.7392578125,
+        4.626953125
+      ]
+    }
+  ],
+  "sizes": {
+    "direct": {
+      "unstripped_bytes": 1073864,
+      "stripped_bytes": 868536,
+      "elf_size": [
+        "847368",
+        "17808",
+        "1243",
+        "866419"
+      ]
+    },
+    "ecs": {
+      "unstripped_bytes": 1903448,
+      "stripped_bytes": 1511512,
+      "elf_size": [
+        "1477356",
+        "30800",
+        "1475",
+        "1509631"
+      ]
+    }
+  },
+  "runtime": [
+    {
+      "backend": "direct",
+      "trial": 0,
+      "load_before": [
+        5.8896484375,
+        4.7392578125,
+        4.626953125
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 0.25
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.06
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 84.02
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1033.7
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 1.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 83.89
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1359.23
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3408.71
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 320.12
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 24.57
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 17365.37
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59119.34
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 45440.49
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 1506.93
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 328.7
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 229570.41
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 64042.83
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 443078.48
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 13043.85
+        }
+      ]
+    },
+    {
+      "backend": "ecs",
+      "trial": 0,
+      "load_before": [
+        5.8896484375,
+        4.7392578125,
+        4.626953125
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 170.46
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 14.27
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 246.38
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1268.1
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 6.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 82.66
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1425.72
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 4175.87
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 752.27
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 29.48
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 17082.99
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59299.65
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 51557.56
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 12153.68
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 208.72
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 240057.83
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 60354.02
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 658444.96
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 145858.54
+        }
+      ]
+    },
+    {
+      "backend": "ecs",
+      "trial": 1,
+      "load_before": [
+        5.8896484375,
+        4.7392578125,
+        4.626953125
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 169.96
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.07
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 243.07
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1285.61
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 6.25
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 84.86
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1367.15
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3719.8
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 705.67
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 29.91
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 16909.52
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 58402.81
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 51563.33
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 11990.31
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 208.3
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 227267.43
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 59975.68
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 542446.74
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 143748.38
+        }
+      ]
+    },
+    {
+      "backend": "direct",
+      "trial": 1,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 0.25
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.0
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 91.04
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1060.49
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 1.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 82.61
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1449.47
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3396.46
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 353.52
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 23.84
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 16980.09
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59060.17
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 45664.15
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 1514.51
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 328.95
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 229065.2
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 61064.16
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 430579.2
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 12503.66
+        }
+      ]
+    },
+    {
+      "backend": "direct",
+      "trial": 2,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 0.25
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.85
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 86.49
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1056.38
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 1.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 82.82
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1379.15
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3851.8
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 345.63
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 21.56
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 17053.42
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59780.66
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 47363.37
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 1495.4
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 330.07
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 226645.84
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 61249.85
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 434237.2
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 12467.05
+        }
+      ]
+    },
+    {
+      "backend": "ecs",
+      "trial": 2,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 171.04
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 14.32
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 240.61
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1273.11
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 5.84
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 97.32
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1442.66
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3593.71
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 709.21
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 29.46
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 16891.58
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 58322.49
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 50593.52
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 12188.29
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 210.15
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 226449.96
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 60351.72
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 539886.49
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 146600.08
+        }
+      ]
+    },
+    {
+      "backend": "ecs",
+      "trial": 3,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 170.49
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 14.33
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 251.98
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1289.26
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 5.49
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 87.31
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1467.08
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 4361.66
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 711.04
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 29.47
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 16814.7
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 58476.05
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 54158.2
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 12902.0
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 207.92
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 226072.32
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 66114.26
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 550508.81
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 146613.34
+        }
+      ]
+    },
+    {
+      "backend": "direct",
+      "trial": 3,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 0.25
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.07
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 84.99
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1039.6
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 1.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 82.44
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1392.69
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3479.51
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 308.99
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 21.45
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 16954.26
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59624.03
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 49555.35
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 1446.3
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 329.81
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 226664.27
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 60648.1
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 438390.4
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 12531.79
+        }
+      ]
+    },
+    {
+      "backend": "direct",
+      "trial": 4,
+      "load_before": [
+        5.578125,
+        4.693359375,
+        4.61279296875
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 0.25
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 13.99
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 84.31
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1047.06
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 1.0
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 83.5
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1469.02
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 3325.41
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 307.96
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 21.6
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 17060.36
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 59164.96
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 57418.39
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 1494.27
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 356.58
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 242944.64
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 64505.2
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 464532.89
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 12753.67
+        }
+      ]
+    },
+    {
+      "backend": "ecs",
+      "trial": 4,
+      "load_before": [
+        5.45166015625,
+        4.681640625,
+        4.609375
+      ],
+      "rows": [
+        {
+          "operation": "idle",
+          "iterations": 100000,
+          "ns_per_operation": 185.46
+        },
+        {
+          "operation": "read_publication",
+          "iterations": 200000,
+          "ns_per_operation": 15.03
+        },
+        {
+          "operation": "select_layer",
+          "iterations": 30000,
+          "ns_per_operation": 263.54
+        },
+        {
+          "operation": "mirrored_tool_noop",
+          "iterations": 3000,
+          "ns_per_operation": 1299.65
+        },
+        {
+          "operation": "thread_query_1",
+          "iterations": 100000,
+          "ns_per_operation": 5.82
+        },
+        {
+          "operation": "comments_view_1",
+          "iterations": 1000,
+          "ns_per_operation": 99.32
+        },
+        {
+          "operation": "mcp_list_1",
+          "iterations": 1000,
+          "ns_per_operation": 1460.22
+        },
+        {
+          "operation": "resolve_commit_1",
+          "iterations": 200,
+          "ns_per_operation": 4537.4
+        },
+        {
+          "operation": "undo_redo_1",
+          "iterations": 200,
+          "ns_per_operation": 786.97
+        },
+        {
+          "operation": "thread_query_128",
+          "iterations": 100000,
+          "ns_per_operation": 31.46
+        },
+        {
+          "operation": "comments_view_128",
+          "iterations": 1000,
+          "ns_per_operation": 17858.73
+        },
+        {
+          "operation": "mcp_list_128",
+          "iterations": 1000,
+          "ns_per_operation": 61649.54
+        },
+        {
+          "operation": "resolve_commit_128",
+          "iterations": 200,
+          "ns_per_operation": 54908.83
+        },
+        {
+          "operation": "undo_redo_128",
+          "iterations": 200,
+          "ns_per_operation": 12046.07
+        },
+        {
+          "operation": "thread_query_1024",
+          "iterations": 100000,
+          "ns_per_operation": 213.11
+        },
+        {
+          "operation": "comments_view_1024",
+          "iterations": 1000,
+          "ns_per_operation": 229368.66
+        },
+        {
+          "operation": "mcp_list_1024",
+          "iterations": 1000,
+          "ns_per_operation": 64200.26
+        },
+        {
+          "operation": "resolve_commit_1024",
+          "iterations": 200,
+          "ns_per_operation": 545385.26
+        },
+        {
+          "operation": "undo_redo_1024",
+          "iterations": 200,
+          "ns_per_operation": 145402.73
+        }
+      ]
+    }
+  ]
+}

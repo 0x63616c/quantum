@@ -1,0 +1,33 @@
+[package]
+name = "ecs-state-spike"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+# Deliberately independent: no changes to the product workspace or lockfile.
+[workspace]
+resolver = "2"
+
+[dependencies]
+bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"], optional = true }
+voxelite-core = { path = "../../crates/voxelite-core" }
+voxelite-plugin-api = { path = "../../crates/voxelite-plugin-api" }
+voxelite-plugin-comments = { path = "../../crates/plugins/voxelite-plugin-comments" }
+voxelite-plugin-mirror = { path = "../../crates/plugins/voxelite-plugin-mirror" }
+
+[features]
+default = []
+ecs = ["dep:bevy_ecs"]
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

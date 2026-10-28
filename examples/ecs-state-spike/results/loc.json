@@ -1,0 +1,100 @@
+{
+  "prototype": {
+    "direct.rs": {
+      "physical": 73,
+      "nonblank_noncomment": 68
+    },
+    "ecs.rs": {
+      "physical": 170,
+      "nonblank_noncomment": 155
+    },
+    "main.rs": {
+      "physical": 225,
+      "nonblank_noncomment": 212
+    },
+    "model.rs": {
+      "physical": 370,
+      "nonblank_noncomment": 342
+    },
+    "tests.rs": {
+      "physical": 266,
+      "nonblank_noncomment": 245
+    }
+  },
+  "production": {
+    "mirror behavior": {
+      "physical": 25,
+      "nonblank_noncomment": 23
+    },
+    "comments behavior": {
+      "physical": 229,
+      "nonblank_noncomment": 223
+    },
+    "app comments read/admission": {
+      "physical": 44,
+      "nonblank_noncomment": 41
+    },
+    "app comments context": {
+      "physical": 16,
+      "nonblank_noncomment": 15
+    },
+    "MCP comments adapter": {
+      "physical": 66,
+      "nonblank_noncomment": 63
+    },
+    "selection reconciliation": {
+      "physical": 6,
+      "nonblank_noncomment": 6
+    },
+    "app mirror settings": {
+      "physical": 17,
+      "nonblank_noncomment": 14
+    },
+    "app undo redo": {
+      "physical": 22,
+      "nonblank_noncomment": 20
+    }
+  },
+  "production_references": {
+    "mirror behavior": {
+      "path": "crates/plugins/voxelite-plugin-mirror/src/lib.rs",
+      "start": 106,
+      "end": 130
+    },
+    "comments behavior": {
+      "path": "crates/plugins/voxelite-plugin-comments/src/panel.rs",
+      "start": 1,
+      "end": 229
+    },
+    "app comments read/admission": {
+      "path": "crates/voxelite-app/src/comments.rs",
+      "start": 7,
+      "end": 50
+    },
+    "app comments context": {
+      "path": "crates/voxelite-app/src/comments.rs",
+      "start": 116,
+      "end": 131
+    },
+    "MCP comments adapter": {
+      "path": "crates/voxelite-mcp/src/comments.rs",
+      "start": 1,
+      "end": 66
+    },
+    "selection reconciliation": {
+      "path": "crates/voxelite-app/src/editor.rs",
+      "start": 550,
+      "end": 555
+    },
+    "app mirror settings": {
+      "path": "crates/voxelite-app/src/editor.rs",
+      "start": 732,
+      "end": 748
+    },
+    "app undo redo": {
+      "path": "crates/voxelite-app/src/editor.rs",
+      "start": 568,
+      "end": 589
+    }
+  }
+}

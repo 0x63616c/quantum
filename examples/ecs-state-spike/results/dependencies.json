@@ -1,0 +1,1162 @@
+{
+  "direct": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "license": "0BSD OR MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.2",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "fdeflate",
+      "version": "0.3.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.10",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "getrandom",
+      "version": "0.4.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "libc",
+      "version": "0.2.191",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "license": "Unlicense OR MIT",
+      "registry": true
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.8.9",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "png",
+      "version": "0.18.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "semver",
+      "version": "1.0.28",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.154",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.10",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "syn",
+      "version": "3.0.9",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.21",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "2.0.21",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "registry": true
+    },
+    {
+      "name": "uuid",
+      "version": "1.29.0",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "license": "MIT/Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "voxelite-core",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-mesh",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-api",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-comments",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-mirror",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-render-plan",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.23",
+      "license": "MIT",
+      "registry": true
+    }
+  ],
+  "ecs": [
+    {
+      "name": "adler2",
+      "version": "2.0.1",
+      "license": "0BSD OR MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "arrayvec",
+      "version": "0.7.8",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "async-task",
+      "version": "4.7.1",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macro_logic",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macros",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_macro_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_platform",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ptr",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_tasks",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.2",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bumpalo",
+      "version": "3.20.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "concurrent-queue",
+      "version": "2.5.0",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "convert_case",
+      "version": "0.10.0",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crc32fast",
+      "version": "1.5.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crossbeam-queue",
+      "version": "0.3.14",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crossbeam-utils",
+      "version": "0.8.23",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "derive_more",
+      "version": "2.1.1",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "derive_more-impl",
+      "version": "2.1.1",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "disqualified",
+      "version": "1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.3",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "fdeflate",
+      "version": "0.3.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "fixedbitset",
+      "version": "0.5.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "flate2",
+      "version": "1.1.10",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "foldhash",
+      "version": "0.2.0",
+      "license": "Zlib",
+      "registry": true
+    },
+    {
+      "name": "futures-core",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "futures-lite",
+      "version": "2.6.1",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "getrandom",
+      "version": "0.4.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "indexmap",
+      "version": "2.14.2",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "libc",
+      "version": "0.2.191",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "log",
+      "version": "0.4.34",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "license": "Unlicense OR MIT",
+      "registry": true
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.8.9",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "mutants",
+      "version": "0.0.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "nonmax",
+      "version": "0.5.5",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "png",
+      "version": "0.18.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "rustc-hash",
+      "version": "2.1.3",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "rustc_version",
+      "version": "0.4.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "semver",
+      "version": "1.0.28",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.154",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "simd-adler32",
+      "version": "0.3.10",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "slotmap",
+      "version": "1.1.1",
+      "license": "Zlib",
+      "registry": true
+    },
+    {
+      "name": "smallvec",
+      "version": "1.16.4",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "spin",
+      "version": "0.12.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "syn",
+      "version": "3.0.9",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.21",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "2.0.21",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thread_local",
+      "version": "1.1.10",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_datetime",
+      "version": "1.1.2+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_edit",
+      "version": "0.25.17+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_parser",
+      "version": "1.1.5+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-segmentation",
+      "version": "1.13.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-xid",
+      "version": "0.2.6",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unsynn",
+      "version": "0.3.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "uuid",
+      "version": "1.29.0",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "variadics_please",
+      "version": "2.0.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "license": "MIT/Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "voxelite-core",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-mesh",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-api",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-comments",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-plugin-mirror",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "voxelite-render-plan",
+      "version": "0.3.1",
+      "license": "MIT",
+      "registry": false
+    },
+    {
+      "name": "winnow",
+      "version": "1.0.4",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.23",
+      "license": "MIT",
+      "registry": true
+    }
+  ],
+  "added": [
+    {
+      "name": "arrayvec",
+      "version": "0.7.8",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "async-task",
+      "version": "4.7.1",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macro_logic",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macros",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_macro_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_platform",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ptr",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_tasks",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bumpalo",
+      "version": "3.20.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "concurrent-queue",
+      "version": "2.5.0",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "convert_case",
+      "version": "0.10.0",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "crossbeam-queue",
+      "version": "0.3.14",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crossbeam-utils",
+      "version": "0.8.23",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "derive_more",
+      "version": "2.1.1",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "derive_more-impl",
+      "version": "2.1.1",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "disqualified",
+      "version": "1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.3",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "fixedbitset",
+      "version": "0.5.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "foldhash",
+      "version": "0.2.0",
+      "license": "Zlib",
+      "registry": true
+    },
+    {
+      "name": "futures-core",
+      "version": "0.3.34",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "futures-lite",
+      "version": "2.6.1",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "indexmap",
+      "version": "2.14.2",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "log",
+      "version": "0.4.34",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "mutants",
+      "version": "0.0.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "nonmax",
+      "version": "0.5.5",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "rustc-hash",
+      "version": "2.1.3",
+      "license": "Apache-2.0 OR MIT",
+      "registry": true
+    },
+    {
+      "name": "rustc_version",
+      "version": "0.4.1",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "slotmap",
+      "version": "1.1.1",
+      "license": "Zlib",
+      "registry": true
+    },
+    {
+      "name": "smallvec",
+      "version": "1.16.4",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "spin",
+      "version": "0.12.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "thread_local",
+      "version": "1.1.10",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_datetime",
+      "version": "1.1.2+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_edit",
+      "version": "0.25.17+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "toml_parser",
+      "version": "1.1.5+spec-1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-segmentation",
+      "version": "1.13.3",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-xid",
+      "version": "0.2.6",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unsynn",
+      "version": "0.3.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "variadics_please",
+      "version": "2.0.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "winnow",
+      "version": "1.0.4",
+      "license": "MIT",
+      "registry": true
+    }
+  ],
+  "added_not_in_product_lock": [
+    {
+      "name": "bevy_ecs",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macro_logic",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ecs_macros",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_macro_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_platform",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_ptr",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_tasks",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "bevy_utils",
+      "version": "0.20.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "crossbeam-queue",
+      "version": "0.3.14",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "disqualified",
+      "version": "1.1.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "fixedbitset",
+      "version": "0.5.7",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "mutants",
+      "version": "0.0.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "nonmax",
+      "version": "0.5.5",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "spin",
+      "version": "0.12.3",
+      "license": "MIT",
+      "registry": true
+    },
+    {
+      "name": "thread_local",
+      "version": "1.1.10",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unicode-xid",
+      "version": "0.2.6",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "unsynn",
+      "version": "0.3.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    },
+    {
+      "name": "variadics_please",
+      "version": "2.0.0",
+      "license": "MIT OR Apache-2.0",
+      "registry": true
+    }
+  ]
+}
