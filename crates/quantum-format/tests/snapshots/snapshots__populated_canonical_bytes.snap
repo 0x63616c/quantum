@@ -11,7 +11,7 @@ expression: "format!(\"{}<EOF>\", String::from_utf8(encoded).unwrap())"
     "id": "00000000-0000-4000-8000-000000000001",
     "name": "Study"
   },
-  "format": "voxelite",
+  "format": "quantum",
   "layers": [
     {
       "id": "00000000-0000-4000-8000-000000000002",

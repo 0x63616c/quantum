@@ -110,7 +110,7 @@ impl Client {
         let text: Value =
             serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap();
         assert_eq!(text, result["structuredContent"]);
-        assert_eq!(text["api_version"], "voxelite.v1");
+        assert_eq!(text["api_version"], "quantum.v1");
         if self.modern {
             assert_eq!(result["resultType"], "complete");
         } else {

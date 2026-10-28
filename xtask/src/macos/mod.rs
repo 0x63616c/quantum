@@ -21,6 +21,7 @@ mod homebrew;
 pub mod package;
 pub mod release_notes;
 pub mod sign;
+mod update_compat;
 
 pub use feed::{Update, validate, validate_release};
 pub use files::sha256;
