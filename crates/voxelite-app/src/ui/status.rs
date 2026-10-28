@@ -126,47 +126,7 @@ impl EditorView {
                     )
                     .child(slot("", self.editor.tool.name().to_owned(), 6)),
             )
-            .child(
-                div()
-                    .id("status-message")
-                    .flex_1()
-                    .min_w(px(space::NONE))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .font_family(type_size::UI)
-                    .text_color(if self.error { t.danger() } else { t.muted() })
-                    .anchored_hint(self.status.clone(), t, TooltipSide::Above)
-                    .when(!compact, |d| {
-                        if !self.error
-                            && let Some(text) = self.status.plain_text()
-                        {
-                            if self.save_flow.working() {
-                                return d.child(
-                                    voxelite_ui::AsciiReveal::new(
-                                        "io-progress",
-                                        text.to_owned(),
-                                        t,
-                                    )
-                                    .loading(true)
-                                    .reduced_motion(self.reduced_motion),
-                                );
-                            }
-                            if let Some(at) = self.save_flow.completion(text) {
-                                return d.child(
-                                    voxelite_ui::AsciiReveal::new(
-                                        "io-progress",
-                                        text.to_owned(),
-                                        t,
-                                    )
-                                    .started_at(at)
-                                    .reduced_motion(self.reduced_motion),
-                                );
-                            }
-                        }
-                        d.child(self.status.clone())
-                    })
-                    .when(compact && self.error, |d| d.child("!")),
-            )
+            .child(self.status_message(compact))
             .child(
                 row()
                     .gap(px(space::MD))
@@ -208,6 +168,44 @@ impl EditorView {
             )
     }
 }
+
+impl EditorView {
+    fn status_message(&self, compact: bool) -> Stateful<Div> {
+        let t = self.theme;
+        div()
+            .id("status-message")
+            .flex_1()
+            .min_w(px(space::NONE))
+            .overflow_hidden()
+            .text_ellipsis()
+            .font_family(type_size::UI)
+            .text_color(if self.error { t.danger() } else { t.muted() })
+            .anchored_hint(self.status.clone(), t, TooltipSide::Above)
+            .when(!compact, |d| {
+                if !self.error
+                    && let Some(text) = self.status.plain_text()
+                {
+                    if self.save_flow.working() {
+                        return d.child(
+                            voxelite_ui::AsciiReveal::new("io-progress", text.to_owned(), t)
+                                .loading(true)
+                                .reduced_motion(self.reduced_motion),
+                        );
+                    }
+                    if let Some(at) = self.save_flow.completion(text) {
+                        return d.child(
+                            voxelite_ui::AsciiReveal::new("io-progress", text.to_owned(), t)
+                                .started_at(at)
+                                .reduced_motion(self.reduced_motion),
+                        );
+                    }
+                }
+                d.child(self.status.clone())
+            })
+            .when(compact && self.error, |d| d.child("!"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{grouped, selection_metrics};

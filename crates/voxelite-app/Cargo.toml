@@ -7,7 +7,9 @@ license.workspace = true
 
 [features]
 default = ["native"]
-native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple"]
+# Deterministic GPUI integration tests; keep headless model tests GUI-free.
+test-support = ["native", "gpui/test-support"]
+native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple", "dep:async-lock"]
 
 [lib]
 crate-type = ["rlib"]
@@ -22,9 +24,12 @@ name = "ascii_loading"
 required-features = ["native"]
 
 [dependencies]
+futures-channel.workspace = true
 voxelite-mcp.workspace = true
 tempfile.workspace = true
 png.workspace = true
+async-lock = { version = "3", optional = true }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 voxelite-ui = { workspace = true, optional = true }
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true
@@ -71,7 +76,6 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std"
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
 objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
 block2 = "0.6.2"
-futures-channel.workspace = true
 libloading = "0.8.9"
 
 [target.'cfg(target_os = "macos")'.dependencies.voxelite-render]

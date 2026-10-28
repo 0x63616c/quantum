@@ -88,20 +88,31 @@ impl Preview {
         theme: Theme,
         reduced: bool,
     ) -> impl IntoElement {
-        let media = &self.media[usize::from(theme == Theme::Light)];
-        let [width, height] = media.size();
-        AsciiImageReveal::new(
+        let [width, height] = self.media[0].size();
+        self.reveal_with(
             id,
-            media.clone(),
+            label,
+            theme,
+            reduced,
             img(self.image.clone())
                 .w(px(width as f32))
                 .h(px(height as f32))
                 .object_fit(ObjectFit::Contain),
-            label,
-            theme,
         )
-        .started_at(self.arrived)
-        .reduced_motion(reduced)
+    }
+
+    fn reveal_with(
+        &self,
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        theme: Theme,
+        reduced: bool,
+        image: impl IntoElement,
+    ) -> impl IntoElement {
+        let media = &self.media[usize::from(theme == Theme::Light)];
+        AsciiImageReveal::new(id, media.clone(), image, label, theme)
+            .started_at(self.arrived)
+            .reduced_motion(reduced)
     }
 }
 
@@ -128,7 +139,14 @@ pub(super) fn recent(path: &std::path::Path) -> anyhow::Result<PreparedPreview> 
     bytes.truncate(info.buffer_size());
     let rgba = image::RgbaImage::from_raw(info.width, info.height, bytes)
         .ok_or_else(|| anyhow::anyhow!("Invalid preview pixels"))?;
-    PreparedPreview::new(rgba, [metrics::RECENT_PREVIEW as u32; 2], Theme::surface)
+    PreparedPreview::new(
+        rgba,
+        [
+            metrics::welcome::THUMB_WIDTH as u32,
+            metrics::welcome::THUMB_HEIGHT as u32,
+        ],
+        |theme| theme.background().blend(theme.hover().opacity(0.5)),
+    )
 }
 
 pub(super) fn recent_element(
@@ -140,11 +158,30 @@ pub(super) fn recent_element(
 ) -> AnyElement {
     match preview {
         Some(Some(preview)) => preview
-            .reveal(("recent-image", index), label, theme, reduced)
+            .reveal_with(
+                ("recent-image", index),
+                label,
+                theme,
+                reduced,
+                div()
+                    .relative()
+                    .w(px(metrics::welcome::THUMB_WIDTH))
+                    .h(px(metrics::welcome::THUMB_HEIGHT))
+                    .child(
+                        img(preview.image.clone())
+                            .absolute()
+                            .left(relative(-0.06))
+                            .top(px(-metrics::welcome::THUMB_HEIGHT * 0.06))
+                            .w(relative(1.12))
+                            .h(px(metrics::welcome::THUMB_HEIGHT * 1.12))
+                            .object_fit(ObjectFit::Contain),
+                    ),
+            )
             .into_any_element(),
         Some(None) => icon("cube").text_color(theme.muted()).into_any_element(),
         None => div()
-            .size(px(metrics::RECENT_PREVIEW))
+            .w(px(metrics::welcome::THUMB_WIDTH))
+            .h(px(metrics::welcome::THUMB_HEIGHT))
             .overflow_hidden()
             .child(
                 AsciiSkeleton::new(("recent-loading", index), theme)
@@ -153,6 +190,50 @@ pub(super) fn recent_element(
                     .reduced_motion(reduced),
             )
             .into_any_element(),
+    }
+}
+
+impl EditorView {
+    pub(super) fn scene_loading(&self) -> Div {
+        let t = self.theme;
+        div()
+            .absolute()
+            .inset_0()
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(
+                div().w(px(metrics::SCENE_LOADING_WIDTH)).child(
+                    voxelite_ui::AsciiSkeleton::new("scene-loading", t)
+                        .rows(12)
+                        .reduced_motion(self.reduced_motion),
+                ),
+            )
+    }
+    pub(super) fn scene_heading(&self) -> Div {
+        let t = self.theme;
+        div()
+            .absolute()
+            .top(px(space::PANEL))
+            .left(px(space::XXL))
+            .child(
+                row().gap(px(space::INSET)).text_color(t.muted()).child(
+                    voxelite_ui::AsciiReveal::new(
+                        "scene-view",
+                        match self.camera_view {
+                            Some(Op::Front) => "Front",
+                            Some(Op::Right) => "Right",
+                            Some(Op::Top) => "Top",
+                            Some(Op::Frame) => "Isometric",
+                            _ => "Orthographic",
+                        },
+                        t,
+                    )
+                    .loading(!self.viewport.has_frame() && self.viewport.rendering())
+                    .started_at(self.viewport.reveal_started())
+                    .reduced_motion(self.reduced_motion),
+                ),
+            )
     }
 }
 
@@ -201,5 +282,27 @@ mod tests {
         let file = tempfile::NamedTempFile::new().unwrap();
         std::fs::write(file.path(), b"not a PNG").unwrap();
         assert!(recent(file.path()).is_err());
+    }
+    #[test]
+    fn welcome_cache_pixels_fit_the_split_layout_in_both_themes() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut encoder = png::Encoder::new(file.reopen().unwrap(), 640, 480);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder
+            .write_header()
+            .unwrap()
+            .write_image_data(&vec![0; 640 * 480 * 4])
+            .unwrap();
+        let preview = recent(file.path()).unwrap().ready();
+        for (media, theme) in preview.media.iter().zip([Theme::Dark, Theme::Light]) {
+            assert_eq!(media.size(), [60, 46]);
+            let color: Rgba = theme.background().blend(theme.hover().opacity(0.5)).into();
+            assert_eq!(
+                media.options().background,
+                [color.r, color.g, color.b].map(|value| (value * 255.).round() as u8)
+            );
+        }
+        assert_eq!(preview.image.as_bytes(0).unwrap().len(), 640 * 480 * 4);
     }
 }

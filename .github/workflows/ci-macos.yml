@@ -152,18 +152,18 @@ jobs:
           fi
       # Formatting runs in CI Linux; the scripts job runs the portable task checks.
       - name: Clippy
-        run: cargo clippy --workspace --locked -- -D warnings
+        run: cargo clippy --workspace --locked --features voxelite-app/test-support -- -D warnings
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest@0.9.150
 
       - name: Test workspace
-        run: cargo nextest run --workspace --locked --profile ci
+        run: cargo nextest run --workspace --locked --features voxelite-app/test-support --profile ci
 
       - name: Test doctests (--workspace)
         if: ${{ !cancelled() }}
-        run: cargo test --doc --workspace --locked
+        run: cargo test --doc --workspace --locked --features voxelite-app/test-support
       - name: Build app and unsigned DMG
         if: needs.changes.outputs.package == 'true'
         run: cargo xtask macos package

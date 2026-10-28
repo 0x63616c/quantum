@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
 
 /// Maximum number of projects retained in the history.
@@ -106,10 +106,19 @@ impl Recents {
     }
 
     fn write(&self, projects: &[RecentProject]) -> EditorResult<()> {
+        let mut projects = projects.to_vec();
+        // The v1 timestamp encoding is unsigned. Modification times are always
+        // refreshed from disk on load, so persist an epoch placeholder for old
+        // files instead of failing to record them or changing the file format.
+        for project in &mut projects {
+            if project.modified < SystemTime::UNIX_EPOCH {
+                project.modified = SystemTime::UNIX_EPOCH;
+            }
+        }
         Ok(
             local_settings::json_store::<History>(&self.path)?.save(&History {
                 version: 1,
-                projects: projects.to_vec(),
+                projects,
             })?,
         )
     }
@@ -129,23 +138,105 @@ pub fn display_path(path: &Path, home: Option<&Path>) -> String {
     path.display().to_string()
 }
 
-/// A compact relative file-modification label, including future clock skew.
+/// Display the containing folder, abbreviating only the actual home directory.
+pub fn folder_label(path: &Path, home: Option<&Path>) -> String {
+    display_path(path.parent().unwrap_or(path), home)
+}
+
+/// Calendar-style modification time in the user's local timezone.
 pub fn modified_label(modified: SystemTime, now: SystemTime) -> String {
-    let seconds = now
-        .duration_since(modified)
-        .unwrap_or(Duration::ZERO)
-        .as_secs();
-    match seconds {
-        0..60 => "Just now".into(),
-        60..3600 => format!("{}m ago", seconds / 60),
-        3600..86400 => format!("{}h ago", seconds / 3600),
-        _ => format!("{}d ago", seconds / 86400),
-    }
+    use chrono::TimeZone;
+    modified_label_with_offset(modified, now, |utc| {
+        chrono::Local.offset_from_utc_datetime(&utc.naive_utc())
+    })
+}
+
+// Resolve each instant's offset separately: applying today's offset to an old
+// mtime gets calendar boundaries wrong across daylight-saving transitions.
+fn modified_label_with_offset(
+    modified: SystemTime,
+    now: SystemTime,
+    offset: impl Fn(chrono::DateTime<chrono::Utc>) -> chrono::FixedOffset,
+) -> String {
+    let utc = |time: SystemTime| {
+        let nanos = match time.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => i128::try_from(duration.as_nanos()).ok()?,
+            Err(error) => -i128::try_from(error.duration().as_nanos()).ok()?,
+        };
+        chrono::DateTime::from_timestamp(
+            i64::try_from(nanos.div_euclid(1_000_000_000)).ok()?,
+            nanos.rem_euclid(1_000_000_000) as u32,
+        )
+    };
+    let label = || {
+        let modified = utc(modified)?;
+        let now = utc(now)?;
+        // A UTC instant can be representable while its local date overflows.
+        // Never call DateTime::date_naive/format before checking that boundary.
+        let modified_date = modified
+            .naive_utc()
+            .checked_add_offset(offset(modified))?
+            .date();
+        let now_date = now.naive_utc().checked_add_offset(offset(now))?.date();
+        let seconds = now.signed_duration_since(modified).num_seconds().max(0);
+        if now < modified {
+            return Some("Just now".into());
+        }
+        let days = now_date.signed_duration_since(modified_date).num_days();
+        if days == 1 {
+            return Some("Yesterday".into());
+        }
+        if days == 0 {
+            if seconds < 60 {
+                return Some("Just now".into());
+            }
+            let (count, unit) = if seconds < 3600 {
+                (seconds / 60, "minute")
+            } else {
+                (seconds / 3600, "hour")
+            };
+            return Some(format!(
+                "{count} {unit}{} ago",
+                if count == 1 { "" } else { "s" }
+            ));
+        }
+        use chrono::Datelike;
+        Some(
+            modified_date
+                .format(if modified_date.year() == now_date.year() {
+                    "%b %-d"
+                } else {
+                    "%b %-d, %Y"
+                })
+                .to_string(),
+        )
+    };
+    label().unwrap_or_else(|| "Unknown date".into())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pre_epoch_files_round_trip_without_changing_the_v1_encoding() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("old.voxl");
+        std::fs::write(&file, b"project").unwrap();
+        let modified = SystemTime::UNIX_EPOCH - std::time::Duration::from_secs(86400);
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(modified)
+            .unwrap();
+        let recents = Recents::new(dir.path());
+        assert_eq!(
+            recents.record(&file, "Old project").unwrap()[0].modified,
+            modified
+        );
+        assert_eq!(recents.load().unwrap()[0].modified, modified);
+    }
     use std::fs;
 
     #[test]
@@ -252,21 +343,243 @@ mod tests {
             display_path(Path::new("/home/calum-other/project.voxl"), home),
             "/home/calum-other/project.voxl"
         );
-        let now = SystemTime::UNIX_EPOCH + Duration::from_secs(100_000);
-        for (seconds, label) in [
-            (0, "Just now"),
-            (60, "1m ago"),
-            (3600, "1h ago"),
-            (86400, "1d ago"),
-        ] {
+        assert_eq!(
+            folder_label(Path::new("/home/calum/Quantum/a.voxl"), home),
+            "~/Quantum"
+        );
+        assert_eq!(folder_label(Path::new("/home/calum/a.voxl"), home), "~");
+        assert_eq!(
+            folder_label(Path::new("/home/calum-other/a.voxl"), home),
+            "/home/calum-other"
+        );
+    }
+
+    fn instant(value: &str) -> SystemTime {
+        chrono::DateTime::parse_from_rfc3339(value).unwrap().into()
+    }
+
+    #[test]
+    fn system_timezone_handles_local_midnight_and_calendar_overflow() {
+        use chrono::{DateTime, Local, TimeZone, Utc};
+        use std::time::Duration;
+
+        // Exercise the public formatter in each TZ test run, without mutating
+        // the process environment while other tests are running.
+        let midnight: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 27, 0, 5, 0)
+            .single()
+            .unwrap()
+            .into();
+        assert_eq!(
+            modified_label(midnight - Duration::from_secs(600), midnight),
+            "Yesterday"
+        );
+        let midnight = midnight - Duration::from_secs(5 * 60 - 15);
+        assert_eq!(
+            modified_label(midnight - Duration::from_secs(30), midnight),
+            "Yesterday"
+        );
+        for boundary in [DateTime::<Utc>::MIN_UTC, DateTime::<Utc>::MAX_UTC] {
+            let label = modified_label(boundary.into(), midnight);
+            let reverse = modified_label(midnight, boundary.into());
+            let offset = Local.offset_from_utc_datetime(&boundary.naive_utc());
+            if (boundary == DateTime::<Utc>::MAX_UTC && offset.local_minus_utc() > 0)
+                || (boundary == DateTime::<Utc>::MIN_UTC && offset.local_minus_utc() < 0)
+            {
+                assert_eq!(label, "Unknown date");
+                assert_eq!(reverse, "Unknown date");
+            }
+        }
+    }
+
+    #[test]
+    fn system_timezone_buckets_calendar_days_across_both_dst_transitions() {
+        use chrono::{Local, TimeZone};
+        use std::time::Duration;
+
+        // These are the 2026 transition days in Los Angeles and Auckland.
+        // Run the public Local-based formatter under each TZ without changing
+        // environment variables inside the multithreaded test process.
+        for (month, day) in [(3, 8), (11, 1), (4, 5), (9, 27)] {
+            let date = chrono::NaiveDate::from_ymd_opt(2026, month, day).unwrap();
+            let local = |days, hour, minute| -> SystemTime {
+                let date = date + chrono::Duration::days(days);
+                Local
+                    .from_local_datetime(&date.and_hms_opt(hour, minute, 0).unwrap())
+                    .single()
+                    .unwrap()
+                    .into()
+            };
+            let now = local(0, 4, 0);
+            assert_eq!(modified_label(local(-1, 23, 30), now), "Yesterday");
             assert_eq!(
-                modified_label(now - Duration::from_secs(seconds), now),
-                label
+                modified_label(now - Duration::from_secs(7200), now),
+                "2 hours ago"
+            );
+            // The previous calendar day can be more than 24 elapsed hours away.
+            assert_eq!(modified_label(local(0, 0, 30), local(1, 0, 5)), "Yesterday");
+        }
+        let now: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 27, 12, 0, 0)
+            .single()
+            .unwrap()
+            .into();
+        let modified: SystemTime = Local
+            .with_ymd_and_hms(2026, 10, 25, 23, 59, 0)
+            .single()
+            .unwrap()
+            .into();
+        assert_eq!(modified_label(modified, now), "Oct 25");
+    }
+
+    fn label(modified: SystemTime, now: SystemTime, east: i32) -> String {
+        modified_label_with_offset(modified, now, |_| {
+            chrono::FixedOffset::east_opt(east).unwrap()
+        })
+    }
+
+    #[test]
+    fn calendar_times_handle_midnight_years_and_clock_skew_without_machine_timezone() {
+        use std::time::Duration;
+        let now = instant("2026-10-27T12:00:00Z");
+        for (seconds, expected) in [
+            (0, "Just now"),
+            (60, "1 minute ago"),
+            (120, "2 minutes ago"),
+            (3600, "1 hour ago"),
+            (7200, "2 hours ago"),
+            (86400, "Yesterday"),
+            (3 * 86400, "Oct 24"),
+        ] {
+            assert_eq!(label(now - Duration::from_secs(seconds), now, 0), expected);
+        }
+        for seconds in [1, 3600, 86400, 365 * 86400] {
+            assert_eq!(
+                label(now + Duration::from_secs(seconds), now, 0),
+                "Just now"
             );
         }
         assert_eq!(
-            modified_label(now + Duration::from_secs(100), now),
-            "Just now"
+            label(instant("2025-10-27T12:00:00Z"), now, 0),
+            "Oct 27, 2025"
         );
+        for offset in [-12 * 3600, -7 * 3600, 0, 5 * 3600 + 1800, 13 * 3600] {
+            // The same local midnight in each injected timezone.
+            let midnight = instant("2026-10-27T00:05:00Z");
+            let midnight = if offset >= 0 {
+                midnight - Duration::from_secs(offset as u64)
+            } else {
+                midnight + Duration::from_secs((-offset) as u64)
+            };
+            assert_eq!(
+                label(midnight - Duration::from_secs(600), midnight, offset),
+                "Yesterday"
+            );
+        }
+        let modified = instant("2026-10-26T23:30:00Z");
+        let now = instant("2026-10-27T01:30:00Z");
+        assert_eq!(label(modified, now, 0), "Yesterday");
+        assert_eq!(label(modified, now, 13 * 3600), "2 hours ago");
+        assert_eq!(label(modified, now, -7 * 3600), "2 hours ago");
+    }
+
+    #[test]
+    fn daylight_saving_uses_each_instants_offset_and_elapsed_utc_time() {
+        for (modified, now, transition, before, after, expected) in [
+            (
+                "2026-03-08T09:30:00Z",
+                "2026-03-08T10:30:00Z",
+                "2026-03-08T10:00:00Z",
+                -8,
+                -7,
+                "1 hour ago",
+            ),
+            (
+                "2026-11-01T08:30:00Z",
+                "2026-11-01T09:30:00Z",
+                "2026-11-01T09:00:00Z",
+                -7,
+                -8,
+                "1 hour ago",
+            ),
+            // Applying the new offset to the old instant would change its date.
+            (
+                "2026-03-08T07:30:00Z",
+                "2026-03-08T11:00:00Z",
+                "2026-03-08T10:00:00Z",
+                -8,
+                -7,
+                "Yesterday",
+            ),
+            (
+                "2026-11-01T07:30:00Z",
+                "2026-11-01T11:00:00Z",
+                "2026-11-01T09:00:00Z",
+                -7,
+                -8,
+                "3 hours ago",
+            ),
+            (
+                "2026-09-26T11:30:00Z",
+                "2026-09-26T15:00:00Z",
+                "2026-09-26T14:00:00Z",
+                12,
+                13,
+                "Yesterday",
+            ),
+        ] {
+            let transition = instant(transition);
+            assert_eq!(
+                modified_label_with_offset(instant(modified), instant(now), |utc| {
+                    let east = if SystemTime::from(utc) < transition {
+                        before
+                    } else {
+                        after
+                    };
+                    chrono::FixedOffset::east_opt(east * 3600).unwrap()
+                }),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn pre_epoch_and_out_of_calendar_range_timestamps_do_not_panic() {
+        use chrono::{DateTime, Utc};
+        use std::time::Duration;
+        let epoch = SystemTime::UNIX_EPOCH;
+        assert_eq!(
+            label(
+                epoch - Duration::from_nanos(1),
+                epoch + Duration::from_secs(120),
+                0
+            ),
+            "Yesterday"
+        );
+        assert_eq!(
+            label(
+                epoch - Duration::from_secs(86400),
+                instant("2026-10-27T12:00:00Z"),
+                0
+            ),
+            "Dec 31, 1969"
+        );
+        for (time, offset) in [
+            (DateTime::<Utc>::MAX_UTC, 3600),
+            (DateTime::<Utc>::MIN_UTC, -3600),
+        ] {
+            assert_eq!(label(time.into(), epoch, offset), "Unknown date");
+            assert_eq!(label(epoch, time.into(), offset), "Unknown date");
+        }
+        for time in [
+            epoch.checked_add(Duration::from_secs(i64::MAX as u64)),
+            epoch.checked_sub(Duration::from_secs(i64::MAX as u64)),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            assert_eq!(label(time, epoch, 0), "Unknown date");
+            assert_eq!(label(epoch, time, 0), "Unknown date");
+        }
     }
 }

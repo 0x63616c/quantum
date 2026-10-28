@@ -92,6 +92,7 @@ Linux column denotes a macOS-only command.
 | --- | --- | --- |
 | New project | ⌘N | Ctrl+N |
 | Open project… | ⌘O | Ctrl+O |
+| Open Sample… | ⇧⌘O | Ctrl+Shift+O |
 | Save | ⌘S | Ctrl+S |
 | Save as… | ⇧⌘S | Ctrl+Shift+S |
 | Quit Quantum | ⌘Q | Ctrl+Q |
@@ -162,9 +163,16 @@ undoable. History and the connected MCP feed show actual edits and counts.
 
 ## Files and rendering
 
-The welcome window offers **New Project**, **Open…**, and up to 12 recent projects.
-Tab moves between controls; focus Recent and use Up/Down, then Enter to open, or
-double-click a row. Opening or creating a project closes Welcome and shows the
+The split welcome window offers **New Project**, **Open…**, **Open Sample…**
+(Cmd/Ctrl+Shift+O), and up to 12 recent projects. **Show at launch** is saved in
+`settings.json`; turning it off starts a blank editor when no path is supplied.
+Desktop settings writes run on the background executor, coalesce rapid changes,
+and drain on graceful exit. Older settings files default to showing Welcome.
+Tab (Shift+Tab in reverse) cycles through New Project, Open, Open Sample,
+Show at launch, and the project list. Up/Down traverse recents followed by all
+four samples in display order, clamping at either end; Enter opens the selection.
+Left/Right also step through that order. Open Sample focuses the first sample.
+Escape or Cmd/Ctrl+W closes Welcome, returning to an existing editor. Opening or creating a project closes Welcome and shows the
 editor. If an editor is already open, its Save/Discard/Cancel flow protects edits.
 **Window → Welcome** (Cmd/Ctrl+Shift+1) reopens the launcher; the native
 **File → Open Recent** submenu opens a recent project directly. **Clear Recent
@@ -173,10 +181,36 @@ window quits, following the existing desktop lifecycle.
 
 Recent projects persist in versioned `recents.json` beside `settings.json`, with
 canonical-path deduplication and missing files filtered out. The `thumbnails/`
-cache stores small CPU-rendered PNGs of saved documents, keyed by canonical path
-and file modification time. Saves update the preview; missing/stale previews are
+cache stores 640 × 480 CPU-rendered PNGs of saved documents, keyed by canonical path
+and file modification time/length plus renderer version. Saves update the preview; missing/stale previews are
 rendered lazily in the background while Welcome shows a placeholder. Preview
-failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
+failures do not prevent opening or saving. Cache hits are decoded within a fixed
+preview budget; damaged entries regenerate without touching the project.
+`VOXELITE_DATA_DIR` isolates both stores.
+The same sample cards appear in a two-column grid for an empty history and a
+four-column strip pinned below recents and a divider. The compact cards show
+only titles; the empty-history grid also shows voxel and layer counts.
+Long histories scroll above the strip; short histories leave spare space between
+the list and divider. Names and metadata stay on one line and ellipsize within each card;
+the full sample name remains available in its tooltip.
+
+Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin are embedded `.voxl`
+projects. Samples open as untitled copies (no destination path) through the same
+unsaved-change flow as file opens. Never-saved sessions also require confirmation
+before New, Open, close or quit, even before the first edit. Save opens the path
+picker; cancellation or failure keeps the copy open and unsaved. Only a successful
+project save adopts a destination; exporting does not satisfy Save/Discard/Cancel.
+The three new projects total about 235 KB;
+Autumn Workshop was already embedded, so packaging needs no extra resources.
+Sample counts come from the documents. Both samples and recents use the same
+opt-in renderer treatment: isometric framing, directional face light, per-voxel
+occlusion, soft contact shadow, transparency and 2× supersampling. A process-wide
+render gate bounds concurrency; callers wait asynchronously before dispatching
+blocking work. Repeat saves coalesce in a queue capped at 12 paths. Welcome owns
+its decoded image cache and evicts obsolete revisions (at most 12 recent previews,
+4 sample previews and the brand mark). One image at a time progressively replaces
+a quiet placeholder. The regular viewport and export defaults are unchanged.
+
 `--example` opens the bundled Autumn Workshop with no write destination, including
 in the existing editor capture scripts. `--viewport-png` without a path still
 renders that bundled example without opening a window.
@@ -401,3 +435,11 @@ UI action glyphs are bundled Lucide SVGs with upstream ISC/Feather MIT notices i
 keyboard guide to its right. The viewport mouse/key legend has
 a full hover tooltip. Text fields support selection contraction/reversal,
 clipboard, IME range conversion, pointer selection and horizontal caret scrolling.
+
+### Native integration tests
+
+`cargo test -p voxelite-app --locked --features test-support` also exercises real
+GPUI key dispatch and settings/history shutdown using its deterministic test
+executor. CI enables this feature for workspace tests and Clippy. It is separate
+from `native` so production builds and `--no-default-features` model tests do not
+pull in GPUI's testing dependencies.
