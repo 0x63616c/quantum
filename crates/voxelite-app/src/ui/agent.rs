@@ -135,42 +135,7 @@ impl EditorView {
         let t = self.theme;
         let paused = self.agent.session.as_ref().is_some_and(|s| s.paused);
         if self.agent.events.is_empty() {
-            let connected = self.agent.clients > 0;
-            let has_history = self.editor.engine.history().next().is_some();
-            let invitation = Panel::section(t)
-                .px(px(PANEL_GUTTER))
-                .py(px(if compact { space::XL } else { space::PANEL }))
-                .when(connected, |d| {
-                    d.child(section_title("Ready for agent edits")).child(
-                        div()
-                            .mt(px(space::SM))
-                            .text_color(t.muted())
-                            .child("Edits will appear here as they happen."),
-                    )
-                })
-                .when(!connected, |d| {
-                    d.child(self.control(
-                        "connect-agent",
-                        "plug",
-                        "Connect agent",
-                        cx,
-                        |this, _, cx| {
-                            this.agent.open = true;
-                            cx.notify();
-                        },
-                    ))
-                });
-            return div()
-                .flex_shrink_0()
-                .flex()
-                .flex_col()
-                .child(invitation)
-                .when(has_history, |d| {
-                    d.child(
-                        self.history_panel(true, cx)
-                            .h(px(metrics::AGENT_HISTORY_HEIGHT)),
-                    )
-                });
+            return self.agent_invitation(compact, cx);
         }
         Panel::section(t)
             .flex_1()
@@ -439,4 +404,46 @@ fn preset(name: &str) -> Option<PresetView> {
         "top" => PresetView::Top,
         _ => return None,
     })
+}
+
+impl EditorView {
+    fn agent_invitation(&self, compact: bool, cx: &Context<Self>) -> Div {
+        let t = self.theme;
+        let connected = self.agent.clients > 0;
+        let has_history = self.editor.engine.history().next().is_some();
+        let invitation = Panel::section(t)
+            .px(px(PANEL_GUTTER))
+            .py(px(if compact { space::XL } else { space::PANEL }))
+            .when(connected, |d| {
+                d.child(section_title("Ready for agent edits")).child(
+                    div()
+                        .mt(px(space::SM))
+                        .text_color(t.muted())
+                        .child("Edits will appear here as they happen."),
+                )
+            })
+            .when(!connected, |d| {
+                d.child(self.control(
+                    "connect-agent",
+                    "plug",
+                    "Connect agent",
+                    cx,
+                    |this, _, cx| {
+                        this.agent.open = true;
+                        cx.notify();
+                    },
+                ))
+            });
+        div()
+            .flex_shrink_0()
+            .flex()
+            .flex_col()
+            .child(invitation)
+            .when(has_history, |d| {
+                d.child(
+                    self.history_panel(true, cx)
+                        .h(px(metrics::AGENT_HISTORY_HEIGHT)),
+                )
+            })
+    }
 }

@@ -42,7 +42,9 @@ jobs:
       - name: Lint
         env:
           LINT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD' }}
-        run: cargo xtask lint
+        run: |
+          cargo xtask lint
+          cargo clippy --workspace --all-targets --locked --features voxelite-app/test-support -- -D warnings
 
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
@@ -50,11 +52,11 @@ jobs:
           tool: cargo-nextest@0.9.150
 
       - name: Test workspace
-        run: cargo nextest run --workspace --locked --profile ci
+        run: cargo nextest run --workspace --locked --features voxelite-app/test-support --profile ci
 
       - name: Test doctests (--workspace)
         if: ${{ !cancelled() }}
-        run: cargo test --doc --workspace --locked
+        run: cargo test --doc --workspace --locked --features voxelite-app/test-support
 
       - name: Check repository hygiene
         run: cargo xtask check tidy

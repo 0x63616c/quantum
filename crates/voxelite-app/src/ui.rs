@@ -22,6 +22,7 @@ mod settings;
 mod shortcut_hint;
 mod tooltip;
 pub(crate) mod welcome;
+mod welcome_style;
 use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
 use crate::{
@@ -205,10 +206,7 @@ impl EditorView {
         let weak = cx.weak_entity();
         window.on_window_should_close(cx, move |_, cx| {
             weak.update(cx, |this, cx| {
-                match this
-                    .save_flow
-                    .request_close(|| this.editor.engine.is_dirty())
-                {
+                match this.save_flow.request_close(|| this.editor.needs_save()) {
                     save_flow::CloseRequest::Allow => true,
                     save_flow::CloseRequest::Blocked => false,
                     save_flow::CloseRequest::Confirm => {
@@ -466,7 +464,7 @@ impl EditorView {
         self.palette_open = false;
         if self
             .save_flow
-            .confirm_if_dirty(op, || self.editor.engine.is_dirty())
+            .confirm_if_dirty(op, || self.editor.needs_save())
         {
             cx.notify();
             return;
@@ -540,9 +538,8 @@ impl EditorView {
                 }
             },
             Op::Open => self.open_dialog(cx),
-            Op::OpenRecent | Op::Welcome => {
-                cx.defer(|cx| { if let Err(error) = welcome::show(cx) { eprintln!("Could not open welcome window: {error}"); } });
-            }
+            Op::OpenSample => welcome::show_deferred(true, cx),
+            Op::OpenRecent | Op::Welcome => welcome::show_deferred(false, cx),
             Op::ClearRecents => welcome::clear(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
@@ -1151,48 +1148,9 @@ impl EditorView {
             .child(surface)
             .when(
                 !self.viewport.has_frame() && self.viewport.rendering(),
-                |d| {
-                    d.child(
-                        div()
-                            .absolute()
-                            .inset_0()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .child(
-                                div().w(px(metrics::SCENE_LOADING_WIDTH)).child(
-                                    voxelite_ui::AsciiSkeleton::new("scene-loading", t)
-                                        .rows(12)
-                                        .reduced_motion(self.reduced_motion),
-                                ),
-                            ),
-                    )
-                },
+                |d| d.child(self.scene_loading()),
             )
-            .child(
-                div()
-                    .absolute()
-                    .top(px(space::PANEL))
-                    .left(px(space::XXL))
-                    .child(
-                        row().gap(px(space::INSET)).text_color(t.muted()).child(
-                            voxelite_ui::AsciiReveal::new(
-                                "scene-view",
-                                match self.camera_view {
-                                    Some(Op::Front) => "Front",
-                                    Some(Op::Right) => "Right",
-                                    Some(Op::Top) => "Top",
-                                    Some(Op::Frame) => "Isometric",
-                                    _ => "Orthographic",
-                                },
-                                t,
-                            )
-                            .loading(!self.viewport.has_frame() && self.viewport.rendering())
-                            .started_at(self.viewport.reveal_started())
-                            .reduced_motion(self.reduced_motion),
-                        ),
-                    ),
-            )
+            .child(self.scene_heading())
             .children(self.comment_pins(cx))
             .when(self.editor.preview.is_some(), |d| {
                 d.child(
@@ -1978,62 +1936,7 @@ impl EditorView {
             return Some(self.palette_manager(cx));
         }
         if self.save_flow.dialog_open() {
-            return Some(
-                div()
-                    .absolute()
-                    .size_full()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .bg(t.app_scrim())
-                    .child(
-                        self.floating()
-                            .p(px(space::XXL))
-                            .child(
-                                row()
-                                    .gap(px(space::SM))
-                                    .when(self.save_flow.picker.waiting(), |d| {
-                                        let reduced =
-                                            voxelite_app::reduce_motion::prefers_reduced_motion();
-                                        d.child(
-                                            voxelite_ui::Spinner::new("save-picker-spinner", t)
-                                                .reduced_motion(
-                                                    reduced || self.capture_state.is_some(),
-                                                ),
-                                        )
-                                    })
-                                    .child(
-                                        if self.save_flow.working()
-                                            && let Some(text) = self.status.plain_text()
-                                        {
-                                            voxelite_ui::AsciiReveal::new(
-                                                "io-dialog-progress",
-                                                text.to_owned(),
-                                                t,
-                                            )
-                                            .loading(true)
-                                            .reduced_motion(self.reduced_motion)
-                                            .into_any_element()
-                                        } else {
-                                            self.status.clone().into_any_element()
-                                        },
-                                    ),
-                            )
-                            .when(self.save_flow.picker.waiting(), |d| {
-                                d.child(
-                                    row().mt(px(space::XL)).child(
-                                        Button::new("cancel-save-picker", "Cancel", t)
-                                            .build()
-                                            .on_click(cx.listener(|this, _, window, cx| {
-                                                this.cancel_save_picker(cx);
-                                                window.focus(&this.focus, cx);
-                                            })),
-                                    ),
-                                )
-                            }),
-                    )
-                    .into_any_element(),
-            );
+            return Some(self.working_dialog(cx));
         }
         if self.save_flow.needs_confirmation() {
             return Some(

@@ -135,16 +135,16 @@ fn main() {
     let reduced = args.iter().any(|s| s == "--reduced-motion")
         || voxelite_app::reduce_motion::prefers_reduced_motion();
     gpui_platform::application().run(move |cx| {
-        cx.text_system()
-            .add_fonts(vec![
-                std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/Geist.ttf").as_slice()),
-                std::borrow::Cow::Borrowed(
-                    include_bytes!("../assets/fonts/GeistMono.ttf").as_slice(),
-                ),
-            ])
-            .expect("bundled fonts");
+        if let Err(error) = cx.text_system().add_fonts(vec![
+            std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/Geist.ttf").as_slice()),
+            std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono.ttf").as_slice()),
+        ]) {
+            eprintln!("Cannot load gallery fonts: {error}");
+            cx.quit();
+            return;
+        }
         cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
-        cx.open_window(
+        if let Err(error) = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                     None,
@@ -173,8 +173,10 @@ fn main() {
                     demo
                 })
             },
-        )
-        .expect("open gallery");
+        ) {
+            eprintln!("Cannot open loading gallery: {error}");
+            cx.quit();
+        }
         cx.activate(true);
     });
 }
