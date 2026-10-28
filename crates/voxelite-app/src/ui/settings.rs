@@ -7,6 +7,7 @@ use crate::{
     theme::Theme,
 };
 use gpui::{prelude::*, *};
+use std::sync::{Arc, Mutex};
 use voxelite_app::preferences::{Appearance, Preferences};
 use voxelite_render::AmbientOcclusionStrength;
 use voxelite_ui::tokens::{metrics, radius, space, type_size};
@@ -37,6 +38,15 @@ pub(super) fn init_loaded(
     loaded: voxelite_app::editor::EditorResult<Preferences>,
     cx: &mut App,
 ) {
+    init_at(override_theme, loaded, path(), cx);
+}
+
+fn init_at(
+    override_theme: Option<Theme>,
+    loaded: voxelite_app::editor::EditorResult<Preferences>,
+    destination: std::path::PathBuf,
+    cx: &mut App,
+) {
     let (mut values, error) = match loaded {
         Ok(values) => (values, None),
         Err(error) => (
@@ -56,32 +66,77 @@ pub(super) fn init_loaded(
         values: values.clone(),
         error,
     });
-    {
-        cx.set_global(SettingsWrites {
+    cx.set_global(SettingsWrites {
+        queue: Arc::new(Mutex::new(WriteQueue {
             committed: values,
-            ..Default::default()
-        });
-        cx.on_app_quit(|cx| {
-            let task = cx.global_mut::<SettingsWrites>().task.take();
-            async move {
-                if let Some(task) = task {
-                    task.await;
-                }
+            pending: None,
+            running: false,
+            error: None,
+        })),
+        save: Arc::new(move |values| values.save(&destination)),
+        worker: None,
+        notification: None,
+    });
+    cx.on_app_quit(|cx| {
+        let writes = cx.global_mut::<SettingsWrites>();
+        // Shutdown holds the App borrow. Cancel UI notifications before waiting
+        // for the independent disk worker; it must never re-enter GPUI here.
+        writes.notification.take();
+        let worker = writes.worker.take();
+        async move {
+            if let Some(worker) = worker {
+                worker.await;
             }
-        })
-        .detach();
-    }
+        }
+    })
+    .detach();
 }
 
-// One writer, with at most one pending snapshot. Rapid changes cannot reorder
-// durable preferences or accumulate an unbounded chain of jobs.
-#[derive(Default)]
-struct SettingsWrites {
+struct WriteQueue {
     committed: Preferences,
     pending: Option<Preferences>,
-    task: Option<Task<()>>,
+    running: bool,
+    error: Option<String>,
+}
+
+type SavePreferences = dyn Fn(&Preferences) -> voxelite_app::editor::EditorResult<()> + Send + Sync;
+
+struct SettingsWrites {
+    queue: Arc<Mutex<WriteQueue>>,
+    save: Arc<SavePreferences>,
+    worker: Option<Task<()>>,
+    notification: Option<Task<()>>,
 }
 impl Global for SettingsWrites {}
+
+// Only disk work and the bounded queue live on this worker. Taking the next
+// snapshot and transitioning to idle share a lock, so no edit can be stranded.
+fn drain_writes(queue: &Mutex<WriteQueue>, save: &SavePreferences) {
+    loop {
+        let pending = {
+            let mut queue = queue.lock().unwrap_or_else(|e| e.into_inner());
+            match queue.pending.take() {
+                Some(pending) => pending,
+                None => {
+                    queue.running = false;
+                    return;
+                }
+            }
+        };
+        let result = save(&pending);
+        let mut queue = queue.lock().unwrap_or_else(|e| e.into_inner());
+        match result {
+            Ok(()) => {
+                queue.committed = pending;
+                queue.error = None;
+            }
+            Err(error) => {
+                queue.error = Some(format!("Settings were not saved: {error}"));
+                eprintln!("Settings were not saved: {error}");
+            }
+        }
+    }
+}
 
 fn apply_appearance(appearance: Appearance, cx: &App) {
     cx.set_window_appearance(match appearance {
@@ -102,55 +157,49 @@ pub(super) fn theme(appearance: Appearance, window: &Window) -> Theme {
 }
 pub(super) fn change(cx: &mut App, edit: impl FnOnce(&mut Preferences)) {
     let mut state = cx.global::<SettingsState>().clone();
-    let mut next = state.values.clone();
-    edit(&mut next);
+    edit(&mut state.values);
+    apply_appearance(state.values.appearance, cx);
+    let next = state.values.clone();
+    cx.set_global(state);
+    let writes = cx.global_mut::<SettingsWrites>();
     {
-        apply_appearance(next.appearance, cx);
-        state.values = next.clone();
-        cx.set_global(state);
-        let writes = cx.global_mut::<SettingsWrites>();
-        writes.pending = Some(next);
-        if writes.task.is_some() {
+        let mut queue = writes.queue.lock().unwrap_or_else(|e| e.into_inner());
+        queue.pending = Some(next);
+        if queue.running {
             return;
         }
-        let task = cx.spawn(async move |cx| {
-            loop {
-                let pending = cx.update(|cx| cx.global_mut::<SettingsWrites>().pending.take());
-                let Some(pending) = pending else {
-                    break;
-                };
-                let saving = pending.clone();
-                let result = cx
-                    .background_executor()
-                    .spawn(async move { saving.save(&path()) })
-                    .await;
-                cx.update(|cx| {
-                    let writes = cx.global_mut::<SettingsWrites>();
-                    let revert = if result.is_ok() {
-                        writes.committed = pending;
-                        None
-                    } else {
-                        // Preserve a newer queued edit; otherwise restore the last
-                        // durable preferences instead of showing an unsaved toggle.
-                        writes.pending.is_none().then(|| writes.committed.clone())
-                    };
-                    if let Some(values) = &revert {
-                        apply_appearance(values.appearance, cx);
-                    }
-                    cx.update_global::<SettingsState, _>(|state, _| {
-                        if let Some(values) = revert {
-                            state.values = values;
-                        }
-                        state.error = result
-                            .err()
-                            .map(|error| format!("Settings were not saved: {error}"));
-                    });
-                });
-            }
-            cx.update(|cx| cx.global_mut::<SettingsWrites>().task = None);
-        });
-        cx.global_mut::<SettingsWrites>().task = Some(task);
+        queue.running = true;
     }
+    // Any prior notification describes an older batch. Read the latest durable
+    // snapshot after this worker finishes, including edits coalesced during I/O.
+    writes.notification.take();
+    let queue = writes.queue.clone();
+    let save = writes.save.clone();
+    let (done, receive) = futures_channel::oneshot::channel();
+    let worker = cx.background_executor().spawn(async move {
+        drain_writes(&queue, &*save);
+        let _ = done.send(());
+    });
+    let notification = cx.spawn(async move |cx| {
+        if receive.await.is_err() {
+            return;
+        }
+        cx.update(|cx| {
+            let (values, error) = {
+                let writes = cx.global::<SettingsWrites>();
+                let queue = writes.queue.lock().unwrap_or_else(|e| e.into_inner());
+                (queue.committed.clone(), queue.error.clone())
+            };
+            apply_appearance(values.appearance, cx);
+            cx.update_global::<SettingsState, _>(|state, _| {
+                state.values = values;
+                state.error = error;
+            });
+        });
+    });
+    let writes = cx.global_mut::<SettingsWrites>();
+    writes.worker = Some(worker);
+    writes.notification = Some(notification);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1330,6 +1379,135 @@ impl EditorView {
 mod tests {
     use super::{SearchResult, Section, SectionHistory, search_sections};
     use crate::actions::Op;
+
+    fn init_writer(cx: &gpui::TestAppContext, path: std::path::PathBuf) {
+        cx.update(|cx| super::init_at(None, Ok(Default::default()), path, cx));
+    }
+
+    #[gpui::test]
+    fn show_at_launch_round_trips_through_the_background_writer(cx: &mut gpui::TestAppContext) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        init_writer(cx, path.clone());
+        for enabled in [false, true, false] {
+            cx.update(|cx| super::change(cx, |p| p.show_welcome = enabled));
+            cx.run_until_parked();
+            assert_eq!(
+                super::Preferences::load(&path).unwrap().show_welcome,
+                enabled
+            );
+            cx.read(|cx| {
+                assert_eq!(
+                    cx.global::<super::SettingsState>().values.show_welcome,
+                    enabled
+                )
+            });
+        }
+    }
+
+    #[gpui::test]
+    fn rapid_changes_coalesce_into_the_latest_complete_snapshot(cx: &mut gpui::TestAppContext) {
+        use std::sync::{Arc, Mutex};
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        init_writer(cx, path.clone());
+        let snapshots = Arc::new(Mutex::new(Vec::new()));
+        let saved = snapshots.clone();
+        cx.update(|cx| {
+            cx.global_mut::<super::SettingsWrites>().save = Arc::new(move |values| {
+                saved.lock().unwrap().push(values.clone());
+                values.save(&path)
+            });
+            super::change(cx, |p| p.show_welcome = false);
+            super::change(cx, |p| p.grid = false);
+            super::change(cx, |p| p.show_welcome = true);
+        });
+        cx.run_until_parked();
+        let snapshots = snapshots.lock().unwrap();
+        assert_eq!(snapshots.len(), 1);
+        assert!(snapshots[0].show_welcome);
+        assert!(!snapshots[0].grid);
+    }
+
+    #[gpui::test]
+    fn quit_drains_pending_settings_without_reentering_the_app(cx: &mut gpui::TestAppContext) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        init_writer(cx, path.clone());
+        cx.update(|cx| {
+            super::change(cx, |p| p.grid = false);
+            super::change(cx, |p| p.show_welcome = false);
+        });
+        // Do not run the scheduler first: quit must drain an unstarted worker.
+        cx.quit();
+        let loaded = super::Preferences::load(&path).unwrap();
+        assert!(!loaded.show_welcome);
+        assert!(!loaded.grid);
+    }
+
+    #[gpui::test]
+    fn failed_write_restores_last_durable_toggle_and_can_retry(cx: &mut gpui::TestAppContext) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        init_writer(cx, path.clone());
+        cx.update(|cx| super::change(cx, |p| p.show_welcome = false));
+        cx.run_until_parked();
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        cx.update(|cx| super::change(cx, |p| p.show_welcome = true));
+        cx.run_until_parked();
+        cx.read(|cx| {
+            let state = cx.global::<super::SettingsState>();
+            assert!(!state.values.show_welcome);
+            assert!(state.error.as_ref().unwrap().contains("not saved"));
+        });
+        std::fs::remove_dir(&path).unwrap();
+        cx.update(|cx| super::change(cx, |p| p.show_welcome = true));
+        cx.run_until_parked();
+        assert!(super::Preferences::load(&path).unwrap().show_welcome);
+        cx.read(|cx| assert!(cx.global::<super::SettingsState>().error.is_none()));
+    }
+
+    #[test]
+    fn edits_during_io_coalesce_and_drain_even_after_an_older_write_fails() {
+        use super::{Preferences, WriteQueue, drain_writes};
+        use std::sync::{Arc, Mutex};
+        let queue = Arc::new(Mutex::new(WriteQueue {
+            committed: Preferences::default(),
+            pending: Some(Preferences {
+                show_welcome: false,
+                ..Default::default()
+            }),
+            running: true,
+            error: None,
+        }));
+        let snapshots = Arc::new(Mutex::new(Vec::new()));
+        let saved = snapshots.clone();
+        let edits = queue.clone();
+        drain_writes(&queue, &move |value| {
+            let mut saved = saved.lock().unwrap();
+            saved.push(value.clone());
+            if saved.len() == 1 {
+                let mut queue = edits.lock().unwrap();
+                queue.pending = Some(Preferences::default());
+                queue.pending = Some(Preferences {
+                    grid: false,
+                    ..Default::default()
+                });
+                return Err(voxelite_app::editor::EditorError::Gesture(
+                    "disk failure".into(),
+                ));
+            }
+            Ok(())
+        });
+        let queue = queue.lock().unwrap();
+        assert!(!queue.running);
+        assert!(queue.pending.is_none());
+        assert!(queue.error.is_none());
+        assert!(queue.committed.show_welcome);
+        assert!(!queue.committed.grid);
+        assert_eq!(snapshots.lock().unwrap().len(), 2);
+    }
 
     #[test]
     fn empty_search_keeps_all_sections_without_setting_rows() {

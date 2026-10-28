@@ -18,6 +18,7 @@ path = "src/main.rs"
 required-features = ["native"]
 
 [dependencies]
+futures-channel.workspace = true
 voxelite-mcp.workspace = true
 tempfile.workspace = true
 png.workspace = true
@@ -63,7 +64,6 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std"
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
 objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
 block2 = "0.6.2"
-futures-channel.workspace = true
 libloading = "0.8.9"
 
 [target.'cfg(target_os = "macos")'.dependencies.voxelite-render]
@@ -71,6 +71,7 @@ workspace = true
 features = ["gpu"]
 
 [dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
 voxelite-plugin-tools.workspace = true
 voxelite-plugin-exporters.workspace = true
 voxelite-plugin-shadows-lighting.workspace = true
