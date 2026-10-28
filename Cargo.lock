@@ -7585,6 +7585,7 @@ dependencies = [
  "plist",
  "pulldown-cmark",
  "regex",
+ "resvg",
  "roxmltree 0.21.2",
  "rustix",
  "semver",

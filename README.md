@@ -1,3 +1,5 @@
+<img src="site/assets/mark.svg" width="96" height="96" alt="Quantize: a smooth hemisphere beside a grid of rounded voxels">
+
 # Quantum
 
 An Aseprite-style 3D voxel editor for people and agents.
