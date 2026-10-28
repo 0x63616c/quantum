@@ -5952,7 +5952,9 @@ name = "voxelite-app"
 version = "0.3.1"
 dependencies = [
  "anyhow",
+ "async-lock",
  "block2 0.6.2",
+ "chrono",
  "env_logger",
  "futures-channel",
  "glam",

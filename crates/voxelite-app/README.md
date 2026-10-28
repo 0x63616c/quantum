@@ -44,6 +44,7 @@ Linux column denotes a macOS-only command.
 | --- | --- | --- |
 | New project | ⌘N | Ctrl+N |
 | Open project… | ⌘O | Ctrl+O |
+| Open Sample… | ⇧⌘O | Ctrl+Shift+O |
 | Save | ⌘S | Ctrl+S |
 | Save as… | ⇧⌘S | Ctrl+Shift+S |
 | Quit Quantum | ⌘Q | Ctrl+Q |
@@ -114,9 +115,13 @@ undoable. History and the connected MCP feed show actual edits and counts.
 
 ## Files and rendering
 
-The welcome window offers **New Project**, **Open…**, and up to 12 recent projects.
+The split welcome window offers **New Project**, **Open…**, **Open Sample…**
+(Cmd/Ctrl+Shift+O), and up to 12 recent projects. **Show at launch** is saved in
+`settings.json`; turning it off starts a blank editor when no path is supplied.
+Desktop settings writes run on the background executor, coalesce rapid changes,
+and drain on graceful exit. Older settings files default to showing Welcome.
 Tab moves between controls; focus Recent and use Up/Down, then Enter to open, or
-double-click a row. Opening or creating a project closes Welcome and shows the
+click a row. Opening or creating a project closes Welcome and shows the
 editor. If an editor is already open, its Save/Discard/Cancel flow protects edits.
 **Window → Welcome** (Cmd/Ctrl+Shift+1) reopens the launcher; the native
 **File → Open Recent** submenu opens a recent project directly. **Clear Recent
@@ -125,10 +130,29 @@ window quits, following the existing desktop lifecycle.
 
 Recent projects persist in versioned `recents.json` beside `settings.json`, with
 canonical-path deduplication and missing files filtered out. The `thumbnails/`
-cache stores small CPU-rendered PNGs of saved documents, keyed by canonical path
-and file modification time. Saves update the preview; missing/stale previews are
+cache stores 640 × 480 CPU-rendered PNGs of saved documents, keyed by canonical path
+and file modification time/length plus renderer version. Saves update the preview; missing/stale previews are
 rendered lazily in the background while Welcome shows a placeholder. Preview
 failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
+The same sample cards appear in a two-column grid for an empty history and a
+four-column row below recents. Five 60px rows fill the list at the default size;
+shorter lists take their natural height and longer lists scroll while samples
+stay visible. Names and metadata stay on one line and ellipsize within each card;
+the full sample name remains available in its tooltip.
+
+Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin are embedded `.voxl`
+projects. Samples open as untitled copies (no destination path) through the same
+unsaved-change flow as file opens. The three new projects total about 235 KB;
+Autumn Workshop was already embedded, so packaging needs no extra resources.
+Sample counts come from the documents. Both samples and recents use the same
+opt-in renderer treatment: isometric framing, directional face light, per-voxel
+occlusion, soft contact shadow, transparency and 2× supersampling. A process-wide
+render gate bounds concurrency; callers wait asynchronously before dispatching
+blocking work. Repeat saves coalesce in a queue capped at 12 paths. Welcome owns
+its decoded image cache and evicts obsolete revisions (at most 12 recent previews,
+4 sample previews and the brand mark). One image at a time progressively replaces
+a quiet placeholder. The regular viewport and export defaults are unchanged.
+
 `--example` opens the bundled Autumn Workshop with no write destination, including
 in the existing editor capture scripts. `--viewport-png` without a path still
 renders that bundled example without opening a window.

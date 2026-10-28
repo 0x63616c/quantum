@@ -29,7 +29,15 @@ pub(super) fn init(override_theme: Option<Theme>, cx: &mut App) {
     if cx.has_global::<SettingsState>() {
         return;
     }
-    let (mut values, error) = match Preferences::load(&path()) {
+    init_loaded(override_theme, Preferences::load(&path()), cx);
+}
+
+pub(super) fn init_loaded(
+    override_theme: Option<Theme>,
+    loaded: voxelite_app::editor::EditorResult<Preferences>,
+    cx: &mut App,
+) {
+    let (mut values, error) = match loaded {
         Ok(values) => (values, None),
         Err(error) => (
             Preferences::default(),
@@ -44,8 +52,37 @@ pub(super) fn init(override_theme: Option<Theme>, cx: &mut App) {
         };
     }
     apply_appearance(values.appearance, cx);
-    cx.set_global(SettingsState { values, error });
+    cx.set_global(SettingsState {
+        values: values.clone(),
+        error,
+    });
+    {
+        cx.set_global(SettingsWrites {
+            committed: values,
+            ..Default::default()
+        });
+        cx.on_app_quit(|cx| {
+            let task = cx.global_mut::<SettingsWrites>().task.take();
+            async move {
+                if let Some(task) = task {
+                    task.await;
+                }
+            }
+        })
+        .detach();
+    }
 }
+
+// One writer, with at most one pending snapshot. Rapid changes cannot reorder
+// durable preferences or accumulate an unbounded chain of jobs.
+#[derive(Default)]
+struct SettingsWrites {
+    committed: Preferences,
+    pending: Option<Preferences>,
+    task: Option<Task<()>>,
+}
+impl Global for SettingsWrites {}
+
 fn apply_appearance(appearance: Appearance, cx: &App) {
     cx.set_window_appearance(match appearance {
         Appearance::System => None,
@@ -67,15 +104,53 @@ pub(super) fn change(cx: &mut App, edit: impl FnOnce(&mut Preferences)) {
     let mut state = cx.global::<SettingsState>().clone();
     let mut next = state.values.clone();
     edit(&mut next);
-    match next.save(&path()) {
-        Ok(()) => {
-            apply_appearance(next.appearance, cx);
-            state.values = next;
-            state.error = None;
+    {
+        apply_appearance(next.appearance, cx);
+        state.values = next.clone();
+        cx.set_global(state);
+        let writes = cx.global_mut::<SettingsWrites>();
+        writes.pending = Some(next);
+        if writes.task.is_some() {
+            return;
         }
-        Err(error) => state.error = Some(format!("Settings were not saved: {error}")),
+        let task = cx.spawn(async move |cx| {
+            loop {
+                let pending = cx.update(|cx| cx.global_mut::<SettingsWrites>().pending.take());
+                let Some(pending) = pending else {
+                    break;
+                };
+                let saving = pending.clone();
+                let result = cx
+                    .background_executor()
+                    .spawn(async move { saving.save(&path()) })
+                    .await;
+                cx.update(|cx| {
+                    let writes = cx.global_mut::<SettingsWrites>();
+                    let revert = if result.is_ok() {
+                        writes.committed = pending;
+                        None
+                    } else {
+                        // Preserve a newer queued edit; otherwise restore the last
+                        // durable preferences instead of showing an unsaved toggle.
+                        writes.pending.is_none().then(|| writes.committed.clone())
+                    };
+                    if let Some(values) = &revert {
+                        apply_appearance(values.appearance, cx);
+                    }
+                    cx.update_global::<SettingsState, _>(|state, _| {
+                        if let Some(values) = revert {
+                            state.values = values;
+                        }
+                        state.error = result
+                            .err()
+                            .map(|error| format!("Settings were not saved: {error}"));
+                    });
+                });
+            }
+            cx.update(|cx| cx.global_mut::<SettingsWrites>().task = None);
+        });
+        cx.global_mut::<SettingsWrites>().task = Some(task);
     }
-    cx.set_global(state);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

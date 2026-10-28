@@ -67,7 +67,7 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
             }
             "--help" | "-h" => {
                 println!(
-                    "Quantum native voxel editor\n\nvoxelite [project.voxl] [--example] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens the welcome window.\n--example opens the bundled autumn-workshop diorama for exploration and captures.\n--viewport-png without a path renders that diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
+                    "Quantum native voxel editor\n\nvoxelite [project.voxl] [--example] [--theme dark|light] [--exit-after SECONDS] [--session-socket PATH]\nvoxelite [project.voxl] --viewport-png output.png\n\nNo path opens Welcome, or a blank editor when Show at launch is off.\n--example opens the bundled autumn-workshop diorama for exploration and captures.\n--viewport-png without a path renders that diorama.\n--viewport-png renders without initializing GPUI or a display.\n--session-socket selects the private Unix socket for live MCP attachment.\n--screenshot-delay is an alias for --exit-after (external capture).\nSee crates/voxelite-app/README.md for keyboard and mouse controls."
                 );
                 std::process::exit(0);
             }
@@ -121,6 +121,10 @@ fn main() -> anyhow::Result<()> {
             .map(|path| Editor::open(path))
             .transpose()?
     };
+    // Load local preferences before starting GPUI's event loop.
+    let preferences = voxelite_app::preferences::Preferences::load(
+        &voxelite_app::local_settings::data_dir().join("settings.json"),
+    );
     gpui_platform::application()
         .with_assets(assets::Assets)
         .run(move |cx| {
@@ -131,11 +135,11 @@ fn main() -> anyhow::Result<()> {
                 .expect("bundled fonts");
             cx.set_text_rendering_mode(TextRenderingMode::Grayscale);
             actions::install(cx);
-            ui::welcome::init(options.theme, options.session_socket, cx);
+            ui::welcome::init(options.theme, options.session_socket, preferences, cx);
             let result = if let Some(editor) = editor {
                 ui::welcome::open_editor(editor, cx)
             } else {
-                ui::welcome::show(cx).map(|_| ())
+                ui::welcome::startup(cx)
             };
             if let Err(error) = result {
                 eprintln!("Cannot open Quantum: {error}");

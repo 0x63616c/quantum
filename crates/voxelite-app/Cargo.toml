@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 default = ["native"]
-native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple"]
+native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple", "dep:async-lock"]
 
 [lib]
 crate-type = ["rlib"]
@@ -21,6 +21,8 @@ required-features = ["native"]
 voxelite-mcp.workspace = true
 tempfile.workspace = true
 png.workspace = true
+async-lock = { version = "3", optional = true }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 voxelite-ui = { workspace = true, optional = true }
 voxelite-core.workspace = true
 voxelite-plugin-api.workspace = true

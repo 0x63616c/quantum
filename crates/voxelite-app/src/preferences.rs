@@ -24,6 +24,8 @@ pub enum Appearance {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Preferences {
+    /// Open the project launcher on startup when no document was requested.
+    pub show_welcome: bool,
     /// User-selected color scheme.
     pub appearance: Appearance,
     /// Show the ground grid in the viewport.
@@ -46,6 +48,7 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
+            show_welcome: true,
             appearance: Appearance::System,
             grid: true,
             antialiasing: true,
@@ -93,6 +96,7 @@ mod tests {
         let path = dir.path().join("settings.json");
         assert_eq!(Preferences::load(&path).unwrap(), Preferences::default());
         let preferences = Preferences {
+            show_welcome: false,
             appearance: Appearance::Light,
             grid: false,
             show_debug_overlay: true,
@@ -104,6 +108,7 @@ mod tests {
         let upgraded = Preferences::load(&path).unwrap();
         assert_eq!(upgraded.appearance, Appearance::Dark);
         assert!(upgraded.grid && upgraded.antialiasing);
+        assert!(upgraded.show_welcome);
         assert!(upgraded.ambient_occlusion);
         assert_eq!(upgraded.viewport_ambient_occlusion().get(), 1.0);
         assert!(!upgraded.show_debug_overlay);
@@ -116,7 +121,7 @@ mod tests {
         preferences.grid = !preferences.grid;
         assert_eq!(
             serde_json::to_string(&preferences).unwrap(),
-            r#"{"appearance":"system","grid":false,"antialiasing":true,"ambient_occlusion":true,"ambient_occlusion_strength":1.0,"show_performance":true,"show_debug_overlay":false,"navigation_hints":true,"animate_camera":true}"#
+            r#"{"show_welcome":true,"appearance":"system","grid":false,"antialiasing":true,"ambient_occlusion":true,"ambient_occlusion_strength":1.0,"show_performance":true,"show_debug_overlay":false,"navigation_hints":true,"animate_camera":true}"#
         );
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");

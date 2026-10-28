@@ -44,6 +44,7 @@ pub(super) struct SaveFlow {
     after_save: Option<Op>,
     dialog_open: bool,
     open_path: Option<PathBuf>,
+    sample: Option<voxelite_app::samples::Sample>,
 }
 
 impl Default for SaveFlow {
@@ -54,6 +55,7 @@ impl Default for SaveFlow {
             after_save: None,
             dialog_open: false,
             open_path: None,
+            sample: None,
         }
     }
 }
@@ -93,6 +95,7 @@ impl SaveFlow {
         self.pending = None;
         {
             self.open_path = None;
+            self.sample = None;
         }
     }
     pub(super) fn begin_dialog(&mut self) {
@@ -106,6 +109,7 @@ impl SaveFlow {
         self.finish_dialog();
         self.after_save = None;
         self.open_path = None;
+        self.sample = None;
     }
 
     // Saving ends the dialog gate separately and consumes the continuation
@@ -114,6 +118,7 @@ impl SaveFlow {
         let next = self.after_save.take();
         if !success {
             self.open_path = None;
+            self.sample = None;
         }
         next.filter(|_| success)
     }
@@ -129,6 +134,7 @@ impl SaveFlow {
             SaveChoice::Cancel => {
                 {
                     self.open_path = None;
+                    self.sample = None;
                 }
                 PendingAction::Cancelled
             }
@@ -169,7 +175,33 @@ impl EditorView {
         self.menu = None;
         self.commands.close();
         self.palette_open = false;
+        self.save_flow.sample = None;
         self.save_flow.open_path = Some(path);
+        if !self
+            .save_flow
+            .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
+        {
+            self.open_dialog(cx);
+        }
+        window.focus(&self.focus, cx);
+        cx.notify();
+    }
+
+    pub(super) fn open_sample(
+        &mut self,
+        sample: voxelite_app::samples::Sample,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.enabled(Op::Open) {
+            return;
+        }
+        self.pause_history(cx);
+        self.menu = None;
+        self.commands.close();
+        self.palette_open = false;
+        self.save_flow.open_path = None;
+        self.save_flow.sample = Some(sample);
         if !self
             .save_flow
             .confirm_if_dirty(Op::Open, || self.editor.engine.is_dirty())
@@ -208,6 +240,28 @@ impl EditorView {
     }
 
     pub(super) fn open_dialog(&mut self, cx: &mut Context<Self>) {
+        if let Some(sample) = self.save_flow.sample.take() {
+            self.save_flow.begin_dialog();
+            let task = cx
+                .background_executor()
+                .spawn(async move { sample.session() });
+            cx.spawn(async move |this, cx| {
+                let result = task.await;
+                let _ = this.update(cx, |this, cx| {
+                    this.save_flow.finish_dialog();
+                    match result.and_then(Editor::from_session) {
+                        Ok(editor) => this.replace_editor(editor, cx),
+                        Err(error) => {
+                            this.status = error.to_string().into();
+                            this.error = true;
+                        }
+                    }
+                    cx.notify();
+                });
+            })
+            .detach();
+            return;
+        }
         if let Some(path) = self.save_flow.open_path.take() {
             self.load_project(path, cx);
             return;
@@ -480,6 +534,38 @@ mod tests {
                 }
             }
             assert!(flow.open_path.is_none());
+        }
+    }
+
+    #[test]
+    fn sample_open_is_retained_after_save_and_cleared_on_every_cancel_path() {
+        use voxelite_app::samples::Sample;
+        let mut flow = SaveFlow {
+            sample: Some(Sample::Lighthouse),
+            ..Default::default()
+        };
+        flow.confirm_if_dirty(Op::Open, || true);
+        flow.resolve(SaveChoice::Save);
+        assert_eq!(flow.complete_save(true), Some(Op::Open));
+        assert_eq!(flow.sample.take(), Some(Sample::Lighthouse));
+        for cancel in 0..4 {
+            flow.sample = Some(Sample::Snow);
+            flow.confirm_if_dirty(Op::Open, || true);
+            match cancel {
+                0 => flow.cancel_confirmation(),
+                1 => {
+                    flow.resolve(SaveChoice::Cancel);
+                }
+                2 => {
+                    flow.resolve(SaveChoice::Save);
+                    flow.complete_save(false);
+                }
+                _ => {
+                    flow.resolve(SaveChoice::Save);
+                    flow.cancel_save();
+                }
+            }
+            assert!(flow.sample.is_none());
         }
     }
 

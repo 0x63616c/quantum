@@ -33,6 +33,7 @@ macro_rules! operations {
 operations! {
     New => "dev.voxelite.core.new",
     Open => "dev.voxelite.core.open",
+    OpenSample => "dev.voxelite.core.open_sample",
     OpenRecent => "dev.voxelite.core.open_recent",
     ClearRecents => "dev.voxelite.core.clear_recents",
     Welcome => "dev.voxelite.core.welcome",

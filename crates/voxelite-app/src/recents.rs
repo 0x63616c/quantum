@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
 
 /// Maximum number of projects retained in the history.
@@ -99,9 +99,18 @@ impl Recents {
     }
 
     fn write(&self, projects: &[RecentProject]) -> EditorResult<()> {
+        let mut projects = projects.to_vec();
+        // The v1 timestamp encoding is unsigned. Modification times are always
+        // refreshed from disk on load, so persist an epoch placeholder for old
+        // files instead of failing to record them or changing the file format.
+        for project in &mut projects {
+            if project.modified < SystemTime::UNIX_EPOCH {
+                project.modified = SystemTime::UNIX_EPOCH;
+            }
+        }
         let bytes = serde_json::to_vec_pretty(&History {
             version: 1,
-            projects: projects.to_vec(),
+            projects,
         })
         .map_err(|error| crate::editor::EditorError::Gesture(error.to_string()))?;
         local_settings::write_local(&self.path, &bytes)
@@ -122,23 +131,89 @@ pub fn display_path(path: &Path, home: Option<&Path>) -> String {
     path.display().to_string()
 }
 
-/// A compact relative file-modification label, including future clock skew.
+/// Display the containing folder, abbreviating only the actual home directory.
+pub fn folder_label(path: &Path, home: Option<&Path>) -> String {
+    display_path(path.parent().unwrap_or(path), home)
+}
+
+/// Calendar-style modification time in the user's local timezone.
 pub fn modified_label(modified: SystemTime, now: SystemTime) -> String {
-    let seconds = now
-        .duration_since(modified)
-        .unwrap_or(Duration::ZERO)
-        .as_secs();
-    match seconds {
-        0..60 => "Just now".into(),
-        60..3600 => format!("{}m ago", seconds / 60),
-        3600..86400 => format!("{}h ago", seconds / 3600),
-        _ => format!("{}d ago", seconds / 86400),
+    let local = |time: SystemTime| {
+        let nanos = match time.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => i128::try_from(duration.as_nanos()).ok()?,
+            Err(error) => -i128::try_from(error.duration().as_nanos()).ok()?,
+        };
+        chrono::DateTime::from_timestamp(
+            i64::try_from(nanos.div_euclid(1_000_000_000)).ok()?,
+            nanos.rem_euclid(1_000_000_000) as u32,
+        )
+        .map(|date| date.with_timezone(&chrono::Local))
+    };
+    match (local(modified), local(now)) {
+        (Some(modified), Some(now)) => calendar_label(modified, now),
+        _ => "Unknown date".into(),
     }
+}
+
+fn calendar_label<T: chrono::TimeZone>(
+    modified: chrono::DateTime<T>,
+    now: chrono::DateTime<T>,
+) -> String
+where
+    T::Offset: std::fmt::Display,
+{
+    let seconds = (now.timestamp() - modified.timestamp()).max(0);
+    if seconds < 60 {
+        return "Just now".into();
+    }
+    let days = now
+        .date_naive()
+        .signed_duration_since(modified.date_naive())
+        .num_days();
+    if days == 1 {
+        return "Yesterday".into();
+    }
+    if days == 0 {
+        let (count, unit) = if seconds < 3600 {
+            (seconds / 60, "minute")
+        } else {
+            (seconds / 3600, "hour")
+        };
+        return format!("{count} {unit}{} ago", if count == 1 { "" } else { "s" });
+    }
+    use chrono::Datelike;
+    modified
+        .format(if modified.year() == now.year() {
+            "%b %-d"
+        } else {
+            "%b %-d, %Y"
+        })
+        .to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pre_epoch_files_round_trip_without_changing_the_v1_encoding() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("old.voxl");
+        std::fs::write(&file, b"project").unwrap();
+        let modified = SystemTime::UNIX_EPOCH - std::time::Duration::from_secs(86400);
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(modified)
+            .unwrap();
+        let recents = Recents::new(dir.path());
+        assert_eq!(
+            recents.record(&file, "Old project").unwrap()[0].modified,
+            modified
+        );
+        assert_eq!(recents.load().unwrap()[0].modified, modified);
+    }
     use std::fs;
 
     #[test]
@@ -245,21 +320,57 @@ mod tests {
             display_path(Path::new("/home/calum-other/project.voxl"), home),
             "/home/calum-other/project.voxl"
         );
-        let now = SystemTime::UNIX_EPOCH + Duration::from_secs(100_000);
+        assert_eq!(
+            folder_label(Path::new("/home/calum/Quantum/a.voxl"), home),
+            "~/Quantum"
+        );
+        assert_eq!(folder_label(Path::new("/home/calum/a.voxl"), home), "~");
+        assert_eq!(
+            folder_label(Path::new("/home/calum-other/a.voxl"), home),
+            "/home/calum-other"
+        );
+    }
+
+    #[test]
+    fn calendar_times_handle_midnight_years_and_clock_skew() {
+        use chrono::{Duration, TimeZone, Utc};
+        let now = Utc.with_ymd_and_hms(2026, 10, 27, 12, 0, 0).unwrap();
         for (seconds, label) in [
             (0, "Just now"),
-            (60, "1m ago"),
-            (3600, "1h ago"),
-            (86400, "1d ago"),
+            (60, "1 minute ago"),
+            (120, "2 minutes ago"),
+            (3600, "1 hour ago"),
+            (7200, "2 hours ago"),
+            (86400, "Yesterday"),
+            (3 * 86400, "Oct 24"),
         ] {
-            assert_eq!(
-                modified_label(now - Duration::from_secs(seconds), now),
-                label
-            );
+            assert_eq!(calendar_label(now - Duration::seconds(seconds), now), label);
         }
+        assert_eq!(calendar_label(now + Duration::hours(1), now), "Just now");
+        let midnight = Utc.with_ymd_and_hms(2026, 10, 27, 0, 5, 0).unwrap();
         assert_eq!(
-            modified_label(now + Duration::from_secs(100), now),
-            "Just now"
+            calendar_label(midnight - Duration::minutes(10), midnight),
+            "Yesterday"
+        );
+        assert_eq!(
+            calendar_label(Utc.with_ymd_and_hms(2025, 10, 27, 12, 0, 0).unwrap(), now),
+            "Oct 27, 2025"
+        );
+    }
+
+    #[test]
+    fn out_of_calendar_range_timestamps_do_not_panic() {
+        if let Some(time) =
+            SystemTime::UNIX_EPOCH.checked_add(std::time::Duration::from_secs(i64::MAX as u64))
+        {
+            assert_eq!(modified_label(time, SystemTime::UNIX_EPOCH), "Unknown date");
+        }
+        assert!(
+            !modified_label(
+                SystemTime::UNIX_EPOCH - std::time::Duration::from_secs(86400),
+                SystemTime::now()
+            )
+            .is_empty()
         );
     }
 }

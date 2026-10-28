@@ -20,6 +20,7 @@ mod settings;
 mod shortcut_hint;
 mod tooltip;
 pub(crate) mod welcome;
+mod welcome_style;
 use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
 use crate::{
@@ -511,6 +512,12 @@ impl EditorView {
                 }
             },
             Op::Open => self.open_dialog(cx),
+            Op::OpenSample => {
+                cx.defer(|cx| { match welcome::show(cx) {
+                    Ok(handle) => { let _ = handle.update(cx, |view, window, cx| view.focus_samples(window, cx)); }
+                    Err(error) => eprintln!("Could not open sample picker: {error}"),
+                } });
+            }
             Op::OpenRecent | Op::Welcome => {
                 cx.defer(|cx| { if let Err(error) = welcome::show(cx) { eprintln!("Could not open welcome window: {error}"); } });
             }

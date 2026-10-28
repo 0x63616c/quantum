@@ -45,6 +45,16 @@ impl Plugin for CorePlugin {
                 None,
             ),
             (
+                "dev.voxelite.core.open_sample",
+                "Open Sample…",
+                Some("secondary-shift-o"),
+                Some("Editor"),
+                "layer",
+                "File",
+                11,
+                None,
+            ),
+            (
                 "dev.voxelite.core.open_recent",
                 "Open Recent",
                 None,
