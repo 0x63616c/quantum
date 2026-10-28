@@ -12,12 +12,18 @@ use voxelite_plugin_api::{
 pub struct ExamplePlugin;
 
 impl Plugin for ExamplePlugin {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: example plugin ID and Cargo package version are valid constants"
+    )]
     fn manifest(&self) -> Manifest {
         Manifest {
-            id: PluginId::new("dev.voxelite.example").unwrap(),
+            id: PluginId::new("dev.voxelite.example")
+                .expect("example plugin ID and Cargo package version are valid constants"),
             name_key: "plugins.example.name".into(),
             description_key: "plugins.example.description".into(),
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            version: Version::parse(env!("CARGO_PKG_VERSION"))
+                .expect("example plugin ID and Cargo package version are valid constants"),
             api_version: API_VERSION,
             builtin: false,
             default_enabled: false,
@@ -67,10 +73,12 @@ mod tests {
 
         let mut registrar = Registrar::default();
         plugin.contribute(&mut registrar);
-        let contributions = registrar.finish().unwrap();
+        let contributions = registrar
+            .finish()
+            .expect("example plugin ID and Cargo package version are valid constants");
         assert_eq!(contributions.len(), 1);
         assert!(matches!(
-            contributions.iter().next().unwrap(),
+            contributions.iter().next().expect("example plugin ID and Cargo package version are valid constants"),
             Contribution::Command(command) if command.id == "dev.voxelite.example.command"
         ));
     }

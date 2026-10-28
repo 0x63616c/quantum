@@ -187,6 +187,7 @@ pub fn parse_color(text: &str) -> Result<Swatch> {
 
 /// Step through display order, matching duplicate swatches by their original RGBA.
 /// The caller must provide a palette that passes `Palette::validate`.
+#[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
 pub fn step_swatch(palette: &Palette, color: &Swatch, delta: isize) -> (usize, Swatch) {
     let current = palette
         .order

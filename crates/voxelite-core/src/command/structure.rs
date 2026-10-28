@@ -36,8 +36,13 @@ pub(super) fn layer_edit(s: &mut Snapshot, edit: &LayerEdit) -> Result<()> {
             l.id = *id;
             l.name = name.clone();
             l.locked = false;
-            let source = s.layers.key(*source).expect("source exists");
-            s.layers.insert_after(source, l).expect("source exists");
+            let source = s
+                .layers
+                .key(*source)
+                .ok_or_else(|| Error::Conflict("source layer missing".into()))?;
+            s.layers
+                .insert_after(source, l)
+                .ok_or_else(|| Error::Conflict("source layer missing".into()))?;
         }
         LayerEdit::Reorder(order) => {
             let old: BTreeSet<_> = s.layers.iter().map(|l| l.id).collect();

@@ -84,6 +84,7 @@ impl DataSection {
         self.raw.get()
     }
     /// Decode a JSON payload only when requested by its owner.
+    #[expect(clippy::expect_used, reason = "internal invariant: validated envelope")]
     pub fn json_payload(&self) -> Result<Value> {
         let envelope: Envelope<'_> =
             serde_json::from_str(self.raw.get()).expect("validated envelope");
@@ -93,6 +94,7 @@ impl DataSection {
         serde_json::from_str(envelope.payload.get()).map_err(|e| Error::Invalid(e.to_string()))
     }
     /// Decode opaque bytes only when requested by their owner.
+    #[expect(clippy::expect_used, reason = "internal invariant: validated envelope")]
     pub fn bytes_payload(&self) -> Result<Vec<u8>> {
         let envelope: Envelope<'_> =
             serde_json::from_str(self.raw.get()).expect("validated envelope");

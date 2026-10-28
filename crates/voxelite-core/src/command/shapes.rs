@@ -85,6 +85,7 @@ pub(super) fn shape_cells(shape: &Shape, work: &mut Work) -> Result<Vec<Pos>> {
         .collect())
 }
 // Exact rational boundary times: numerator odd, denominator twice |delta|.
+#[expect(clippy::expect_used, reason = "internal invariant: nonterminal line")]
 fn line_cells(from: Pos, to: Pos, work: &mut Work) -> Result<Vec<Pos>> {
     for p in [from, to] {
         if p.iter().any(|v| !(-32768..32768).contains(v)) {

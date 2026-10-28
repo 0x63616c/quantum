@@ -3,6 +3,7 @@
 #[path = "support/autumn_workshop.rs"]
 mod autumn_workshop;
 
+#[expect(clippy::expect_used, reason = "internal invariant: generated recipe")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/autumn-workshop.voxl");

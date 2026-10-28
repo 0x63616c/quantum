@@ -4,6 +4,7 @@
 //! Uses 1024x640 because the public CPU renderer caps either dimension at 1024.
 use std::{hint::black_box, path::Path, time::Instant};
 use voxelite_render::*;
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let output = std::env::args().nth(1);
     if let Some(path) = &output {
