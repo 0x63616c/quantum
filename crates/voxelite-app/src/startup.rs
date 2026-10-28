@@ -47,10 +47,13 @@ mod tests {
     #[test]
     fn in_app_failed_load_preserves_dirty_document_and_history() {
         let dir = tempfile::tempdir().unwrap();
-        let invalid = dir.path().join("invalid.voxl");
+        // macOS temp dirs sit behind the /var -> /private/var symlink and
+        // `Editor::save` stores the canonical path.
+        let root = dir.path().canonicalize().unwrap();
+        let invalid = root.join("invalid.voxl");
         std::fs::write(&invalid, b"invalid project").unwrap();
         let mut editor = Editor::blank().unwrap();
-        let path = dir.path().join("current.voxl");
+        let path = root.join("current.voxl");
         editor.save(&path).unwrap();
         editor.apply_at([1, 2, 3]).unwrap();
         let before = editor.engine.document().clone();
