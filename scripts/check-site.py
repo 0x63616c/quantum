@@ -144,9 +144,13 @@ def check_seo(path, page):
     assert page.meta('twitter:image') == image, 'Twitter and OG images differ'
     assert page.meta('twitter:image:alt') == page.meta('og:image:alt', 'property'), 'Image alt text differs'
     icons = [attrs for attrs in page.tags('link') if 'icon' in attrs.get('rel', '').split()]
-    assert len(icons) == 1, 'Expected one favicon'
-    assert icons[0].get('type') == 'image/svg+xml', 'Expected an SVG favicon'
-    assert icons[0].get('href') in ('/assets/mark.svg', f'{BASE_URL}/assets/mark.svg'), 'Incorrect favicon'
+    actual_icons = [(attrs.get('type'), urlsplit(attrs.get('href', '')).path,
+                     attrs.get('sizes')) for attrs in icons]
+    assert actual_icons == [
+        ('image/png', '/assets/favicon-16.png', '16x16'),
+        ('image/png', '/assets/favicon-32.png', '32x32'),
+        ('image/svg+xml', '/assets/favicon.svg', None),
+    ], 'Expected the Quantize SVG favicon and both PNG fallbacks'
 
 
 ANALYTICS_SCRIPTS = ('/_vercel/insights/script.js', '/_vercel/speed-insights/script.js')

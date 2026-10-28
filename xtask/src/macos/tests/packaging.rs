@@ -63,6 +63,10 @@ fn default_public_key_and_matching_override() {
             f.env.set("SPARKLE_PUBLIC_ED_KEY", raw.trim());
         }
         f.package(false).unwrap();
+        assert_eq!(
+            fs::read(f.path("dist/Voxelite.app/Contents/Resources/Voxelite.icns")).unwrap(),
+            fs::read(f.path("packaging/macos/Voxelite.icns")).unwrap(),
+        );
         let info = files::read_plist(&f.path("dist/Voxelite.app/Contents/Info.plist")).unwrap();
         assert_eq!(
             files::plist_string(&info, "SUPublicEDKey").unwrap(),

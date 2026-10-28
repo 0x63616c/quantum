@@ -14,6 +14,7 @@ bundle_id = { current = "co.worldwidewebb.voxelite", stable = true }
 bundle_name = { current = "Quantum", stable = false }
 bundle_display_name = { current = "Quantum", stable = false }
 bundle_executable = { current = "Voxelite", next = "Quantum", stable = false }
+# CFBundleIconFile stays Voxelite; cargo xtask icons now supplies the Quantize artwork.
 bundle_icon = { current = "Voxelite", next = "Quantum", stable = false }
 # GPUI windows use voxelite_app::APP_ID (crates/voxelite-app/src/lib.rs), which
 # must equal bundle_id; ui/{welcome,settings}.rs reference the constant.
@@ -66,3 +67,15 @@ macos_data_directory = { current = "~/Library/Application Support/voxelite", sta
 xdg_data_directory = { current = "$XDG_DATA_HOME/voxelite", stable = true }
 fallback_data_directory = { current = "~/.local/share/voxelite", stable = true }
 data_directory_env = { current = "VOXELITE_DATA_DIR", stable = true }
+
+[artwork]
+# Calum approved Quantize for #84: smooth left hemisphere, quantized right, hard seam.
+# Edit the two SVG masters; cargo xtask icons regenerates all other artwork.
+design = { current = "Quantize", stable = false }
+icon_source = { current = "packaging/macos/icon.svg", stable = false }
+small_mark_source = { current = "packaging/macos/mark-small.svg", stable = false }
+mark = { current = "site/assets/mark.svg", stable = false }
+favicon = { current = "site/assets/favicon.svg", stable = false }
+readme_logo = { current = "site/assets/mark.svg", stable = false }
+bundle_icon_asset = { current = "packaging/macos/Voxelite.icns", stable = false }
+app_icon = { current = "crates/voxelite-app/assets/app-icon-256.png", stable = false }

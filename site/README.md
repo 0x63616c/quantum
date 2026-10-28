@@ -22,6 +22,10 @@ Edit page markup in `crates/voxelite-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
 skills in the repository's `skills/` directory. Edit metadata in
 `crates/voxelite-site/src/`.
+The Quantize header mark and SVG/PNG favicons come from `cargo xtask icons`;
+edit the [SVG masters](../packaging/macos/ARTWORK.md) and regenerate rather than
+changing those derivatives.
+
 The generator uses `https://voxelite.worldwidewebb.co` for canonical URLs, social
 previews, structured data and crawl files. `sitemap.xml` lists the homepage,
 download page and docs; the 404 page is marked `noindex` and has no

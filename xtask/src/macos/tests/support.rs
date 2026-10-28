@@ -197,8 +197,6 @@ impl Runner for FakeRunner {
                 _ => (),
             },
             "openssl" => stdout = b"fixture random password".to_vec(),
-            "sips" => (),
-            "iconutil" => write(path(args.last().unwrap()), "fixture icon"),
             "curl" => write(
                 path(args.last().unwrap()),
                 if self.has("corrupt_archive") {
@@ -344,6 +342,7 @@ impl Fixture {
         let repository = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         for name in [
             "packaging/macos/Info.plist",
+            "packaging/macos/Voxelite.icns",
             "packaging/macos/sparkle_public_ed_key.txt",
             "packaging/macos/RELEASE_NOTES.md",
             "packaging/macos/RELEASE_NOTES.unnotarized.md",
