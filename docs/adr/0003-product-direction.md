@@ -14,17 +14,16 @@ this decision does not certify platform support or release readiness.
 ## Decision
 
 Build an Aseprite-style 3D voxel editor for people and agents. The product scope is
-a Rust/GPUI native macOS application, the same editor compiled to WebAssembly,
-and MCP workflows for creating, inspecting and editing models. Human editing must
-remain useful without an agent or account. Keep canonical, versioned `.voxl`
-projects and GLB/PNG exports portable across these workflows.
+a Rust/GPUI native macOS application and MCP workflows for creating, inspecting
+and editing models. Human editing must remain useful without an agent or account.
+Keep canonical, versioned `.voxl` projects and GLB/PNG exports portable across
+these workflows.
 
 The shared document engine owns layers, palette slots, atomic commands, revision
 checks and undo/redo. History playback inspects immutable previews; named versions
 and anchored comments remain project content. Local human and agent edits use the
 same engine and history. The current MCP transports are standalone stdio and a
-private Unix-socket attachment to the native editor; the browser editor does not
-provide a live MCP attachment.
+private Unix-socket attachment to the native editor.
 
 Follow [ADR 0002](0002-built-in-plugin-architecture.md) for feature ownership:
 
