@@ -4,7 +4,7 @@
 normalized), the version
 pinned by `xtask/src/macos/package.rs`:
 https://github.com/sparkle-project/Sparkle/blob/2.10.1/LICENSE
-It is included in the macOS acknowledgements. The package script also ships the
+It is included in the macOS acknowledgements. The packaging task also ships the
 upstream license alongside the embedded framework; no updater configuration is
 changed here.
 

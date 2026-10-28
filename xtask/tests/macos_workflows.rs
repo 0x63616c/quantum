@@ -53,7 +53,7 @@ fn tool() -> &'static Path {
 fn fixture() -> tempfile::TempDir {
     let temp = tempfile::tempdir().unwrap();
     fs::create_dir(temp.path().join("tools")).unwrap();
-    for name in ["gh", "cargo", "secret-echo"] {
+    for name in ["gh", "cargo", "secret-echo", "pipe-parent", "pipe-leaf"] {
         fs::copy(tool().join("tool"), temp.path().join("tools").join(name)).unwrap();
     }
     temp
@@ -367,6 +367,46 @@ fn interrupted_runner_kills_and_reaps_child_but_allows_cleanup() {
         .args(["release", "edit"])
         .during_cleanup();
     cleanup.run(&runner).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn interruption_stops_descendants_holding_output_pipes() {
+    for parent_exits in [false, true] {
+        check_descendant_interruption(parent_exits);
+    }
+}
+
+#[cfg(unix)]
+fn check_descendant_interruption(parent_exits: bool) {
+    let root = fixture();
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let runner = SystemRunner::default().with_interruption(flag.clone());
+    let ready = root.path().join("ready");
+    let signal_ready = ready.clone();
+    let interrupt = std::thread::spawn(move || {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !signal_ready.exists() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "fixture did not start"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        flag.store(143, std::sync::atomic::Ordering::SeqCst);
+        std::time::Instant::now()
+    });
+    let mut command =
+        xtask::cmd::Command::new(root.path().join("tools/pipe-parent")).env("PIPE_READY", ready);
+    if parent_exits {
+        command = command.env("PIPE_PARENT_EXITS", "1");
+    } else {
+        command = command.env_remove("PIPE_PARENT_EXITS");
+    }
+    let error = command.output(&runner).unwrap_err();
+    let requested = interrupt.join().unwrap();
+    assert!(error.to_string().contains("143"));
+    assert!(requested.elapsed() < std::time::Duration::from_secs(2));
 }
 
 #[test]

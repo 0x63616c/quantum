@@ -110,12 +110,13 @@ impl Runner for FakeRunner {
         }
         if self.get("signal") == operation {
             let signal = self.get("signal_number");
-            assert!(
-                std::process::Command::new("kill")
-                    .args([&format!("-{signal}"), &std::process::id().to_string()])
-                    .status()?
-                    .success()
-            );
+            // Synchronous delivery on this isolated helper's current thread;
+            // a separate kill process can exit before the handler has run.
+            signal_hook::low_level::raise(match signal.as_str() {
+                "INT" => signal_hook::consts::SIGINT,
+                "TERM" => signal_hook::consts::SIGTERM,
+                _ => panic!("unsupported test signal"),
+            })?;
             return Ok(Output {
                 status: Status::from_code(1),
                 ..Default::default()

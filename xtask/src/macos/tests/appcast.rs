@@ -150,6 +150,58 @@ fn malformed_xml_and_unstable_or_unordered_versions() {
         assert!(validate(&f.path("feed.xml"), false, None).is_err());
     }
 }
+
+#[test]
+fn rss_elements_require_the_original_unnamespaced_tags() {
+    let f = Fixture::new();
+    for data in [
+        "<rss xmlns='urn:wrong' version='2.0'><channel/></rss>",
+        "<x:rss xmlns:x='urn:wrong' version='2.0'><channel/></x:rss>",
+        "<rss version='2.0'><channel xmlns='urn:wrong'/></rss>",
+    ] {
+        write(f.path("feed.xml"), data);
+        assert!(validate(&f.path("feed.xml"), true, None).is_err(), "{data}");
+    }
+    let feed = fixture_feed(&["1.2.3"]);
+    let namespaced_item = feed
+        .replace("<item>", "<x:item xmlns:x='urn:wrong'>")
+        .replace("</item>", "</x:item>");
+    write(f.path("feed.xml"), namespaced_item);
+    assert!(validate(&f.path("feed.xml"), false, None).is_err());
+    // ElementTree's .//enclosure only counts unqualified enclosure tags.
+    write(
+        f.path("feed.xml"),
+        feed.replace("</item>", "<x:enclosure xmlns:x='urn:other'/></item>"),
+    );
+    validate(&f.path("feed.xml"), false, None).unwrap();
+}
+
+#[test]
+fn appcast_dry_run_preserves_existing_outputs_without_release_artifacts() {
+    let mut f = Fixture::new();
+    f.env.set("SPARKLE_ED_PRIVATE_KEY", SECRET_KEY);
+    f.env.set(
+        "GITHUB_OUTPUT",
+        f.path("outputs").to_str().unwrap().to_owned(),
+    );
+    for path in ["site/appcast.xml", "outputs", "dist/sentinel"] {
+        write(f.path(path), "keep existing bytes");
+    }
+    appcast::generate(&macos::Context {
+        root: f.root(),
+        runner: &crate::cmd::SystemRunner::dry_run(),
+        environment: &f.env,
+    })
+    .unwrap();
+    for path in ["site/appcast.xml", "outputs", "dist/sentinel"] {
+        assert_eq!(
+            fs::read_to_string(f.path(path)).unwrap(),
+            "keep existing bytes"
+        );
+    }
+    assert!(!f.path("dist/Voxelite.html").exists());
+    assert_eq!(fs::read_dir(f.path("tmp")).unwrap().count(), 0);
+}
 #[test]
 fn asset_metadata_must_cover_every_asset() {
     let f = Fixture::new();
@@ -283,9 +335,18 @@ fn sparkle_signing_and_feed_validation() {
             );
         }
         if success {
-            let notes = fs::read_to_string(f.path("dist/RELEASE_NOTES.md")).unwrap();
             let html = fs::read_to_string(f.path("dist/Voxelite.html")).unwrap();
-            assert_eq!(html, appcast::release_notes_html(&notes));
+            // Independent expected bytes, including the wrapper and all five
+            // html.escape substitutions; do not compare the encoder to itself.
+            assert_eq!(
+                html,
+                concat!(
+                    "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>\n",
+                    "<pre style=\"white-space: pre-wrap; font-family: system-ui\">",
+                    "Fix &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; café &lt;/pre&gt; ]]&gt; &#x27;quoted&#x27;\n",
+                    "</pre>\n</body></html>\n",
+                )
+            );
             assert!(
                 html.contains("&lt;script&gt;")
                     && html.contains("&amp;")

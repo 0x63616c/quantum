@@ -56,6 +56,11 @@ fn child<'a, 'i>(node: Node<'a, 'i>, namespace: Option<&str>, name: &str) -> Opt
         n.is_element() && n.tag_name().namespace() == namespace && n.tag_name().name() == name
     })
 }
+fn unqualified(node: Node<'_, '_>, name: &str) -> bool {
+    // roxmltree's has_tag_name("name") matches every namespace. RSS tags
+    // were unqualified in ElementTree, and must remain so after the port.
+    node.is_element() && node.tag_name().namespace().is_none() && node.tag_name().name() == name
+}
 fn field(node: Node<'_, '_>, name: &str) -> String {
     child(node, Some(SPARKLE), name)
         .and_then(|n| n.text())
@@ -101,15 +106,15 @@ pub fn validate(
     let root = doc.root_element();
     let channels: Vec<_> = root
         .children()
-        .filter(|n| n.has_tag_name("channel"))
+        .filter(|n| unqualified(*n, "channel"))
         .collect();
-    if !root.has_tag_name("rss") || root.attribute("version") != Some("2.0") || channels.len() != 1
+    if !unqualified(root, "rss") || root.attribute("version") != Some("2.0") || channels.len() != 1
     {
         return Err(invalid("Expected one RSS 2.0 channel"));
     }
     let mut updates = Vec::new();
     let mut last = None;
-    for item in channels[0].children().filter(|n| n.has_tag_name("item")) {
+    for item in channels[0].children().filter(|n| unqualified(*n, "item")) {
         let version = field(item, "version");
         let parsed = stable_version(&version)?;
         let short_version = field(item, "shortVersionString");
@@ -127,7 +132,7 @@ pub fn validate(
         }
         if item
             .descendants()
-            .filter(|n| n.has_tag_name("enclosure"))
+            .filter(|n| unqualified(*n, "enclosure"))
             .count()
             != 1
         {

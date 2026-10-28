@@ -150,7 +150,7 @@ cargo test -p xtask --locked
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
 | Repository consistency (plugins, branding, documentation) | `cargo xtask check plugin-deps brand docs-links docs-assets` |
-| Remaining Python regressions (macOS, site, PII scan) | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Remaining Python regressions (site, PII scan) | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
 | Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
 | Dependency licenses, advisories and sources | `cargo deny check` |
 | Unused dependencies | `cargo machete` |
@@ -344,7 +344,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Formatting, plugin rule/tests, packaging script tests, Clippy, workspace tests and ad-hoc DMG build. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Formatting, plugin rule/tests, packaging task tests, Clippy, workspace tests and ad-hoc DMG build. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 

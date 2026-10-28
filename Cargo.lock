@@ -7414,6 +7414,7 @@ dependencies = [
  "plist",
  "regex",
  "roxmltree 0.21.2",
+ "rustix",
  "semver",
  "serde",
  "serde_json",

@@ -363,6 +363,28 @@ fn invalid_inputs_and_notarization_rejection() {
         "macOS packaging requires macOS and Xcode."
     );
 }
+
+#[test]
+fn rejected_notarization_never_echoes_untrusted_submission_metadata() {
+    for id in [
+        "PRIVATECREDENTIAL123",
+        "11111111-2222-3333-4444-555555555555",
+    ] {
+        let mut f = Fixture::new();
+        f.env.set("APPLE_API_ISSUER_ID", id);
+        let bytes =
+            serde_json::to_vec(&serde_json::json!({"id": id, "status": "Invalid"})).unwrap();
+        let runner = crate::testing::RecordingRunner::stdout(&bytes);
+        let context = macos::Context {
+            root: f.root(),
+            environment: &f.env,
+            runner: &runner,
+        };
+        let error = sign::notarize(&context, &f.path("archive"), &f.path("key")).unwrap_err();
+        assert!(error.to_string().contains("Notarization was not accepted"));
+        assert!(!error.to_string().contains(id));
+    }
+}
 #[test]
 fn identity_selection_and_keychain_parser_contracts() {
     let digest = "A".repeat(40);
