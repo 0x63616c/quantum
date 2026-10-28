@@ -11,6 +11,8 @@ use crate::{
     workspace::Workspace,
 };
 
+mod legacy;
+
 type Inventory = BTreeMap<String, BTreeMap<String, Entry>>;
 
 #[derive(Deserialize)]
@@ -21,7 +23,10 @@ struct Entry {
 }
 
 pub(crate) fn run(context: &Context<'_>) -> Outcome {
-    super::outcome(check(context.workspace))
+    super::outcome(check(context.workspace).and_then(|mut errors| {
+        errors.extend(legacy::check(context)?);
+        Ok(errors)
+    }))
 }
 
 fn read_toml<T: DeserializeOwned>(workspace: &Workspace, path: &str) -> Result<T> {

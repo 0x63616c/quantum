@@ -112,9 +112,15 @@ The repository checks run in-process from `src/checks/`:
   adds its timed summary on stdout. Failures exit with status 1.
 - `brand`: `brand.toml` stability and consistency with packaging, package names,
   app IDs, MCP names, site metadata, project format, storage paths and skills.
+  Also scans tracked text and filenames for legacy branding, allowing only live,
+  justified literal/path exceptions in `brand.toml` compatibility entries.
+  Diagnostics include line/column; unused exceptions fail.
   Storage checks match the production path-selection functions, verifying macOS
   Application Support, XDG/fallback paths and the environment override without
   counting migration code or test assertions.
+- `typos`: source/documentation spelling via typos-cli 1.51.1 and `_typos.toml`.
+  Install with `cargo install typos-cli --version 1.51.1 --locked`; missing tools
+  fail this gate. CI Linux installs that version and runs both brand and typos.
 - `docs-links`: local file and directory links in every tracked `docs/**/*.md`,
   resolved relative to each document with URL escapes decoded. Parses inline and
   reference Markdown links and images, skipping code examples and external URLs;

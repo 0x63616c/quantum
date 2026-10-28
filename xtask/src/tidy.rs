@@ -17,6 +17,7 @@ const ROOT_ENTRIES: &[&str] = &[
     ".gitattributes",
     ".github",
     ".gitignore",
+    "_typos.toml",
     "AGENTS.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",

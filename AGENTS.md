@@ -447,3 +447,6 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | [Rendering harness](docs/perf/rendering-harness.md), [bench references](bench/README.md) | Golden/performance contracts and evidence. |
 | [UI library](crates/quantum-ui/README.md), [UI rules](crates/quantum-ui/AGENTS.md), [art checklist](design/ART-CHECKLIST.md) | Controls, text editing and visual rules. |
 | [Release guide](docs/releasing-macos.md) | Signing, Sparkle key custody, appcasts and qualification. |
+
+Run `cargo xtask check brand typos` before submitting changes; see CONTRIBUTING.md for
+how to add a justified `brand.toml` compatibility exception or `_typos.toml` word.
