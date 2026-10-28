@@ -203,10 +203,9 @@ impl EditorView {
     fn load_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.save_flow.begin_dialog();
         self.status = "Opening project…".into();
-        let task = cx.background_executor().spawn(async move {
-            voxelite_format::session::DocumentSession::open(&path, voxelite_core::Limits::default())
-                .map_err(voxelite_app::editor::EditorError::from)
-        });
+        let task = cx
+            .background_executor()
+            .spawn(async move { Editor::load_session(&path) });
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
