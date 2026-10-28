@@ -90,6 +90,11 @@ never pushed to `pr-assets`. Non-UI PRs get no Screenshots section.
 Details, adding screens and troubleshooting:
 [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
+Native UI regression checks use `cargo xtask ui-snapshots` on the golden Mac.
+See [native UI goldens](docs/ui-snapshots.md) for permissions, density requirements,
+explicit rebaseline and regression-test evidence. UI review also covers focus/hover,
+empty/loading states and text truncation, as listed in the PR template.
+
 ## 5. One focus per PR
 
 One issue, one concern, one PR. Split drive-by fixes into their own issue. Do not

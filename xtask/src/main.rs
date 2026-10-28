@@ -1,6 +1,7 @@
 //! Repository maintenance CLI and release-mode launcher for the GPU harness.
 
 mod screenshots;
+mod ui_snapshots;
 
 use std::{ffi::OsString, process::ExitCode};
 
@@ -27,6 +28,7 @@ Maintenance:
   version       Print the app version or check a release tag
   macos         Package, sign, and prepare release feeds and notes
   screenshots   Capture before/after screens for UI PRs
+  ui-snapshots  Check native UI screenshot goldens
 
 Rendering:
   bench         Run performance harness (all arguments forwarded)
@@ -58,6 +60,8 @@ enum Task {
     /// Capture before/after screens for UI PRs
     #[command(disable_help_flag = true)]
     Screenshots(Harness),
+    /// Check native UI screenshot goldens (explicit --rebaseline to update)
+    UiSnapshots(Harness),
     /// Print the app version, optionally requiring a matching release tag
     Version {
         /// Require this stable tag to match the app version
@@ -170,6 +174,14 @@ fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
             } else {
                 screenshots::run(&args).map_err(xtask::Error::Invalid)?;
             }
+        }
+        Some(Task::UiSnapshots(harness)) => {
+            let args: Vec<String> = harness
+                .args
+                .iter()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            ui_snapshots::run(&args).map_err(xtask::Error::Invalid)?;
         }
         Some(Task::Tidy) => xtask::tidy().map_err(xtask::Error::Invalid)?,
         Some(Task::Version { check_tag }) => println!(

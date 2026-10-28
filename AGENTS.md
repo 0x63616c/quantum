@@ -161,6 +161,7 @@ cargo test -p xtask --locked
 | Dependency licenses, advisories and sources | `cargo deny check` |
 | Unused dependencies | `cargo machete` |
 | Task / render harness help | `cargo xtask --help` / `cargo xtask bench --help` |
+| Native UI goldens (golden Mac GUI session) | `cargo xtask ui-snapshots` (see [setup](docs/ui-snapshots.md)) |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
 | Full site build | `scripts/build-site.sh` |
