@@ -376,9 +376,10 @@ impl WelcomeView {
         if self.busy {
             return;
         }
-        if matches!(op, Op::New | Op::Open | Op::Quit) && cx.global::<Launcher>().editor.is_some() {
+        if matches!(op, Op::New | Op::Open | Op::Quit)
+            && let Some(handle) = cx.global::<Launcher>().editor
+        {
             // A stale handle is cleared before retrying in this window.
-            let handle = cx.global::<Launcher>().editor.unwrap();
             if handle.read(cx).is_ok() {
                 request(op, path, cx);
                 return;

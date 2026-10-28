@@ -33,7 +33,7 @@ impl Distribution {
             p50: percentile(&sorted, 0.5)?,
             p95: percentile(&sorted, 0.95)?,
             p99: percentile(&sorted, 0.99)?,
-            max: *sorted.last().unwrap(),
+            max: sorted[sorted.len() - 1],
             mean: sorted.iter().map(|v| v / sorted.len() as f64).sum(),
         })
     }
@@ -53,7 +53,7 @@ impl Spread {
         Ok(Self {
             median,
             min: sorted[0],
-            max: *sorted.last().unwrap(),
+            max: sorted[sorted.len() - 1],
             runs,
         })
     }

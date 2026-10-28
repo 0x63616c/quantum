@@ -177,6 +177,10 @@ impl OrbitCamera {
         Self::fit_view(snapshot, aspect, PresetView::Iso)
     }
     /// Fit a named orthographic view using its own projected bounds.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: validated editor document"
+    )]
     pub fn fit_view(snapshot: &Snapshot, aspect: f64, view: PresetView) -> Self {
         let camera = Camera::fit(snapshot, view, aspect, false).expect("validated editor document");
         let Projection::Orthographic { height } = camera.projection else {
@@ -444,6 +448,7 @@ impl Editor {
         Self::from_session(DocumentSession::new(project, path, Limits::default())?)
     }
     /// Attach UI-thread plugins to a session that may have been loaded in the background.
+    #[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
     pub fn from_session(mut session: DocumentSession) -> EditorResult<Self> {
         let mut plugins = crate::app_host();
         plugins.load_data(&mut session.engine)?;

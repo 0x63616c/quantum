@@ -180,6 +180,10 @@ impl LocalCells {
     }
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: one worker per chunk"
+)]
 fn mesh_dirty(dirty: &[Pos], snapshot: &Snapshot, palette: &[Option<[f32; 3]>]) -> Vec<ChunkMesh> {
     let mesh = |at| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
     // Small edits avoid thread startup.
@@ -209,7 +213,10 @@ fn mesh_dirty(dirty: &[Pos], snapshot: &Snapshot, palette: &[Option<[f32; 3]>]) 
             });
             return results
                 .into_iter()
-                .map(|r| r.into_inner().unwrap())
+                .map(|r| {
+                    r.into_inner()
+                        .expect("scoped workers completed every chunk before joining")
+                })
                 .collect();
         }
     }
@@ -251,6 +258,10 @@ fn ambient(
     }
     occupied
 }
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: validated snapshot contains every meshed palette slot"
+)]
 fn mesh_chunk(at: Pos, cells: &LocalCells, palette: &[Option<[f32; 3]>]) -> ChunkMesh {
     let mut mesh = ChunkMesh::default();
     for axis in 0..3 {
@@ -327,7 +338,9 @@ fn mesh_chunk(at: Pos, cells: &LocalCells, palette: &[Option<[f32; 3]>]) -> Chun
                             axis: axis as u8,
                             positive,
                         };
-                        let color = palette[usize::from(face.slot)].as_ref().unwrap();
+                        let color = palette[usize::from(face.slot)]
+                            .as_ref()
+                            .expect("validated snapshot contains every meshed palette slot");
                         let vertices = quad.vertices();
                         // Pick the less conspicuous diagonal through differing AO values.
                         let indices = if face.ao[0] as u16 + face.ao[2] as u16

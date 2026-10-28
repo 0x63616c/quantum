@@ -171,6 +171,10 @@ enum ActionPresentation {
 }
 
 impl EditorView {
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: constant keystroke; internal invariant: declared boolean grid setting"
+    )]
     pub fn new(
         mut editor: Editor,
         override_theme: Option<Theme>,
@@ -333,6 +337,10 @@ impl EditorView {
         }
         cx.notify();
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: declared boolean grid setting"
+    )]
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.cancel_camera_animation();
         {
@@ -1363,6 +1371,7 @@ impl EditorView {
                 cx.stop_propagation();
             }))
     }
+    #[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
     fn palette_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
         let t = self.theme;
         let palette = self.active_palette();
@@ -1926,6 +1935,7 @@ impl EditorView {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
     }
 
+    #[expect(clippy::expect_used, reason = "internal invariant: valid palette")]
     fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
         if self.agent.open && !self.save_flow.dialog_open() {

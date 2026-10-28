@@ -322,6 +322,10 @@ impl EditorView {
         }
         self.request_cpu_render(cx);
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: renderer dimensions"
+    )]
     fn request_cpu_render(&mut self, cx: &mut Context<Self>) {
         if self.viewport.render_size[0] == 0 {
             return;
