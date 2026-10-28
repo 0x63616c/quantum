@@ -153,6 +153,8 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 
 - Core/MCP, Python tests and site builds can run on Linux. Full workspace and
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
+- Keep the Linux GUI build for CI and UI capture work; see
+  [ADR 0004](docs/adr/0004-keep-linux-gui-build.md).
 - Run Metal/AppKit/Sparkle checks and `scripts/package-macos.sh` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
   from Linux checks or mocked packaging tools.
