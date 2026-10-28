@@ -153,16 +153,18 @@ fn check_ignored_assets(workspace: &Workspace, runner: &dyn Runner) -> Result<Ve
     }
     // A short argument vector has the same check-ignore semantics as --stdin;
     // keep all execution in the shared runner without adding piped stdin support.
-    let command = Command::new("git")
-        .args(["check-ignore", "--no-index", "--"])
-        .args(captures)
-        .args(
-            images
-                .iter()
-                .map(|path| path.strip_prefix(workspace.root()).unwrap_or(path)),
-        )
-        .current_dir(workspace.root())
-        .allow_in_dry_run();
+    let sh = xshell::Shell::new().map_err(|error| crate::Error::Invalid(error.to_string()))?;
+    let command = Command::from(xshell::cmd!(
+        sh,
+        "git check-ignore --no-index -- {captures...}"
+    ))
+    .args(
+        images
+            .iter()
+            .map(|path| path.strip_prefix(workspace.root()).unwrap_or(path)),
+    )
+    .current_dir(workspace.root())
+    .allow_in_dry_run();
     let output = command.read(runner)?;
     let ignored: Vec<_> = output.lines().collect();
     if ignored == captures {

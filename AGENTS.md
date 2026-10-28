@@ -126,6 +126,10 @@ Use `cargo xtask check --list` to list checks,
 `cargo xtask check tidy fmt` for named checks, or `validate --only tidy fmt` /
 `validate --skip test` to select gates. Script and platform checks below remain
 separate. See [xtask/README.md](xtask/README.md) for the library and registry.
+Build ordinary xtask command vectors with `xshell::cmd!` and convert them to
+`cmd::Command` (or use `macos::Context::script`) before running through the
+injectable `Runner`. Apply secret markers and execution policy after conversion;
+keep process-group cancellation in the shared runner.
 
 Run from the repository root. These are the general macOS CI checks:
 
