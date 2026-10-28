@@ -7,6 +7,7 @@ use crate::{
     theme::Theme,
 };
 use gpui::{prelude::*, *};
+use std::sync::{Arc, Mutex};
 use voxelite_app::preferences::{Appearance, Preferences};
 use voxelite_render::AmbientOcclusionStrength;
 use voxelite_ui::tokens::{metrics, radius, space, type_size};
@@ -22,37 +23,13 @@ pub(super) struct SettingsState {
 }
 impl Global for SettingsState {}
 
-fn path() -> std::path::PathBuf {
-    voxelite_app::local_settings::data_dir().join("settings.json")
-}
-pub(super) fn init(override_theme: Option<Theme>, cx: &mut App) {
-    if cx.has_global::<SettingsState>() {
-        return;
-    }
-    let (mut values, error) = match Preferences::load(&path()) {
-        Ok(values) => (values, None),
-        Err(error) => (
-            Preferences::default(),
-            Some(format!("Could not load settings: {error}")),
-        ),
-    };
-    if let Some(theme) = override_theme {
-        values.appearance = if theme == Theme::Light {
-            Appearance::Light
-        } else {
-            Appearance::Dark
-        };
-    }
-    apply_appearance(values.appearance, cx);
-    cx.set_global(SettingsState { values, error });
-}
-fn apply_appearance(appearance: Appearance, cx: &App) {
-    cx.set_window_appearance(match appearance {
-        Appearance::System => None,
-        Appearance::Light => Some(WindowAppearance::Light),
-        Appearance::Dark => Some(WindowAppearance::Dark),
-    });
-}
+mod persistence;
+#[cfg(all(test, feature = "test-support"))]
+pub(super) use persistence::init_at;
+#[cfg(test)]
+use persistence::{WriteQueue, drain_writes};
+pub(super) use persistence::{change, init, init_loaded};
+
 pub(super) fn theme(appearance: Appearance, window: &Window) -> Theme {
     match appearance {
         Appearance::Light => Theme::Light,
@@ -62,20 +39,6 @@ pub(super) fn theme(appearance: Appearance, window: &Window) -> Theme {
             _ => Theme::Dark,
         },
     }
-}
-pub(super) fn change(cx: &mut App, edit: impl FnOnce(&mut Preferences)) {
-    let mut state = cx.global::<SettingsState>().clone();
-    let mut next = state.values.clone();
-    edit(&mut next);
-    match next.save(&path()) {
-        Ok(()) => {
-            apply_appearance(next.appearance, cx);
-            state.values = next;
-            state.error = None;
-        }
-        Err(error) => state.error = Some(format!("Settings were not saved: {error}")),
-    }
-    cx.set_global(state);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1257,106 +1220,4 @@ impl EditorView {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{SearchResult, Section, SectionHistory, search_sections};
-    use crate::actions::Op;
-
-    #[test]
-    fn empty_search_keeps_all_sections_without_setting_rows() {
-        let results = search_sections("  ");
-        assert_eq!(
-            results.iter().map(|r| r.section).collect::<Vec<_>>(),
-            Section::ALL
-        );
-        assert!(results.iter().all(|r| r.settings.is_empty()));
-    }
-
-    #[test]
-    fn search_finds_individual_settings_by_label_and_description() {
-        for (query, section, title) in [
-            (" ground GRID ", Section::Viewport, "Ground grid"),
-            (
-                "average frame time",
-                Section::Viewport,
-                "Render performance",
-            ),
-            ("smooth edges", Section::Viewport, "Antialiasing"),
-            ("ao strength", Section::Viewport, "Ambient occlusion"),
-            ("navigation hints", Section::General, "Navigation help"),
-            ("reduce motion", Section::General, "Animate camera"),
-            ("assistant", Section::Agent, "Project connection"),
-            ("reset settings", Section::Advanced, "Restore defaults"),
-            ("system dark", Section::Appearance, "Appearance"),
-        ] {
-            assert_eq!(
-                search_sections(query),
-                vec![SearchResult {
-                    section,
-                    settings: vec![title]
-                }],
-                "{query}"
-            );
-        }
-    }
-
-    #[test]
-    fn search_includes_parent_sections_and_individual_shortcuts() {
-        let results = search_sections("save");
-        let shortcuts = results
-            .iter()
-            .find(|r| r.section == Section::Shortcuts)
-            .unwrap();
-        assert!(shortcuts.settings.contains(&Op::Save.label()));
-        assert!(shortcuts.settings.contains(&Op::SaveAs.label()));
-        assert!(!shortcuts.settings.contains(&Op::Undo.label()));
-        assert!(search_sections("unmatched-xyz").is_empty());
-        assert_eq!(
-            search_sections("viewport ground")[0].settings,
-            vec!["Ground grid"]
-        );
-    }
-
-    #[test]
-    fn history_moves_back_and_forward_and_stops_at_boundaries() {
-        let mut history = SectionHistory::new(Section::General);
-        assert!(!history.can_back());
-        assert!(!history.can_forward());
-        history.back();
-        history.forward();
-        assert_eq!(history.current(), Section::General);
-        history.visit(Section::Appearance);
-        history.visit(Section::Viewport);
-        history.back();
-        assert_eq!(history.current(), Section::Appearance);
-        assert!(history.can_back());
-        assert!(history.can_forward());
-        history.back();
-        history.back();
-        assert_eq!(history.current(), Section::General);
-        history.forward();
-        history.forward();
-        history.forward();
-        assert_eq!(history.current(), Section::Viewport);
-        assert!(!history.can_forward());
-    }
-
-    #[test]
-    fn history_preserves_forward_on_reselection_and_truncates_on_new_navigation() {
-        let mut history = SectionHistory::new(Section::General);
-        history.visit(Section::Appearance);
-        history.visit(Section::Viewport);
-        history.back();
-        history.visit(Section::Appearance);
-        assert!(history.can_forward());
-        assert_eq!(history.entries.len(), 3);
-        history.visit(Section::Agent);
-        assert!(!history.can_forward());
-        assert_eq!(
-            history.entries,
-            vec![Section::General, Section::Appearance, Section::Agent]
-        );
-        history.visit(Section::Agent);
-        history.back();
-        assert_eq!(history.current(), Section::Appearance);
-    }
-}
+mod tests;
