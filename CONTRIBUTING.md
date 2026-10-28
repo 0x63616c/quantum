@@ -114,6 +114,9 @@ An issue is done only when all of these hold:
 Never call work done from memory. Re-read the issue's checklist against the merged
 diff first.
 
+Before coding, run `cargo xtask graphify` to refresh the local code graph; see
+[AGENTS.md](AGENTS.md#local-code-graph) for the navigation workflow.
+
 ## Running Rust tests
 
 CI runs `cargo nextest run --workspace --locked --profile ci`, followed by

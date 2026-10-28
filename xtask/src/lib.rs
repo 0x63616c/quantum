@@ -2,6 +2,7 @@
 
 pub mod check;
 pub mod cmd;
+pub mod graphify;
 pub mod icons;
 pub mod macos;
 pub mod release;
