@@ -117,3 +117,30 @@ fail tests. Locally, run the relevant tests with `INSTA_UPDATE=new`, then use
 `cargo insta review` to inspect and accept intentional changes. Commit reviewed
 `.snap` files alongside the tests; never commit `.snap.new` or `.pending-snap`
 files. Use `INSTA_UPDATE=no` to verify the accepted snapshots without updating them.
+
+## Workflow security and secret scanning
+
+Every PR and push to main runs gitleaks 8.30.1 on complete reachable Git history
+in a GitHub-hosted Linux job. The release archive is verified against its pinned
+SHA-256 before execution; no gitleaks license or write token is required. To
+reproduce with that version installed:
+
+```sh
+gitleaks git --redact --log-opts=--all .
+cargo xtask check workflows
+```
+
+If a scan finds a credential, revoke or rotate it first; deleting the current
+file does not remove it from history. Keep secret values out of issues and logs.
+For a confirmed false positive, add a narrowly scoped, documented exception in
+`.gitleaks.toml` that extends the default rules, then rerun the full-history scan.
+Prefer an exact fingerprint or specific path/rule combination over disabling
+a rule globally. Review exceptions like code; do not baseline real credentials.
+
+Pin every remote workflow `uses:` reference to a full 40-character commit SHA,
+with an exact `# vX.Y.Z` comment. Resolve annotated tags to their commit before
+pinning. Dependabot checks the GitHub Actions ecosystem weekly; review both the
+SHA and its version comment when updating. Keep explicit workflow-level
+`permissions: {}` or `contents: read`, and grant additional permissions only
+to the job that needs them. Site publishing writes the site-dist branch through
+the contents permission; it uses Vercel credentials rather than Pages or OIDC grants.

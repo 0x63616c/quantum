@@ -11,6 +11,7 @@ fn selection_validates_names_and_preserves_order() {
         names(select(CHECKS, &[], &[]).unwrap()),
         [
             "tidy",
+            "workflows",
             "plugin-deps",
             "brand",
             "docs-links",
@@ -31,6 +32,7 @@ fn selection_validates_names_and_preserves_order() {
         names(select(CHECKS, &[], &["test".into()]).unwrap()),
         [
             "tidy",
+            "workflows",
             "plugin-deps",
             "brand",
             "docs-links",

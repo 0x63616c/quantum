@@ -3,6 +3,7 @@
 pub(crate) mod brand;
 pub(crate) mod docs;
 pub(crate) mod plugin_deps;
+pub(crate) mod workflows;
 
 use std::path::PathBuf;
 
