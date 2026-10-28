@@ -23,8 +23,6 @@ pub type RenderError = voxelite_mesh::MeshError;
 pub type RenderResult<T> = Result<T, RenderError>;
 
 #[cfg(any(test, feature = "gpu"))]
-// Linux type-checks GPU resources, but only the Metal worker drives meshing.
-#[cfg_attr(all(feature = "gpu", not(target_os = "macos")), allow(dead_code))]
 mod chunk_mesh;
 #[cfg(any(test, feature = "gpu"))]
 mod shadow;
