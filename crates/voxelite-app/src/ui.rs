@@ -1,12 +1,6 @@
 //! Native GPUI shell. Portable editing logic lives in the library.
 mod about;
-#[cfg(not(target_family = "wasm"))]
 mod agent;
-#[cfg(target_family = "wasm")]
-#[path = "ui/agent_web.rs"]
-mod agent;
-#[cfg(target_family = "wasm")]
-mod browser;
 mod camera_anim;
 #[cfg(target_os = "linux")]
 mod capture;
@@ -25,7 +19,6 @@ mod save_flow;
 mod settings;
 mod shortcut_hint;
 mod tooltip;
-#[cfg(not(target_family = "wasm"))]
 pub(crate) mod welcome;
 use tooltip::{AnchoredTooltip, TooltipSide};
 mod status;
@@ -80,10 +73,7 @@ pub struct EditorView {
     editor: Editor,
     theme: Theme,
     preferences: voxelite_app::preferences::Preferences,
-    #[cfg(not(target_family = "wasm"))]
     settings_window: Option<WindowHandle<settings::SettingsView>>,
-    #[cfg(target_family = "wasm")]
-    settings_modal: Option<Entity<settings::SettingsView>>,
     palette_focus: FocusHandle,
     modal_focus: FocusHandle,
     sidebar_scroll: ScrollHandle,
@@ -95,7 +85,7 @@ pub struct EditorView {
     camera_view: Option<Op>,
     camera_fitted: bool,
     camera_anim: voxelite_render::CameraAnimator,
-    anim_epoch: web_time::Instant,
+    anim_epoch: std::time::Instant,
     hover: Option<Pos>,
     cursor: Pos,
     drag: Option<Point<Pixels>>,
@@ -173,7 +163,6 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) -> Self {
         settings::init(override_theme, cx);
-        #[cfg(not(target_family = "wasm"))]
         {
             welcome::record(&editor, cx);
             welcome::observe_editor(cx);
@@ -243,12 +232,8 @@ impl EditorView {
             .err()
             .map(|error| error.to_string());
         let agent = agent::Agent::new(&editor, socket);
-        #[cfg(not(target_family = "wasm"))]
         let agent_error = agent.as_ref().err().map(ToString::to_string);
-        #[cfg(target_family = "wasm")]
-        let agent_error: Option<String> = None;
         let agent = agent.unwrap_or_default();
-        #[cfg(not(target_family = "wasm"))]
         cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor()
@@ -272,15 +257,12 @@ impl EditorView {
             camera_view: Some(Op::Frame),
             camera_fitted: true,
             camera_anim: voxelite_render::CameraAnimator::new(),
-            anim_epoch: web_time::Instant::now(),
+            anim_epoch: std::time::Instant::now(),
             zoom_reference_span: editor.camera.span,
             viewport: viewport::Viewport::new(editor.camera),
             editor,
             preferences,
-            #[cfg(not(target_family = "wasm"))]
             settings_window: None,
-            #[cfg(target_family = "wasm")]
-            settings_modal: None,
             palette_focus: cx.focus_handle(),
             modal_focus: cx.focus_handle(),
             sidebar_scroll: ScrollHandle::new(),
@@ -336,7 +318,6 @@ impl EditorView {
     }
     fn replace_editor(&mut self, mut editor: Editor, cx: &mut Context<Self>) {
         self.cancel_camera_animation();
-        #[cfg(not(target_family = "wasm"))]
         {
             welcome::record(&editor, cx);
             welcome::project_ready(cx);
@@ -345,7 +326,6 @@ impl EditorView {
         self.timeline.dragging = false;
         self.timeline.expanded = false;
         self.zoom_reference_span = editor.camera.span;
-        #[cfg(not(target_family = "wasm"))]
         if let Some(session) = &mut self.agent.session
             && let Err(e) = session.replace(editor.project())
         {
@@ -478,7 +458,6 @@ impl EditorView {
             Op::Minimize => window.minimize_window(),
             Op::ZoomWindow => window.zoom_window(),
             Op::FullScreen => {
-                #[cfg(not(target_family = "wasm"))]
                 window.toggle_fullscreen();
                 cx.notify();
             }
@@ -532,18 +511,12 @@ impl EditorView {
                 }
             },
             Op::Open => self.open_dialog(cx),
-            #[cfg(not(target_family = "wasm"))]
             Op::OpenRecent | Op::Welcome => {
                 cx.defer(|cx| { if let Err(error) = welcome::show(cx) { eprintln!("Could not open welcome window: {error}"); } });
             }
-            #[cfg(not(target_family = "wasm"))]
             Op::ClearRecents => welcome::clear(cx),
             Op::Save => self.save(false, cx),
             Op::SaveAs => self.save(true, cx),
-            #[cfg(target_family = "wasm")]
-            Op::ExportGlb => self.export_browser(false, cx),
-            #[cfg(target_family = "wasm")]
-            Op::ExportPng => self.export_browser(true, cx),
             Op::Comment => self.begin_comment(cx),
             Op::Undo => {
                 let r = self.editor.undo();
@@ -693,10 +666,6 @@ impl EditorView {
             return;
         }
         self.reconcile_palette_panel(window, cx);
-        #[cfg(target_family = "wasm")]
-        if self.settings_modal.is_some() {
-            return;
-        }
         if self.save_flow.needs_confirmation() {
             self.pending_key(&e.keystroke, cx);
             return;
@@ -1870,29 +1839,6 @@ impl EditorView {
 
     fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
-        #[cfg(target_family = "wasm")]
-        if let Some(settings) = &self.settings_modal {
-            return Some(
-                div()
-                    .absolute()
-                    .size_full()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .bg(t.settings_scrim())
-                    .child(
-                        div()
-                            .w(px(metrics::SETTINGS_WIDTH))
-                            .max_w_full()
-                            .h(px(metrics::SETTINGS_HEIGHT))
-                            .max_h_full()
-                            .rounded(px(radius::WINDOW))
-                            .shadow_lg()
-                            .child(settings.clone()),
-                    )
-                    .into_any_element(),
-            );
-        }
         if self.agent.open && !self.save_flow.dialog_open() {
             return Some(self.agent_popover(cx));
         }
@@ -2302,8 +2248,6 @@ impl EditorView {
 }
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        #[cfg(target_family = "wasm")]
-        crate::web::set_unsaved(self.editor.engine.is_dirty());
         if let Some(view) = self.editor.comments_view() {
             self.editor.comments_state = view.state;
         } else {
@@ -2365,14 +2309,9 @@ impl Render for EditorView {
                         || self.enabled(op)
                 },
             );
-            #[cfg(not(target_family = "wasm"))]
             let menus = welcome::menus(menus, self.enabled(Op::Open), cx);
             cx.set_menus(menus);
         }
-        #[cfg(target_family = "wasm")]
-        let settings_open = self.settings_modal.is_some();
-        #[cfg(not(target_family = "wasm"))]
-        let settings_open = false;
         if self
             .overlay_drag
             .as_ref()
@@ -2388,30 +2327,30 @@ impl Render for EditorView {
         let overlay = self.overlay(window, cx);
         div()
             .id("editor-root")
-            .key_context(if settings_open {
-                "Settings"
-            } else if self.command_input.read(cx).focused(window)
-                || self.palettes.field_focused(window, cx)
-                || self.discussion.text.read(cx).focused(window)
-                || self.timeline.name.read(cx).focused(window)
-            {
-                "TextField"
-            } else if self.palette_focus.is_focused(window) {
-                "Palette"
-            } else if self.commands.is_open() {
-                "CommandPalette"
-            } else if self.menu.is_some()
-                || self.palette_open
-                || self.save_flow.needs_confirmation()
-                || self.info.is_some()
-                || self.save_flow.dialog_open()
-                || self.palettes.open
-                || self.agent.open
-            {
-                "Modal"
-            } else {
-                "Editor"
-            })
+            .key_context(
+                if self.command_input.read(cx).focused(window)
+                    || self.palettes.field_focused(window, cx)
+                    || self.discussion.text.read(cx).focused(window)
+                    || self.timeline.name.read(cx).focused(window)
+                {
+                    "TextField"
+                } else if self.palette_focus.is_focused(window) {
+                    "Palette"
+                } else if self.commands.is_open() {
+                    "CommandPalette"
+                } else if self.menu.is_some()
+                    || self.palette_open
+                    || self.save_flow.needs_confirmation()
+                    || self.info.is_some()
+                    || self.save_flow.dialog_open()
+                    || self.palettes.open
+                    || self.agent.open
+                {
+                    "Modal"
+                } else {
+                    "Editor"
+                },
+            )
             .track_focus(&self.focus)
             .tab_stop(false)
             .size_full()
@@ -2448,15 +2387,11 @@ impl Render for EditorView {
                 }
                 this.invoke(*op, window, cx);
             }))
-            .map(|d| {
-                #[cfg(not(target_family = "wasm"))]
-                let d = d.on_action(cx.listener(
-                    |this, op: &crate::actions::OpenRecentProject, window, cx| {
-                        this.open_recent(op.path.clone(), window, cx);
-                    },
-                ));
-                d
-            })
+            .on_action(
+                cx.listener(|this, op: &crate::actions::OpenRecentProject, window, cx| {
+                    this.open_recent(op.path.clone(), window, cx);
+                }),
+            )
             .when(!cfg!(target_os = "macos"), |d| d.child(self.menubar(cx)))
             .child(self.toolbar(f32::from(size.width) < 1200.0, cx))
             .child(
@@ -2484,10 +2419,6 @@ impl Render for EditorView {
                                 return;
                             }
                             window.focus(&this.focus, cx);
-                            #[cfg(target_family = "wasm")]
-                            {
-                                this.settings_modal = None;
-                            }
                             this.agent.open = false;
 
                             this.palettes.open = false;

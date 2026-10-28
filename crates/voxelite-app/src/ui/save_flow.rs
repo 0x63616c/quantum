@@ -5,7 +5,6 @@
 //! an export instead of a project save cancels that deferred command.
 use super::*;
 
-#[cfg(not(target_family = "wasm"))]
 use voxelite_app::save_format::SaveFormat;
 #[cfg(target_os = "macos")]
 mod macos;
@@ -44,7 +43,6 @@ pub(super) struct SaveFlow {
     choice: SaveChoice,
     after_save: Option<Op>,
     dialog_open: bool,
-    #[cfg(not(target_family = "wasm"))]
     open_path: Option<PathBuf>,
 }
 
@@ -55,7 +53,6 @@ impl Default for SaveFlow {
             choice: SaveChoice::Save,
             after_save: None,
             dialog_open: false,
-            #[cfg(not(target_family = "wasm"))]
             open_path: None,
         }
     }
@@ -94,7 +91,6 @@ impl SaveFlow {
 
     pub(super) fn cancel_confirmation(&mut self) {
         self.pending = None;
-        #[cfg(not(target_family = "wasm"))]
         {
             self.open_path = None;
         }
@@ -106,18 +102,16 @@ impl SaveFlow {
         self.dialog_open = false;
     }
 
-    #[cfg(not(target_family = "wasm"))]
     fn cancel_save(&mut self) {
         self.finish_dialog();
         self.after_save = None;
         self.open_path = None;
     }
 
-    // Native saves end the dialog gate separately. Browser downloads are
-    // synchronous and never open it; both consume the continuation on failure.
+    // Saving ends the dialog gate separately and consumes the continuation
+    // on failure.
     pub(super) fn complete_save(&mut self, success: bool) -> Option<Op> {
         let next = self.after_save.take();
-        #[cfg(not(target_family = "wasm"))]
         if !success {
             self.open_path = None;
         }
@@ -133,7 +127,6 @@ impl SaveFlow {
                 PendingAction::Save
             }
             SaveChoice::Cancel => {
-                #[cfg(not(target_family = "wasm"))]
                 {
                     self.open_path = None;
                 }
@@ -163,7 +156,6 @@ impl SaveFlow {
 }
 
 impl EditorView {
-    #[cfg(not(target_family = "wasm"))]
     pub(super) fn open_recent(
         &mut self,
         path: PathBuf,
@@ -188,7 +180,6 @@ impl EditorView {
         cx.notify();
     }
 
-    #[cfg(not(target_family = "wasm"))]
     fn load_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.save_flow.begin_dialog();
         self.status = "Opening project…".into();
@@ -216,7 +207,6 @@ impl EditorView {
         .detach();
     }
 
-    #[cfg(not(target_family = "wasm"))]
     pub(super) fn open_dialog(&mut self, cx: &mut Context<Self>) {
         if let Some(path) = self.save_flow.open_path.take() {
             self.load_project(path, cx);
@@ -249,7 +239,6 @@ impl EditorView {
             });
         }).detach();
     }
-    #[cfg(not(target_family = "wasm"))]
     fn write_project(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.save_flow.begin_dialog();
         self.status = "Saving project…".into();
@@ -281,7 +270,6 @@ impl EditorView {
         })
         .detach();
     }
-    #[cfg(not(target_family = "wasm"))]
     fn write_export(
         &mut self,
         path: PathBuf,
@@ -350,7 +338,6 @@ impl EditorView {
         })
         .detach();
     }
-    #[cfg(not(target_family = "wasm"))]
     pub(super) fn save(&mut self, save_as: bool, cx: &mut Context<Self>) {
         if !save_as && let Some(path) = self.editor.path.clone() {
             self.write_project(path, cx);
@@ -358,7 +345,6 @@ impl EditorView {
         }
         self.choose_save_path(cx);
     }
-    #[cfg(not(target_family = "wasm"))]
     pub(super) fn choose_save_path(&mut self, cx: &mut Context<Self>) {
         let directory = self
             .editor
@@ -468,7 +454,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn recent_path_survives_save_but_is_discarded_on_cancel_and_failure() {
         let mut flow = SaveFlow::default();
         let path = std::path::PathBuf::from("project.voxl");
@@ -538,7 +523,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_family = "wasm"))]
     fn cancelling_or_failing_path_chooser_aborts_the_entire_deferred_operation() {
         for op in [Op::New, Op::Open, Op::Quit] {
             let mut flow = SaveFlow::default();
@@ -639,7 +623,7 @@ mod tests {
         flow.finish_dialog();
         flow.cancel_confirmation();
         assert_eq!(flow.complete_save(true), Some(Op::New));
-        // Browser save completion does not mutate an independently held gate.
+        // Save completion does not mutate an independently held gate.
         flow.begin_dialog();
         assert_eq!(flow.complete_save(false), None);
         assert!(flow.dialog_open());

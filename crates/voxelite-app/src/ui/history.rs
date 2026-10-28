@@ -101,7 +101,7 @@ impl EditorView {
         // Dropping the previous task cancels its pending timer, including on a
         // rapid pause/resume. Only this playback session can advance the cursor.
         self.timeline.playback_task = None;
-        match self.editor.play_history(web_time::Instant::now()) {
+        match self.editor.play_history(std::time::Instant::now()) {
             Ok(true) => self.refresh_history_playback(cx),
             Ok(false) => return,
             Err(e) => {
@@ -121,7 +121,7 @@ impl EditorView {
                     if !this.viewport.is_current(&this.editor) {
                         return true;
                     }
-                    match this.editor.tick_history(web_time::Instant::now()) {
+                    match this.editor.tick_history(std::time::Instant::now()) {
                         Ok(true) => this.refresh_history_playback(cx),
                         Ok(false) => cx.notify(),
                         Err(e) => this.report(Err::<(), _>(e), "", cx),
