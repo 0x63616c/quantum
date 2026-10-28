@@ -182,8 +182,7 @@ impl LocalCells {
 
 fn mesh_dirty(dirty: &[Pos], snapshot: &Snapshot, palette: &[Option<[f32; 3]>]) -> Vec<ChunkMesh> {
     let mesh = |at| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
-    // Browser wasm has no native threads. Small edits also avoid thread startup.
-    #[cfg(not(target_arch = "wasm32"))]
+    // Small edits avoid thread startup.
     if dirty.len() >= 4 {
         use std::sync::{
             OnceLock,

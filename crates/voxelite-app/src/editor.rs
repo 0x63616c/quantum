@@ -1,13 +1,10 @@
 //! Human tool gestures translated into atomic shared-core commands.
 use glam::DVec3;
 use std::cell::{Ref, RefCell};
-#[cfg(not(target_family = "wasm"))]
 use std::path::Path;
 use std::path::PathBuf;
 use voxelite_core::*;
-#[cfg(not(target_family = "wasm"))]
 use voxelite_format::session::SavePolicy;
-#[cfg(not(target_family = "wasm"))]
 pub use voxelite_format::session::{SaveTask, SavedProject};
 use voxelite_format::{
     Project,
@@ -490,7 +487,6 @@ impl Editor {
         )
     }
     /// Read a file without touching the current editor on failure.
-    #[cfg(not(target_family = "wasm"))]
     pub fn open(path: &Path) -> EditorResult<Self> {
         Self::from_session(DocumentSession::open(path, Limits::default())?)
     }
@@ -510,19 +506,16 @@ impl Editor {
     }
     /// Save through a synced temporary file in the destination directory, then atomically rename.
     /// Dirty state is cleared only after successful persistence.
-    #[cfg(not(target_family = "wasm"))]
     pub fn save(&mut self, path: &Path) -> EditorResult<()> {
         let saved = self.prepare_save(path).write()?;
         self.finish_save(saved);
         Ok(())
     }
     /// Capture the current document without performing filesystem I/O.
-    #[cfg(not(target_family = "wasm"))]
     pub fn prepare_save(&self, path: &Path) -> SaveTask {
         self.session.prepare_save(path, SavePolicy::ReplaceSelected)
     }
     /// Adopt a successful save; edits made after its snapshot remain dirty.
-    #[cfg(not(target_family = "wasm"))]
     pub fn finish_save(&mut self, saved: SavedProject) {
         self.session.finish_save(saved);
     }

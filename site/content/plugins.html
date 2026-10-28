@@ -44,4 +44,4 @@ fn conforms_to_plugin_contract() {
 }</code></pre>
 <p>The harness checks declarations and exercises an enable/disable/enable cycle, including implementation availability for supported bindings. It complements feature-specific tests; it does not supply missing command execution.</p>
 <h2 id="limits">What is not supported yet</h2>
-<p>There is no third-party plugin loading, dynamic library loading, WASM plugin runtime, scripting API or plugin marketplace. The Rust API is not a stable binary ABI. The browser editor is compiled to WebAssembly, but that does not make it a WASM plugin loader. Built-in plugins are developed and reviewed as part of this repository and linked at build time.</p>
+<p>There is no third-party plugin loading, dynamic library loading, scripting API or plugin marketplace. The Rust API is not a stable binary ABI. Built-in plugins are developed and reviewed as part of this repository and linked at build time.</p>
