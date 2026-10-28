@@ -5,6 +5,7 @@
 //! is inert, bounded, preserved, and never interpreted as a URL or executable.
 mod build_history;
 pub mod session;
+pub mod storage;
 mod stream;
 pub use build_history::{BuildHistory, BuildStep};
 use serde::{Deserialize, Serialize};

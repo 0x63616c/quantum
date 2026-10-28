@@ -269,7 +269,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../site/appcast.xml"),
         root,
     )?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("index.html"),
         format!(
             include_str!("../templates/index.html"),
@@ -279,7 +279,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ),
     )?;
     fs::create_dir_all(root.join("download"))?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("download/index.html"),
         format!(
             include_str!("../templates/download.html"),
@@ -291,7 +291,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             github_link = GITHUB_LINK.trim(),
         ),
     )?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("assets/mcp-tools.json"),
         format!("{}\n", serde_json::to_string_pretty(&tools)?),
     )?;
@@ -305,20 +305,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             &format!("{}: Quantum docs", page.title),
             page.description,
         );
-        fs::write(
+        voxelite_format::storage::safe_write(
             directory.join("index.html"),
             layout(page.slug, page.title, &metadata, &body),
         )?;
         let markdown = markdown::render(page, &body)?;
-        fs::write(
+        voxelite_format::storage::safe_write(
             root.join(page.markdown_path().trim_start_matches('/')),
             &markdown,
         )?;
-        fs::write(directory.join("index.md"), &markdown)?;
+        voxelite_format::storage::safe_write(directory.join("index.md"), &markdown)?;
         documents.push((page, markdown));
     }
     markdown::write_indexes(root, &documents)?;
-    fs::write(
+    voxelite_format::storage::safe_write(
         root.join("404.html"),
         layout(
             "404",

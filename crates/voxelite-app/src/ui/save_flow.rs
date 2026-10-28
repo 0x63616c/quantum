@@ -315,7 +315,7 @@ impl EditorView {
                 let bytes = bytes??;
                 executor
                     .spawn(async move {
-                        std::fs::write(&path, bytes)?;
+                        voxelite_format::storage::safe_write(&path, bytes)?;
                         Ok::<_, anyhow::Error>(path)
                     })
                     .await
