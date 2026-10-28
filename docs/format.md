@@ -2,7 +2,7 @@
 
 One project. One readable JSON file.
 
-`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `quantum-format` and the validated core model in this development build. Media type: `application/vnd.voxelite.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
+`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `quantum-format` and the validated core model in this development build. Media type: `application/vnd.quantum.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
 
 ## Top-level structure
 
@@ -97,7 +97,7 @@ The format remains 1.0. Old files without extensions load unchanged; an empty na
     "id": "00000000-0000-4000-8000-000000000001",
     "name": "One voxel"
   },
-  "format": "voxelite",
+  "format": "quantum",
   "layers": [{
     "id": "00000000-0000-4000-8000-000000000002",
     "locked": false, "name": "Base", "visible": true,
@@ -113,3 +113,5 @@ The format remains 1.0. Old files without extensions load unchanged; an empty na
 ```
 
 This displayed example is compacted for readability. The downloadable file uses canonical whitespace. Open it in the editor or with `quantum_document_open` to validate it; the app preserves the existing document if an open fails.
+
+Readers accept the legacy v1 discriminator specified in the [format schema](https://github.com/0x63616c/quantum/blob/main/spec/voxl/1.0/schema.json); every save emits `quantum`. Content and IDs are preserved. Older applications that require the previous discriminator cannot open newly saved projects; keep an original copy when sharing with them.

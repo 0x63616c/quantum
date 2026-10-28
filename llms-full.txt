@@ -93,7 +93,7 @@ The Mac app includes the MCP server. For source builds, build `quantum-mcp` firs
 
 ### Headless: create and save independently
 
-[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://quantum.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `quantum_capabilities_get`; expect API `voxelite.v1`. [Install agent skills](https://quantum.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
+[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://quantum.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `quantum_capabilities_get`; expect API `quantum.v1`. [Install agent skills](https://quantum.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
 
 ### Native: work in the same document
 
@@ -208,7 +208,7 @@ Source: [https://quantum.worldwidewebb.co/docs/mcp.md](https://quantum.worldwide
 
 Coordinates in. Models out. Real visual feedback.
 
-This reference is generated from the Rust server's live discovery catalog, API `voxelite.v1`. Download the [complete JSON catalog](https://quantum.worldwidewebb.co/assets/mcp-tools.json). Run `quantum-mcp --schema` to inspect the catalog for your own build.
+This reference is generated from the Rust server's live discovery catalog, API `quantum.v1`. Download the [complete JSON catalog](https://quantum.worldwidewebb.co/assets/mcp-tools.json). Run `quantum-mcp --schema` to inspect the catalog for your own build.
 
 ## Install MCP
 
@@ -295,7 +295,7 @@ MCP gives your agent voxel editing tools, palettes, real PNG renders, and projec
 ## Verify it works
 
 1.  Restart or reconnect your host and list its MCP tools.
-2.  Call `quantum_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+2.  Call `quantum_capabilities_get` with `{}`. Expect API `quantum.v1`, an epoch and available document IDs.
 3.  Confirm the installed skills appear in your host, then ask it to use `quantum-workflow` for your first model.
 
 ## Shared contract
@@ -379,7 +379,7 @@ Generated directly from `QuantumServer::tools()`. Expand a schema for nested pro
 
 ### quantum\_capabilities\_get
 
-Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.
+Discover quantum.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.
 
 | Argument | Required | Type / constraints |
 | -------- | -------- | ------------------ |
@@ -403,7 +403,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -420,7 +420,7 @@ Complete output schema
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "voxelite.v1"
+          "const": "quantum.v1"
         },
         "protocol_versions": {
           "type": "array",
@@ -927,7 +927,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1248,7 +1248,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1634,7 +1634,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1951,7 +1951,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2266,7 +2266,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2603,7 +2603,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2894,7 +2894,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3200,7 +3200,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3519,7 +3519,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3705,7 +3705,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4089,7 +4089,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4515,7 +4515,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4865,7 +4865,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5182,7 +5182,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5513,7 +5513,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5796,7 +5796,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6030,7 +6030,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6338,7 +6338,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6655,7 +6655,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6968,7 +6968,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7281,7 +7281,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7594,7 +7594,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7908,7 +7908,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8119,7 +8119,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8423,7 +8423,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8732,7 +8732,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -9091,7 +9091,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -9601,7 +9601,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -9998,7 +9998,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -10248,7 +10248,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -10566,7 +10566,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -11320,7 +11320,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -11747,7 +11747,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12123,7 +12123,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12533,7 +12533,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12837,7 +12837,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -13146,7 +13146,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -13392,7 +13392,7 @@ Source: [https://quantum.worldwidewebb.co/docs/format.md](https://quantum.worldw
 
 One project. One readable JSON file.
 
-`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `quantum-format` and the validated core model in this development build. Media type: `application/vnd.voxelite.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
+`.voxl` stores a complete portable project as UTF-8 JSON. This reference follows `quantum-format` and the validated core model in this development build. Media type: `application/vnd.quantum.project+json`. Current writer version: `{"major": 1, "minor": 0}`.
 
 ## Top-level structure
 
@@ -13487,7 +13487,7 @@ The format remains 1.0. Old files without extensions load unchanged; an empty na
     "id": "00000000-0000-4000-8000-000000000001",
     "name": "One voxel"
   },
-  "format": "voxelite",
+  "format": "quantum",
   "layers": [{
     "id": "00000000-0000-4000-8000-000000000002",
     "locked": false, "name": "Base", "visible": true,
@@ -13503,6 +13503,8 @@ The format remains 1.0. Old files without extensions load unchanged; an empty na
 ```
 
 This displayed example is compacted for readability. The downloadable file uses canonical whitespace. Open it in the editor or with `quantum_document_open` to validate it; the app preserves the existing document if an open fails.
+
+Readers accept the legacy v1 discriminator specified in the [format schema](https://github.com/0x63616c/quantum/blob/main/spec/voxl/1.0/schema.json); every save emits `quantum`. Content and IDs are preserved. Older applications that require the previous discriminator cannot open newly saved projects; keep an original copy when sharing with them.
 
 ---
 
@@ -13599,7 +13601,7 @@ MCP gives your agent voxel editing tools, palettes, real PNG renders, and projec
 ## Verify it works
 
 1.  Restart or reconnect your host and list its MCP tools.
-2.  Call `quantum_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+2.  Call `quantum_capabilities_get` with `{}`. Expect API `quantum.v1`, an epoch and available document IDs.
 3.  Confirm the installed skills appear in your host, then ask it to use `quantum-workflow` for your first model.
 
 ## Choose a skill

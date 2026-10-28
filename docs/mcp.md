@@ -2,7 +2,7 @@
 
 Coordinates in. Models out. Real visual feedback.
 
-This reference is generated from the Rust server's live discovery catalog, API `voxelite.v1`. Download the [complete JSON catalog](https://quantum.worldwidewebb.co/assets/mcp-tools.json). Run `quantum-mcp --schema` to inspect the catalog for your own build.
+This reference is generated from the Rust server's live discovery catalog, API `quantum.v1`. Download the [complete JSON catalog](https://quantum.worldwidewebb.co/assets/mcp-tools.json). Run `quantum-mcp --schema` to inspect the catalog for your own build.
 
 ## Install MCP
 
@@ -89,7 +89,7 @@ MCP gives your agent voxel editing tools, palettes, real PNG renders, and projec
 ## Verify it works
 
 1.  Restart or reconnect your host and list its MCP tools.
-2.  Call `quantum_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+2.  Call `quantum_capabilities_get` with `{}`. Expect API `quantum.v1`, an epoch and available document IDs.
 3.  Confirm the installed skills appear in your host, then ask it to use `quantum-workflow` for your first model.
 
 ## Shared contract
@@ -173,7 +173,7 @@ Generated directly from `QuantumServer::tools()`. Expand a schema for nested pro
 
 ### quantum\_capabilities\_get
 
-Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.
+Discover quantum.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.
 
 | Argument | Required | Type / constraints |
 | -------- | -------- | ------------------ |
@@ -197,7 +197,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -214,7 +214,7 @@ Complete output schema
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "voxelite.v1"
+          "const": "quantum.v1"
         },
         "protocol_versions": {
           "type": "array",
@@ -721,7 +721,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1042,7 +1042,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1428,7 +1428,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -1745,7 +1745,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2060,7 +2060,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2397,7 +2397,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2688,7 +2688,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -2994,7 +2994,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3313,7 +3313,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3499,7 +3499,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -3883,7 +3883,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4309,7 +4309,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4659,7 +4659,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -4976,7 +4976,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5307,7 +5307,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5590,7 +5590,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -5824,7 +5824,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6132,7 +6132,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6449,7 +6449,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -6762,7 +6762,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7075,7 +7075,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7388,7 +7388,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7702,7 +7702,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -7913,7 +7913,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8217,7 +8217,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8526,7 +8526,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -8885,7 +8885,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -9395,7 +9395,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -9792,7 +9792,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -10042,7 +10042,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -10360,7 +10360,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -11114,7 +11114,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -11541,7 +11541,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -11917,7 +11917,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12327,7 +12327,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12631,7 +12631,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",
@@ -12940,7 +12940,7 @@ Complete output schema
   "type": "object",
   "properties": {
     "api_version": {
-      "const": "voxelite.v1"
+      "const": "quantum.v1"
     },
     "session_id": {
       "type": "string",

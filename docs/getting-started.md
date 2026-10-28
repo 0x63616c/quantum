@@ -58,7 +58,7 @@ The Mac app includes the MCP server. For source builds, build `quantum-mcp` firs
 
 ### Headless: create and save independently
 
-[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://quantum.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `quantum_capabilities_get`; expect API `voxelite.v1`. [Install agent skills](https://quantum.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
+[Install MCP in Cursor, Claude Code, Codex, VS Code or another host](https://quantum.worldwidewebb.co/docs/mcp/#install-mcp). The guide includes one-click links, CLI commands and manual configuration. Use an existing project directory as the file root, restart your host, list tools and call `quantum_capabilities_get`; expect API `quantum.v1`. [Install agent skills](https://quantum.worldwidewebb.co/docs/skills/#install-skills) to teach the creative workflow.
 
 ### Native: work in the same document
 

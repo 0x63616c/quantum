@@ -3,7 +3,7 @@ name: quantum-workflow
 description: Create or refine voxel art through Quantum MCP, with atomic edits, visual review, named versions and portable exports.
 ---
 
-Use a connected Quantum server exposing `voxelite.v1`. Discover tools rather
+Use a connected Quantum server exposing `quantum.v1`. Discover tools rather
 than assuming the full planned API exists. This workflow needs no GPU/display.
 
 1. Call `quantum_capabilities_get`; capture epoch and open model IDs. In an

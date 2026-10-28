@@ -89,7 +89,7 @@ MCP gives your agent voxel editing tools, palettes, real PNG renders, and projec
 ## Verify it works
 
 1.  Restart or reconnect your host and list its MCP tools.
-2.  Call `quantum_capabilities_get` with `{}`. Expect API `voxelite.v1`, an epoch and available document IDs.
+2.  Call `quantum_capabilities_get` with `{}`. Expect API `quantum.v1`, an epoch and available document IDs.
 3.  Confirm the installed skills appear in your host, then ask it to use `quantum-workflow` for your first model.
 
 ## Choose a skill
