@@ -31,6 +31,8 @@ struct Launcher {
     // Serialize metadata changes across windows, including Clear while an open
     // or save is finishing. Rendering has a separate bounded background worker.
     work: Option<Task<()>>,
+    notification: Option<Task<()>>,
+    continuation: Option<Task<()>>,
     revision: u64,
     preview_work: Option<Task<()>>,
     preview_queue: VecDeque<PathBuf>,
@@ -57,6 +59,8 @@ pub(crate) fn init(
         projects: Vec::new(),
         error: None,
         work: None,
+        notification: None,
+        continuation: None,
         revision: 0,
         preview_work: None,
         preview_queue: VecDeque::new(),
@@ -64,8 +68,17 @@ pub(crate) fn init(
     // Let GPUI's graceful shutdown drain metadata writes even when the user
     // closes the last window immediately after opening, saving, or clearing.
     // Thumbnails remain disposable and can be generated at the next launch.
+    observe_quit(cx);
+    history(HistoryChange::Reload, cx);
+}
+
+fn observe_quit(cx: &mut App) {
     cx.on_app_quit(|cx| {
-        let work = cx.global_mut::<Launcher>().work.take();
+        let state = cx.global_mut::<Launcher>();
+        state.notification.take();
+        state.continuation.take();
+        state.preview_work.take();
+        let work = state.work.take();
         async move {
             if let Some(work) = work {
                 work.await;
@@ -73,27 +86,36 @@ pub(crate) fn init(
         }
     })
     .detach();
-    history(HistoryChange::Reload, cx);
 }
 
 fn history(change: HistoryChange, cx: &mut App) {
+    history_at(change, voxelite_app::local_settings::data_dir(), cx);
+}
+
+fn history_at(change: HistoryChange, directory: PathBuf, cx: &mut App) {
     let previous = cx.global_mut::<Launcher>().work.take();
-    let directory = voxelite_app::local_settings::data_dir();
-    let executor = cx.background_executor().clone();
-    let task = cx.spawn(async move |cx| {
+    let (done, receive) = futures_channel::oneshot::channel();
+    // Serialize only disk work on the background executor. The quit hook can
+    // drain this chain without borrowing the App or running UI continuations.
+    let work = cx.background_executor().spawn(async move {
         if let Some(previous) = previous {
             previous.await;
         }
-        let result = executor
-            .spawn(async move {
-                let store = Recents::new(&directory);
-                match change {
-                    HistoryChange::Reload => store.load(),
-                    HistoryChange::Record(path, name) => store.record(&path, &name),
-                    HistoryChange::Clear => store.clear().and_then(|()| store.load()),
-                }
-            })
-            .await;
+        let store = Recents::new(&directory);
+        let result = match change {
+            HistoryChange::Reload => store.load(),
+            HistoryChange::Record(path, name) => store.record(&path, &name),
+            HistoryChange::Clear => store.clear().and_then(|()| store.load()),
+        };
+        if let Err(error) = &result {
+            eprintln!("Could not update recent projects: {error}");
+        }
+        let _ = done.send(result);
+    });
+    let notification = cx.spawn(async move |cx| {
+        let Ok(result) = receive.await else {
+            return;
+        };
         cx.update(|cx| {
             cx.update_global::<Launcher, _>(|state, _| {
                 match result {
@@ -109,7 +131,9 @@ fn history(change: HistoryChange, cx: &mut App) {
             })
         });
     });
-    cx.global_mut::<Launcher>().work = Some(task);
+    let state = cx.global_mut::<Launcher>();
+    state.work = Some(work);
+    state.notification = Some(notification);
 }
 
 pub(super) fn record(editor: &Editor, cx: &mut App) {
@@ -178,16 +202,25 @@ pub(super) fn observe_editor(cx: &mut Context<EditorView>) {
 // A Save & Quit continuation must not exit before the recent entry is durable.
 pub(super) fn after_record(op: Op, cx: &mut Context<EditorView>) {
     let previous = cx.global_mut::<Launcher>().work.take();
-    let task = cx.spawn(async move |this, cx| {
+    let (done, receive) = futures_channel::oneshot::channel();
+    let work = cx.background_executor().spawn(async move {
         if let Some(previous) = previous {
             previous.await;
+        }
+        let _ = done.send(());
+    });
+    let continuation = cx.spawn(async move |this, cx| {
+        if receive.await.is_err() {
+            return;
         }
         let _ = this.update(cx, |this, cx| {
             this.save_flow.finish_dialog();
             this.run(op, cx);
         });
     });
-    cx.global_mut::<Launcher>().work = Some(task);
+    let state = cx.global_mut::<Launcher>();
+    state.work = Some(work);
+    state.continuation = Some(continuation);
 }
 
 pub(super) fn clear(cx: &mut App) {
@@ -299,7 +332,7 @@ pub(crate) fn show(cx: &mut App) -> anyhow::Result<WindowHandle<WelcomeView>> {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             window_min_size: Some(size(px(layout::WIDTH), px(layout::HEIGHT))),
             titlebar: Some(TitlebarOptions {
-                title: None,
+                title: (!cfg!(target_os = "macos")).then(|| "Quantum".into()),
                 appears_transparent: true,
                 traffic_light_position: Some(point(px(space::SECTION), px(metrics::TRAFFIC_TOP))),
             }),
@@ -1218,5 +1251,47 @@ mod tests {
         ] {
             assert_eq!(grouped_count(count), label);
         }
+    }
+    #[gpui::test]
+    fn shutdown_drains_ordered_history_writes_without_ui_callbacks(cx: &mut gpui::TestAppContext) {
+        let dir = tempfile::tempdir().unwrap();
+        cx.update(|cx| {
+            cx.set_global(super::Launcher {
+                editor: None,
+                welcome: None,
+                socket: None,
+                projects: Vec::new(),
+                error: None,
+                work: None,
+                notification: None,
+                continuation: None,
+                revision: 0,
+                preview_work: None,
+                preview_queue: VecDeque::new(),
+            })
+        });
+        let path = dir.path().join("saved.voxl");
+        std::fs::write(&path, b"project").unwrap();
+        cx.update(|cx| {
+            super::observe_quit(cx);
+            super::history_at(
+                super::HistoryChange::Record(path.clone(), "First".into()),
+                dir.path().into(),
+                cx,
+            );
+            super::history_at(super::HistoryChange::Clear, dir.path().into(), cx);
+            super::history_at(
+                super::HistoryChange::Record(path.clone(), "Last".into()),
+                dir.path().into(),
+                cx,
+            );
+        });
+        cx.quit();
+        let projects = voxelite_app::recents::Recents::new(dir.path())
+            .load()
+            .unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].name, "Last");
+        assert_eq!(projects[0].path, path.canonicalize().unwrap());
     }
 }
