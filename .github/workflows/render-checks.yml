@@ -41,7 +41,9 @@ jobs:
   render:
     # Only owner-triggered, same-repository code may use the golden machine.
     if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, macOS, ARM64, xcode]
+    # Goldens and timing baselines come from one runner. The Mac mini hosts two
+    # voxelite runners; only homelab-voxelite carries the golden label.
+    runs-on: [self-hosted, macOS, ARM64, xcode, golden]
     timeout-minutes: 60
     env:
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
