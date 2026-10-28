@@ -36,8 +36,11 @@ while IFS=$'\t' read -r name title width height args; do
   [[ -z "$name" || "$name" == \#* ]] && continue
   export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
   mkdir -p "$VOXELITE_DATA_DIR"
+  # A private cwd keeps the displayed relative socket path stable across captures.
+  # Fixture paths in the spec must be absolute (the bundled --example needs none).
+  cd "$VOXELITE_DATA_DIR"
   # shellcheck disable=SC2086 # args are a space-separated list by design
-  "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/$name.sock" \
+  "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "./session.sock" \
     >"$XDG_RUNTIME_DIR/$name.log" 2>&1 </dev/null &
   app_pid=$!
   window=''

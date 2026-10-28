@@ -9,6 +9,7 @@ pub(crate) enum LaunchState {
     Palette,
     History,
     HistoryPreview,
+    CommentsEmpty,
     Comments,
     CommentThread,
     CommentDraft,
@@ -25,23 +26,27 @@ pub(crate) enum LaunchState {
     PaletteChooser,
     PaletteManager,
     PaletteMenu,
+    PaletteDelete,
     Debug,
     Settings(Section),
 }
 
 impl LaunchState {
     pub(crate) const ALL: &[(&str, Self)] = &[
-        ("chrome-menu-quantum", Self::Menu("Quantum")),
         ("chrome-menu-file", Self::Menu("File")),
         ("chrome-menu-edit", Self::Menu("Edit")),
         ("chrome-menu-view", Self::Menu("View")),
         ("chrome-menu-tools", Self::Menu("Tools")),
         ("chrome-menu-palette", Self::Menu("Palette")),
+        ("chrome-menu-layers", Self::Menu("Layers")),
+        ("chrome-menu-agent", Self::Menu("Agent")),
+        ("chrome-menu-extensions", Self::Menu("Extensions")),
         ("chrome-menu-window", Self::Menu("Window")),
         ("chrome-menu-help", Self::Menu("Help")),
         ("panels-palette", Self::Palette),
         ("panels-history", Self::History),
         ("panels-history-preview", Self::HistoryPreview),
+        ("panels-comments-empty", Self::CommentsEmpty),
         ("panels-comments", Self::Comments),
         ("panels-comment-thread", Self::CommentThread),
         ("panels-comment-draft", Self::CommentDraft),
@@ -58,6 +63,7 @@ impl LaunchState {
         ("popovers-palette-chooser", Self::PaletteChooser),
         ("dialogs-palettes", Self::PaletteManager),
         ("popovers-palette-menu", Self::PaletteMenu),
+        ("dialogs-palette-delete", Self::PaletteDelete),
         ("overlays-debug", Self::Debug),
         ("settings-general", Self::Settings(Section::General)),
         ("settings-appearance", Self::Settings(Section::Appearance)),
@@ -116,6 +122,7 @@ impl EditorView {
                 }
                 self.request_render(cx);
             }
+            LaunchState::CommentsEmpty => self.panel = SidebarTab::Comments,
             LaunchState::Comments | LaunchState::CommentThread | LaunchState::CommentDraft => {
                 self.panel = SidebarTab::Comments;
                 self.editor
@@ -176,6 +183,19 @@ impl EditorView {
                     self.capture_palette_menu();
                 }
             }
+            LaunchState::PaletteDelete => {
+                // Keep the copied library in memory; opening a capture must not write preferences.
+                self.editor.palette_action_with(
+                    PaletteAction::Edit {
+                        operation: voxelite_plugin_api::PaletteOperation::Duplicate,
+                        name: "Workshop colors".into(),
+                        color: String::new(),
+                    },
+                    |_| Ok(()),
+                )?;
+                self.invoke(Op::ManagePalettes, window, cx);
+                self.capture_palette_delete();
+            }
             LaunchState::Debug => self.preferences.show_debug_overlay = true,
             LaunchState::Settings(section) => self.open_settings(section, window, cx),
         }
@@ -186,7 +206,7 @@ impl EditorView {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{LaunchState, MENUS, Section};
 
     #[test]
     fn capture_states_cover_registered_menus_and_settings() {
@@ -197,6 +217,16 @@ mod tests {
                     .any(|(_, state)| matches!(state, LaunchState::Menu(name) if name == menu)),
                 "missing {menu} menu capture"
             );
+        }
+        let mut names = std::collections::BTreeSet::new();
+        for (name, state) in LaunchState::ALL {
+            assert!(names.insert(name), "duplicate state {name}");
+            if let LaunchState::Menu(menu) = state {
+                assert!(
+                    MENUS.iter().any(|(name, _)| name == menu),
+                    "unregistered menu {menu}"
+                );
+            }
         }
         for section in Section::ALL {
             assert!(

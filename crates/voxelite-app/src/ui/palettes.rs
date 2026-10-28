@@ -121,6 +121,10 @@ fn selected_rgb(view: &PaletteView) -> [u8; 3] {
         })
 }
 impl EditorView {
+    pub(super) fn capture_palette_delete(&mut self) {
+        self.palettes.delete_confirmation = true;
+    }
+
     pub(super) fn capture_palette_menu(&mut self) {
         self.palettes.menu = true;
         self.palettes.menu_index = 0;

@@ -23,28 +23,97 @@ struct Screen {
     args: &'static str,
 }
 
-const SCREENS: &[Screen] = &[
-    Screen {
-        name: "welcome",
-        caption: "Welcome window (no recent projects)",
-        title: "Quantum",
-        size: (1024, 704),
-        args: "--theme dark",
-    },
-    Screen {
-        name: "editor-dark",
-        caption: "Editor, dark theme (Autumn Workshop example)",
-        title: "Autumn Workshop",
-        size: (1440, 900),
-        args: "--example --theme dark",
-    },
-    Screen {
-        name: "editor-light",
-        caption: "Editor, light theme (Autumn Workshop example)",
-        title: "Autumn Workshop",
-        size: (1440, 900),
-        args: "--example --theme light",
-    },
+// Each launch state expands into both themes, with identical geometry and title matching.
+macro_rules! screens {
+    ($($title:literal, ($width:literal, $height:literal) => [
+        $(($state:literal, $caption:literal)),* $(,)?
+    ]),* $(,)?) => {
+        &[
+            Screen {
+                name: "welcome",
+                caption: "Welcome window (no recent projects)",
+                title: "Quantum",
+                size: (1024, 704),
+                args: "--theme dark",
+            },
+            Screen {
+                name: "editor-dark",
+                caption: "Editor, dark theme (Autumn Workshop example)",
+                title: "Autumn Workshop",
+                size: (1440, 900),
+                args: "--example --theme dark",
+            },
+            Screen {
+                name: "editor-light",
+                caption: "Editor, light theme (Autumn Workshop example)",
+                title: "Autumn Workshop",
+                size: (1440, 900),
+                args: "--example --theme light",
+            },
+            $($(
+                Screen {
+                    name: concat!($state, "-dark"),
+                    caption: concat!($caption, " (dark)"),
+                    title: $title,
+                    size: ($width, $height),
+                    args: concat!("--show ", $state, " --theme dark"),
+                },
+                Screen {
+                    name: concat!($state, "-light"),
+                    caption: concat!($caption, " (light)"),
+                    title: $title,
+                    size: ($width, $height),
+                    args: concat!("--show ", $state, " --theme light"),
+                },
+            )*)*
+        ]
+    };
+}
+
+const SCREENS: &[Screen] = screens![
+    "Autumn Workshop", (1440, 900) => [
+        ("chrome-menu-file", "File menu"),
+        ("chrome-menu-edit", "Edit menu"),
+        ("chrome-menu-view", "View menu"),
+        ("chrome-menu-tools", "Tools menu"),
+        ("chrome-menu-palette", "Palette menu"),
+        ("chrome-menu-layers", "Layers menu"),
+        ("chrome-menu-agent", "Agent menu"),
+        ("chrome-menu-extensions", "Extensions menu"),
+        ("chrome-menu-window", "Window menu"),
+        ("chrome-menu-help", "Help menu"),
+        ("panels-palette", "Focused palette sidebar"),
+        ("panels-history", "History and named versions"),
+        ("panels-history-preview", "History preview and restore controls"),
+        ("panels-comments-empty", "Empty comments panel"),
+        ("panels-comments", "Comments and model pins"),
+        ("panels-comment-thread", "Comment thread"),
+        ("panels-comment-draft", "New comment composer"),
+        ("panels-agent", "Expanded agent activity"),
+        ("popovers-connect-agent", "Connect agent"),
+        ("dialogs-about", "About Quantum"),
+        ("dialogs-acknowledgements", "Acknowledgements"),
+        ("dialogs-keyboard-guide", "Keyboard guide"),
+        ("dialogs-commands", "Command search"),
+        ("dialogs-tools", "Tool search"),
+        ("dialogs-extensions", "Extensions"),
+        ("dialogs-unsaved-changes", "Unsaved changes"),
+        ("dialogs-save-waiting", "Save dialog waiting surface"),
+        ("popovers-palette-chooser", "Palette chooser"),
+        ("dialogs-palettes", "Palette manager and color editor"),
+        ("popovers-palette-menu", "Palette import/export menu"),
+        ("dialogs-palette-delete", "Delete custom palette confirmation"),
+        ("overlays-debug", "Debug overlay"),
+    ],
+    "^Quantum Settings$", (880, 640) => [
+        ("settings-general", "Settings: General"),
+        ("settings-appearance", "Settings: Appearance"),
+        ("settings-viewport", "Settings: Viewport / Rendering"),
+        ("settings-shortcuts", "Settings: Shortcuts"),
+        ("settings-agent", "Settings: Agent"),
+        ("settings-updates", "Settings: Updates"),
+        ("settings-advanced", "Settings: Advanced"),
+    ],
 ];
 
 const ASSETS_BRANCH: &str = "pr-assets";
@@ -58,7 +127,8 @@ const CHANGED_FRACTION: f64 = 0.0005;
 pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen NAME ...] [--out DIR] [--publish PR] [--remote NAME]
   --base     before ref (default: merge-base of HEAD and <remote>/main)
   --head     after ref (default: the current working tree, uncommitted changes included)
-  --screen   limit to these screens (welcome, editor-dark, editor-light); default all
+  --screen   limit to exact screen names (e.g. panels-history-dark); repeat for multiple screens; default all
+             welcome, editor-{dark,light}, and every --show state suffixed -dark or -light
   --out      output directory (default: target/pr-screenshots)
   --publish  push PNGs to the pr-assets branch and fill the PR's Screenshots section
   --remote   git remote for the base default and publishing (default: origin, else the only remote)
@@ -706,6 +776,68 @@ fn status(command: &mut Command) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn screen_names_are_unique_and_state_screens_have_matching_themes() {
+        let mut names = std::collections::BTreeSet::new();
+        for screen in SCREENS {
+            assert!(
+                names.insert(screen.name),
+                "duplicate screen {}",
+                screen.name
+            );
+            let args: Vec<_> = screen.args.split_whitespace().collect();
+            if args.first() != Some(&"--show") {
+                continue;
+            }
+            assert_eq!(args.len(), 4);
+            let state = args[1];
+            assert_eq!(args[2], "--theme");
+            for theme in ["dark", "light"] {
+                let name = format!("{state}-{theme}");
+                let partner = SCREENS
+                    .iter()
+                    .find(|candidate| candidate.name == name)
+                    .expect("missing theme");
+                assert_eq!(partner.args, format!("--show {state} --theme {theme}"));
+                assert_eq!(partner.size, screen.size);
+                assert_eq!(partner.title, screen.title);
+            }
+            assert_eq!(
+                screen.size,
+                if state.starts_with("settings-") {
+                    (880, 640)
+                } else {
+                    (1440, 900)
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn established_screens_keep_their_original_capture_contract() {
+        let expected = [
+            ("welcome", "Quantum", (1024, 704), "--theme dark"),
+            (
+                "editor-dark",
+                "Autumn Workshop",
+                (1440, 900),
+                "--example --theme dark",
+            ),
+            (
+                "editor-light",
+                "Autumn Workshop",
+                (1440, 900),
+                "--example --theme light",
+            ),
+        ];
+        for (screen, expected) in SCREENS.iter().zip(expected) {
+            assert_eq!(
+                (screen.name, screen.title, screen.size, screen.args),
+                expected
+            );
+        }
+    }
 
     #[test]
     fn splice_replaces_marked_block() {
