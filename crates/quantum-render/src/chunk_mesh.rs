@@ -193,12 +193,20 @@ fn mesh_dirty(
     snapshot: &Snapshot,
     palette: &[Option<[f32; 3]>],
 ) -> Vec<RenderResult<ChunkMesh>> {
-    let mesh = |&at: &Pos| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
     // Preserve the small-edit serial path and the existing eight-worker bound.
     // Reuse workers across syncs rather than allocating thread stacks each time.
-    if dirty.len() >= 4
-        && let Some(pool) = mesh_pool()
-    {
+    let pool = (dirty.len() >= 4).then(mesh_pool).flatten();
+    mesh_dirty_with_pool(dirty, snapshot, palette, pool)
+}
+
+fn mesh_dirty_with_pool(
+    dirty: &[Pos],
+    snapshot: &Snapshot,
+    palette: &[Option<[f32; 3]>],
+    pool: Option<&rayon::ThreadPool>,
+) -> Vec<RenderResult<ChunkMesh>> {
+    let mesh = |&at: &Pos| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
+    if let Some(pool) = pool {
         use rayon::prelude::*;
         // Indexed collection retains dirty-set order, including errors. Applying
         // results (and enforcing the aggregate quad budget) remains serial.

@@ -319,7 +319,6 @@ fn quad_budget_checks_order_and_recovers_like_reference() {
     // Seed a resident mesh at the budget rather than generating 1.5M quads.
     // Run caches separately to bound test memory to one such vertex allocation.
     let mut snapshot = scene();
-    snapshot.layers[0].voxels = volume([([-1, 0, 0], 1)]);
     macro_rules! check {
         ($cache:ty, $mesh:ty, $vertex:ty, $at:expr) => {{
             type Mesh = $mesh;
@@ -339,6 +338,8 @@ fn quad_budget_checks_order_and_recovers_like_reference() {
                     exposed_faces: 0,
                 },
             );
+            let mut occupied: Vec<_> = snapshot.layers[0].voxels.chunk_positions().collect();
+            occupied.sort_unstable();
             let result = cache.sync_validated(&snapshot);
             if $at[0] == 0 {
                 assert_eq!(
@@ -346,21 +347,26 @@ fn quad_budget_checks_order_and_recovers_like_reference() {
                     Err(RenderError::Limit("GPU chunk mesh quad budget".into()))
                 );
                 assert!(cache.meshes.is_empty());
-                assert_eq!(cache.sync_validated(&snapshot).unwrap(), vec![[-1, 0, 0]]);
+                assert_eq!(cache.sync_validated(&snapshot).unwrap(), occupied);
             } else {
-                assert_eq!(result, Ok(vec![$at, [-1, 0, 0]]));
+                let expected = std::iter::once($at).chain(occupied).collect();
+                assert_eq!(result, Ok(expected));
             }
             assert!(cache.sync_validated(&snapshot).unwrap().is_empty());
         }};
     }
-    for at in [[0, 0, 0], [-2, 0, 0]] {
-        check!(ChunkMeshes, ChunkMesh, MeshVertex, at);
-        check!(
-            reference::ChunkMeshes,
-            reference::ChunkMesh,
-            reference::MeshVertex,
-            at
-        );
+    // Two dirty chunks use serial meshing; four exercise the parallel threshold.
+    for positions in [vec![[-1, 0, 0]], vec![[-33, 0, 0], [-1, 0, 0], [32, 0, 0]]] {
+        snapshot.layers[0].voxels = volume(positions.into_iter().map(|p| (p, 1)));
+        for at in [[0, 0, 0], [-4, 0, 0]] {
+            check!(ChunkMeshes, ChunkMesh, MeshVertex, at);
+            check!(
+                reference::ChunkMeshes,
+                reference::ChunkMesh,
+                reference::MeshVertex,
+                at
+            );
+        }
     }
 }
 
@@ -376,6 +382,17 @@ fn rayon_chunk_batches_preserve_serial_order_and_vertex_bits() {
     );
     let palette = vec![Some([0.25, 0.5, 0.75]); 257];
     let dirty: Vec<_> = Region::new([-2; 3], [2; 3]).unwrap().cells().collect();
+    // Explicit pools exercise Rayon even on single-CPU CI hosts. None covers
+    // the fallback used when worker creation fails or only one CPU is available.
+    let pools: Vec<_> = [1, 2, 8]
+        .into_iter()
+        .map(|threads| {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(threads)
+                .build()
+                .unwrap()
+        })
+        .collect();
     // Exercise the serial threshold and uneven work divisions, including empty
     // chunks, negative seams and AO. Compare raw floats rather than tolerances.
     for count in [0, 1, 3, 4, 7, 8, 27, 64] {
@@ -384,26 +401,28 @@ fn rayon_chunk_batches_preserve_serial_order_and_vertex_bits() {
             .iter()
             .map(|&at| mesh_chunk(at, &LocalCells::new(at, &snapshot), &palette).unwrap())
             .collect();
-        for _ in 0..3 {
-            let actual = mesh_dirty(dirty, &snapshot, &palette);
-            assert_eq!(actual.len(), expected.len());
-            for (actual, expected) in actual.into_iter().zip(&expected) {
-                let actual = actual.unwrap();
-                assert_eq!(actual.exposed_faces, expected.exposed_faces);
-                assert_eq!(actual.vertices.len(), expected.vertices.len());
-                for (actual, expected) in actual.vertices.iter().zip(&expected.vertices) {
-                    assert_eq!(
-                        actual.position.map(f32::to_bits),
-                        expected.position.map(f32::to_bits)
-                    );
-                    assert_eq!(
-                        actual.normal.map(f32::to_bits),
-                        expected.normal.map(f32::to_bits)
-                    );
-                    assert_eq!(
-                        actual.color_ao.map(f32::to_bits),
-                        expected.color_ao.map(f32::to_bits)
-                    );
+        for pool in std::iter::once(None).chain(pools.iter().map(Some)) {
+            for _ in 0..3 {
+                let actual = mesh_dirty_with_pool(dirty, &snapshot, &palette, pool);
+                assert_eq!(actual.len(), expected.len());
+                for (actual, expected) in actual.into_iter().zip(&expected) {
+                    let actual = actual.unwrap();
+                    assert_eq!(actual.exposed_faces, expected.exposed_faces);
+                    assert_eq!(actual.vertices.len(), expected.vertices.len());
+                    for (actual, expected) in actual.vertices.iter().zip(&expected.vertices) {
+                        assert_eq!(
+                            actual.position.map(f32::to_bits),
+                            expected.position.map(f32::to_bits)
+                        );
+                        assert_eq!(
+                            actual.normal.map(f32::to_bits),
+                            expected.normal.map(f32::to_bits)
+                        );
+                        assert_eq!(
+                            actual.color_ao.map(f32::to_bits),
+                            expected.color_ao.map(f32::to_bits)
+                        );
+                    }
                 }
             }
         }
