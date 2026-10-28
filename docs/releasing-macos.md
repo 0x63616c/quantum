@@ -191,7 +191,11 @@ CI checks formatting, runs the mocked packaging/release regression tests,
 runs `cargo clippy --workspace --locked -- -D warnings`,
 runs `cargo nextest run --workspace --locked --profile ci` and
 `cargo test --doc --workspace --locked`, and, when selected above, builds the
-release app and packages a DMG. Strict Clippy passed on Linux when this workflow
+app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
+`release` with LTO disabled and 16 codegen units. Main, nightly, dispatch and
+release packaging keep `release`. `cargo xtask macos package` reads
+`PACKAGE_CARGO_PROFILE` (default `release`) when building and locating binaries,
+including with `--skip-build`, and respects `CARGO_TARGET_DIR`. Strict Clippy passed on Linux when this workflow
 was added; the first macOS run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
 No signing/notarization secrets are passed to CI. Its DMG and checksum artifacts
