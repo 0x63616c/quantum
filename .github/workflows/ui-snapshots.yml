@@ -1,0 +1,100 @@
+name: UI snapshots
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-snapshots-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+    steps:
+      - name: Detect UI changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            echo 'ui=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          ui=false
+          [[ -z "$files" ]] && ui=true
+          while IFS= read -r file; do
+            case "$file" in
+              crates/voxelite-app/*|crates/voxelite-ui/*|crates/voxelite-core/*|crates/voxelite-mesh/*|crates/voxelite-format/*|crates/voxelite-plugin-api/*|crates/voxelite-plugin-host/*|crates/voxelite-plugins-builtin/*|crates/voxelite-mcp/*|crates/voxelite-crash/*|crates/voxelite-render/*|crates/voxelite-render-plan/*|crates/plugins/*|vendor/gpui-apple/*|examples/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|xtask/Cargo.toml|xtask/src/main.rs|xtask/src/screenshots.rs|xtask/src/screenshot_fixtures.rs|xtask/src/ui_snapshots*|.github/workflows/ui-snapshots.yml) ui=true ;;
+            esac
+          done <<< "$files"
+          echo "ui=$ui" >> "$GITHUB_OUTPUT"
+
+  snapshots:
+    needs: changes
+    if: needs.changes.outputs.ui == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: 4
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Install build and headless rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            build-essential clang cmake pkg-config libssl-dev \
+            libfontconfig-dev libfreetype-dev libvulkan-dev libwayland-dev \
+            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            mesa-vulkan-drivers
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        with:
+          key: ui-snapshots
+      - name: Test snapshot contracts
+        run: cargo test -p xtask --locked ui_snapshots
+      - name: Compare headless UI goldens
+        run: env -u DISPLAY -u WAYLAND_DISPLAY cargo xtask ui-snapshots
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: ui-snapshot-diffs
+          path: |
+            target/ui-snapshots/actual/*.png
+            target/ui-snapshots/expected/*.png
+            target/ui-snapshots/diff/*.png
+          if-no-files-found: ignore
+
+  ui-snapshots:
+    # Stable gate: non-UI PRs succeed without scheduling a renderer build.
+    needs: [changes, snapshots]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check applicable result
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          UI: ${{ needs.changes.outputs.ui }}
+          SNAPSHOTS: ${{ needs.snapshots.result }}
+        run: |
+          [[ "$CHANGES" == success ]]
+          if [[ "$UI" == true ]]; then
+            [[ "$SNAPSHOTS" == success ]]
+          else
+            [[ "$SNAPSHOTS" == skipped ]]
+          fi

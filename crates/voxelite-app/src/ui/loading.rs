@@ -110,9 +110,12 @@ impl Preview {
         image: impl IntoElement,
     ) -> impl IntoElement {
         let media = &self.media[usize::from(theme == Theme::Light)];
-        AsciiImageReveal::new(id, media.clone(), image, label, theme)
+        let reveal = AsciiImageReveal::new(id, media.clone(), image, label, theme)
             .started_at(self.arrived)
-            .reduced_motion(reduced)
+            .reduced_motion(reduced);
+        #[cfg(feature = "ui-snapshots")]
+        let reveal = reveal.elapsed(std::time::Duration::from_secs(60));
+        reveal
     }
 }
 
@@ -212,27 +215,31 @@ impl EditorView {
     }
     pub(super) fn scene_heading(&self) -> Div {
         let t = self.theme;
+        let heading = voxelite_ui::AsciiReveal::new(
+            "scene-view",
+            match self.camera_view {
+                Some(Op::Front) => "Front",
+                Some(Op::Right) => "Right",
+                Some(Op::Top) => "Top",
+                Some(Op::Frame) => "Isometric",
+                _ => "Orthographic",
+            },
+            t,
+        )
+        .loading(!self.viewport.has_frame() && self.viewport.rendering())
+        .started_at(self.viewport.reveal_started())
+        .reduced_motion(self.reduced_motion);
+        #[cfg(feature = "ui-snapshots")]
+        let heading = heading.elapsed(std::time::Duration::from_secs(60));
         div()
             .absolute()
             .top(px(space::PANEL))
             .left(px(space::XXL))
             .child(
-                row().gap(px(space::INSET)).text_color(t.muted()).child(
-                    voxelite_ui::AsciiReveal::new(
-                        "scene-view",
-                        match self.camera_view {
-                            Some(Op::Front) => "Front",
-                            Some(Op::Right) => "Right",
-                            Some(Op::Top) => "Top",
-                            Some(Op::Frame) => "Isometric",
-                            _ => "Orthographic",
-                        },
-                        t,
-                    )
-                    .loading(!self.viewport.has_frame() && self.viewport.rendering())
-                    .started_at(self.viewport.reveal_started())
-                    .reduced_motion(self.reduced_motion),
-                ),
+                row()
+                    .gap(px(space::INSET))
+                    .text_color(t.muted())
+                    .child(heading),
             )
     }
 }

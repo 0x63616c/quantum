@@ -16,12 +16,12 @@ type Result<T> = std::result::Result<T, String>;
 
 /// Capture surfaces, in display order, with fixed fixtures and sizes.
 #[derive(Debug)]
-struct Screen {
+pub(super) struct Screen {
     key: bool,
-    name: &'static str,
+    pub(super) name: &'static str,
     caption: &'static str,
     title: &'static str,
-    size: (u32, u32),
+    pub(super) size: (u32, u32),
     args: &'static str,
 }
 
@@ -101,7 +101,7 @@ macro_rules! screens {
     };
 }
 
-const SCREENS: &[Screen] = screens![
+pub(super) const SCREENS: &[Screen] = screens![
     "Autumn Workshop", (1440, 900) => [
         ("chrome-menu-file", "File menu"),
         ("chrome-menu-edit", "Edit menu"),
