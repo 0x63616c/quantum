@@ -120,8 +120,11 @@ The split welcome window offers **New Project**, **Open…**, **Open Sample…**
 `settings.json`; turning it off starts a blank editor when no path is supplied.
 Desktop settings writes run on the background executor, coalesce rapid changes,
 and drain on graceful exit. Older settings files default to showing Welcome.
-Tab moves between controls; focus Recent and use Up/Down, then Enter to open, or
-click a row. Opening or creating a project closes Welcome and shows the
+Tab (Shift+Tab in reverse) cycles through New Project, Open, Open Sample,
+Show at launch, and the project list. Up/Down traverse recents followed by all
+four samples in display order, clamping at either end; Enter opens the selection.
+Left/Right also step through that order. Open Sample focuses the first sample.
+Escape or Cmd/Ctrl+W closes Welcome, returning to an existing editor. Opening or creating a project closes Welcome and shows the
 editor. If an editor is already open, its Save/Discard/Cancel flow protects edits.
 **Window → Welcome** (Cmd/Ctrl+Shift+1) reopens the launcher; the native
 **File → Open Recent** submenu opens a recent project directly. **Clear Recent
@@ -135,9 +138,10 @@ and file modification time/length plus renderer version. Saves update the previe
 rendered lazily in the background while Welcome shows a placeholder. Preview
 failures do not prevent opening or saving. `VOXELITE_DATA_DIR` isolates both stores.
 The same sample cards appear in a two-column grid for an empty history and a
-four-column row below recents. Five 60px rows fill the list at the default size;
-shorter lists take their natural height and longer lists scroll while samples
-stay visible. Names and metadata stay on one line and ellipsize within each card;
+four-column strip pinned below recents and a divider. The compact cards show
+only titles; the empty-history grid also shows voxel and layer counts.
+Long histories scroll above the strip; short histories leave spare space between
+the list and divider. Names and metadata stay on one line and ellipsize within each card;
 the full sample name remains available in its tooltip.
 
 Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin are embedded `.voxl`

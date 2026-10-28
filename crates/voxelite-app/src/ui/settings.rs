@@ -41,7 +41,7 @@ pub(super) fn init_loaded(
     init_at(override_theme, loaded, path(), cx);
 }
 
-fn init_at(
+pub(super) fn init_at(
     override_theme: Option<Theme>,
     loaded: voxelite_app::editor::EditorResult<Preferences>,
     destination: std::path::PathBuf,

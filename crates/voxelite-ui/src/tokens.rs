@@ -334,6 +334,47 @@ impl ControlSize {
 }
 /// Geometry shared across component implementations.
 pub mod metrics {
+    /// Split Welcome window and its native editor launch geometry.
+    pub mod welcome {
+        /// Default Welcome window width.
+        pub const WIDTH: f32 = 760.;
+        /// Default Welcome window height.
+        pub const HEIGHT: f32 = 620.;
+        /// Width of the Welcome action pane.
+        pub const SIDEBAR: f32 = 244.;
+        /// Clearance for native window chrome above the brand.
+        pub const SIDEBAR_TOP: f32 = 76.;
+        /// Welcome brand artwork side.
+        pub const MARK: f32 = 56.;
+        /// Welcome product name line height.
+        pub const NAME_LINE: f32 = 29.;
+        /// Welcome content top inset.
+        pub const MAIN_TOP: f32 = 22.;
+        /// Welcome sidebar action height.
+        pub const ACTION: f32 = 34.;
+        /// Recent project row height.
+        pub const ROW: f32 = 60.;
+        /// Recent project artwork width.
+        pub const THUMB_WIDTH: f32 = 60.;
+        /// Recent project artwork height.
+        pub const THUMB_HEIGHT: f32 = 46.;
+        /// Artwork height in the empty-history grid.
+        pub const SAMPLE_LARGE: f32 = 196.;
+        /// Artwork height in the compact bottom sample strip.
+        pub const SAMPLE_SMALL: f32 = 63.;
+        /// Initial native editor width.
+        pub const EDITOR_WIDTH: f32 = 1440.;
+        /// Initial native editor height.
+        pub const EDITOR_HEIGHT: f32 = 900.;
+        /// Minimum native editor width.
+        pub const EDITOR_MIN_WIDTH: f32 = 1024.;
+        /// Editor native traffic-light horizontal inset.
+        pub const EDITOR_TRAFFIC_LEFT: f32 = 20.;
+
+        /// Glyph side inside Welcome shortcut keycaps.
+        pub const KEY_GLYPH: f32 = 8.;
+    }
+
     /// Small glyph inside a keycap or checkbox.
     pub const ICON_TINY: f32 = 10.;
     /// Compact checkbox side.

@@ -383,12 +383,11 @@ pub(super) fn request(op: Op, path: Option<PathBuf>, cx: &mut App) {
 pub(crate) struct WelcomeView {
     focus: FocusHandle,
     list_focus: FocusHandle,
-    sample_focus: FocusHandle,
-    sample_selected: usize,
+    sidebar_focus: [FocusHandle; 4],
     samples: HashMap<Sample, SamplePreview>,
     sample_task: Option<Task<()>>,
     scroll: ScrollHandle,
-    selected: usize,
+    selection: Option<Selection>,
     project_paths: Vec<PathBuf>,
     images: Entity<RetainAllImageCache>,
     image_paths: HashSet<PathBuf>,
@@ -400,8 +399,6 @@ pub(crate) struct WelcomeView {
 }
 impl WelcomeView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let focus = cx.focus_handle();
-        window.focus(&focus, cx);
         cx.observe_global::<Launcher>(|this, cx| {
             this.refresh_previews(cx);
             cx.notify();
@@ -418,24 +415,8 @@ impl WelcomeView {
             cx.notify();
         })
         .detach();
-        let mut view = Self {
-            focus,
-            list_focus: cx.focus_handle(),
-            sample_focus: cx.focus_handle(),
-            sample_selected: 0,
-            samples: HashMap::new(),
-            sample_task: None,
-            scroll: ScrollHandle::new(),
-            selected: 0,
-            project_paths: Vec::new(),
-            images: RetainAllImageCache::new(cx),
-            image_paths: HashSet::new(),
-            previews: HashMap::new(),
-            revision: u64::MAX,
-            thumbnails: None,
-            busy: false,
-            error: None,
-        };
+        let mut view = Self::initial(cx);
+        window.focus(&view.focus, cx);
         view.refresh_previews(cx);
         let cache = ThumbnailCache::new(&voxelite_app::local_settings::data_dir());
         view.sample_task = Some(cx.spawn(async move |this, cx| {
@@ -464,6 +445,26 @@ impl WelcomeView {
         view
     }
 
+    fn initial(cx: &mut Context<Self>) -> Self {
+        Self {
+            focus: cx.focus_handle(),
+            list_focus: cx.focus_handle(),
+            sidebar_focus: std::array::from_fn(|_| cx.focus_handle()),
+            samples: HashMap::new(),
+            sample_task: None,
+            scroll: ScrollHandle::new(),
+            selection: None,
+            project_paths: Vec::new(),
+            images: RetainAllImageCache::new(cx),
+            image_paths: HashSet::new(),
+            previews: HashMap::new(),
+            revision: u64::MAX,
+            thumbnails: None,
+            busy: false,
+            error: None,
+        }
+    }
+
     fn refresh_previews(&mut self, cx: &mut Context<Self>) {
         let state = cx.global::<Launcher>();
         if self.revision == state.revision {
@@ -473,7 +474,7 @@ impl WelcomeView {
         let revision = self.revision;
         let projects = state.projects.clone();
         let paths: Vec<_> = projects.iter().map(|p| p.path.clone()).collect();
-        self.selected = reconcile_selection(&self.project_paths, &paths, self.selected);
+        self.selection = reconcile_selection(&self.project_paths, &paths, self.selection.take());
         self.project_paths = paths;
         // An invalidated or corrupt file must never retain its old artwork.
         self.previews.clear();
@@ -529,14 +530,7 @@ impl WelcomeView {
             }
             Op::OpenSample => self.focus_samples(window, cx),
             Op::OpenRecent | Op::Welcome => {
-                window.focus(
-                    if cx.global::<Launcher>().projects.is_empty() {
-                        &self.sample_focus
-                    } else {
-                        &self.list_focus
-                    },
-                    cx,
-                );
+                window.focus(&self.list_focus, cx);
             }
             Op::ClearRecents => clear(cx),
             Op::Quit => cx.quit(),
@@ -551,7 +545,8 @@ impl WelcomeView {
     }
 
     pub(super) fn focus_samples(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        window.focus(&self.sample_focus, cx);
+        self.selection = Some(Selection::Sample(Sample::Autumn));
+        window.focus(&self.list_focus, cx);
         cx.notify();
     }
 
@@ -664,7 +659,7 @@ impl WelcomeView {
     ) -> Stateful<Div> {
         let sample = Sample::ALL[index];
         let preview = self.samples.get(&sample);
-        let selected = self.sample_selected == index;
+        let selected = self.selected_item() == Selection::Sample(sample);
         Button::custom(("sample", index), sample.name())
             .tab_stop(false)
             .flex_1()
@@ -673,9 +668,15 @@ impl WelcomeView {
             .flex_col()
             .items_start()
             .text_color(t.text())
+            .role(Role::ListBoxOption)
             .aria_selected(selected)
+            .when(selected, |d| d.aria_active_descendant())
             .when(!self.busy, |d| {
-                d.on_click(cx.listener(move |this, _, _, cx| this.open_sample(sample, cx)))
+                d.on_click(cx.listener(move |this, _, window, cx| {
+                    this.selection = Some(Selection::Sample(sample));
+                    window.focus(&this.list_focus, cx);
+                    this.open_sample(sample, cx);
+                }))
             })
             .tooltip(hint(sample.name(), t))
             .child(
@@ -699,6 +700,9 @@ impl WelcomeView {
                         )
                         .when(selected && (!compact || focused), |d| {
                             d.border_color(t.accent())
+                        })
+                        .when(selected && focused, |d| {
+                            d.shadow(voxelite_ui::tokens::focus_ring(t))
                         }),
                     ),
             )
@@ -713,50 +717,163 @@ impl WelcomeView {
                     }))
                     .h(px(type_size::LINE_SM))
                     .line_height(px(type_size::LINE_SM))
-                    .font_weight(type_size::MEDIUM)
+                    .font_weight(if compact {
+                        type_size::NORMAL
+                    } else {
+                        type_size::MEDIUM
+                    })
+                    .when(compact, |d| d.text_color(t.muted()))
                     .truncate()
                     .child(sample.name()),
             )
-            .child(
-                div()
-                    .w_full()
-                    .mt(px(space::XXS))
-                    .text_size(px(type_size::CAPTION))
-                    .h(px(type_size::LINE_SM))
-                    .line_height(px(type_size::LINE_SM))
-                    .text_color(t.muted())
-                    .truncate()
-                    .child(
-                        preview
-                            .map(|p| {
-                                format!(
-                                    "{} voxels · {} {}",
-                                    grouped_count(p.voxels),
-                                    p.layers,
-                                    if p.layers == 1 { "layer" } else { "layers" }
-                                )
-                            })
-                            .unwrap_or_default(),
-                    ),
-            )
+            .when(!compact, |d| {
+                d.child(
+                    div()
+                        .w_full()
+                        .mt(px(space::XXS))
+                        .text_size(px(type_size::CAPTION))
+                        .h(px(type_size::LINE_SM))
+                        .line_height(px(type_size::LINE_SM))
+                        .text_color(t.muted())
+                        .truncate()
+                        .child(
+                            preview
+                                .map(|p| {
+                                    format!(
+                                        "{} voxels · {} {}",
+                                        grouped_count(p.voxels),
+                                        p.layers,
+                                        if p.layers == 1 { "layer" } else { "layers" }
+                                    )
+                                })
+                                .unwrap_or_default(),
+                        ),
+                )
+            })
     }
 }
 
-fn reconcile_selection(old: &[PathBuf], new: &[PathBuf], selected: usize) -> usize {
-    old.get(selected)
-        .and_then(|path| new.iter().position(|p| p == path))
-        .unwrap_or_else(|| selected.min(new.len().saturating_sub(1)))
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Selection {
+    Recent(PathBuf),
+    Sample(Sample),
 }
 
-fn sample_vertical(selected: usize, columns: usize, down: bool) -> usize {
-    if down {
-        if selected + columns < Sample::ALL.len() {
-            selected + columns
+impl Selection {
+    fn at(paths: &[PathBuf], index: usize) -> Self {
+        if let Some(path) = paths.get(index) {
+            Self::Recent(path.clone())
         } else {
-            selected
+            Self::Sample(
+                Sample::ALL[(index.saturating_sub(paths.len())).min(Sample::ALL.len() - 1)],
+            )
         }
-    } else {
-        selected.checked_sub(columns).unwrap_or(selected)
+    }
+
+    fn index(&self, paths: &[PathBuf]) -> usize {
+        match self {
+            Self::Recent(path) => paths.iter().position(|p| p == path).unwrap_or(0),
+            Self::Sample(sample) => {
+                paths.len() + Sample::ALL.iter().position(|s| s == sample).unwrap_or(0)
+            }
+        }
+    }
+
+    fn step(&self, paths: &[PathBuf], forward: bool) -> Self {
+        let index = self.index(paths);
+        Self::at(
+            paths,
+            if forward {
+                (index + 1).min(paths.len() + Sample::ALL.len() - 1)
+            } else {
+                index.saturating_sub(1)
+            },
+        )
+    }
+}
+
+fn reconcile_selection(
+    old: &[PathBuf],
+    new: &[PathBuf],
+    selection: Option<Selection>,
+) -> Option<Selection> {
+    selection.map(|selection| match &selection {
+        Selection::Recent(path) if !new.contains(path) => {
+            let index = selection.index(old).min(new.len().saturating_sub(1));
+            Selection::at(new, index)
+        }
+        _ => selection,
+    })
+}
+
+impl WelcomeView {
+    fn selected_item(&self) -> Selection {
+        self.selection
+            .clone()
+            .unwrap_or_else(|| Selection::at(&self.project_paths, 0))
+    }
+
+    fn key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if event.keystroke.key == "w"
+            && ShortcutPlatform::current().is_primary(event.keystroke.modifiers)
+        {
+            window.remove_window();
+            cx.stop_propagation();
+            return;
+        }
+        let Some(key) = navigation_key(&event.keystroke) else {
+            return;
+        };
+        if key == "tab" {
+            let stops = [
+                &self.sidebar_focus[0],
+                &self.sidebar_focus[1],
+                &self.sidebar_focus[2],
+                &self.sidebar_focus[3],
+                &self.list_focus,
+            ];
+            let current = stops.iter().position(|focus| focus.is_focused(window));
+            let next = match (current, event.keystroke.modifiers.shift) {
+                (Some(index), false) => (index + 1) % stops.len(),
+                (Some(index), true) => (index + stops.len() - 1) % stops.len(),
+                (None, false) => 0,
+                (None, true) => stops.len() - 1,
+            };
+            window.focus(stops[next], cx);
+        } else if key == "escape" {
+            // Welcome is also available while an editor is open. Escape returns
+            // to that editor, or closes the standalone launcher like primary-W.
+            if let Some(editor) = cx.global::<Launcher>().editor {
+                cx.defer(move |cx| {
+                    let _ = editor.update(cx, |_, window, _| window.activate_window());
+                });
+            }
+            window.remove_window();
+        } else {
+            // Sidebar controls retain native Space/Enter activation. Arrows only
+            // navigate the project list (or the initial, un-tabbed window focus).
+            if self.busy || (!self.focus.is_focused(window) && !self.list_focus.is_focused(window))
+            {
+                return;
+            }
+            let selected = self.selected_item();
+            match key {
+                "up" | "left" => self.selection = Some(selected.step(&self.project_paths, false)),
+                "down" | "right" => self.selection = Some(selected.step(&self.project_paths, true)),
+                "enter" => match selected {
+                    Selection::Recent(path) => self.run(Op::Open, Some(path), window, cx),
+                    Selection::Sample(sample) => self.open_sample(sample, cx),
+                },
+                _ => return,
+            }
+            if let Selection::Recent(_) = self.selected_item() {
+                self.scroll
+                    .scroll_to_item(self.selected_item().index(&self.project_paths));
+            }
+            window.focus(&self.list_focus, cx);
+        }
+        cx.stop_propagation();
+        cx.notify();
     }
 }
 
@@ -871,14 +988,31 @@ impl Render for WelcomeView {
             .flex()
             .flex_col()
             .gap(px(space::XXS));
-        for (op, label) in [
+        for (tab, (op, label)) in [
             (Op::New, "New Project"),
             (Op::Open, "Open…"),
             (Op::OpenSample, "Open Sample…"),
-        ] {
+        ]
+        .into_iter()
+        .enumerate()
+        {
             actions = actions.child(
                 Button::custom(op.command_id(), label)
+                    .track_focus(&self.sidebar_focus[tab])
                     .tab_index(0)
+                    .tooltip(hint(
+                        format!(
+                            "{label} ({})",
+                            crate::shortcuts::shortcut_tokens(
+                                op.key().unwrap_or(""),
+                                ShortcutPlatform::current()
+                            )
+                            .iter()
+                            .map(|t| t.text())
+                            .collect::<String>()
+                        ),
+                        t,
+                    ))
                     .h(px(layout::ACTION))
                     .flex_shrink_0()
                     .px(px(space::MD))
@@ -916,7 +1050,9 @@ impl Render for WelcomeView {
         }
         sidebar = sidebar.child(actions).child(div().flex_1()).child(
             Button::custom("show-at-launch", "Show at launch")
+                .track_focus(&self.sidebar_focus[3])
                 .tab_index(0)
+                .tooltip(hint("Show Welcome when Quantum launches", t))
                 .role(Role::CheckBox)
                 .aria_toggled(if show_welcome {
                     Toggled::True
@@ -950,7 +1086,13 @@ impl Render for WelcomeView {
                     settings::change(cx, |p| p.show_welcome = !p.show_welcome)
                 })),
         );
+        let list_focused = self.list_focus.is_focused(window);
         let mut main = div()
+            .id("welcome-projects")
+            .track_focus(&self.list_focus)
+            .tab_index(0)
+            .role(Role::ListBox)
+            .aria_label("Recent projects and samples. Use Up and Down to select, Enter to open.")
             .flex_1()
             .min_w(px(space::NONE))
             .h_full()
@@ -969,24 +1111,27 @@ impl Render for WelcomeView {
                         .child(layout::caps("enter", t)),
                 ),
             );
-            // Natural height for short histories; five rows fill the available list
-            // at the reference size. Larger histories scroll above fixed samples.
+            // The list owns spare height; samples stay at the bottom for every
+            // history length. Long histories scroll above the fixed strip.
             let mut list = div()
                 .id("recent-projects")
-                .track_focus(&self.list_focus)
-                .tab_index(0)
-                .h(px(layout::ROW * projects.len() as f32))
+                .flex_1()
                 .min_h(px(space::NONE))
                 .flex_shrink(1.)
                 .overflow_y_scroll()
                 .track_scroll(&self.scroll);
             for (index, project) in projects.iter().enumerate() {
                 let path = project.path.clone();
-                let selected = self.selected == index;
+                let selected = self.selected_item() == Selection::Recent(path.clone());
                 list = list.child(
                     SidebarItem::custom(("recent", index), project.name.clone(), true, t)
                         .tab_stop(false)
+                        .role(Role::ListBoxOption)
                         .aria_selected(selected)
+                        .when(selected, |d| d.aria_active_descendant())
+                        .when(selected && list_focused, |d| {
+                            d.shadow(voxelite_ui::tokens::focus_ring(t))
+                        })
                         .text_color(t.text())
                         .h(px(layout::ROW))
                         .min_h(px(layout::ROW))
@@ -1058,7 +1203,7 @@ impl Render for WelcomeView {
                         .tooltip(hint(path.display().to_string(), t))
                         .when(!self.busy, |d| {
                             d.on_click(cx.listener(move |this, _, window, cx| {
-                                this.selected = index;
+                                this.selection = Some(Selection::Recent(path.clone()));
                                 window.focus(&this.list_focus, cx);
                                 this.run(Op::Open, Some(path.clone()), window, cx);
                             }))
@@ -1069,8 +1214,6 @@ impl Render for WelcomeView {
         }
         let mut samples = div()
             .id("samples")
-            .track_focus(&self.sample_focus)
-            .tab_index(0)
             .flex_shrink_0()
             .when(!empty, |d| {
                 d.mt(px(space::XL))
@@ -1086,7 +1229,7 @@ impl Render for WelcomeView {
                         .child("No recent projects yet"),
                 )
             }));
-        let samples_focused = self.sample_focus.contains_focused(window, cx);
+        let samples_focused = list_focused;
         if empty {
             for indices in [[0, 1], [2, 3]] {
                 samples = samples.child(
@@ -1129,68 +1272,7 @@ impl Render for WelcomeView {
             .on_action(cx.listener(|this, op: &OpenRecentProject, window, cx| {
                 this.run(Op::Open, Some(op.path.clone()), window, cx)
             }))
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
-                if event.keystroke.key == "w"
-                    && ShortcutPlatform::current().is_primary(event.keystroke.modifiers)
-                {
-                    window.remove_window();
-                    cx.stop_propagation();
-                    return;
-                }
-                let Some(key) = navigation_key(&event.keystroke) else {
-                    return;
-                };
-                if key == "tab" {
-                    if event.keystroke.modifiers.shift {
-                        window.focus_prev(cx);
-                    } else {
-                        window.focus_next(cx);
-                    }
-                } else if key == "enter"
-                    && !this.focus.is_focused(window)
-                    && !this.list_focus.is_focused(window)
-                    && !this.sample_focus.is_focused(window)
-                {
-                    return;
-                } else if this.sample_focus.contains_focused(window, cx)
-                    || cx.global::<Launcher>().projects.is_empty()
-                {
-                    let columns = if cx.global::<Launcher>().projects.is_empty() {
-                        2
-                    } else {
-                        4
-                    };
-                    match key {
-                        "left" => this.sample_selected = this.sample_selected.saturating_sub(1),
-                        "right" => this.sample_selected = (this.sample_selected + 1).min(3),
-                        "up" | "down" => {
-                            this.sample_selected =
-                                sample_vertical(this.sample_selected, columns, key == "down")
-                        }
-                        "enter" => this.open_sample(Sample::ALL[this.sample_selected], cx),
-                        _ => return,
-                    }
-                    window.focus(&this.sample_focus, cx);
-                } else {
-                    let len = cx.global::<Launcher>().projects.len();
-                    match key {
-                        "up" => this.selected = this.selected.saturating_sub(1),
-                        "down" => this.selected = (this.selected + 1).min(len.saturating_sub(1)),
-                        "enter" => {
-                            if let Some(project) =
-                                cx.global::<Launcher>().projects.get(this.selected)
-                            {
-                                this.run(Op::Open, Some(project.path.clone()), window, cx);
-                            }
-                        }
-                        _ => return,
-                    }
-                    this.scroll.scroll_to_item(this.selected);
-                    window.focus(&this.list_focus, cx);
-                }
-                cx.stop_propagation();
-                cx.notify();
-            }))
+            .on_key_down(cx.listener(Self::key_down))
             .child(sidebar)
             .child(main)
     }
@@ -1198,31 +1280,247 @@ impl Render for WelcomeView {
 
 #[cfg(test)]
 mod tests {
-    use super::{grouped_count, queue_preview, reconcile_selection, sample_vertical};
+    use super::{Selection, grouped_count, queue_preview, reconcile_selection};
     use std::{collections::VecDeque, path::PathBuf};
+    use voxelite_app::samples::Sample;
 
     #[test]
-    fn recent_selection_tracks_identity_and_survives_removal_and_empty_history() {
+    fn selection_tracks_paths_and_survives_reorder_removal_and_empty_history() {
         let paths: Vec<PathBuf> = (0..12).map(|i| format!("{i}.voxl").into()).collect();
+        let selection = Some(Selection::Recent(paths[11].clone()));
         let mut reordered = paths.clone();
         reordered.swap(0, 11);
-        assert_eq!(reconcile_selection(&paths, &reordered, 11), 0);
-        assert_eq!(reconcile_selection(&paths, &paths[..11], 11), 10);
-        assert_eq!(reconcile_selection(&paths, &paths[..1], 11), 0);
-        assert_eq!(reconcile_selection(&paths, &[], 11), 0);
-        assert_eq!(reconcile_selection(&[], &paths, 0), 0);
+        assert_eq!(
+            reconcile_selection(&paths, &reordered, selection.clone()),
+            selection
+        );
+        assert_eq!(
+            reconcile_selection(&paths, &paths[..11], selection.clone()),
+            Some(Selection::Recent(paths[10].clone()))
+        );
+        assert_eq!(
+            reconcile_selection(&paths, &[], selection),
+            Some(Selection::Sample(Sample::Autumn))
+        );
+        assert_eq!(reconcile_selection(&[], &paths, None), None);
+        let sample = Some(Selection::Sample(Sample::Snow));
+        assert_eq!(reconcile_selection(&paths, &[], sample.clone()), sample);
     }
 
     #[test]
-    fn sample_vertical_navigation_preserves_columns_at_grid_edges() {
-        for index in 0..4 {
-            assert_eq!(sample_vertical(index, 4, true), index);
-            assert_eq!(sample_vertical(index, 4, false), index);
+    fn arrows_visit_every_recent_and_sample_in_display_order_and_clamp() {
+        for count in [0, 1, 5, 12] {
+            let paths: Vec<PathBuf> = (0..count).map(|i| format!("{i}.voxl").into()).collect();
+            let expected: Vec<_> = paths
+                .iter()
+                .cloned()
+                .map(Selection::Recent)
+                .chain(Sample::ALL.into_iter().map(Selection::Sample))
+                .collect();
+            let mut selection = Selection::at(&paths, 0);
+            assert_eq!(selection.step(&paths, false), selection);
+            for item in &expected {
+                assert_eq!(&selection, item);
+                selection = selection.step(&paths, true);
+            }
+            assert_eq!(&selection, expected.last().unwrap());
+            for item in expected.iter().rev() {
+                assert_eq!(&selection, item);
+                selection = selection.step(&paths, false);
+            }
+            assert_eq!(selection, expected[0]);
         }
-        assert_eq!(sample_vertical(1, 2, false), 1);
-        assert_eq!(sample_vertical(1, 2, true), 3);
-        assert_eq!(sample_vertical(2, 2, true), 2);
-        assert_eq!(sample_vertical(3, 2, false), 1);
+    }
+
+    fn window_fixture(
+        cx: &mut gpui::TestAppContext,
+        count: usize,
+    ) -> (gpui::WindowHandle<super::WelcomeView>, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let paths: Vec<PathBuf> = (0..count)
+            .map(|i| dir.path().join(format!("{i}.voxl")))
+            .collect();
+        cx.update(|cx| {
+            super::settings::init_at(
+                None,
+                Ok(Default::default()),
+                dir.path().join("settings.json"),
+                cx,
+            );
+            cx.set_global(super::Launcher {
+                editor: None,
+                welcome: None,
+                socket: None,
+                projects: paths
+                    .iter()
+                    .map(|path| voxelite_app::recents::RecentProject {
+                        path: path.clone(),
+                        name: "Project".into(),
+                        modified: std::time::SystemTime::UNIX_EPOCH,
+                    })
+                    .collect(),
+                error: None,
+                work: None,
+                notification: None,
+                continuation: None,
+                revision: 0,
+                preview_work: None,
+                preview_queue: VecDeque::new(),
+            });
+        });
+        let window = cx.add_window(|window, cx| {
+            let mut view = super::WelcomeView::initial(cx);
+            view.project_paths = paths;
+            window.focus(&view.focus, cx);
+            view
+        });
+        cx.run_until_parked();
+        (window, dir)
+    }
+
+    fn keys(
+        cx: &mut gpui::TestAppContext,
+        handle: gpui::WindowHandle<super::WelcomeView>,
+        input: &str,
+    ) {
+        for key in input.split_whitespace() {
+            use gpui::{AppContext, InputEvent};
+            // simulate_keystrokes emits key-down only; buttons activate on key-up.
+            cx.update_window(handle.into(), |_, window, cx| window.draw(cx).clear(cx))
+                .unwrap();
+            cx.simulate_keystrokes(handle.into(), key);
+            let _ = cx.update_window(handle.into(), |_, window, cx| {
+                window.dispatch_event(
+                    gpui::KeyUpEvent {
+                        keystroke: gpui::Keystroke::parse(key).unwrap(),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            });
+            cx.run_until_parked();
+        }
+    }
+
+    #[gpui::test]
+    fn shutdown_drains_ordered_history_writes_without_ui_callbacks(cx: &mut gpui::TestAppContext) {
+        let (_handle, dir) = window_fixture(cx, 0);
+        let path = dir.path().join("saved.voxl");
+        std::fs::write(&path, b"project").unwrap();
+        cx.update(|cx| {
+            super::observe_quit(cx);
+            super::history_at(
+                super::HistoryChange::Record(path.clone(), "First".into()),
+                dir.path().into(),
+                cx,
+            );
+            super::history_at(super::HistoryChange::Clear, dir.path().into(), cx);
+            super::history_at(
+                super::HistoryChange::Record(path.clone(), "Last".into()),
+                dir.path().into(),
+                cx,
+            );
+        });
+        cx.quit();
+        let projects = voxelite_app::recents::Recents::new(dir.path())
+            .load()
+            .unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].name, "Last");
+        assert_eq!(projects[0].path, path.canonicalize().unwrap());
+    }
+
+    #[gpui::test]
+    fn tab_cycles_sidebar_toggle_and_list_in_both_directions(cx: &mut gpui::TestAppContext) {
+        let (handle, dir) = window_fixture(cx, 0);
+        for index in [0, 1, 2, 3, 4, 0] {
+            keys(cx, handle, "tab");
+            handle
+                .update(cx, |view, window, _| {
+                    let focus = if index < 4 {
+                        &view.sidebar_focus[index]
+                    } else {
+                        &view.list_focus
+                    };
+                    assert!(focus.is_focused(window), "Tab stop {index}");
+                })
+                .unwrap();
+        }
+        for index in [4, 3, 2, 1, 0, 4] {
+            keys(cx, handle, "shift-tab");
+            handle
+                .update(cx, |view, window, _| {
+                    let focus = if index < 4 {
+                        &view.sidebar_focus[index]
+                    } else {
+                        &view.list_focus
+                    };
+                    assert!(focus.is_focused(window), "reverse Tab stop {index}");
+                })
+                .unwrap();
+        }
+        keys(cx, handle, "shift-tab space");
+        assert!(
+            !voxelite_app::preferences::Preferences::load(&dir.path().join("settings.json"))
+                .unwrap()
+                .show_welcome
+        );
+        keys(cx, handle, "enter");
+        assert!(
+            voxelite_app::preferences::Preferences::load(&dir.path().join("settings.json"))
+                .unwrap()
+                .show_welcome
+        );
+    }
+
+    #[gpui::test]
+    fn real_keys_cross_recents_and_samples_without_stealing_sidebar_activation(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (handle, _dir) = window_fixture(cx, 1);
+        keys(cx, handle, "down down down down down");
+        handle
+            .update(cx, |view, window, _| {
+                assert_eq!(view.selected_item(), Selection::Sample(Sample::Snow));
+                assert!(view.list_focus.is_focused(window));
+            })
+            .unwrap();
+        keys(cx, handle, "up up up up up");
+        handle
+            .update(cx, |view, _, _| {
+                assert!(matches!(view.selected_item(), Selection::Recent(_)))
+            })
+            .unwrap();
+        keys(cx, handle, "ctrl-down alt-up");
+        handle
+            .update(cx, |view, _, _| {
+                assert!(matches!(view.selected_item(), Selection::Recent(_)))
+            })
+            .unwrap();
+        // Tab wraps from the list to New; arrows there must leave list selection alone.
+        keys(cx, handle, "tab down tab tab enter");
+        handle
+            .update(cx, |view, window, _| {
+                assert_eq!(view.selected_item(), Selection::Sample(Sample::Autumn));
+                assert!(view.list_focus.is_focused(window));
+            })
+            .unwrap();
+        keys(cx, handle, "escape");
+        cx.read(|cx| assert!(handle.read(cx).is_err()));
+    }
+
+    #[gpui::test]
+    fn enter_on_a_removed_file_preserves_welcome_and_reports_the_error(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let (handle, _dir) = window_fixture(cx, 1);
+        keys(cx, handle, "enter");
+        handle
+            .update(cx, |view, _, _| {
+                assert!(!view.busy);
+                assert!(view.error.is_some());
+            })
+            .unwrap();
     }
 
     #[test]
@@ -1251,47 +1549,5 @@ mod tests {
         ] {
             assert_eq!(grouped_count(count), label);
         }
-    }
-    #[gpui::test]
-    fn shutdown_drains_ordered_history_writes_without_ui_callbacks(cx: &mut gpui::TestAppContext) {
-        let dir = tempfile::tempdir().unwrap();
-        cx.update(|cx| {
-            cx.set_global(super::Launcher {
-                editor: None,
-                welcome: None,
-                socket: None,
-                projects: Vec::new(),
-                error: None,
-                work: None,
-                notification: None,
-                continuation: None,
-                revision: 0,
-                preview_work: None,
-                preview_queue: VecDeque::new(),
-            })
-        });
-        let path = dir.path().join("saved.voxl");
-        std::fs::write(&path, b"project").unwrap();
-        cx.update(|cx| {
-            super::observe_quit(cx);
-            super::history_at(
-                super::HistoryChange::Record(path.clone(), "First".into()),
-                dir.path().into(),
-                cx,
-            );
-            super::history_at(super::HistoryChange::Clear, dir.path().into(), cx);
-            super::history_at(
-                super::HistoryChange::Record(path.clone(), "Last".into()),
-                dir.path().into(),
-                cx,
-            );
-        });
-        cx.quit();
-        let projects = voxelite_app::recents::Recents::new(dir.path())
-            .load()
-            .unwrap();
-        assert_eq!(projects.len(), 1);
-        assert_eq!(projects[0].name, "Last");
-        assert_eq!(projects[0].path, path.canonicalize().unwrap());
     }
 }

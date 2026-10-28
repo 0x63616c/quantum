@@ -1,5 +1,4 @@
-//! Launcher-specific geometry from Concept A. Shared tokens/components remain
-//! read-only while the UI library is being updated independently.
+//! Concept A presentation using shared UI components and geometry tokens.
 use crate::{
     shortcuts::{ShortcutPlatform, ShortcutSymbol, ShortcutToken, shortcut_tokens},
     theme::Theme,
@@ -7,27 +6,10 @@ use crate::{
 use gpui::{prelude::*, *};
 use voxelite_ui::{
     Kbd, row,
-    tokens::{metrics, radius, space, type_size},
+    tokens::{radius, space, type_size},
 };
 
-pub(super) const WIDTH: f32 = 760.;
-pub(super) const HEIGHT: f32 = 620.;
-pub(super) const SIDEBAR: f32 = 244.;
-pub(super) const SIDEBAR_TOP: f32 = 76.;
-pub(super) const MARK: f32 = 56.;
-pub(super) const NAME_LINE: f32 = 29.;
-pub(super) const MAIN_TOP: f32 = 22.;
-pub(super) const ACTION: f32 = 34.;
-pub(super) const ROW: f32 = 60.;
-pub(super) const THUMB_WIDTH: f32 = 60.;
-pub(super) const THUMB_HEIGHT: f32 = 46.;
-pub(super) const SAMPLE_LARGE: f32 = 196.;
-pub(super) const SAMPLE_SMALL: f32 = 124.;
-// Existing editor geometry; keep it stable while shared tokens are read-only.
-pub(super) const EDITOR_WIDTH: f32 = 1440.;
-pub(super) const EDITOR_HEIGHT: f32 = 900.;
-pub(super) const EDITOR_MIN_WIDTH: f32 = 1024.;
-pub(super) const EDITOR_TRAFFIC_LEFT: f32 = 20.;
+pub(super) use voxelite_ui::tokens::metrics::welcome::*;
 
 pub(super) fn caps(binding: &str, theme: Theme) -> Div {
     row().gap(px(space::COMPACT)).flex_shrink_0().children(
@@ -59,7 +41,7 @@ pub(super) fn caps(binding: &str, theme: Theme) -> Div {
                     ShortcutToken::Symbol(symbol) => cap.child(
                         svg()
                             .path(symbol.path())
-                            .size(px(metrics::ICON_TINY))
+                            .size(px(KEY_GLYPH))
                             .text_color(theme.muted()),
                     ),
                 }
