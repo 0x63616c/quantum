@@ -45,7 +45,7 @@ pub(super) struct SaveFlow {
     dialog_open: bool,
     open_path: Option<PathBuf>,
     pub(super) picker: voxelite_app::save_picker::SavePicker,
-    before_picker: Option<(SharedString, bool)>,
+    before_picker: Option<(HintText, bool)>,
 }
 
 impl Default for SaveFlow {
