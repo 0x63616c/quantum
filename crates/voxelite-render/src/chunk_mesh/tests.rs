@@ -363,3 +363,49 @@ fn quad_budget_checks_order_and_recovers_like_reference() {
         );
     }
 }
+
+#[test]
+fn rayon_chunk_batches_preserve_serial_order_and_vertex_bits() {
+    let mut snapshot = scene();
+    let mut seed = 95;
+    snapshot.layers[0].voxels = volume(
+        Region::new([-18; 3], [19; 3])
+            .unwrap()
+            .cells()
+            .filter_map(|p| random(&mut seed).is_multiple_of(7).then_some((p, 1))),
+    );
+    let palette = vec![Some([0.25, 0.5, 0.75]); 257];
+    let dirty: Vec<_> = Region::new([-2; 3], [2; 3]).unwrap().cells().collect();
+    // Exercise the serial threshold and uneven work divisions, including empty
+    // chunks, negative seams and AO. Compare raw floats rather than tolerances.
+    for count in [0, 1, 3, 4, 7, 8, 27, 64] {
+        let dirty = &dirty[..count];
+        let expected: Vec<_> = dirty
+            .iter()
+            .map(|&at| mesh_chunk(at, &LocalCells::new(at, &snapshot), &palette).unwrap())
+            .collect();
+        for _ in 0..3 {
+            let actual = mesh_dirty(dirty, &snapshot, &palette);
+            assert_eq!(actual.len(), expected.len());
+            for (actual, expected) in actual.into_iter().zip(&expected) {
+                let actual = actual.unwrap();
+                assert_eq!(actual.exposed_faces, expected.exposed_faces);
+                assert_eq!(actual.vertices.len(), expected.vertices.len());
+                for (actual, expected) in actual.vertices.iter().zip(&expected.vertices) {
+                    assert_eq!(
+                        actual.position.map(f32::to_bits),
+                        expected.position.map(f32::to_bits)
+                    );
+                    assert_eq!(
+                        actual.normal.map(f32::to_bits),
+                        expected.normal.map(f32::to_bits)
+                    );
+                    assert_eq!(
+                        actual.color_ao.map(f32::to_bits),
+                        expected.color_ao.map(f32::to_bits)
+                    );
+                }
+            }
+        }
+    }
+}

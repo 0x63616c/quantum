@@ -188,51 +188,44 @@ impl LocalCells {
     }
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "internal invariant: one worker per chunk"
-)]
 fn mesh_dirty(
     dirty: &[Pos],
     snapshot: &Snapshot,
     palette: &[Option<[f32; 3]>],
 ) -> Vec<RenderResult<ChunkMesh>> {
-    let mesh = |at| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
-    // Small edits avoid thread startup.
-    if dirty.len() >= 4 {
-        use std::sync::{
-            OnceLock,
-            atomic::{AtomicUsize, Ordering},
-        };
-        // Bound per-sync thread stacks and scratch storage on high-core machines.
+    let mesh = |&at: &Pos| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
+    // Preserve the small-edit serial path and the existing eight-worker bound.
+    // Reuse workers across syncs rather than allocating thread stacks each time.
+    if dirty.len() >= 4
+        && let Some(pool) = mesh_pool()
+    {
+        use rayon::prelude::*;
+        // Indexed collection retains dirty-set order, including errors. Applying
+        // results (and enforcing the aggregate quad budget) remains serial.
+        return pool.install(|| dirty.par_iter().map(mesh).collect());
+    }
+    dirty.iter().map(mesh).collect()
+}
+
+fn mesh_pool() -> Option<&'static rayon::ThreadPool> {
+    use std::sync::OnceLock;
+    static POOL: OnceLock<Option<rayon::ThreadPool>> = OnceLock::new();
+    POOL.get_or_init(|| {
         let workers = std::thread::available_parallelism()
             .map_or(1, usize::from)
-            .min(8)
-            .min(dirty.len());
-        if workers > 1 {
-            let next = AtomicUsize::new(0);
-            let results: Vec<_> = dirty.iter().map(|_| OnceLock::new()).collect();
-            std::thread::scope(|scope| {
-                for _ in 0..workers {
-                    scope.spawn(|| {
-                        loop {
-                            let i = next.fetch_add(1, Ordering::Relaxed);
-                            let Some(&at) = dirty.get(i) else { break };
-                            results[i].set(mesh(at)).expect("one worker per chunk");
-                        }
-                    });
-                }
-            });
-            return results
-                .into_iter()
-                .map(|r| {
-                    r.into_inner()
-                        .expect("scoped workers completed every chunk before joining")
-                })
-                .collect();
+            .min(8);
+        if workers <= 1 {
+            return None;
         }
-    }
-    dirty.iter().map(|&at| mesh(at)).collect()
+        // Thread allocation can fail under resource pressure. Serial meshing
+        // remains correct; avoid a global-pool initialization panic in that case.
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(workers)
+            .thread_name(|i| format!("voxelite-mesh-{i}"))
+            .build()
+            .ok()
+    })
+    .as_ref()
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -389,6 +382,8 @@ fn mesh_chunk(
 }
 
 #[cfg(test)]
+#[path = "chunk_mesh/reference.rs"]
 mod reference;
 #[cfg(test)]
+#[path = "chunk_mesh/tests.rs"]
 mod tests;

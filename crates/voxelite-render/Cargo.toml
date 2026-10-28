@@ -9,6 +9,7 @@ license.workspace = true
 voxelite-core.workspace = true
 voxelite-mesh.workspace = true
 serde.workspace = true
+rayon = "1.12"
 voxelite-render-plan.workspace = true
 
 # Unsafe FFI is confined to the audited Metal interop module.
@@ -28,6 +29,7 @@ print_stdout = "warn"
 workspace = true
 
 [dev-dependencies]
+divan.workspace = true
 voxelite-format.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
@@ -61,3 +63,7 @@ objc2-io-surface = { version = "0.3.2", optional = true, features = ["objc2-core
 [dev-dependencies.naga]
 version = "=30.0.1"
 features = ["wgsl-in"]
+
+[[bench]]
+name = "chunks"
+harness = false
