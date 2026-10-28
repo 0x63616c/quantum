@@ -1,7 +1,7 @@
 # Site fonts
 
 Geist and Geist Mono retain the variable `wght` axis, 100–900. The site uses
-WOFF2 subsets; the native/wasm app keeps its separate TTF sources in
+WOFF2 subsets; the native app keeps its separate TTF sources in
 `crates/voxelite-app/assets/fonts/`. Both OFL license files remain here.
 
 After regenerating the HTML, rebuild subsets with fontTools and Brotli:

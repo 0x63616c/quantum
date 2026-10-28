@@ -17,7 +17,7 @@ human-readable command summary use `--help`; `--schema` prints the complete tool
 catalog and exits. Connect a host using the [Cursor, Claude and Codex configuration
 examples](../integrations/README.md).
 
-This stage has no GUI/plugin/web dependency and builds on stable Rust on Linux.
+This stage has no GUI/plugin dependency and builds on stable Rust on Linux.
 Edits are held in memory; call `voxelite_document_save` before disconnecting.
 Interactive undo history and retry receipts are session-local. A saved build recipe
 (such as the bundled demo) reconstructs its timeline when opened, subject to the
