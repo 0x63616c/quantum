@@ -95,3 +95,12 @@ An issue is done only when all of these hold:
 
 Never call work done from memory. Re-read the issue's checklist against the merged
 diff first.
+
+## Snapshot tests
+
+insta detects CI (the `CI` environment variable GitHub Actions sets) and then
+behaves as `INSTA_UPDATE=no`: it never writes snapshots, so unreviewed output changes
+fail tests. Locally, run the relevant tests with `INSTA_UPDATE=new`, then use
+`cargo insta review` to inspect and accept intentional changes. Commit reviewed
+`.snap` files alongside the tests; never commit `.snap.new` or `.pending-snap`
+files. Use `INSTA_UPDATE=no` to verify the accepted snapshots without updating them.

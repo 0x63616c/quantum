@@ -1,0 +1,6 @@
+---
+source: crates/plugins/voxelite-plugin-exporters/tests/snapshots.rs
+expression: "format!(\"length: {}\\nhex: {}\", png.len(), hex(&png))"
+---
+length: 95
+hex: 89504e470d0a1a0a0000000d494844520000000200000002080600000072b60d24000000017352474200aece1ce90000001949444154789c63f9cfc0f09ff13f4323239066a8d675f90f003a43066f574582220000000049454e44ae426082

@@ -1,0 +1,20 @@
+---
+source: crates/voxelite-site/tests/snapshots.rs
+expression: text
+---
+# Quantum
+
+> A macOS desktop voxel editor with an MCP interface for AI agents and portable .voxl projects.
+
+These docs describe the development build. The MCP reference is generated from the live server catalog.
+
+All documentation in one file: [llms-full.txt](https://voxelite.worldwidewebb.co/llms-full.txt).
+
+## Documentation
+
+- [Documentation](https://voxelite.worldwidewebb.co/docs.md): Learn how to build voxel models with Quantum, connect an AI agent through MCP, work in the macOS desktop editor, and save portable projects.
+- [Getting started](https://voxelite.worldwidewebb.co/docs/getting-started.md): Download Quantum for Mac or build from source, connect your AI agent through MCP, and create your first voxel model with a guide to editing and exports.
+- [MCP tools](https://voxelite.worldwidewebb.co/docs/mcp.md): Explore Quantum's MCP tool reference, including input and output schemas, atomic edits, rendered previews, revision guards, and error recovery.
+- [The .voxl format](https://voxelite.worldwidewebb.co/docs/format.md): Understand Quantum's .voxl project format: JSON structure, voxel coordinates, palettes, layers, canonical hashes, parser limits, and compatibility.
+- [Agent skills](https://voxelite.worldwidewebb.co/docs/skills.md): Give your AI agent reusable Quantum skills for model composition, palette design, atomic edits, and visual review, with ready-to-use downloads.
+- [Plugins](https://voxelite.worldwidewebb.co/docs/plugins.md): Explore Quantum's built-in plugins, the core boundary, manifests, lifecycle, versioned project data, and a walkthrough for writing a plugin.
