@@ -51,6 +51,20 @@ regex, fixed size, app args). Add one when a PR introduces a new window or panel
 the existing screens do not show. If the state needs input (a dialog, a hover), add a
 CLI flag or fixture to the app rather than scripting clicks, so it stays deterministic.
 
+The app's development-only `--show <state>` opens the bundled example directly in
+an editor surface or a Settings page. The complete state list and manual/platform
+exclusions are in [the app README](../../../crates/voxelite-app/README.md#ui-capture-states).
+Use `chrome-menu-*`, `panels-*`, `dialogs-*`, `popovers-*`, `overlays-debug` and
+`settings-*` states. Each entry in the `screens!` registry expands into both
+`<state>-dark` and `<state>-light`; pass exact names with repeated `--screen`
+options, for example `--screen dialogs-about-dark --screen dialogs-about-light`.
+Editor states use 1440×900. Settings targets `^Quantum Settings$` at 880×640;
+About stays in the editor. Keep the established Welcome/editor captures unchanged.
+The capture script runs in a private data directory with a stable relative socket
+name; any file fixture args must therefore use absolute paths. Check every new
+PNG for the intended surface. A base binary without `--show` will correctly show
+“not on this side” for these new states.
+
 ## 4. Check the result on GitHub before asking for review
 
 1. Open the PR page (`gh pr view <N> --web`, or fetch it) and confirm every image
