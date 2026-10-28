@@ -1,7 +1,7 @@
 //! Display-independent editor state, picking, camera, and file persistence.
 
 /// Application identifier shared by native windows and the macOS bundle.
-pub const APP_ID: &str = "co.worldwidewebb.voxelite";
+pub const APP_ID: &str = "co.worldwidewebb.quantum";
 
 #[cfg(unix)]
 mod attachment;

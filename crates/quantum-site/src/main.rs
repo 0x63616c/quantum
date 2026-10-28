@@ -133,7 +133,7 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
         ""
     };
     let build_note = if PAGES.iter().any(|page| page.slug == slug) {
-        "<p class=\"build-note\">This development build uses API <code>voxelite.v1</code>.</p>"
+        "<p class=\"build-note\">This development build uses API <code>quantum.v1</code>.</p>"
     } else {
         ""
     };

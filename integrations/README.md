@@ -40,7 +40,7 @@ owns its own session; save `.voxl` files before disconnecting. For the live nati
 canvas, use **Copy MCP configuration** in the app's Agent connection panel instead.
 
 Restart/reconnect the host, list tools and call `quantum_capabilities_get` with
-`{}`. Expect API `voxelite.v1`, an epoch and available document IDs. Then ask:
+`{}`. Expect API `quantum.v1`, an epoch and available document IDs. Then ask:
 
 > Create a 32³ scene with an atomic batch. Inspect four real renders, refine it,
 > and save first-scene.voxl. Use returned epoch/revisions for edits.
