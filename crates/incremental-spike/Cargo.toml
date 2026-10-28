@@ -1,0 +1,24 @@
+[package]
+name = "incremental-spike"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = ["salsa"]
+salsa = ["dep:salsa"]
+# Explicit benchmark admission only; never enable in a production app build.
+large-scenes = ["voxelite-core/unbounded-voxels"]
+
+[dependencies]
+voxelite-core.workspace = true
+voxelite-mesh.workspace = true
+voxelite-render-plan.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+salsa = { workspace = true, optional = true }
+
+[lints]
+workspace = true
