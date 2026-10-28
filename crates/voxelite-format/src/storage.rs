@@ -14,7 +14,15 @@ pub(crate) fn parent(path: &Path) -> &Path {
 }
 
 pub(crate) fn stage(path: &Path, bytes: &[u8]) -> io::Result<tempfile::NamedTempFile> {
-    let mut temporary = tempfile::NamedTempFile::new_in(parent(path))?;
+    stage_with_builder(path, bytes, &tempfile::Builder::new())
+}
+
+fn stage_with_builder(
+    path: &Path,
+    bytes: &[u8],
+    builder: &tempfile::Builder<'_, '_>,
+) -> io::Result<tempfile::NamedTempFile> {
+    let mut temporary = builder.tempfile_in(parent(path))?;
     temporary.write_all(bytes)?;
     temporary.flush()?;
     Ok(temporary)
@@ -29,6 +37,8 @@ pub(crate) fn sync_directory(path: &Path) -> io::Result<()> {
 }
 
 /// Replace a file using a same-directory temporary, file sync, rename and directory sync.
+/// Existing target permissions are preserved. On Unix, new files use mode 0o666
+/// filtered by the process umask, matching `std::fs::write`.
 /// The parent directory must exist. Failures before rename leave the target intact;
 /// a directory-sync error means replacement occurred but durability is uncertain.
 pub fn safe_write(path: impl AsRef<Path>, bytes: impl AsRef<[u8]>) -> io::Result<()> {
@@ -40,8 +50,19 @@ fn replace(
     bytes: &[u8],
     before_rename: impl FnOnce() -> io::Result<()>,
 ) -> io::Result<()> {
-    let temporary = stage(path, bytes)?;
-    if let Ok(metadata) = fs::metadata(path) {
+    let metadata = fs::metadata(path).ok();
+    let builder = tempfile::Builder::new();
+    #[cfg(unix)]
+    let builder = {
+        let mut builder = builder;
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.is_none() {
+            builder.permissions(fs::Permissions::from_mode(0o666));
+        }
+        builder
+    };
+    let temporary = stage_with_builder(path, bytes, &builder)?;
+    if let Some(metadata) = metadata {
         temporary
             .as_file()
             .set_permissions(metadata.permissions())?;
@@ -136,6 +157,29 @@ impl<T: Serialize + DeserializeOwned + Default> JsonStore<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    #[test]
+    fn safe_write_matches_creation_mode_and_preserves_existing_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let reference = dir.path().join("reference");
+        let path = dir.path().join("output");
+        fs::write(&reference, b"reference").unwrap();
+        safe_write(&path, b"new").unwrap();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o7777,
+            fs::metadata(&reference).unwrap().permissions().mode() & 0o7777,
+        );
+
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).unwrap();
+        safe_write(&path, b"replacement").unwrap();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o7777,
+            0o640,
+        );
+    }
+
     #[test]
     fn failure_before_rename_keeps_target_and_cleans_staging() {
         let dir = tempfile::tempdir().unwrap();
