@@ -8,12 +8,12 @@ license.workspace = true
 [dependencies]
 base64.workspace = true
 htmd = "0.5.6"
-percent-encoding = "2"
+percent-encoding.workspace = true
 same-file = "1"
 serde.workspace = true
 # Keep catalog/example ordering stable in both standalone and workspace builds.
 serde_json = { workspace = true, features = ["preserve_order"] }
-url = "2"
+url.workspace = true
 
 [dev-dependencies]
 voxelite-format.workspace = true

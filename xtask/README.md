@@ -6,6 +6,7 @@ Run from the repository with `cargo xtask --help`.
 cargo xtask validate --strict
 cargo xtask check --list
 cargo xtask check tidy fmt
+cargo xtask check plugin-deps brand docs-links docs-assets
 cargo xtask validate --skip test
 cargo xtask validate --only tidy fmt
 cargo xtask bump-version patch --dry-run
@@ -17,7 +18,26 @@ Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
 Rustfmt and Clippy are probed because Cargo also lists rustup proxies for
 components missing from the selected toolchain.
 Filters accept multiple names or repeated flags. `tidy` remains a standalone
-command. Script checks, GPU checks and macOS qualification remain separate.
+command. Remaining macOS, site and PII scan script checks, GPU checks and macOS
+qualification remain separate.
+
+The repository checks run in-process from `src/checks/`:
+
+- `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
+  target-specific, build and patched registry dependencies. Reads locked Cargo
+  metadata offline first and retries online if that command fails.
+- `brand`: `brand.toml` stability and consistency with packaging, package names,
+  app IDs, MCP names, site metadata, project format, storage paths and skills.
+- `docs-links`: local links in the glossary and product direction, resolved
+  relative to each document with URL escapes decoded.
+- `docs-assets`: local image links in the root guides, docs and crate READMEs;
+  images must exist outside `screenshots/`. Checks Git ignores captures while
+  keeping `docs/images/*.png` available.
+
+Run their fixture and parsing tests with `cargo test -p xtask --locked checks::`.
+Tests inject the shared command runner for Cargo metadata and Git ignore output;
+no external-tool fixture scripts are needed. TOML, plist and source-pattern
+parsing use `toml`, `plist` and `regex`; `glob` expands the original file scopes.
 
 `bump-version` accepts `major`, `minor`, `patch` or a stable `X.Y.Z`. It checks
 all current version references before writing, preserves their formatting and

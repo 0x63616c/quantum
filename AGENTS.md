@@ -93,8 +93,8 @@ cargo test -p voxelite-render --locked --test boundary normal_workspace_dependen
 - Follow [the plugin guide](crates/plugins/README.md) and run:
 
 ```sh
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
+cargo test -p xtask --locked checks::plugin_deps
 ```
 
 ## Rust and change conventions
@@ -119,9 +119,10 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
 
 ## Build, test and lint
 
-`cargo xtask validate` runs the registered Rust gates: tidy, fmt, clippy (all
-targets), workspace tests, deny and machete. Missing tools skip with a reason;
-use `--strict` to fail instead. Use `cargo xtask check --list` to list checks,
+`cargo xtask validate` runs the registered gates: tidy, plugin-deps, brand,
+docs-links, docs-assets, fmt, clippy (all targets), workspace tests, deny and
+machete. Missing tools skip with a reason; use `--strict` to fail instead.
+Use `cargo xtask check --list` to list checks,
 `cargo xtask check tidy fmt` for named checks, or `validate --only tidy fmt` /
 `validate --skip test` to select gates. Script and platform checks below remain
 separate. See [xtask/README.md](xtask/README.md) for the library and registry.
@@ -132,8 +133,7 @@ Run from the repository root. These are the general macOS CI checks:
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo test --workspace --locked --no-fail-fast
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
 python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 ```
 
@@ -149,7 +149,8 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Editor model without GPUI | `cargo test -p voxelite-app --no-default-features --locked` |
 | Shared controls and editing | `cargo test -p voxelite-ui --locked` |
 | Plugin lifecycle/dispatch | `cargo test -p voxelite-plugin-host --locked` |
-| All Python regressions | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
+| Repository consistency (plugins, branding, documentation) | `cargo xtask check plugin-deps brand docs-links docs-assets` |
+| Remaining Python regressions (macOS, site, PII scan) | `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'` |
 | Tracked root entries, 5 MiB size limit and junk files | `cargo xtask tidy` |
 | Dependency licenses, advisories and sources | `cargo deny check` |
 | Unused dependencies | `cargo machete` |

@@ -266,7 +266,7 @@ GPU entry points, keeping occupancy, traversal, chunk meshes and GPU resources
 private. Encoders receive geometry or pixels, and hosts supply render callbacks.
 The test `normal_workspace_dependencies_preserve_renderer_boundary` in
 [boundary.rs](crates/voxelite-render/tests/boundary.rs) enforces the normal
-workspace dependency boundary. [scripts/check-plugin-deps.py](scripts/check-plugin-deps.py)
+workspace dependency boundary. `cargo xtask check plugin-deps`
 separately rejects plugin normal/build dependencies on any workspace crate except
 `voxelite-plugin-api`, including optional and target-specific dependencies.
 
@@ -277,7 +277,8 @@ their stage-specific introduction predates the current shell and plugin work.
 
 ## Tests and checks
 
-Run `cargo xtask validate` for tidy, formatting, Clippy (all targets), workspace
+Run `cargo xtask validate` for tidy, plugin dependency boundaries, branding,
+documentation links and images, formatting, Clippy (all targets), workspace
 tests, dependency policy and unused dependencies. Missing tools are reported as
 skips; `--strict` makes them failures. Select checks with
 `cargo xtask check tidy fmt`, list them with `cargo xtask check --list`, or use
@@ -297,13 +298,14 @@ format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) 
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
 cargo test --workspace --locked --no-fail-fast
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
 python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 ```
 
-Script and macOS checks remain separate from `validate`.
-The Python packaging tests mock macOS tools and run on Linux. Run all script
+Run the platform-independent repository checks with
+`cargo xtask check plugin-deps brand docs-links docs-assets`.
+Remaining macOS, site and PII scan script checks are separate from `validate`.
+The Python packaging tests mock macOS tools and run on Linux. Run remaining script
 tests with `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'`.
 Useful focused Rust checks include:
 
