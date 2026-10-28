@@ -474,3 +474,8 @@ Capture states `dialogs-feedback` and `dialogs-crash-report` open the independen
 report window (880×760); both support `--theme dark|light`. The crash fixture writes
 only to the selected local app data directory. Use an isolated `QUANTUM_DATA_DIR`
 for manual capture runs. These fixtures are for UI review and never send data.
+
+Editor operations return `EditorResult<T>` with typed `EditorError` variants for
+editor preconditions and underlying session, plugin, I/O, format and encoding
+failures. Callers can match variants without parsing user-facing messages;
+`Display` preserves the existing shell messages.

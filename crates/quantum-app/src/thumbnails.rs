@@ -89,9 +89,7 @@ impl ThumbnailCache {
         let project = quantum_format::from_bytes(&bytes)?;
         let png = render_png(&project.document.content)?;
         if Stamp::read(&path)? != stamp {
-            return Err(EditorError::Gesture(
-                "Project changed while creating its preview".into(),
-            ));
+            return Err(EditorError::PreviewChanged);
         }
         local_settings::write_local(&destination, &png)?;
         // Each project keeps only its current revision. Other paths are untouched.
@@ -174,19 +172,14 @@ fn render_png(snapshot: &quantum_core::Snapshot) -> EditorResult<Vec<u8>> {
             thumbnail: true,
             ..Default::default()
         },
-    )
-    .map_err(|e| EditorError::Gesture(e.to_string()))?;
+    )?;
     let mut png = Vec::new();
     {
         let mut encoder = png::Encoder::new(&mut png, WIDTH, HEIGHT);
         encoder.set_color(png::ColorType::Rgba);
         encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder
-            .write_header()
-            .map_err(|e| EditorError::Gesture(e.to_string()))?;
-        writer
-            .write_image_data(&image.rgba)
-            .map_err(|e| EditorError::Gesture(e.to_string()))?;
+        let mut writer = encoder.write_header()?;
+        writer.write_image_data(&image.rgba)?;
     }
     Ok(png)
 }

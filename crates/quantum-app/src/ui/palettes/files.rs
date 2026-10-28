@@ -98,7 +98,7 @@ impl EditorView {
                         .await
                 }
                 Ok(None) => Ok(None),
-                Err(error) => Err(EditorError::Gesture(error.to_string())),
+                Err(error) => Err(EditorError::PaletteDialog(error)),
             };
             let _ = this.update(cx, |this, cx| {
                 this.save_flow.finish_dialog();
@@ -149,10 +149,8 @@ fn read_import(path: &std::path::Path) -> EditorResult<PaletteAction> {
     let mut bytes = Vec::new();
     file.take((MAX_IMPORT + 1) as u64).read_to_end(&mut bytes)?;
     if bytes.len() > MAX_IMPORT {
-        return Err(EditorError::Gesture(
-            "Palette files must be 64 KiB or smaller.".into(),
-        ));
+        return Err(EditorError::PaletteImportTooLarge);
     }
-    let text = String::from_utf8(bytes).map_err(|error| EditorError::Gesture(error.to_string()))?;
+    let text = String::from_utf8(bytes)?;
     Ok(import_action(&path.to_string_lossy(), text))
 }
