@@ -112,7 +112,6 @@ fn exports_preserve_voxl_history_and_disabled_exporters_do_not_break_save_or_und
     editor.undo().unwrap();
     editor.redo().unwrap();
     assert_eq!(editor.engine.head(), head);
-    #[cfg(not(target_family = "wasm"))]
     {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("still-saves.voxl");

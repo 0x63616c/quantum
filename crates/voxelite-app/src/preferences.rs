@@ -75,7 +75,7 @@ impl Preferences {
         };
         serde_json::from_slice(&bytes).map_err(|e| EditorError::Gesture(e.to_string()))
     }
-    /// Persist atomically on desktop or in origin-local storage on the web.
+    /// Persist settings atomically in a local file.
     pub fn save(&self, path: &Path) -> EditorResult<()> {
         let bytes =
             serde_json::to_vec_pretty(self).map_err(|e| EditorError::Gesture(e.to_string()))?;
@@ -83,7 +83,7 @@ impl Preferences {
     }
 }
 
-#[cfg(all(test, not(target_family = "wasm")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

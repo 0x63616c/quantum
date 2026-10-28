@@ -35,7 +35,7 @@ const PAGES: &[DocPage] = &[
     DocPage {
         slug: "",
         title: "Documentation",
-        description: "Learn how to build voxel models with Quantum, connect an AI agent through MCP, work in the native or web editor, and save portable projects.",
+        description: "Learn how to build voxel models with Quantum, connect an AI agent through MCP, work in the macOS desktop editor, and save portable projects.",
         content: include_str!("../../../site/content/overview.html"),
     },
     DocPage {
@@ -90,7 +90,6 @@ fn section_links(content: &str) -> String {
             continue;
         };
         let label = match id {
-            "web" => "Web editor and site",
             "canonical" => "Bytes and hashes",
             "portable" => "Comments and versions",
             "hands" => "First edit by hand",
@@ -145,7 +144,7 @@ fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {metadata}{markdown_metadata}
 <meta name="theme-color" content="#000000"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script><script>window.va=window.va||function(){{(window.vaq=window.vaq||[]).push(arguments)}};</script><script defer src="/_vercel/insights/script.js"></script><script>window.si=window.si||function(){{(window.siq=window.siq||[]).push(arguments)}};</script><script defer src="/_vercel/speed-insights/script.js"></script></head><body class="documentation">
-<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor</a></div></div></header>
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Quantum</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a><a href="/docs/plugins/">Plugins</a><a href="/download/">Download</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div></header>
 <div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="nav-label">Quantum documentation</p>{navigation}</nav><main class="docs-content" id="main"><h1>{title}</h1>{markdown_actions}<p class="build-note">This development build uses API <code>voxelite.v1</code>.</p>{content}<div class="doc-next"><a href="/docs/">All documentation</a> <a href="/docs/getting-started/">Start building</a></div></main>{desktop_sections}</div><footer class="shell footer"><div><a class="brand" href="/">Quantum</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/docs/plugins/">Plugins</a><a href="/assets/LICENSE">MIT License</a>{github_link}</nav></footer></body></html>
 "##,
         github_link = GITHUB_LINK.trim(),
@@ -327,12 +326,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             &seo::metadata(
                 "/404.html",
                 "Page not found: Quantum",
-                "This page could not be found. Explore Quantum's documentation to build voxel models, connect an AI agent, or get started in the browser editor.",
+                "This page could not be found. Explore Quantum's documentation to build voxel models, connect an AI agent, or download the macOS desktop app.",
             ),
             "<p>This page could not be found. Head back to the <a href=\"/\">Quantum homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
         ),
     )?;
-    let mut public_paths = vec!["/".to_owned(), "/download/".to_owned(), "/app/".to_owned()];
+    let mut public_paths = vec!["/".to_owned(), "/download/".to_owned()];
     public_paths.extend(PAGES.iter().map(DocPage::path));
     public_paths.extend(PAGES.iter().map(DocPage::markdown_path));
     public_paths.extend(["/llms.txt".to_owned(), "/llms-full.txt".to_owned()]);

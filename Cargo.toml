@@ -65,14 +65,6 @@ opt-level = 3
 [profile.dev.package.voxelite-core]
 opt-level = 2
 
-# Fast browser iteration with optimized rasterization and a compact wasm module.
-[profile.web]
-inherits = "release"
-opt-level = 2
-lto = false
-codegen-units = 16
-strip = "debuginfo"
-
 # Pinned GPUI surface handoff fixes; see vendor/README.md.
 [patch.crates-io]
 gpui-apple-gpui-unofficial = { path = "vendor/gpui-apple" }

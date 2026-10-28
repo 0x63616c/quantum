@@ -241,7 +241,7 @@ impl Viewport {
         true
     }
 
-    fn begin_render(&mut self, at: web_time::Instant) -> bool {
+    fn begin_render(&mut self, at: std::time::Instant) -> bool {
         if self.rendering {
             self.render_pending = true;
             return false;
@@ -641,7 +641,7 @@ mod tests {
         assert_eq!(viewport.render_size, [1024, 573]);
         assert!(!viewport.accepts(old, &editor));
         viewport.rendering = false;
-        assert!(viewport.begin_render(web_time::Instant::now()));
+        assert!(viewport.begin_render(std::time::Instant::now()));
         assert!(!viewport.render_pending);
     }
 
@@ -708,16 +708,16 @@ mod tests {
         viewport.render_size = viewport.dimensions([801., 601.], 2.);
         assert_eq!(viewport.render_size, [801, 601]);
         assert!(!viewport.gpu_enabled());
-        assert!(viewport.begin_render(web_time::Instant::now())); // CPU frame in flight.
+        assert!(viewport.begin_render(std::time::Instant::now())); // CPU frame in flight.
         let dimensions = viewport.dimensions([801., 601.], 1.);
         assert_eq!(dimensions, [801, 601]);
         assert!(viewport.gpu_enabled());
         assert_eq!(viewport.render_size, [0, 0]); // Still schedule a GPU frame.
         viewport.render_size = dimensions;
-        assert!(!viewport.begin_render(web_time::Instant::now()));
+        assert!(!viewport.begin_render(std::time::Instant::now()));
         assert!(viewport.render_pending);
         viewport.rendering = false; // CPU completion must allow the queued GPU request.
-        assert!(viewport.begin_render(web_time::Instant::now()));
+        assert!(viewport.begin_render(std::time::Instant::now()));
         assert!(!viewport.render_pending);
     }
 
@@ -851,7 +851,7 @@ mod tests {
     #[test]
     fn coalesces_requests_and_only_latest_navigation_timer_restores_quality() {
         let (mut viewport, editor) = fixture();
-        let at = web_time::Instant::now();
+        let at = std::time::Instant::now();
         assert!(viewport.begin_render(at));
         assert!(!viewport.begin_render(at));
         assert!(!viewport.begin_render(at));

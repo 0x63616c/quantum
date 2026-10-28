@@ -898,7 +898,6 @@ impl EditorView {
                     .child(self.palette_sidebar(&view, cx))
                     .child(main),
             );
-        #[cfg(not(target_family = "wasm"))]
         let panel = panel.on_drop(
             cx.listener(|this, paths: &ExternalPaths, _, cx| this.palette_drop_file(paths, cx)),
         );
