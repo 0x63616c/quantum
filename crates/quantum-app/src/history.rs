@@ -135,9 +135,7 @@ impl Editor {
     pub(crate) fn ensure_live(&mut self) -> EditorResult<()> {
         self.pause_history();
         if self.preview.is_some() {
-            Err(EditorError::Gesture(
-                "History preview is read-only. Return to live or Restore.".into(),
-            ))
+            Err(EditorError::HistoryReadOnly)
         } else {
             Ok(())
         }
@@ -167,7 +165,7 @@ impl Editor {
             .engine
             .versions()
             .find(|v| v.id == id)
-            .ok_or_else(|| EditorError::Gesture("Version no longer exists".into()))?;
+            .ok_or(EditorError::VersionMissing)?;
         let (snapshot, label) = (v.snapshot.clone(), v.name.clone());
         self.set_preview(PreviewSource::Version(id), snapshot, label);
         Ok(())
@@ -193,7 +191,7 @@ impl Editor {
         let p = self
             .preview
             .as_ref()
-            .ok_or_else(|| EditorError::Gesture("Choose a history state first".into()))?;
+            .ok_or(EditorError::HistorySelectionRequired)?;
         match p.source {
             PreviewSource::History(entry) => {
                 self.session.engine.restore_history(
@@ -285,8 +283,11 @@ mod tests {
         assert_eq!(e.engine.snapshot(), live);
         assert_eq!(e.engine.revision(), revision);
         assert_eq!(e.engine.head(), head);
-        assert!(e.apply_at([2, 0, 0]).is_err());
-        assert!(e.undo().is_err());
+        assert!(matches!(
+            e.apply_at([2, 0, 0]),
+            Err(EditorError::HistoryReadOnly)
+        ));
+        assert!(matches!(e.undo(), Err(EditorError::HistoryReadOnly)));
         e.restore_preview().unwrap();
         assert_eq!(e.snapshot().layers[0].voxels.len(), 1);
         assert_eq!(e.engine.revision(), revision + 1);

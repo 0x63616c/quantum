@@ -4,8 +4,8 @@ use crate::{
     local_settings,
 };
 use quantum_plugin_api::{
-    Command, Palette, PaletteAction, PaletteCx, PaletteError, PaletteOutcome, PaletteState,
-    PaletteView, SettingValue, Swatch,
+    Command, Palette, PaletteAction, PaletteCx, PaletteOutcome, PaletteState, PaletteView,
+    SettingValue, Swatch,
 };
 use quantum_plugin_palette::PANEL_ID;
 
@@ -49,10 +49,7 @@ impl Editor {
                 &local_settings::data_dir().join("palettes.json"),
             )?
             .load()?;
-            let bytes = value
-                .map(|value| serde_json::to_vec(&value))
-                .transpose()
-                .map_err(|error| EditorError::Gesture(error.to_string()))?;
+            let bytes = value.map(|value| serde_json::to_vec(&value)).transpose()?;
             self.palette_action(PaletteAction::LoadLibrary(bytes))?;
         }
         Ok(())
@@ -64,8 +61,7 @@ impl Editor {
         action: PaletteAction,
     ) -> EditorResult<Option<PaletteOutcome>> {
         self.palette_action_with(action, |bytes| {
-            let value: serde_json::Value = serde_json::from_slice(bytes)
-                .map_err(|error| EditorError::Gesture(error.to_string()))?;
+            let value: serde_json::Value = serde_json::from_slice(bytes)?;
             Ok(local_settings::json_store::<Option<serde_json::Value>>(
                 &local_settings::data_dir().join("palettes.json"),
             )?
@@ -89,9 +85,7 @@ impl Editor {
         };
         // A request has one durable authority: a local library or the core engine.
         if outcome.library_bytes.is_some() && !outcome.commands.is_empty() {
-            return Err(EditorError::Gesture(
-                "Palette request mixes library and document edits".into(),
-            ));
+            return Err(EditorError::MixedPaletteEdits);
         }
         if !outcome.commands.is_empty() {
             self.execute("Edit palette", Command::Batch(outcome.commands.clone()))?;
@@ -123,16 +117,6 @@ impl PaletteCx for EditorPaletteCx<'_> {
     }
     fn setting(&self, _: &str) -> Option<&SettingValue> {
         None
-    }
-}
-
-impl From<PaletteError> for EditorError {
-    fn from(error: PaletteError) -> Self {
-        match error {
-            error @ PaletteError::Capacity => Self::Gesture(error.to_string()),
-            PaletteError::Core(error) => Self::Core(error),
-            PaletteError::Message(message) => Self::Gesture(message),
-        }
     }
 }
 

@@ -4,15 +4,12 @@ use glam::DVec3;
 use quantum_core::*;
 use quantum_format::session::SavePolicy;
 pub use quantum_format::session::{SaveTask, SavedProject};
-use quantum_format::{
-    Project,
-    session::{DocumentSession, SessionError},
-};
+use quantum_format::{Project, session::DocumentSession};
 use quantum_plugin_api::{
     ExportImage, ExportResult, OverlayFrame, OverlayInput, OverlayNavigation, OverlayOutcome,
-    SettingValue, ToolCx, ToolError, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
+    SettingValue, ToolCx, ToolGesture, ToolHit, ToolInput, ToolLayer, ToolOutcome,
 };
-use quantum_plugin_host::{Host, HostError};
+use quantum_plugin_host::Host;
 use quantum_render::RenderOptions;
 
 use std::cell::{Ref, RefCell};
@@ -36,50 +33,8 @@ pub fn render_view(
     }
 }
 
-/// Failures presented by the shell without dropping the current document.
-#[derive(Debug, thiserror::Error)]
-pub enum EditorError {
-    /// Core validation or edit conflict.
-    #[error(transparent)]
-    Core(#[from] quantum_core::Error),
-    /// Portable format error.
-    #[error(transparent)]
-    Format(#[from] quantum_format::FormatError),
-    /// Filesystem error.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-    /// A project could not be loaded; retains its path and underlying cause.
-    #[error("Could not open {path}: {source}")]
-    Open {
-        /// Requested project path.
-        path: PathBuf,
-        /// Loading or editor initialization failure.
-        source: Box<EditorError>,
-    },
-    /// Invalid human gesture.
-    #[error("{0}")]
-    Gesture(String),
-}
-impl From<SessionError> for EditorError {
-    fn from(error: SessionError) -> Self {
-        match error {
-            SessionError::Format(e) => Self::Format(e),
-            SessionError::Io(e) => Self::Io(e),
-            e => Self::Gesture(e.to_string()),
-        }
-    }
-}
-impl From<HostError> for EditorError {
-    fn from(error: HostError) -> Self {
-        match error {
-            HostError::Tool(ToolError::Core(error)) => Self::Core(error),
-            HostError::Palette(error) => error.into(),
-            error => Self::Gesture(error.to_string()),
-        }
-    }
-}
-/// Result of an editor operation.
-pub type EditorResult<T> = std::result::Result<T, EditorError>;
+mod error;
+pub use error::{EditorError, EditorResult};
 
 /// Built-in editing tools. All mutations use the same engine as MCP.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -401,14 +356,14 @@ impl Editor {
                         .any(|ext| ext.eq_ignore_ascii_case(extension))
             })
             .map(|(_, format)| format.clone())
-            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
+            .ok_or(EditorError::ExportUnavailable)
     }
     /// Resolve an export format in the live registry before starting background work.
     pub fn prepare_export(&self, id: &str) -> EditorResult<quantum_plugin_host::ExportJob> {
         self.plugins
             .borrow_mut()
             .prepare_export(id)?
-            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
+            .ok_or(EditorError::ExportUnavailable)
     }
     /// Admit completed bytes only while the format's plugin remains enabled.
     pub fn finish_export(
@@ -418,7 +373,7 @@ impl Editor {
         self.plugins
             .borrow_mut()
             .finish_export(result)?
-            .ok_or_else(|| EditorError::Gesture("Export format is unavailable".into()))
+            .ok_or(EditorError::ExportUnavailable)
     }
     /// Draw the enabled portable overlays against the displayed document and camera.
     pub fn overlays(&self, camera: OrbitCamera, hovered: Option<(&str, u32)>) -> Vec<OverlayFrame> {
