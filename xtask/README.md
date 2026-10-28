@@ -1,6 +1,8 @@
 # Repository tasks
 
-Run from the repository with `cargo xtask --help`.
+Run from the repository with `cargo xtask --help`. Tasks discover the workspace
+from the current directory (including subdirectories), so shared Cargo build
+artifacts do not redirect checks to the worktree where xtask was compiled.
 
 ```sh
 cargo xtask validate --strict
@@ -36,8 +38,11 @@ The repository checks run in-process from `src/checks/`:
   Storage checks match the production path-selection functions, verifying macOS
   Application Support, XDG/fallback paths and the environment override without
   counting migration code or test assertions.
-- `docs-links`: local links in the glossary and product direction, resolved
-  relative to each document with URL escapes decoded.
+- `docs-links`: local file and directory links in every tracked `docs/**/*.md`,
+  resolved relative to each document with URL escapes decoded. Parses inline and
+  reference Markdown links and images, skipping code examples and external URLs;
+  fragments and queries are stripped (anchors are not validated). Generated and
+  untracked documents are excluded.
 - `docs-assets`: local image links in the root guides, docs and crate READMEs;
   images must exist outside `screenshots/`. Checks Git ignores captures while
   keeping `docs/images/*.png` available.
