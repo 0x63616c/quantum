@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    Error, Result,
+    Error, Result, checks,
     cmd::{self, Runner},
     tidy,
     workspace::Workspace,
@@ -88,6 +88,26 @@ pub static CHECKS: &[Check] = &[
         "tidy",
         "Tracked root entries, size limits and junk files",
         tidy_check,
+    ),
+    Check::new(
+        "plugin-deps",
+        "Plugin and MCP dependency boundaries",
+        checks::plugin_deps::run,
+    ),
+    Check::new(
+        "brand",
+        "Branding inventory matches source and packaging",
+        checks::brand::run,
+    ),
+    Check::new(
+        "docs-links",
+        "Local glossary and product direction links",
+        checks::docs::links,
+    ),
+    Check::new(
+        "docs-assets",
+        "Documentation images and capture ignore policy",
+        checks::docs::assets,
     ),
     Check::cargo("fmt", "Rust formatting", &["fmt", "--all", "--", "--check"]),
     Check::cargo(

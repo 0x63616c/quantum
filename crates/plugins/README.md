@@ -34,8 +34,8 @@ consumers disable default features. Check that boundary with
 Run the dependency rule and its fixture tests with:
 
 ```sh
-python3 -B scripts/check-plugin-deps.py
-python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+cargo xtask check plugin-deps
+cargo test -p xtask --locked checks::plugin_deps
 ```
 
 `voxelite-plugin-example` is a minimal template with ID `dev.voxelite.example`,

@@ -5,6 +5,7 @@ pub mod cmd;
 pub mod version;
 pub mod workspace;
 
+mod checks;
 mod tidy;
 
 use std::path::PathBuf;

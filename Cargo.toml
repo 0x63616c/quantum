@@ -38,6 +38,8 @@ uuid = { version = "1.18", features = ["serde", "v4"] }
 sha2 = "0.10"
 proptest = "1.9"
 png = "0.18"
+percent-encoding = "2"
+url = "2"
 glam = "0.30"
 base64 = "0.22"
 futures-channel = "0.3"

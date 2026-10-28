@@ -9,7 +9,18 @@ fn selection_validates_names_and_preserves_order() {
     let names = |selected: Vec<&Check>| selected.iter().map(|c| c.name).collect::<Vec<_>>();
     assert_eq!(
         names(select(CHECKS, &[], &[]).unwrap()),
-        ["tidy", "fmt", "clippy", "test", "deny", "machete"]
+        [
+            "tidy",
+            "plugin-deps",
+            "brand",
+            "docs-links",
+            "docs-assets",
+            "fmt",
+            "clippy",
+            "test",
+            "deny",
+            "machete"
+        ]
     );
     assert_eq!(
         names(select(CHECKS, &["test".into(), "fmt".into(), "fmt".into()], &[]).unwrap()),
@@ -17,7 +28,17 @@ fn selection_validates_names_and_preserves_order() {
     );
     assert_eq!(
         names(select(CHECKS, &[], &["test".into()]).unwrap()),
-        ["tidy", "fmt", "clippy", "deny", "machete"]
+        [
+            "tidy",
+            "plugin-deps",
+            "brand",
+            "docs-links",
+            "docs-assets",
+            "fmt",
+            "clippy",
+            "deny",
+            "machete"
+        ]
     );
     assert!(select(CHECKS, &["typo".into()], &[]).is_err());
     assert!(select(CHECKS, &[], &["typo".into()]).is_err());
@@ -35,7 +56,11 @@ fn missing_tools_skip_or_fail_without_running_the_check() {
             runner: &runner,
             strict,
         };
-        let outcome = CHECKS[4].run(&context);
+        let outcome = CHECKS
+            .iter()
+            .find(|check| check.name == "deny")
+            .unwrap()
+            .run(&context);
         let message = "cargo deny is not installed; install it with `cargo install cargo-deny`";
         assert_eq!(
             outcome,
@@ -127,7 +152,8 @@ fn wrappers_keep_exact_gates_and_inherit_stdio() {
         &["deny", "check"],
         &["machete"],
     ];
-    for (check, args) in CHECKS[1..].iter().zip(expected) {
+    for args in expected {
+        let check = CHECKS.iter().find(|check| check.name == args[0]).unwrap();
         let runner =
             RecordingRunner::stdout(b"    fmt\n    clippy\n    test\n    deny\n    machete\n");
         let probes_component = matches!(args[0], "fmt" | "clippy");
@@ -168,7 +194,7 @@ fn installed_but_broken_tools_fail_even_without_strict() {
         strict: false,
     };
     assert!(
-        matches!(CHECKS[4].run(&context), Outcome::Fail(messages) if messages[0].contains("17"))
+        matches!(CHECKS.iter().find(|check| check.name == "deny").unwrap().run(&context), Outcome::Fail(messages) if messages[0].contains("17"))
     );
     let runner = RecordingRunner::default();
     runner
@@ -180,7 +206,14 @@ fn installed_but_broken_tools_fail_even_without_strict() {
         runner: &runner,
         strict: false,
     };
-    assert!(matches!(CHECKS[4].run(&context), Outcome::Fail(_)));
+    assert!(matches!(
+        CHECKS
+            .iter()
+            .find(|check| check.name == "deny")
+            .unwrap()
+            .run(&context),
+        Outcome::Fail(_)
+    ));
 }
 
 #[test]
