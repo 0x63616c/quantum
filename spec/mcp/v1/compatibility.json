@@ -1,6 +1,6 @@
 {
   "api_version": "voxelite.v1",
-  "application_version": "0.3.1",
+  "application_version": "0.4.0",
   "protocol_profiles": [
     "2025-11-25",
     "2026-07-28"
