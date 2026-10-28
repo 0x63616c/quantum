@@ -11,7 +11,11 @@ use crate::{DocPage, PAGES, SITE_BASE_URL, escape};
 
 #[expect(clippy::expect_used, reason = "internal invariant: string write")]
 pub fn render(page: &DocPage, body: &str) -> Result<String, Box<dyn Error>> {
-    let base = Url::parse(&format!("{SITE_BASE_URL}{}", page.path()))?;
+    let body = crate::brand::expand(body);
+    let base = Url::parse(&crate::brand::expand(&format!(
+        "{SITE_BASE_URL}{}",
+        page.path()
+    )))?;
     let converter = HtmlToMarkdown::builder()
         .options(Options {
             br_style: BrStyle::Backslash,
@@ -92,20 +96,20 @@ pub fn render(page: &DocPage, body: &str) -> Result<String, Box<dyn Error>> {
 
 pub fn write_indexes(root: &Path, documents: &[(&DocPage, String)]) -> Result<(), Box<dyn Error>> {
     let mut index = format!(
-        "# Quantum\n\n> A macOS desktop voxel editor with an MCP interface for AI agents and portable .voxl projects.\n\n\
+        "# @@product@@\n\n> A macOS desktop voxel editor with an MCP interface for AI agents and portable .voxl projects.\n\n\
          These docs describe the development build. The MCP reference is generated from the live server catalog.\n\n\
          All documentation in one file: [llms-full.txt]({SITE_BASE_URL}/llms-full.txt).\n\n## Documentation\n\n"
     );
     let mut full = String::from(
-        "# Quantum documentation\n\n> Complete documentation, generated from the same source content and MCP catalog as the website.\n",
+        "# @@product@@ documentation\n\n> Complete documentation, generated from the same source content and MCP catalog as the website.\n",
     );
     for (page, markdown) in documents {
         let url = format!("{SITE_BASE_URL}{}", page.markdown_path());
         writeln!(index, "- [{}]({url}): {}", page.title, page.description)?;
         write!(full, "\n---\n\nSource: [{url}]({url})\n\n{markdown}")?;
     }
-    quantum_format::storage::safe_write(root.join("llms.txt"), index)?;
-    quantum_format::storage::safe_write(root.join("llms-full.txt"), full)?;
+    crate::brand::write(root.join("llms.txt"), index)?;
+    crate::brand::write(root.join("llms-full.txt"), full)?;
     Ok(())
 }
 
@@ -115,6 +119,7 @@ mod tests {
 
     #[test]
     fn exports_semantics_and_links_without_page_chrome() {
+        let site_base_url = crate::brand::get().site_url();
         let body = r##"<h2 id="example">Example &amp; details</h2>
 <p><a href="../format/">Format</a> <a href="#example">This section</a>
 <a href="/docs/getting-started/#connect">Connect</a></p>
@@ -125,12 +130,12 @@ mod tests {
         let markdown = render(&PAGES[1], body).unwrap();
         assert!(markdown.starts_with("# Getting started\n"));
         assert!(markdown.contains("## Example & details"));
-        assert!(markdown.contains(&format!("[Format]({SITE_BASE_URL}/docs/format.md)")));
+        assert!(markdown.contains(&format!("[Format]({site_base_url}/docs/format.md)")));
         assert!(markdown.contains(&format!(
-            "[This section]({SITE_BASE_URL}/docs/getting-started/#example)"
+            "[This section]({site_base_url}/docs/getting-started/#example)"
         )));
         assert!(markdown.contains(&format!(
-            "[Connect]({SITE_BASE_URL}/docs/getting-started/#connect)"
+            "[Connect]({site_base_url}/docs/getting-started/#connect)"
         )));
         assert!(markdown.contains("| Field | Value |"));
         assert!(markdown.contains("a&#124;b"));

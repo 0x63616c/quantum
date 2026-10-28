@@ -42,20 +42,24 @@ jobs:
           # rustup reads the version and components from rust-toolchain.toml.
           rustup show
 
-      - name: Download signed release appcast or empty initial feed
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: cargo xtask macos fetch-appcast site/appcast.xml
-
       - name: Build site
         run: scripts/build-site.sh
 
       - name: Verify site
         run: |
+          QUANTUM_BRAND_SITE=site cargo xtask check brand
           python3 scripts/check-site.py
-          cargo xtask macos check-appcast site/appcast.xml --allow-empty
           test -s site/index.html
           test -s site/llms.txt
+
+      - name: Download signed release appcast or empty initial feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Signed feeds retain historical product names and immutable asset URLs.
+        # Fetch after naming verification; validate through the appcast gate.
+        run: |
+          cargo xtask macos fetch-appcast site/appcast.xml
+          cargo xtask macos check-appcast site/appcast.xml --allow-empty
 
       - name: Stage public files
         run: |

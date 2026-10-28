@@ -23,3 +23,5 @@ __pycache__/
 
 *.snap.new
 *.pending-snap
+/site/changelog/
+/site/blog/
