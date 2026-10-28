@@ -2,6 +2,7 @@
 
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
+    io::{self, Write},
     path::PathBuf,
 };
 
@@ -13,10 +14,39 @@ use crate::{
 };
 
 pub(crate) fn run(context: &Context<'_>) -> Outcome {
-    super::outcome(check(context))
+    run_with_output(context, &mut io::stdout().lock(), &mut io::stderr().lock())
 }
 
-fn check(context: &Context<'_>) -> Result<Vec<String>> {
+fn run_with_output(
+    context: &Context<'_>,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> Outcome {
+    let diagnostic = match check(context) {
+        Ok(diagnostic) => diagnostic,
+        Err(error) => Some(format!("{error}\n")),
+    };
+    let (written, outcome) = match diagnostic {
+        Some(message) => (
+            stderr.write_all(message.as_bytes()),
+            Outcome::Fail(vec![message]),
+        ),
+        None => (
+            writeln!(stdout, "Plugin dependency rule passed."),
+            Outcome::Pass,
+        ),
+    };
+    match written {
+        Ok(()) => outcome,
+        Err(error) => Outcome::Fail(vec![format!(
+            "Could not report plugin dependency rule: {error}"
+        )]),
+    }
+}
+
+/// Return the complete legacy stderr diagnostic, or no diagnostic on success.
+/// The registry adds its timed summary separately, without replacing these bytes.
+fn check(context: &Context<'_>) -> Result<Option<String>> {
     let command = context
         .workspace
         .cargo()
@@ -35,17 +65,13 @@ fn check(context: &Context<'_>) -> Result<Vec<String>> {
         output = read(&command)?;
     }
     if !output.status.success() {
-        return Ok(vec![String::from_utf8_lossy(&output.stderr).into_owned()]);
+        return Ok(Some(String::from_utf8_lossy(&output.stderr).into_owned()));
     }
     let metadata = serde_json::from_slice(&output.stdout)
         .map_err(|error| Error::Invalid(format!("Could not read Cargo metadata: {error}")))?;
-    let mut errors = dependency_violations(&metadata);
-    if !errors.is_empty() {
-        errors.insert(0, "Plugin dependency rule failed:".into());
-    } else {
-        println!("Plugin dependency rule passed.");
-    }
-    Ok(errors)
+    let errors = dependency_violations(&metadata);
+    Ok((!errors.is_empty())
+        .then(|| format!("Plugin dependency rule failed:\n{}\n", errors.join("\n"))))
 }
 
 #[derive(Deserialize)]
