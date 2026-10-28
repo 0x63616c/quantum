@@ -257,9 +257,12 @@ The packager:
 
 Without the certificate/password pair, the build succeeds with ad-hoc app signing
 and an unsigned DMG. With Developer ID but incomplete API credentials, it signs
-without notarizing. These local/CI modes print clear notices. The release workflow requires all five
-Apple secrets and appcast generation requires a notarized result and the Sparkle
-secret; an incomplete configuration cannot publish a release.
+without notarizing. These local/CI modes print clear notices. The release workflow
+checks all five Apple secrets and the Sparkle secret
+before checkout or building, reporting only a missing secret’s name. Credentials
+remain scoped to their individual steps; the build receives none. Appcast
+generation also requires a notarized result; an incomplete configuration cannot
+publish a release.
 Invalid credentials, rejected notarization, bad checksums, or failed signature
 verification fail the release; they do not silently fall back. Ad-hoc builds omit
 hardened runtime so they can load the ad-hoc Sparkle framework during development.
