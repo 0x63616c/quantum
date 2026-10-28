@@ -9,6 +9,8 @@ license.workspace = true
 default = ["native"]
 # Deterministic GPUI integration tests; keep headless model tests GUI-free.
 test-support = ["native", "gpui/test-support"]
+# Opt-in Linux pixel harness; never enabled by production builds.
+ui-snapshots = ["test-support", "gpui_platform/test-support"]
 native = ["dep:quantum-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple", "dep:async-lock"]
 
 [lib]

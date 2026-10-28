@@ -4,6 +4,21 @@
 //! `keyboard` routes keys; `layout` composes frames. `chrome`, `viewport_controls`,
 //! `sidebar` and `panel_*` build the editor surfaces; `dialogs` selects overlays.
 mod about;
+
+/// Version shown in the UI. Pinned in `ui-snapshots` builds so release bumps
+/// do not invalidate the committed goldens.
+pub(crate) const APP_VERSION: &str = if cfg!(feature = "ui-snapshots") {
+    "0.0.0"
+} else {
+    env!("CARGO_PKG_VERSION")
+};
+
+/// Optional build identifier shown in About; omitted from `ui-snapshots` builds.
+pub(crate) const APP_BUILD: Option<&str> = if cfg!(feature = "ui-snapshots") {
+    None
+} else {
+    option_env!("QUANTUM_BUILD")
+};
 mod agent;
 mod camera_anim;
 #[cfg(target_os = "linux")]
@@ -32,6 +47,8 @@ mod save_flow;
 mod settings;
 mod shortcut_hint;
 mod sidebar;
+#[cfg(feature = "ui-snapshots")]
+pub(crate) mod snapshots;
 mod status;
 mod tooltip;
 mod viewport;

@@ -109,6 +109,8 @@ impl Render for WelcomeView {
             .or(settings.error.clone());
         self.refresh_menus(window, cx);
         let home = std::env::var_os("HOME").map(PathBuf::from);
+        #[cfg(feature = "ui-snapshots")]
+        let home = super::snapshot::home(cx).or(home);
         let empty = projects.is_empty();
         let sidebar = self.sidebar(show_welcome, t, cx);
         let list_focused = self.list_focus.is_focused(window);
@@ -237,7 +239,7 @@ impl WelcomeView {
                     .text_color(t.muted())
                     .text_size(px(type_size::CAPTION))
                     .line_height(px(type_size::LINE_SM))
-                    .child(format!("Version {}", env!("CARGO_PKG_VERSION"))),
+                    .child(format!("Version {}", crate::ui::APP_VERSION)),
             );
         sidebar
             .child(self.sidebar_actions(t, cx))
@@ -430,10 +432,7 @@ impl WelcomeView {
                     } else {
                         t.muted()
                     })
-                    .child(modified_label(
-                        project.modified,
-                        std::time::SystemTime::now(),
-                    )),
+                    .child(modified_label(project.modified, recent_clock(cx))),
             )
             .tooltip(hint(path.display().to_string(), t))
             .when(!self.busy, |d| {
@@ -573,4 +572,12 @@ impl WelcomeView {
             let _ = window.drop_image(image);
         }
     }
+}
+
+fn recent_clock(_cx: &App) -> std::time::SystemTime {
+    #[cfg(feature = "ui-snapshots")]
+    if let Some(clock) = super::snapshot::clock(_cx) {
+        return clock;
+    }
+    std::time::SystemTime::now()
 }

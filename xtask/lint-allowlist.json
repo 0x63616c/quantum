@@ -15,7 +15,7 @@
   "crates/quantum-app/src/palette_tests.rs:function-lines:::manager_copy_cancel_commit_and_interchange_keep_the_document_and_brush_untouched": 115,
   "crates/quantum-app/src/shortcuts.rs:string-dispatch": 33,
   "crates/quantum-app/src/thumbnails.rs:string-dispatch": 1,
-  "crates/quantum-app/src/ui/about.rs:function-lines:impl  for EditorView::about_dialog": 142,
+  "crates/quantum-app/src/ui/about.rs:function-lines:impl  for EditorView::about_dialog": 139,
   "crates/quantum-app/src/ui/agent.rs:function-lines:impl  for EditorView::agent_feed": 153,
   "crates/quantum-app/src/ui/agent.rs:string-dispatch": 7,
   "crates/quantum-app/src/ui/capture.rs:string-dispatch": 1,

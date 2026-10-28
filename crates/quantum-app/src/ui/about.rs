@@ -150,10 +150,7 @@ impl EditorView {
                                 .text_size(px(type_size::BODY))
                                 .text_color(t.muted())
                                 .text_center()
-                                .child(version_label(
-                                    env!("CARGO_PKG_VERSION"),
-                                    option_env!("QUANTUM_BUILD"),
-                                )),
+                                .child(version_label(crate::ui::APP_VERSION, crate::ui::APP_BUILD)),
                         )
                         .child(
                             div()
