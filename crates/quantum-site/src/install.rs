@@ -7,8 +7,19 @@ use std::{error::Error, fmt::Write as _, fs, path::Path};
 
 use crate::escape;
 
-const NAME: &str = "quantum";
-const SKILLS_COMMAND: &str = "npx skills add 0x63616c/quantum";
+fn name() -> &'static str {
+    &crate::brand::get().identifiers.mcp_server_name.current
+}
+fn skills_command() -> String {
+    format!(
+        "npx skills add {}",
+        crate::brand::get()
+            .identifiers
+            .github_repo_url
+            .current
+            .trim_start_matches("https://github.com/")
+    )
+}
 // encodeURIComponent's unescaped characters, including punctuation in paths.
 const COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'-')
@@ -34,10 +45,13 @@ struct NamedServerConfig<'a> {
     server: ServerConfig<'a>,
 }
 
-const SERVER: ServerConfig<'_> = ServerConfig {
-    command: "/Applications/Quantum.app/Contents/MacOS/quantum-mcp",
-    args: ["--root", "${workspaceFolder}"],
-};
+static COMMAND: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| crate::brand::get().mcp_command());
+static SERVER: std::sync::LazyLock<ServerConfig<'static>> =
+    std::sync::LazyLock::new(|| ServerConfig {
+        command: &COMMAND,
+        args: ["--root", "${workspaceFolder}"],
+    });
 
 impl<'a> ServerConfig<'a> {
     fn with_root(self, root: &'a str) -> Self {
@@ -50,27 +64,29 @@ impl<'a> ServerConfig<'a> {
     #[expect(clippy::expect_used, reason = "internal invariant: server JSON")]
     fn named_json(self) -> String {
         serde_json::to_string(&NamedServerConfig {
-            name: NAME,
+            name: name(),
             server: self,
         })
         .expect("server JSON")
     }
 
     fn generic(self) -> Value {
-        json!({"mcpServers": {NAME: self}})
+        json!({"mcpServers": {(name()): self}})
     }
 
     fn cli(self, host: &str) -> String {
+        let name = name();
         format!(
-            "{host} mcp add {NAME} -- {} {} \"$PWD\"",
+            "{host} mcp add {name} -- {} {} \"$PWD\"",
             shell_quote(self.command),
             self.args[0]
         )
     }
 
     fn toml(self) -> String {
+        let name = name();
         format!(
-            "[mcp_servers.{NAME}]\ncommand = {}\nargs = {}",
+            "[mcp_servers.{name}]\ncommand = {}\nargs = {}",
             json!(self.command),
             json!(self.args)
         )
@@ -83,8 +99,9 @@ fn shell_quote(value: &str) -> String {
 
 #[expect(clippy::expect_used, reason = "internal invariant: server JSON")]
 fn cursor_link() -> String {
-    let encoded = STANDARD.encode(serde_json::to_string(&SERVER).expect("server JSON"));
-    format!("cursor://anysphere.cursor-deeplink/mcp/install?name={NAME}&config={encoded}")
+    let name = name();
+    let encoded = STANDARD.encode(serde_json::to_string(&*SERVER).expect("server JSON"));
+    format!("cursor://anysphere.cursor-deeplink/mcp/install?name={name}&config={encoded}")
 }
 
 fn vscode_link() -> String {
@@ -120,7 +137,7 @@ pub fn block() -> String {
             &serde_json::to_string_pretty(&SERVER.with_root("<project dir>").generic())
                 .expect("server JSON")
         ),
-        skills_command = code("sh", SKILLS_COMMAND),
+        skills_command = code("sh", &skills_command()),
     )
 }
 
@@ -155,7 +172,7 @@ pub fn skill_list() -> Result<String, Box<dyn Error>> {
             html,
             "<section><h3 id=\"{name}\">{name}</h3><p>{}</p>{}<p><a href=\"/assets/skills/{name}/SKILL.md\">Read skill instructions</a></p></section>",
             escape(description),
-            code("sh", &format!("{SKILLS_COMMAND} --skill {name}"))
+            code("sh", &format!("{} --skill {name}", skills_command()))
         )?;
     }
     Ok(html)
@@ -169,21 +186,21 @@ pub fn write_integrations(root: &Path) -> Result<(), Box<dyn Error>> {
         ("cursor/mcp.json", SERVER.generic()),
         ("claude/mcp.json", manual.generic()),
         ("other/mcp.json", manual.generic()),
-        ("vscode/mcp.json", json!({"servers": {NAME: SERVER}})),
+        ("vscode/mcp.json", json!({"servers": {(name()): *SERVER}})),
     ] {
         let path = root.join(path);
         fs::create_dir_all(path.parent().expect("example directory"))?;
-        quantum_format::storage::safe_write(
+        crate::brand::write(
             path,
             format!("{}\n", serde_json::to_string_pretty(&config)?),
         )?;
     }
     fs::create_dir_all(root.join("codex"))?;
-    quantum_format::storage::safe_write(
+    crate::brand::write(
         root.join("codex/config.toml"),
         format!("{}\n", manual.toml()),
     )?;
-    quantum_format::storage::safe_write(
+    crate::brand::write(
         root.join("README.md"),
         format!(
             include_str!("../templates/integrations.md"),
@@ -208,7 +225,7 @@ mod tests {
     #[test]
     fn every_install_link_and_command_survives_html_and_markdown() {
         let expected = json!({"command": "/Applications/Quantum.app/Contents/MacOS/quantum-mcp", "args": ["--root", "${workspaceFolder}"]});
-        assert_eq!(serde_json::to_value(SERVER).unwrap(), expected);
+        assert_eq!(serde_json::to_value(*SERVER).unwrap(), expected);
         for page in PAGES
             .iter()
             .filter(|page| matches!(page.slug, "mcp" | "skills"))
@@ -226,17 +243,17 @@ mod tests {
                     assert_eq!(url.host_str(), Some("anysphere.cursor-deeplink"));
                     assert_eq!(url.path(), "/mcp/install");
                     let query: std::collections::HashMap<_, _> = url.query_pairs().collect();
-                    assert_eq!(query["name"], NAME);
+                    assert_eq!(query["name"], name());
                     let bytes = STANDARD.decode(query["config"].as_bytes()).unwrap();
                     assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap(), expected);
-                    assert_eq!(bytes, serde_json::to_vec(&SERVER).unwrap());
+                    assert_eq!(bytes, serde_json::to_vec(&*SERVER).unwrap());
                     assert!(markdown.contains(&format!("[Add to Cursor]({href})")));
                     counts[0] += 1;
                 } else if let Some(encoded) = href.strip_prefix("vscode:mcp/install?") {
                     let decoded = percent_decode_str(encoded).decode_utf8().unwrap();
                     let value: Value = serde_json::from_str(&decoded).unwrap();
                     assert_eq!(decoded, SERVER.named_json());
-                    assert_eq!(value["name"], NAME);
+                    assert_eq!(value["name"], name());
                     assert_eq!(value["command"], expected["command"]);
                     assert_eq!(value["args"], expected["args"]);
                     assert!(markdown.contains(&format!("[Install in VS Code]({href})")));
@@ -248,7 +265,7 @@ mod tests {
                 SERVER.cli("claude"),
                 SERVER.cli("codex"),
                 vscode_cli(),
-                SKILLS_COMMAND.to_owned(),
+                skills_command(),
                 SERVER.with_root("<project dir>").toml(),
             ] {
                 assert!(html.contains(&escape(&command)), "{command}");
@@ -261,7 +278,7 @@ mod tests {
                     "quantum-primitives",
                     "quantum-render-review",
                 ] {
-                    assert!(markdown.contains(&format!("{SKILLS_COMMAND} --skill {name}")));
+                    assert!(markdown.contains(&format!("{} --skill {name}", skills_command())));
                 }
             }
             assert!(

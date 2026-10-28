@@ -210,7 +210,6 @@ impl Plan {
         let paths = [
             "Cargo.toml",
             "README.md",
-            "crates/quantum-site/templates/download.html",
             "spec/mcp/v1/compatibility.json",
             "Cargo.lock",
         ];
@@ -229,14 +228,8 @@ impl Plan {
             after: replace_range(&manifest, range, &from, &to)?,
             before: manifest,
         }];
-        for (path, prefix, suffix) in [
-            ("README.md", "The current workspace version is **", "**"),
-            (
-                "crates/quantum-site/templates/download.html",
-                "Version ",
-                " for macOS",
-            ),
-        ] {
+        {
+            let (path, prefix, suffix) = ("README.md", "The current workspace version is **", "**");
             let before = workspace.read(path)?;
             let after = replace_reference(&before, prefix, suffix, &from, &to)
                 .map_err(|error| Error::Invalid(format!("{path}: {error}")))?;
