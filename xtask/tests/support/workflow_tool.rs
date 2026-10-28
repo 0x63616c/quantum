@@ -42,6 +42,19 @@ fn main() {
                 exit(1);
             }
         }
+        "pipe-parent" => {
+            let mut child =
+                std::process::Command::new(Path::new(&executable).with_file_name("pipe-leaf"))
+                    .spawn()
+                    .unwrap();
+            if env::var_os("PIPE_PARENT_EXITS").is_none() {
+                child.wait().unwrap();
+            }
+        }
+        "pipe-leaf" => {
+            fs::write(env::var_os("PIPE_READY").unwrap(), "ready").unwrap();
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        }
         "secret-echo" => {
             for name in [
                 "MACOS_CERTIFICATE_P12_BASE64",

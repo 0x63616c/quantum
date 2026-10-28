@@ -207,6 +207,10 @@ impl Command {
     }
 
     fn redact(&self, text: &str) -> String {
+        let input = self
+            .input
+            .as_ref()
+            .map(|bytes| String::from_utf8_lossy(bytes));
         let mut secrets: Vec<_> = self
             .args
             .iter()
@@ -214,19 +218,18 @@ impl Command {
             .filter(|v| v.secret && !v.value.is_empty())
             .map(|v| v.value.to_string_lossy())
             .collect();
+        if let Some(input) = &input {
+            for value in [input.as_ref(), input.trim()] {
+                if !value.is_empty() {
+                    secrets.push(value.into());
+                }
+            }
+        }
         // Replace longer secrets first when one contains another.
         secrets.sort_by_key(|value| std::cmp::Reverse(value.len()));
         let mut text = text.to_owned();
         for secret in secrets {
             text = text.replace(secret.as_ref(), "[REDACTED]");
-        }
-        if let Some(input) = &self.input {
-            let input = String::from_utf8_lossy(input);
-            for value in [input.as_ref(), input.trim()] {
-                if !value.is_empty() {
-                    text = text.replace(value, "[REDACTED]");
-                }
-            }
         }
         text
     }
@@ -443,6 +446,14 @@ impl Runner for SystemRunner {
         if command.input.is_some() {
             child.stdin(process::Stdio::piped());
         }
+        // A tool can spawn helpers which inherit its output pipes. Cancellation
+        // must stop the entire group before joining the pipe readers; killing
+        // only the immediate child can otherwise block release cleanup forever.
+        #[cfg(unix)]
+        if self.interruption.is_some() && !command.during_cleanup {
+            use std::os::unix::process::CommandExt;
+            child.process_group(0);
+        }
         let mut child = child.spawn()?;
         // Drain both pipes and feed stdin concurrently, avoiding pipe-capacity
         // deadlocks even when a tool writes before reading its input.
@@ -464,13 +475,28 @@ impl Runner for SystemRunner {
                 .take()
                 .zip(command.input())
                 .map(|(mut pipe, bytes)| scope.spawn(move || pipe.write_all(bytes)));
+            let mut exited = None;
             let status = loop {
                 if interrupted() != 0 {
+                    #[cfg(unix)]
+                    {
+                        use rustix::process::{Pid, Signal, kill_process_group};
+                        let _ = kill_process_group(Pid::from_child(&child), Signal::KILL);
+                    }
                     let _ = child.kill();
                     child.wait()?;
                     break Status::from_code(interrupted() as i32);
                 }
-                if let Some(status) = child.try_wait()? {
+                if exited.is_none() {
+                    exited = child.try_wait()?;
+                }
+                // Continue observing cancellation even after the direct child
+                // exits if descendants still hold a captured pipe open.
+                if let Some(status) = exited
+                    && stdout.as_ref().is_none_or(|h| h.is_finished())
+                    && stderr.as_ref().is_none_or(|h| h.is_finished())
+                    && stdin.as_ref().is_none_or(|h| h.is_finished())
+                {
                     break status.into();
                 }
                 thread::sleep(Duration::from_millis(20));

@@ -287,18 +287,11 @@ pub fn notarize(context: &Context<'_>, archive: &Path, key: &Path) -> Result<()>
         invalid("Invalid notarization result; raw authentication diagnostics suppressed.")
     })?;
     if result.get("status").and_then(|s| s.as_str()) != Some("Accepted") {
-        // Apple submission IDs are public identifiers; reject arbitrary diagnostic
-        // text so malformed tool output cannot smuggle credentials into the log.
-        let id = result
-            .get("id")
-            .and_then(|id| id.as_str())
-            .filter(|id| {
-                !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
-            })
-            .unwrap_or("unknown");
-        return Err(Error::Invalid(format!(
-            "Notarization was not accepted (submission {id}). Inspect it with notarytool log."
-        )));
+        // Even an alphanumeric or UUID-shaped value can be an echoed credential.
+        // Keep all returned authentication metadata out of release logs.
+        return Err(invalid(
+            "Notarization was not accepted. Inspect the submission locally with notarytool log.",
+        ));
     }
     Ok(())
 }

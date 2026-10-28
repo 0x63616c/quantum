@@ -11,7 +11,7 @@ provided token; a personal access token is not needed.
 | --- | --- |
 | `MACOS_CERTIFICATE_P12_BASE64` | Base64 of a password-protected Developer ID **Application** `.p12` export, including its private key. |
 | `MACOS_CERTIFICATE_PASSWORD` | The nonempty password chosen when exporting that `.p12`. |
-| `MACOS_SIGNING_IDENTITY` | Optional: the certificate's SHA-1 fingerprint. Omit when the export contains exactly one valid Developer ID Application identity; the script auto-detects it. |
+| `MACOS_SIGNING_IDENTITY` | Optional: the certificate's SHA-1 fingerprint. Omit when the export contains exactly one valid Developer ID Application identity; the packager auto-detects it. |
 | `APPLE_API_KEY_P8_BASE64` | Base64 of the downloaded App Store Connect **team** API `.p8` key. Assign the key the **Developer** role. |
 | `APPLE_API_KEY_ID` | The API key's Key ID from App Store Connect. |
 | `APPLE_API_ISSUER_ID` | The team API Issuer ID from App Store Connect. |
@@ -72,11 +72,11 @@ base64 -i /secure/path/AuthKey.p8 | tr -d '\n' |
 ```
 
 Keep the downloaded key and certificate export in secure storage outside the
-checkout. The packaging script decodes them into a private temporary directory,
+checkout. The packaging task decodes them into a private temporary directory,
 imports the certificate into a temporary keychain, grants noninteractive
 `codesign` access, and restores the runner's keychain search list on exit. Cleanup
 also runs on failures, `INT`, and `TERM`, including when the original keychain
-search list is empty. A forced kill or machine outage cannot run shell traps;
+search list is empty. A forced kill or machine outage cannot run cleanup guards;
 inspect the runner for leftover temporary keychains before resuming releases
 after such an interruption. Do not run packaging with shell tracing. Raw signing
 and authentication diagnostics are suppressed on failure because they can expose
@@ -88,7 +88,7 @@ certificate identities; reproduce locally to inspect Apple tool errors.
 requests. Its job-level guard is:
 
 ```yaml
-if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
 ```
 
 Fork pull requests never schedule this self-hosted job. Do not change the event to
@@ -132,8 +132,8 @@ The packager:
 1. Builds `voxelite-app` with the locked dependencies and assembles the app/icon.
    Release CI builds in a separate step without signing credentials, then invokes
    the packager with `--skip-build` and an explicit `VERSION`. Local packaging
-   still builds by default. The script removes credential variables from child
-   environments and exposes each encoded key only to its decoder.
+   still builds by default. The task removes credential variables from child
+   environments and decodes the keys in-process.
 2. Validates the committed public key and optional matching override, downloads
    pinned Sparkle 2.10.1, verifies SHA-256, preserves framework symlinks, and embeds
    the framework and license. It sets the feed, key, and update policy described
@@ -203,11 +203,12 @@ stdin or the GitHub secrets UI. Sparkle 2.10.1's new format is already base64 of
 maintainer control. Only the public key belongs in Git. Never regenerate the
 production key as part of setup or CI.
 
-Both release scripts disable shell tracing and unexport signing credentials.
+Both release tasks remove signing credentials from child environments.
 Sparkle receives its key only through stdin (`--ed-key-file -`); its children do
-not inherit it. Both Sparkle tools' stdout/stderr go to `/dev/null`, since
-malformed-key diagnostics can reveal input. No key or raw diagnostic file is
-created by the feed script. Exit and signal traps remove its temporary archives.
+not inherit it. Both Sparkle tools' stdout/stderr are captured and suppressed,
+since malformed-key diagnostics can reveal input. No key or raw diagnostic file
+is created by the feed task. Cleanup guards remove its temporary archives on
+exit, including interruption by SIGINT or SIGTERM.
 Apple keys are decoded into private temporary files and removed after
 use; the Apple CLI still receives certificate/keychain passwords and public API
 identifiers as arguments, so the dedicated runner must be trusted.
@@ -316,9 +317,9 @@ TAG=v0.3.1 SPARKLE_ED_PRIVATE_KEY=fixture cargo xtask macos appcast --dry-run
 
 The appcast dry run describes its artifact/history checks and prints both Sparkle
 commands, with private-key stdin redacted. It does not require a built release,
-write GitHub outputs or generate a feed. Complete Linux transcripts and the
-old-to-new external command mapping are in
-[xtask port verification](../xtask/macos-port-verification.md).
+write GitHub outputs or generate a feed. The
+[xtask command ownership table](../xtask/README.md#release-command-ownership)
+maps each external operation to its Rust implementation.
 
 For real credentials, first build with `cargo build --release --locked -p xtask`
 in an environment without signing secrets. Then invoke the prebuilt binary:
@@ -328,7 +329,8 @@ uses `target/release/xtask version --check-tag "$TAG"` before building the app.
 xtask removes all seven signing variables from every child environment and sends
 the Sparkle key only on stdin. Temporary secrets use 0600 files in a 0700
 directory. Keychain deletion and search-list restoration run after failures,
-panics, SIGINT (130) and SIGTERM (143); failed cleanup returns 1 and invalidates
+panics, SIGINT (130) and SIGTERM (143). On Unix, interruption stops the active
+tool and its descendants before cleanup; failed cleanup returns 1 and invalidates
 `dist/.notarized`. Abrupt machine loss or SIGKILL cannot run process cleanup.
 
 ### Local end-to-end test with a throwaway key
@@ -406,8 +408,8 @@ files. Do not upload throwaway assets or keys to GitHub.
   Developer ID certificate, API key permissions, Xcode/Metal, and toolchain.
 - Complete the throwaway-key update test and live menu/Settings
   refresh checks on macOS, including an ad-hoc CI app launch.
-- Bump Cargo/lockfile to the approved version; run formatting, Python regression
-  tests, Clippy and Rust tests, then verify the intended tag points to that code.
+- Bump Cargo/lockfile to the approved version; run formatting, xtask release regression
+  tests, Clippy and workspace tests, then verify the intended tag points to that code.
   Creating/pushing the tag is a separate release action; this work does not do it.
 - Confirm nested signatures, both Accepted notarizations, both stapled tickets,
   Gatekeeper assessments, final checksum, signed feed/notes, and unchanged history.

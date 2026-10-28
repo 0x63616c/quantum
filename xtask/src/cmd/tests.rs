@@ -49,6 +49,29 @@ fn diagnostics_redact_repeated_secrets_before_quoting() {
 }
 
 #[test]
+fn overlapping_stdin_and_argument_secrets_are_redacted_together() {
+    for (argument, input) in [
+        ("shared", "shared private remainder\n"),
+        ("shared private remainder", "shared\n"),
+    ] {
+        let command = Command::new("tool")
+            .secret_arg(argument)
+            .secret_stdin(input.as_bytes())
+            .arg(format!("copy={input}"));
+        let runner = SystemRunner::with_dry_run_output(Output {
+            status: Status::from_code(1),
+            stderr: format!("{argument} {input}").into_bytes(),
+            ..Output::default()
+        });
+        let error = command.output(&runner).unwrap_err();
+        for message in [command.to_string(), error.to_string(), format!("{error:?}")] {
+            assert!(!message.contains("shared"), "{message}");
+            assert!(!message.contains("private remainder"), "{message}");
+        }
+    }
+}
+
+#[test]
 fn capture_trim_and_exit_policy_are_explicit() {
     let command = Command::new("tool");
     let runner = RecordingRunner::stdout(b" \n answer\r\n");

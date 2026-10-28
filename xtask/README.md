@@ -21,8 +21,8 @@ Missing Cargo tools skip unless `--strict` is set; broken installed tools fail.
 Rustfmt and Clippy are probed because Cargo also lists rustup proxies for
 components missing from the selected toolchain.
 Filters accept multiple names or repeated flags. `tidy` remains a standalone
-command. Remaining macOS, site and PII scan script checks, GPU checks and macOS
-qualification remain separate.
+command. Remaining site and PII scan script checks, GPU checks and macOS qualification
+remain separate.
 
 The repository checks run in-process from `src/checks/`:
 
@@ -84,7 +84,8 @@ implement `Runner` to record calls and return outputs without spawning tools.
 
 `Command::secret_stdin` sends private input over a pipe and redacts it in errors.
 `SystemRunner::with_interruption` kills and reaps the active child when its atomic
-exit-code flag is set. Only restoration commands use `during_cleanup` to finish
+exit-code flag is set. On Unix it isolates each tool in a process group and stops
+its descendants too, so inherited pipes cannot block cleanup. Only restoration commands use `during_cleanup` to finish
 after interruption. The macOS CLI registers SIGINT/SIGTERM handlers for 130/143;
 Drop guards restore keychains and remove temporary files on errors and unwinds.
 
@@ -97,6 +98,74 @@ The registered `appcast` check validates `site/appcast.xml`, allowing an empty f
 Build xtask before providing credentials. In release CI, credential-bearing
 steps execute `target/release/xtask` directly; invoking Cargo there could expose
 credentials to Cargo and build scripts before xtask can sanitize its children.
-See the [release guide](../docs/releasing-macos.md) and
-[port verification](macos-port-verification.md) for dry runs, command mapping and
-the complete regression coverage map.
+See the [release guide](../docs/releasing-macos.md) for dry runs and macOS
+qualification. Portable release regression tests live under `src/macos/tests/`
+and `tests/macos_workflows.rs`. The latter compiles its Rust tool fixture only
+during tests; no fake-tool mode or fixture is included in the production binary.
+
+## Release command ownership
+
+Every external operation in the former packaging shell has an explicit owner.
+File operations and parsers now run in-process; commands still use argument
+vectors through `Context::command`, which removes all seven signing variables.
+Private-tool failures suppress raw output rather than trying to identify every
+possible certificate subject or authentication detail in it.
+
+| Former command / operation | Rust implementation |
+| --- | --- |
+| `uname -s` | `macos::package::Options::is_macos`, production `cfg!(target_os = "macos")`; dry runs bypass execution |
+| `cargo metadata ...` + Python JSON version selector | `macos::version`, using cleaned Cargo metadata; dry runs read `version::workspace_version` |
+| `cargo build --release --locked -p voxelite-app --bin voxelite` | `package::build`, omitted by `--skip-build` |
+| `cargo build --release --locked -p voxelite-mcp` | `package::build`, omitted by `--skip-build` |
+| `mktemp -d` | `files::WorkDir`, tempfile with explicit 0700 directory permissions |
+| Python canonical public-key validation | `files::public_key`, canonical 32-byte base64 and committed-file equality |
+| Python secret decoding | `files::decode_secret`, in-process base64 into create-new 0600 files |
+| Python plist read/update/dump | `package::bundle_plist`, sorted plist keys, identical fields and trailing newline |
+| `mkdir`, `cp`, `rm`, `touch` | `mkdir`, `copy`, `write`, `files::remove`, `std::fs` and Drop guards |
+| Ten `sips -z ...` calls | `package::build`, 16/32/128/256/512 points at 1× and 2× |
+| `iconutil -c icns ... -o ...` | `package::build` |
+| `curl --fail --location --retry 3 --proto '=https' --tlsv1.2 ...` | `package::build`, pinned Sparkle 2.10.1 URL |
+| `shasum -a 256 --check` for Sparkle | `macos::sha256` before extraction, same pinned digest |
+| `tar -xf ... -C dist/sparkle ./Sparkle.framework ./bin ./LICENSE` | `package::build` |
+| `ditto` framework copy | `package::build`, retaining symlinks and modes |
+| `security list-keychains -d user` + Python shlex parser | `sign::Keychain::prepare` and `sign::keychain_paths`, before mutations |
+| `openssl rand -hex 32` | `sign::Keychain::import`, captured and never printed |
+| `security create-keychain -p ...` | `sign::Keychain::import`, redacted secret argument |
+| `security set-keychain-settings -lut 21600 ...` | `sign::Keychain::import` |
+| `security unlock-keychain -p ...` | `sign::Keychain::import`, redacted secret argument |
+| `security import ... -k ... -P ... -T /usr/bin/codesign -T /usr/bin/security` | `sign::Keychain::import`, redacted password, suppressed diagnostics |
+| `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ...` | `sign::Keychain::import`, redacted password, suppressed diagnostics |
+| `security list-keychains -d user -s ... temporary-keychain` | `sign::Keychain::import` |
+| `security find-identity -v -p codesigning ...` + Python identity selector | `sign::Keychain::import` and `select_identity`, name/fingerprint matching |
+| Nested/app `codesign --force --sign ...` | `sign::Signing::command` and `package::build`, Installer → Downloader (preserve entitlements) → Autoupdate → Updater → framework → MCP → main executable → app; runtime/timestamp only with Developer ID |
+| `codesign --verify --deep --strict` app | `package::build`, private diagnostics |
+| `ditto -c -k --keepParent` app ZIP | `package::build`, before app submission |
+| `xcrun notarytool submit ... --key ... --key-id ... --issuer ... --wait --timeout 30m --output-format json` (ZIP and DMG) | `sign::notarize`, exact arguments, private diagnostics and Accepted-only result |
+| Python notarization JSON status check | `sign::notarize` |
+| `xcrun stapler staple`, `xcrun stapler validate` (app and DMG) | `sign::staple` |
+| `spctl --assess --type execute` app | `package::build`, private diagnostics |
+| `ditto` stapled app into stage | `package::build`, after app ticket validation |
+| `ln -s /Applications` | `std::os::unix::fs::symlink` in `package::build` |
+| `hdiutil create -volname Voxelite -srcfolder ... -fs HFS+ -format UDZO -ov ...` | `package::create_dmg` |
+| DMG `codesign --force --keychain ... --sign ... --timestamp` and `--verify --strict` | `package::build`, private diagnostics |
+| `spctl --assess --type open --context context:primary-signature` DMG | `package::build`, private diagnostics |
+| `(cd dist && shasum -a 256 Voxelite.dmg > Voxelite.dmg.sha256)` and `cat` | `macos::sha256`, `write` and `print!`; same relative filename and two-space separator |
+| EXIT/INT/TERM traps; `security delete-keychain`, `security list-keychains -d user -s ...`, `rm -rf` | `macos::Signals`, interruptible `SystemRunner`, `Keychain::finish`/Drop, `Marker` and `WorkDir` guards |
+
+The other migrated commands map as follows:
+
+| Former operation | Rust implementation |
+| --- | --- |
+| `gh api --paginate --slurp repos/0x63616c/voxelite/releases?per_page=100` | `appcast::fetch` |
+| `gh release download ... --pattern appcast.xml --dir ...` | `appcast::fetch`; numeric stable selection and complete API asset-size validation |
+| XML parsing/validation | `feed::validate`, `feed::validate_release`; original XML copied without serialization |
+| DMG checksum check and `xcrun stapler validate` before signing feed | `appcast::generate` |
+| HTML escaping release notes | `appcast::release_notes_html`, exact `html.escape` replacements |
+| `generate_appcast --ed-key-file - --maximum-deltas 0 --maximum-versions 0 ...` | `appcast::generate`, secret stdin pipe and suppressed diagnostics |
+| `sign_update --ed-key-file - --verify ...` | `appcast::generate`, secret stdin pipe and suppressed diagnostics |
+| GitHub `generated=false` / `generated=true` outputs | `appcast::github_output`, unchanged ordering, skipped during dry run |
+| `chmod 644` final XML/HTML | `files::public_permissions` |
+| `git rev-parse --verify refs/tags/...^{commit}` | `release_notes::generate` |
+| `git tag --merged ... --no-contains ...` | `release_notes::generate`, strict ancestors only |
+| `git describe --tags --abbrev=0 --match=...` | `release_notes::generate`, stable tags only |
+| `git log --no-merges --no-show-signature --no-color --pretty=- %s (%h) ... --` | `release_notes::generate`, fully qualified tag range |

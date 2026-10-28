@@ -304,8 +304,8 @@ cargo test -p xtask --locked
 
 Run the platform-independent repository checks with
 `cargo xtask check plugin-deps brand docs-links docs-assets`.
-Remaining macOS, site and PII scan script checks are separate from `validate`.
-The Python packaging tests mock macOS tools and run on Linux. Run remaining script
+Remaining site and PII scan script checks are separate from `validate`.
+The Rust packaging tests inject macOS tools and run on Linux. Run remaining script
 tests with `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'`.
 Useful focused Rust checks include:
 
