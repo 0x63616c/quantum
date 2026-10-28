@@ -209,3 +209,20 @@ fn release_notes_match_packaging_notarization() {
         assert_eq!(notes.contains("Open Anyway"), !notarized);
     }
 }
+
+#[test]
+fn tagged_changelog_supplies_notes_instead_of_unrelated_worktree() {
+    let mut n = Notes::new();
+    write(
+        n.fixture.path("CHANGELOG.md"),
+        "# Changelog\n\n## [1.2.3]\n\n### Added\n\n- Tagged feature\n\n## [1.2.2]\n\n- Older\n",
+    );
+    n.git(&["add", "CHANGELOG.md"]);
+    n.commit("chore(release): v1.2.3");
+    n.git(&["tag", "v1.2.3"]);
+    write(n.fixture.path("CHANGELOG.md"), "Unrelated working copy");
+    let notes = n.notes("v1.2.3", false);
+    assert!(notes.contains("### Added\n\n- Tagged feature"));
+    assert!(!notes.contains("Older"));
+    assert!(!notes.contains("Unrelated working copy"));
+}

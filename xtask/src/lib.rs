@@ -3,6 +3,7 @@
 pub mod check;
 pub mod cmd;
 pub mod macos;
+pub mod release;
 pub mod version;
 pub mod workspace;
 
