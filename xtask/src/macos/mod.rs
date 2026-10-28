@@ -17,6 +17,7 @@ use std::{
 pub mod appcast;
 mod feed;
 mod files;
+mod homebrew;
 pub mod package;
 pub mod release_notes;
 pub mod sign;
@@ -182,6 +183,18 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
 /// Grouped CLI for release preparation; none of these commands publish assets.
 #[derive(Subcommand)]
 pub enum Task {
+    /// Render the stable Homebrew cask from verified release metadata
+    HomebrewCask {
+        /// Stable release version (at least 0.4.0)
+        #[arg(long)]
+        version: String,
+        /// SHA-256 of the published DMG
+        #[arg(long)]
+        sha256: String,
+        /// Destination cask file
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Build, sign, optionally notarize, and create dist/Quantum.dmg
     Package {
         /// Use existing executables from the configured packaging profile
@@ -288,6 +301,11 @@ pub fn execute(task: Task, workspace: &Workspace) -> Result<u8> {
             release_dir.as_deref(),
             previous.as_deref(),
         ),
+        Task::HomebrewCask {
+            version,
+            sha256,
+            output,
+        } => homebrew::write(&version, &sha256, &output),
         Task::ReleaseNotes => release_notes::generate(&context),
     };
     if runner.interruption_code() != 0 && !matches!(result, Err(Error::Cleanup(_))) {

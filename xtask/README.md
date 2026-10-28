@@ -291,7 +291,9 @@ Drop guards restore keychains and remove temporary files on errors and unwinds.
 
 The `macos` group includes `package [--skip-build] [--dry-run]`, `appcast
 [--dry-run]`, `fetch-appcast <out>`, `check-appcast <file> [--allow-empty]` and
-`release-notes`. Configuration still uses the documented release environment
+`release-notes`, and `homebrew-cask --version X.Y.Z --sha256 HEX --output FILE`.
+The cask renderer accepts stable releases from 0.4.0 and a 64-hex digest.
+Configuration still uses the documented release environment
 variables. `check-appcast` also accepts paired `--release-dir` and `--previous`.
 The registered `appcast` check validates `site/appcast.xml`, allowing an empty feed.
 

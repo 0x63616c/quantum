@@ -225,3 +225,9 @@ current = ["Voxelite is now"]
 stable = true
 paths = ["site/content/blog/2026-10-28-rename.md"]
 reason = "Historical rename announcement title; current product copy is generated from the inventory."
+
+[compatibility.homebrew]
+current = ["~/Library/Application Support/voxelite", "co.worldwidewebb.voxelite"]
+stable = true
+paths = ["packaging/homebrew/quantum.rb", "xtask/src/macos/tests/fixtures/homebrew.rb"]
+reason = "Explicit zap removes migrated legacy data and preferences under the stable Sparkle bundle ID; projects remain untouched."

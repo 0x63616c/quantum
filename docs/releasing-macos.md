@@ -552,3 +552,46 @@ Quantum release: preserve the bundle identifier and signing key, verify the
 old-host appcast returns the unchanged signed bytes directly, and test a real
 0.3.x update. Existing installed bundle filenames may remain unchanged after
 Sparkle updates them; new downloads use Quantum.app.
+
+## Homebrew tap
+
+After the DMG job publishes a release, the separate Ubuntu `homebrew-tap` job
+downloads the DMG and checksum, verifies the bytes and renders
+`packaging/homebrew/quantum.rb` with `cargo xtask macos homebrew-cask`. It commits
+only changed casks to `0x63616c/homebrew-tap` with a normal fast-forward push.
+Render locally without publishing:
+
+```sh
+cargo xtask macos homebrew-cask --version 0.4.0 --sha256 <64-hex-digest> --output /tmp/quantum.rb
+```
+
+The renderer rejects prereleases and versions before 0.4.0, validates the digest
+and normalizes it to lowercase. Reruns with identical metadata do nothing. A failure is nonblocking so it cannot
+prevent site deployment; inspect the job logs after a release. A missing secret
+produces a warning and skips publishing. Never replace published release assets.
+
+`HOMEBREW_TAP_DEPLOY_KEY` is an ed25519 SSH key with write access only to the tap.
+To rotate it, generate a new ed25519 key, add its public half as a write deploy
+key on `0x63616c/homebrew-tap` only, then set the private half:
+
+```sh
+gh secret set HOMEBREW_TAP_DEPLOY_KEY -R 0x63616c/quantum < key
+```
+
+Remove the old deploy key after verifying the replacement. GitHub SSH host keys
+are pinned in `packaging/homebrew/github_known_hosts` from GitHub's published
+`https://api.github.com/meta` SSH keys; review changes against that source.
+
+### Homebrew
+
+```sh
+brew install --cask 0x63616c/tap/quantum
+```
+
+Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle;
+the cask sets `auto_updates true`, so `brew upgrade` skips it. Run
+`brew upgrade --cask --greedy quantum` to reinstall the latest release through
+Homebrew. Its recorded version can lag after an in-app update; this is harmless.
+
+Uninstall with `brew uninstall --cask quantum`. For full cleanup, use
+`brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
