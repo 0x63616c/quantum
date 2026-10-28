@@ -61,6 +61,10 @@ impl BuiltinTool {
         }
     }
 
+    #[expect(
+        clippy::expect_used,
+        reason = "apply establishes the box anchor before requesting its preview"
+    )]
     fn apply(
         self,
         cx: &dyn ToolCx,
@@ -73,7 +77,7 @@ impl BuiltinTool {
         if self == Self::Picker {
             outcome.sampled_color = cx
                 .sample(at)
-                .map(|(slot, _)| cx.palette().get(slot).expect("valid slot").clone());
+                .and_then(|(slot, _)| cx.palette().get(slot).cloned());
             return Ok(outcome);
         }
         let layer = cx.layer(cx.active_layer())?;
@@ -184,7 +188,7 @@ impl Tool for BuiltinTool {
             ToolGesture::Click if *self == Self::Picker => {
                 outcome.sampled_color = cx
                     .hovered_hit()
-                    .map(|hit| cx.palette().get(hit.slot).expect("valid slot").clone());
+                    .and_then(|hit| cx.palette().get(hit.slot).cloned());
                 Ok(outcome)
             }
             ToolGesture::Click => {

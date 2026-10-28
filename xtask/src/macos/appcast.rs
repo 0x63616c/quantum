@@ -25,6 +25,7 @@ struct Release {
 
 /// Fetch the numerically highest stable release with a feed. API, download and
 /// validation failures never fall back to an empty feed or overwrite destination.
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn fetch(context: &Context<'_>, destination: &Path) -> Result<()> {
     let output = context
         .command("gh")
@@ -123,6 +124,7 @@ pub fn release_notes_html(notes: &str) -> String {
 /// Generate and verify a signed feed using only stdin for the private key.
 /// No network operation runs with the key. Dry runs describe prerequisites but
 /// do not require built artifacts, write outputs or execute Sparkle/Apple tools.
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn generate(context: &Context<'_>) -> Result<()> {
     github_output(context, false)?;
     let dry = context.runner.is_dry_run();

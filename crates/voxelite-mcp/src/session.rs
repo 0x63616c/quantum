@@ -31,6 +31,7 @@ pub(crate) struct RenderTask {
     passes: voxelite_render::RenderPlan,
 }
 impl RenderTask {
+    #[expect(clippy::expect_used, reason = "internal invariant: tool result")]
     pub fn run(self) -> CallToolResult {
         let result = (|| -> Result<CallToolResult> {
             let images = images::render(&self.snapshot, &self.args, &self.passes)?;
@@ -94,6 +95,7 @@ impl Session {
         Ok(())
     }
     /// Validate and pin only read-only rendering; no history or authority is cloned.
+    #[expect(clippy::expect_used, reason = "internal invariant: render catalog")]
     pub(crate) fn prepare_render(
         &self,
         args: Value,
@@ -170,6 +172,10 @@ impl Session {
             Err(e) => self.error(e),
         }
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: JSON arguments; internal invariant: catalog prefix; internal invariant: serializable tool result"
+    )]
     fn execute(
         &mut self,
         spec: &Spec,

@@ -9,6 +9,7 @@ use url::Url;
 
 use crate::{DocPage, PAGES, SITE_BASE_URL, escape};
 
+#[expect(clippy::expect_used, reason = "internal invariant: string write")]
 pub fn render(page: &DocPage, body: &str) -> Result<String, Box<dyn Error>> {
     let base = Url::parse(&format!("{SITE_BASE_URL}{}", page.path()))?;
     let converter = HtmlToMarkdown::builder()

@@ -1,5 +1,9 @@
 //! Validate generated documentation and its downloadable project.
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn generated_site() -> tempfile::TempDir {
     let output = tempfile::tempdir().unwrap();
     let result = std::process::Command::new(env!("CARGO_BIN_EXE_voxelite-site"))

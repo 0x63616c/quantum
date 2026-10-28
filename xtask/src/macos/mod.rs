@@ -284,6 +284,7 @@ pub fn execute(task: Task, workspace: &Workspace) -> Result<u8> {
 }
 
 /// Offline CLI validation, including the original diagnostic prefix.
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn check_appcast(
     file: &Path,
     allow_empty: bool,

@@ -2,6 +2,10 @@
 use proptest::prelude::*;
 use voxelite_core::*;
 use voxelite_plugin_exporters::encoding::*;
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn model(points: Vec<Pos>) -> Snapshot {
     let mut e = Engine::new(Document::new(Uuid::from_u128(1), Uuid::from_u128(2))).unwrap();
     e.execute(Transaction {
@@ -19,6 +23,10 @@ fn model(points: Vec<Pos>) -> Snapshot {
     .unwrap();
     e.document().content.clone()
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "test fixture or assertion helper reports invalid setup by panicking"
+)]
 fn check_glb(s: &Snapshot) {
     let bytes = glb(s).unwrap();
     assert_eq!(bytes, glb(s).unwrap());

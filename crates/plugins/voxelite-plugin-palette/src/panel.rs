@@ -313,6 +313,7 @@ fn preset(name: &str) -> Result<Palette, PaletteError> {
         .ok_or_else(|| PaletteError::Message("unknown preset".into()))
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: validated palette")]
 fn append(
     current: &Palette,
     palette: Palette,

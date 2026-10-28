@@ -1,5 +1,11 @@
 //! Shared assertions for each built-in plugin's unit tests.
 
+#![expect(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "conformance harness reports failures by panicking, like assert!"
+)]
+
 use voxelite_plugin_api::Plugin;
 
 use crate::{EnabledSet, Host, HostError, HostEvent, PluginState};

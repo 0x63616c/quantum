@@ -80,7 +80,12 @@ pub fn heatmap(golden: &[u8], actual: &[u8]) -> Result<Vec<u8>> {
         .iter()
         .zip(actual.as_chunks::<4>().0)
         .flat_map(|(g, a)| {
-            let delta = g.iter().zip(a).map(|(g, a)| g.abs_diff(*a)).max().unwrap();
+            let delta = g
+                .iter()
+                .zip(a)
+                .map(|(g, a)| g.abs_diff(*a))
+                .max()
+                .unwrap_or(0);
             if delta == 0 {
                 *a
             } else {
@@ -241,6 +246,7 @@ fn fresh(snapshot: &Snapshot, camera: Camera) -> Result<voxelite_render::gpu::He
         true,
     ))?)
 }
+#[expect(clippy::print_stdout, reason = "CLI output")]
 pub fn run(options: &Options) -> Result<bool> {
     let start = Instant::now();
     let mut gpu = block_on(Headless::new(HeadlessOptions::default()))?;
@@ -354,7 +360,13 @@ pub fn run(options: &Options) -> Result<bool> {
                             .filter(|f| f.size == frame.size)
                             .and_then(|f| f.rgba.as_deref());
                         artifacts(&options.out, &mut entry, frame.size, &actual, other)?;
-                        eprintln!("{scene}/{still}: {}", entry.error.as_deref().unwrap());
+                        eprintln!(
+                            "{scene}/{still}: {}",
+                            entry
+                                .error
+                                .as_deref()
+                                .unwrap_or("unknown visual comparison error")
+                        );
                         entries.push(entry);
                         continue;
                     }

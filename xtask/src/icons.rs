@@ -66,6 +66,10 @@ impl Artwork {
 ///
 /// The optical master is selected by logical size, including Retina representations.
 /// The optional preview copy is useful outside the repository for design review.
+#[expect(
+    clippy::print_stdout,
+    reason = "CLI output: reports the generated or checked asset count"
+)]
 pub fn generate(workspace: &Workspace, check: bool, preview: Option<&Path>) -> Result<()> {
     let art = Artwork::load(workspace)?;
     let mut assets = BTreeMap::new();

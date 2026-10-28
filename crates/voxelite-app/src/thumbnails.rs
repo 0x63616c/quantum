@@ -46,6 +46,10 @@ impl ThumbnailCache {
         }
     }
 
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: serializable timestamp"
+    )]
     fn destination(&self, path: &Path, stamp: &Stamp) -> PathBuf {
         // Preserve non-Unicode path identity. The second hash also avoids stale
         // GPUI image-cache hits after the project is saved again.

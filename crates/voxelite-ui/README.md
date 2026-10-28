@@ -299,6 +299,13 @@ state. `statusbar-stability.png` compares positive, negative, three-digit, i32
 extreme and placeholder values; `statusbar-separators.json` records the painted
 separator columns so identical positions can be checked independently of text.
 
+App callers are checked by `cargo xtask lint`: literal `px`, hex `rgb`/`rgba`,
+literal `hsl`/`hsla`, string patterns and literal string equality have a
+shrink-only baseline. Add shared tokens/components and typed dispatch rather
+than new exceptions. The shared UI crate owns styling and is exempt from the
+app patterns. All Rust files/functions retain the 1,000/100-line size budgets.
+See [the exact lint rules](../../xtask/README.md) for scope and baseline updates.
+
 ## Typed design system (#133)
 
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,

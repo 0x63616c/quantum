@@ -117,6 +117,7 @@ impl<K: Key, T> Entities<K, T> {
         key
     }
     /// Remove a presentation position and invalidate its key.
+    #[expect(clippy::expect_used, reason = "internal invariant: ordered arena key")]
     pub fn remove(&mut self, index: usize) -> T {
         self.ids.take();
         self.entries
@@ -187,6 +188,10 @@ impl<K: Key, T: Entity> Entities<K, T> {
             .copied()
     }
     /// Reorder by portable IDs after the caller validates the permutation.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: validated entity permutation"
+    )]
     pub(crate) fn reorder(&mut self, order: &[Uuid]) {
         self.order = order
             .iter()
@@ -282,6 +287,7 @@ impl<'a, K: Key, T> IntoIterator for &'a mut Entities<K, T> {
 impl<K: Key, T> IntoIterator for Entities<K, T> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<T>;
+    #[expect(clippy::expect_used, reason = "internal invariant: ordered arena key")]
     fn into_iter(mut self) -> Self::IntoIter {
         self.order
             .into_iter()

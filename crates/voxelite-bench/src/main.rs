@@ -4,6 +4,7 @@ use voxelite_bench::{
     cli::{HELP, Options},
     compare, report, visual,
 };
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn run() -> Result<bool> {
     let options = Options::parse(std::env::args().skip(1))?;
     match options.command.as_str() {

@@ -157,7 +157,9 @@ impl RasterCache {
             .map_err(|_| RenderError::Invalid("raster occupancy cache poisoned".into()))?;
         cache.sync(snapshot)?;
         // This cache has no GPU consumer; do not retain upload bookkeeping.
-        cache.grid_mut().unwrap().clear_dirty();
+        if let Some(grid) = cache.grid_mut() {
+            grid.clear_dirty();
+        }
         render_with_occupancy(snapshot, options, cache.grid())
     }
     /// An owned task for a background executor; the cache survives worker changes.
@@ -176,6 +178,10 @@ impl RasterCache {
 pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<RenderedImage> {
     render_with_occupancy(snapshot, options, None)
 }
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: exact shadow rendering initializes occupancy"
+)]
 fn render_with_occupancy(
     snapshot: &Snapshot,
     options: &RenderOptions,
@@ -320,7 +326,9 @@ fn render_with_occupancy(
                             let shadow = options.shadows
                                 && diffuse > 0.0
                                 && trace_shadow(
-                                    occupancy.as_ref().unwrap(),
+                                    occupancy
+                                        .as_ref()
+                                        .expect("exact shadow rendering initializes occupancy"),
                                     std::array::from_fn(|a| {
                                         f.world[a] - snapshot.bounds.min[a] as f32
                                             + n[a] as f32 * SHADOW_EPSILON
@@ -379,9 +387,9 @@ fn render_with_occupancy(
 }
 fn clip(poly: &[Vertex], plane: f64, near: bool) -> Vec<Vertex> {
     let mut out = Vec::new();
-    if poly.is_empty() {
+    let Some(&last) = poly.last() else {
         return out;
-    }
+    };
     let inside = |v: Vertex| {
         if near {
             v.view.z >= plane
@@ -389,7 +397,7 @@ fn clip(poly: &[Vertex], plane: f64, near: bool) -> Vec<Vertex> {
             v.view.z <= plane
         }
     };
-    let mut previous = *poly.last().unwrap();
+    let mut previous = last;
     for &current in poly {
         if inside(current) != inside(previous) {
             let t = (plane - previous.view.z) / (current.view.z - previous.view.z);

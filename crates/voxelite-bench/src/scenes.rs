@@ -84,6 +84,10 @@ fn fbm(x: f64, y: f64, z: f64, seed: u32) -> u32 {
     // Quantize once; all occupancy thresholds, ranks and height decisions are integers.
     (sum / norm * f64::from(1u32 << 24)).round() as u32
 }
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: fixed benchmark palette fits the palette capacity"
+)]
 fn palette() -> Palette {
     Palette::from_colors(
         [
@@ -104,7 +108,7 @@ fn palette() -> Palette {
         .map(|&(r, g, b)| Swatch::rgb(r, g, b))
         .collect(),
     )
-    .unwrap()
+    .expect("fixed benchmark palette fits the palette capacity")
 }
 fn finish(cells: Vec<[i32; 4]>, bounds: Region, name: &str) -> Result<Snapshot> {
     let voxels = Volume::deserialize(serde::de::value::SeqDeserializer::<

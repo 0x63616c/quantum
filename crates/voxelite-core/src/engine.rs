@@ -328,6 +328,10 @@ impl Engine {
         }
         Ok(receipt)
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: entry admission checked; internal invariant: retained redo key; internal invariant: retained undo key"
+    )]
     fn install(
         &mut self,
         staged: Document,
@@ -379,6 +383,7 @@ impl Engine {
         Ok(())
     }
     /// Undo exactly the expected top entry, even when another actor authored it.
+    #[expect(clippy::expect_used, reason = "internal invariant: head checked")]
     pub fn undo(&mut self, revision: u64, entry: Uuid) -> Result<Receipt> {
         self.guard(revision)?;
         if self.head() != Some(entry) {
@@ -404,6 +409,7 @@ impl Engine {
         })
     }
     /// Redo exactly the captured redo head; any intervening edit clears redo.
+    #[expect(clippy::expect_used, reason = "internal invariant: head checked")]
     pub fn redo(&mut self, revision: u64, entry: Uuid) -> Result<Receipt> {
         self.guard(revision)?;
         if self.redo_head() != Some(entry) {

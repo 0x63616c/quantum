@@ -2,6 +2,7 @@
 use voxelite_mcp::VoxeliteServer;
 
 #[tokio::main]
+#[expect(clippy::print_stdout, reason = "CLI output")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let mut root = std::env::current_dir()?;

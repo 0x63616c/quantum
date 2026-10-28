@@ -321,6 +321,7 @@ impl AttachedSession {
         self.poll_with_host(document, &mut (self.session.host_factory)())
     }
     /// Process requests using the editor's live feature bindings.
+    #[expect(clippy::expect_used, reason = "internal invariant: attached document")]
     pub fn poll_with_host(
         &mut self,
         document: &mut DocumentSession,

@@ -53,8 +53,10 @@ fn units(text: &str) -> Vec<Range<usize>> {
         let p = word.chars().all(|c| {
             c.is_ascii_punctuation() || matches!(c, '—' | '–' | '…' | '。' | '、' | '！' | '？')
         });
-        if p && punctuation {
-            result.last_mut().unwrap().end = i + word.len();
+        if p && punctuation
+            && let Some(last) = result.last_mut()
+        {
+            last.end = i + word.len();
         } else {
             result.push(i..i + word.len());
         }

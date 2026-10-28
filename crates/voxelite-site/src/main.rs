@@ -80,6 +80,7 @@ fn escape(text: &str) -> String {
 
 /// Index authored second-level headings, using the same anchors as the article.
 /// Content is trusted build-time HTML; no runtime parsing or script is needed.
+#[expect(clippy::expect_used, reason = "internal invariant: string write")]
 fn section_links(content: &str) -> String {
     let mut links = String::new();
     for heading in content.split("<h2 id=\"").skip(1) {
@@ -101,6 +102,7 @@ fn section_links(content: &str) -> String {
     links
 }
 
+#[expect(clippy::expect_used, reason = "internal invariant: string write")]
 fn layout(slug: &str, title: &str, metadata: &str, content: &str) -> String {
     let (markdown_metadata, markdown_actions) = PAGES
         .iter()
@@ -254,6 +256,7 @@ fn article_body(page: &DocPage, tools: &[Value]) -> Result<String, Box<dyn Error
     Ok(body)
 }
 
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn main() -> Result<(), Box<dyn Error>> {
     let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
     let root = Path::new(&destination);

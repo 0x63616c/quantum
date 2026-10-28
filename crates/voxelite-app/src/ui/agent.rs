@@ -98,6 +98,10 @@ impl EditorView {
             cx.notify();
         }
     }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: MCP configuration is a JSON value"
+    )]
     pub(super) fn agent_popover(&self, cx: &Context<Self>) -> AnyElement {
         let t = self.theme;
         let path = self
@@ -121,7 +125,7 @@ impl EditorView {
                         .filter(|path| path.is_file())
                         .unwrap_or_else(|| PathBuf::from("voxelite-mcp"));
                     let config=serde_json::json!({"mcpServers":{"voxelite":{"command":command,"args":["--connect",s.path()]}}});
-                    cx.write_to_clipboard(ClipboardItem::new_string(serde_json::to_string_pretty(&config).unwrap()));this.status="MCP configuration copied".into();cx.notify();
+                    cx.write_to_clipboard(ClipboardItem::new_string(serde_json::to_string_pretty(&config).expect("MCP configuration is a JSON value")));this.status="MCP configuration copied".into();cx.notify();
                 }
             }))
             .child(div().text_size(px(type_size::BODY)).text_color(t.muted()).child("Uses the bundled MCP server, or voxelite-mcp on PATH for source builds. This socket accepts local processes running as you. Changes stay in memory until saved in the app.")))
@@ -332,6 +336,10 @@ impl EditorView {
     }
 
     /// Render thumbnails from the exact content inspected by MCP, not newer live edits.
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: thumbnail dimensions"
+    )]
     pub(super) fn capture_agent_views(
         &mut self,
         snapshot: Arc<voxelite_core::Snapshot>,

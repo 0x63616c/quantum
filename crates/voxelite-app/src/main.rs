@@ -21,6 +21,7 @@ struct Options {
     session_socket: Option<PathBuf>,
     show: Option<ui::launch::LaunchState>,
 }
+#[expect(clippy::print_stdout, reason = "CLI output")]
 fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     let mut options = Options {
         path: None,
@@ -100,6 +101,7 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     );
     Ok(options)
 }
+#[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let options = options(std::env::args().skip(1))?;
