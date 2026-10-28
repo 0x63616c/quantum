@@ -6,7 +6,7 @@
   binaries, bundle IDs and the repo slug still use `voxelite`. Do not rename them
   piecemeal. Use real names in commands, paths and identifiers.
 - Build an Aseprite-style 3D voxel editor with a Rust/GPUI native macOS shell,
-  shared wasm editor, `.voxl` projects, GLB/PNG exports and MCP agent workflows.
+  `.voxl` projects, GLB/PNG exports and MCP agent workflows.
 - Verify behavior in code and manifests. [Product direction](docs/adr/0003-product-direction.md)
   and the [domain glossary](docs/glossary.md) distinguish current implementation
   from deferred work and proposed seams. Do not present those as implemented
@@ -34,7 +34,7 @@ ownership. Here `A → B` means A may depend on B, not the reverse.
 | `voxelite-ui` | Own GPUI components, tokens and text editing. Depend on GPUI and Unicode segmentation, not app/domain crates. |
 | `voxelite-mcp` | Adapt core/format/render and injected API/host capabilities to stdio and Unix-socket sessions. No app/GPUI dependency or concrete plugin imports in the library. |
 | `voxelite-plugins-builtin` | Compose concrete built-ins for the app and MCP binary. Infrastructure outside `crates/plugins/`; API/host never depend on it. |
-| `voxelite-app` | Compose editor state, plugins, native/web UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
+| `voxelite-app` | Compose editor state, plugins, native UI, dialogs, render scheduling and native MCP attachment. Keep domain invariants in the engine. |
 | `voxelite-bench` | Exercise the production renderer; isolate benchmark-only features from production builds. |
 | `voxelite-site` / `xtask` | Generate site/docs from the MCP catalog / launch the render harness. Keep outside product runtime dependencies. |
 
@@ -146,13 +146,12 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 | Render harness help | `cargo xtask --help` |
 | Pinned visual check | `cargo xtask visual --determinism` |
 | Performance comparison | `cargo xtask bench --scene autumn --runs 3 --compare` |
-| Web build | `scripts/build-web.sh` |
 | Full site build | `scripts/build-site.sh` |
 | Site generator tests | `cargo test --locked -p voxelite-site` |
 | Built-site validation | `python3 scripts/check-site.py` |
 | Offline feed validation | `python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty` |
 
-- Core/MCP, Python tests and site/web builds can run on Linux. Full workspace and
+- Core/MCP, Python tests and site builds can run on Linux. Full workspace and
   UI builds need GPUI system dependencies; use the native guide's Linux setup.
 - Run Metal/AppKit/Sparkle checks and `scripts/package-macos.sh` on macOS. CI uses
   Apple silicon, Xcode 27.0 and its Metal toolchain. Do not claim Mac coverage
@@ -161,12 +160,9 @@ python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
   `CARGO_TARGET_DIR=/home/box/.cache/cargo-shared`. For lavapipe the guide specifies
   `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json` and
   `XDG_RUNTIME_DIR=/tmp`; verify local installations before using these paths.
-- Build `site/app/` before site validation. Use `scripts/build-site.sh --skip-web`
-  only with an existing verified `web/dist/`. Browser checks need a server and
-  Playwright: follow [site/README.md](site/README.md) for
-  `node scripts/check-site-install.mjs` and
-  `node scripts/capture-site.mjs screenshots/site/final`; follow
-  [docs/web.md](docs/web.md) for `node scripts/capture-web.mjs`.
+- Website checks need a server and Playwright: follow [site/README.md](site/README.md)
+  for `node scripts/check-site-install.mjs` and
+  `node scripts/capture-site.mjs screenshots/site/final`.
 
 ## Rendering and performance
 
@@ -257,7 +253,7 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compar
   [text_field.rs](crates/voxelite-ui/src/text_field.rs). Use `Editor` mutations,
   `set()` for model replacement and `TextFieldEvent` for domain effects.
 - Preserve [bindings.rs](crates/voxelite-ui/src/editing/bindings.rs)'s natural
-  macOS editing behavior, also selected for browsers on macOS:
+  macOS editing behavior:
 
 | Key | Behavior |
 | --- | --- |
@@ -290,7 +286,7 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
 
 - Edit site templates in `crates/voxelite-site/templates/`, article bodies in
   `site/content/`, generation/metadata in `crates/voxelite-site/src/`, and skills
-  in `skills/`. Run `scripts/build-site.sh`, or `--skip-web` with a verified bundle.
+  in `skills/`. Run `scripts/build-site.sh`.
 - The site reads the committed `spec/mcp/v1/tools.json` catalog without linking
   `voxelite-mcp`. After changing MCP tool metadata or schemas, refresh and commit
   it with `UPDATE_TOOLS_JSON=1 cargo test -p voxelite-mcp --locked --test tools_catalog`.
@@ -308,8 +304,8 @@ UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match
   `scripts/generate-macos-appcast.sh`; fetch release feeds with
   `scripts/fetch-macos-appcast.py`. Preserve signed XML/HTML bytes. Never hand-edit
   an appcast, sign with an unrelated key or rewrite published assets.
-- Review built output and relative links. Keep generated site output,
-  `web/dist/` and local benchmark outputs out of source commits.
+- Review built output and relative links. Keep generated site output and
+  local benchmark outputs out of source commits.
 
 ## Commits and PRs
 

@@ -22,7 +22,7 @@ deterministic. The logical clock advances one minute per edit; it does not claim
 actual authoring dates or durations.
 
 The format crate validates and stores the command recipe. Opening the bundled
-scene in the native/web editor or MCP reconstructs the undo and scrub timeline.
+scene in the macOS editor or MCP reconstructs the undo and scrub timeline.
 An unchanged save retains the recipe; later interactive edits follow the existing
 session-local history behavior (see the [format specification](../spec/voxl/1.0/README.md)).
 

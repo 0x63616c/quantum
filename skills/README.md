@@ -10,9 +10,9 @@ Four portable workflows for the implemented `voxelite.v1` MCP server:
 | [voxelite-render-review](voxelite-render-review/SKILL.md) | Real four-angle PNG critique and verified repairs |
 
 Connect MCP separately using [the integration guide](../integrations/README.md).
-Installing instructions does not install or start the server. Browser editing
-currently has no live MCP attachment. These skills do not grant permissions or
-change host settings. No host plugin package is shipped in this stage.
+Installing instructions does not install or start the server. These skills do not
+grant permissions or change host settings. No host plugin package is shipped in
+this stage.
 
 ## Agent Skills CLI
 
@@ -63,4 +63,4 @@ rule/AGENTS.md line you added. Remove the MCP host entry separately if desired.
 
 Skills require no credentials or personal filesystem paths. The static site
 bundles these exact source files for download; edit this directory, then run
-`scripts/build-site.sh --skip-web` to refresh the published copy.
+`scripts/build-site.sh` to refresh the published copy.

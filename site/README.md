@@ -4,7 +4,7 @@ A static marketing site and Rust-generated documentation. No cookies,
 remote fonts, or runtime framework. Every page loads Vercel Web Analytics and
 Speed Insights from same-origin `/_vercel/` paths: cookie-free, anonymous page-view
 and performance counts, nothing in the editor or your files. Dark and light themes share the app's Geist
-fonts and neutral tokens. The bundled editor is the actual Rust GPUI wasm app.
+fonts and neutral tokens.
 
 From the repository root:
 
@@ -13,20 +13,18 @@ scripts/build-site.sh
 python3 -m http.server 8090 --directory site --bind 127.0.0.1
 ```
 
-Open `http://127.0.0.1:8090`. The browser editor is at `/app/`. Site-only iterations
-can reuse the verified `web/dist/` with `scripts/build-site.sh --skip-web`.
-Generated site output and `web/dist/` are ignored by Git. If the bundle is
-missing, run `scripts/build-web.sh` first. Nothing in these scripts deploys or
-pushes. `site/vercel.json` is published at the root of `site-dist` and adds
-immutable font cache headers.
+Open `http://127.0.0.1:8090`. Generated site output is ignored by Git.
+Nothing in these scripts deploys or pushes. `site/vercel.json` is published at
+the root of `site-dist` and adds immutable font cache headers and permanent
+redirects from retired editor URLs to the download page.
 
 Edit page markup in `crates/voxelite-site/templates/`, shared
 styles in `assets/site.css`, documentation bodies in `content/`, and portable
 skills in the repository's `skills/` directory. Edit metadata in
-`crates/voxelite-site/src/` and the browser editor's HTML in `web/index.html`.
+`crates/voxelite-site/src/`.
 The generator uses `https://voxelite.worldwidewebb.co` for canonical URLs, social
 previews, structured data and crawl files. `sitemap.xml` lists the homepage,
-download page, docs and editor; the 404 page is marked `noindex` and has no
+download page and docs; the 404 page is marked `noindex` and has no
 canonical URL. Run the build after content/skill changes. The
 `voxelite-site` Rust crate wraps documentation and generates all 38 MCP references
 from the committed [tool catalog](../spec/mcp/v1/tools.json), without linking the
@@ -43,7 +41,7 @@ Commit the sources, not the built site. CI builds the site on every PR and push
 to `main`; trusted `main` builds publish to `site-dist`. Ignored output includes
 `index.html`, `404.html`, `download/`, `docs/`, `docs.md`, `llms*.txt`,
 `sitemap.xml`, `robots.txt`, `assets/mcp-tools.json`, `assets/integrations/`,
-`assets/skills/`, `assets/voxelite-skills.zip` and `app/`. Keep `content/`, this
+`assets/skills/` and `assets/voxelite-skills.zip`. Keep `content/`, this
 README, `vercel.json`, `appcast.xml` and the remaining assets
 (styles, scripts, fonts, images, badges, licenses and sample project) tracked:
 the site build does not recreate them. The appcast is also a generator input.
@@ -62,9 +60,8 @@ deeplinks remain available without JavaScript. Copy buttons use `assets/site.js`
 
 Site fonts are variable WOFF2 subsets, preloaded by the shared metadata generator
 in every site template, including the 404. `font-display: optional` prevents late
-font swaps, with metric-matched local fallbacks for cold/slow loads. The browser
-editor's canvas still embeds the app's own TTF assets; its HTML loading screen uses
-system fonts and needs no WOFF2 preload. See [font build notes](assets/fonts/README.md)
+font swaps, with metric-matched local fallbacks for cold/slow loads.
+See [font build notes](assets/fonts/README.md)
 to regenerate subsets after adding new characters.
 
 The same build converts those article bodies (including every MCP schema) to
@@ -89,8 +86,7 @@ Rust generator copies it unchanged to another output directory and preserves it
 in place. Do not edit a generated feed: its signature covers the exact bytes.
 See [automatic updates](../docs/releasing-macos.md#automatic-updates-sparkle).
 
-Generator tests build into temporary directories and do not require a site or
-wasm build:
+Generator tests build into temporary directories and do not require a site build:
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -140,7 +136,7 @@ packaging remain untested here; guides disclose those boundaries.
 
 ## Deployment
 
-`.github/workflows/deploy-site.yml` builds the complete site and wasm editor on
+`.github/workflows/deploy-site.yml` builds the complete static site on
 GitHub-hosted Ubuntu runners for pushes to `main`, pull requests, manual runs,
 and successful owner-triggered **Release macOS** workflow completions. It fetches
 the highest numeric stable release containing an appcast, validates its asset
