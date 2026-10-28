@@ -101,6 +101,55 @@ fn plugin_failures_retain_nested_kinds_and_messages() {
 }
 
 #[test]
+fn nested_core_failures_preserve_the_existing_top_level_variant() {
+    let source = quantum_core::Error::OutOfBounds([32, 0, 0]);
+    for error in [
+        EditorError::from(source.clone()),
+        EditorError::from(HostError::Tool(ToolError::Core(source.clone()))),
+        EditorError::from(HostError::Palette(PaletteError::Core(source.clone()))),
+        EditorError::from(PaletteError::Core(source.clone())),
+    ] {
+        assert_eq!(error.to_string(), "out of bounds: [32, 0, 0]");
+        assert!(matches!(error, EditorError::Core(ref cause) if cause == &source));
+    }
+}
+
+#[test]
+fn failed_opens_keep_the_path_and_matchable_cause() {
+    let dir = tempfile::tempdir().unwrap();
+    let missing = dir.path().join("missing.voxl");
+    let invalid = dir.path().join("invalid.voxl");
+    std::fs::write(&invalid, b"invalid project").unwrap();
+    for path in [&missing, &invalid, &dir.path().to_path_buf()] {
+        let error = Editor::open(path).err().unwrap();
+        let EditorError::Open {
+            path: actual,
+            source,
+        } = &error
+        else {
+            panic!("open failure lost its context: {error}");
+        };
+        assert_eq!(actual, path);
+        assert_eq!(
+            error.to_string(),
+            format!("Could not open {}: {source}", path.display())
+        );
+        assert_eq!(
+            std::error::Error::source(&error).unwrap().to_string(),
+            source.to_string()
+        );
+        match source.as_ref() {
+            EditorError::Io(cause) if path == &missing => {
+                assert_eq!(cause.kind(), std::io::ErrorKind::NotFound);
+            }
+            EditorError::Format(_) if path == &invalid => {}
+            EditorError::Session(SessionError::NotRegular) if path == dir.path() => {}
+            cause => panic!("unexpected cause for {}: {cause:?}", path.display()),
+        }
+    }
+}
+
+#[test]
 fn encoding_failures_keep_their_sources() {
     let source = serde_json::from_str::<serde_json::Value>("{").unwrap_err();
     let expected = source.to_string();

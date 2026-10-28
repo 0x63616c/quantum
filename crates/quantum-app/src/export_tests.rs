@@ -105,9 +105,18 @@ fn exports_preserve_voxl_history_and_disabled_exporters_do_not_break_save_or_und
     editor
         .set_plugin_enabled("dev.quantum.exporters", false)
         .unwrap();
-    assert!(editor.finish_export(completion).is_err());
-    assert!(editor.export_format("png").is_err());
-    assert!(editor.prepare_export(&png.id).is_err());
+    assert!(matches!(
+        editor.finish_export(completion),
+        Err(EditorError::ExportUnavailable)
+    ));
+    assert!(matches!(
+        editor.export_format("png"),
+        Err(EditorError::ExportUnavailable)
+    ));
+    assert!(matches!(
+        editor.prepare_export(&png.id),
+        Err(EditorError::ExportUnavailable)
+    ));
     assert_eq!(editor.project().to_bytes().unwrap(), before);
     editor.undo().unwrap();
     editor.redo().unwrap();

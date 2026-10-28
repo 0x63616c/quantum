@@ -154,3 +154,52 @@ fn read_import(path: &std::path::Path) -> EditorResult<PaletteAction> {
     let text = String::from_utf8(bytes)?;
     Ok(import_action(&path.to_string_lossy(), text))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{EditorError, MAX_IMPORT, PaletteAction, read_import};
+
+    #[test]
+    fn palette_import_accepts_the_limit_and_rejects_one_extra_byte() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Boundary.HEX");
+        let text = "a".repeat(MAX_IMPORT);
+        std::fs::write(&path, &text).unwrap();
+        let PaletteAction::ImportLibrary {
+            name,
+            format,
+            text: actual,
+        } = read_import(&path).unwrap()
+        else {
+            panic!("expected a palette import proposal");
+        };
+        assert_eq!(name, "Boundary");
+        assert_eq!(format, "hex");
+        assert_eq!(actual, text);
+        std::fs::write(&path, vec![b'a'; MAX_IMPORT + 1]).unwrap();
+        let error = read_import(&path).unwrap_err();
+        assert!(matches!(error, EditorError::PaletteImportTooLarge));
+        assert_eq!(
+            error.to_string(),
+            "Palette files must be 64 KiB or smaller."
+        );
+    }
+
+    #[test]
+    fn palette_import_preserves_utf8_and_io_failures() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("invalid.hex");
+        assert!(matches!(
+            read_import(&path),
+            Err(EditorError::Io(cause)) if cause.kind() == std::io::ErrorKind::NotFound
+        ));
+        std::fs::write(&path, [255]).unwrap();
+        let error = read_import(&path).unwrap_err();
+        assert!(matches!(&error, EditorError::PaletteUtf8(cause)
+            if cause.as_bytes() == [255]));
+        assert_eq!(
+            error.to_string(),
+            String::from_utf8(vec![255]).unwrap_err().to_string()
+        );
+    }
+}
