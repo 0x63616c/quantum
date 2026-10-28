@@ -34,7 +34,7 @@ of their apparent regressions. No builds/tests from this task overlap any timing
 series. During the final twenty rounds no Rust build processes were observed after
 the first few rounds; another application's screenshot capture remained active.
 One-minute load declined from about 13 to 5. A further four-round confirmation
-started below 5 (range roughly 4.8–6.9). This is measured shared-machine evidence,
+started below 5 (recorded range 4.24–7.37). This is measured shared-machine evidence,
 not an idle-machine or Metal performance claim.
 
 ## Twenty-round comparison
