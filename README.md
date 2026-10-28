@@ -26,14 +26,28 @@ Apple M2 Metal golden set:
 
 ![Autumn Workshop voxel cottage, garden and orange tree, with the ground grid on a black background](bench/golden/apple-m2-metal/autumn_fit.png)
 
-Native editor captures showing an agent session in dark mode and the workspace
-in light mode. These are real earlier review captures: their toolbar Save/Share
-controls and status copy predate the current shell. Current Save actions live in
-the File menu, and hosted sharing is not implemented.
+Current Quantum editor showing Autumn Workshop and its session history, in dark
+and light themes:
 
-![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](docs/images/agent-dark.png)
+![Quantum editor in dark mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-dark.png)
 
-![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](docs/images/main-light.png)
+![Quantum editor in light mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-light.png)
+
+Welcome offers bundled samples and actions to create or open a project:
+
+![Quantum Welcome in dark mode with Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin samples](crates/quantum-app/tests/ui-goldens/welcome.png)
+
+These images link directly to the checked-in [headless GPUI goldens](docs/ui-snapshots.md),
+which use the Linux CPU viewport. No duplicate screenshot assets are maintained.
+Verify them with `cargo xtask ui-snapshots`; after an intentional UI change,
+regenerate the README views with:
+
+```sh
+cargo xtask ui-snapshots --rebaseline --screen 'editor-*' --screen welcome
+```
+
+Inspect the regenerated PNGs before committing. Welcome's fixed `0.0.0` version
+is a capture fixture, not the current release version.
 
 ## What is implemented
 
@@ -67,8 +81,9 @@ the File menu, and hosted sharing is not implemented.
   word/line navigation, selection, clipboard, local undo and IME handling.
   Packaged macOS builds integrate Sparkle update checks.
 
-The app opens the bundled Autumn Workshop directly when no file is supplied.
-For controls and their generated shortcut table, see the
+With no file argument, the app shows Welcome by default, or a blank editor when
+**Show at launch** is off. Use `--example` to open the bundled Autumn Workshop
+directly. For controls and their generated shortcut table, see the
 [native editor guide](crates/quantum-app/README.md). Roadmap entries and older
 reviews can describe earlier stages; they are not a list of shipped features.
 

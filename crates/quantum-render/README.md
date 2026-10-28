@@ -15,6 +15,10 @@ Public API:
 Occupancy, shadow traversal, chunk meshes, shaders and GPU resources are private.
 Greedy geometry belongs to `quantum-mesh` and is not re-exported here.
 
+`src/gpu.rs` coordinates viewport resources and render passes. Its private
+`src/gpu/targets.rs` module constructs render targets, attachments and pipelines;
+the split preserves the same formats, sample counts and attachment lifetimes.
+
 `gpu::Style::ambient_occlusion_strength` applies the same strength range to
 cached vertex AO in both exact-shadow and shadow-map paths, without remeshing.
 The CPU rasterizer continues sampling local voxel contacts per pixel. See the

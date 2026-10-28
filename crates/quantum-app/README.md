@@ -26,6 +26,19 @@ GPUI dependency when built with `--no-default-features`:
 cargo test -p quantum-app --no-default-features
 ```
 
+## Module layout
+
+- `src/editor.rs` translates gestures into engine transactions;
+  `src/editor/camera.rs` owns orbit geometry and voxel picking. The existing
+  `editor::{OrbitCamera, Ray, Hit, raycast}` entry points remain re-exports.
+- `src/actions.rs` derives shell metadata from the enabled command registry;
+  `src/actions/bindings.rs` installs native menus and platform key bindings.
+  Command regression tests live in `src/actions/command_tests.rs`.
+- `src/ui/settings.rs` composes Settings pages. Its `settings/controls.rs`,
+  `settings/history.rs` and `settings/window.rs` modules own control construction,
+  navigation history and window lifecycle respectively. History tests live beside
+  its private storage; page and search tests remain in `settings/tests.rs`.
+
 ## UI capture states
 
 The development-only `--show <state>` flag opens a surface at launch on the bundled
