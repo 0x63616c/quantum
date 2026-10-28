@@ -35,23 +35,19 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-            build-essential clang cmake pkg-config libssl-dev \
-            libfontconfig-dev libfreetype-dev libvulkan-dev libwayland-dev \
-            libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev rsync
+          sudo apt-get install --yes --no-install-recommends build-essential rsync
 
-      - name: Install pinned Rust toolchain and wasm target
+      - name: Install pinned Rust toolchain
         run: |
           # rustup reads the version and components from rust-toolchain.toml.
           rustup show
-          rustup target add wasm32-unknown-unknown
 
       - name: Download signed release appcast or empty initial feed
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/fetch-macos-appcast.py site/appcast.xml
 
-      - name: Build site and wasm editor
+      - name: Build site
         run: scripts/build-site.sh
 
       - name: Verify site
@@ -60,7 +56,6 @@ jobs:
           python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
           test -s site/index.html
           test -s site/llms.txt
-          test -s site/app/voxelite_app_bg.wasm
 
       - name: Stage public files
         run: |

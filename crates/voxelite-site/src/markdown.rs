@@ -91,7 +91,7 @@ pub fn render(page: &DocPage, body: &str) -> Result<String, Box<dyn Error>> {
 
 pub fn write_indexes(root: &Path, documents: &[(&DocPage, String)]) -> Result<(), Box<dyn Error>> {
     let mut index = format!(
-        "# Quantum\n\n> A voxel editor with native Mac and browser workspaces, an MCP interface for AI agents, and portable .voxl projects.\n\n\
+        "# Quantum\n\n> A macOS desktop voxel editor with an MCP interface for AI agents and portable .voxl projects.\n\n\
          These docs describe the development build. The MCP reference is generated from the live server catalog.\n\n\
          All documentation in one file: [llms-full.txt]({SITE_BASE_URL}/llms-full.txt).\n\n## Documentation\n\n"
     );

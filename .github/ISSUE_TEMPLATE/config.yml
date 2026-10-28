@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/0x63616c/voxelite/blob/main/CONTRIBUTING.md
+    about: Issue-first workflow, PR rules and the Definition of Done.

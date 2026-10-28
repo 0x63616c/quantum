@@ -16,7 +16,7 @@ impl Keycap {
         let platform = ShortcutPlatform::current();
         // Headless Linux captures can exercise the Mac typography without
         // changing real key bindings. This hook is absent from release builds.
-        #[cfg(all(debug_assertions, not(target_family = "wasm")))]
+        #[cfg(debug_assertions)]
         let platform = if std::env::var_os("VOXELITE_CAPTURE_MAC_UI").is_some() {
             ShortcutPlatform::Apple
         } else {

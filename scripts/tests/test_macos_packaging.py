@@ -162,7 +162,8 @@ class PackagingTests(unittest.TestCase):
         packager = self.root / "scripts/package-macos.sh"
         digest = hashlib.sha256(self.archive.read_bytes()).hexdigest()
         packager.write_text(re.sub(r"SPARKLE_SHA256=[0-9a-f]{64}", "SPARKLE_SHA256=" + digest, packager.read_text()))
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith(("MACOS_", "APPLE_", "SPARKLE_"))}
+        self.env = {k: v for k, v in os.environ.items()
+                    if not k.startswith(("MACOS_", "APPLE_", "SPARKLE_")) and k != "CARGO_TARGET_DIR"}
         self.env.update(
             PATH=str(self.root / "tools") + os.pathsep + os.environ["PATH"],
             VERSION="1.2.3", TMPDIR=str(self.root / "tmp"),

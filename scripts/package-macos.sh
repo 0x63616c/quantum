@@ -114,8 +114,8 @@ if [[ "$BUILD_APP" == true ]]; then
   cargo build --release --locked -p voxelite-mcp
 fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp target/release/voxelite "$APP/Contents/MacOS/Voxelite"
-cp target/release/voxelite-mcp "$APP/Contents/MacOS/voxelite-mcp"
+cp "${CARGO_TARGET_DIR:-target}/release/voxelite" "$APP/Contents/MacOS/Voxelite"
+cp "${CARGO_TARGET_DIR:-target}/release/voxelite-mcp" "$APP/Contents/MacOS/voxelite-mcp"
 python3 - "$APP/Contents/Info.plist" <<'PY'
 import os
 import plistlib

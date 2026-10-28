@@ -182,7 +182,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await page.goto(base);
   assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'The voxel editorbuilt for AI agents.');
-  assert.equal(await page.getByRole('link', { name: 'Open the desktop web editor', exact: false }).count(), 1);
+  assert.equal(await page.locator('.header nav').getByRole('link', { name: 'Download', exact: true }).getAttribute('href'), '/download/');
   await page.locator('label[for="proof-before"]').click();
   assert.equal(await page.locator('.proof-before').isVisible(), true);
   assert.equal(await page.locator('.proof-after').isVisible(), false);

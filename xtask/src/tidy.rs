@@ -3,11 +3,13 @@
 use std::{collections::BTreeSet, path::Path, process::Command};
 
 const ROOT_ENTRIES: &[&str] = &[
+    ".agents",
     ".cargo",
     ".gitattributes",
     ".github",
     ".gitignore",
     "AGENTS.md",
+    "CONTRIBUTING.md",
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",
@@ -29,7 +31,6 @@ const ROOT_ENTRIES: &[&str] = &[
     "skills",
     "spec",
     "vendor",
-    "web",
     "xtask",
 ];
 const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024;

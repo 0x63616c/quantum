@@ -1,0 +1,68 @@
+# Contributing to Quantum
+
+Quantum (repository `voxelite`) is tracked on the
+[Quantum project board](https://github.com/users/0x63616c/projects). Every change
+starts as an issue and lands as one focused pull request that closes it. These
+rules apply to people and coding agents alike; [AGENTS.md](AGENTS.md) covers the
+technical conventions.
+
+## 1. Issue first
+
+- Open an issue before starting work, using a template: **Feature**, **Bug**,
+  **Refactor** or **Spike**. Search open issues first and reuse one if it exists.
+- Every issue states **Why** and a **Done when** checklist of observable outcomes
+  (behavior, tests, docs, screenshots). Vague checklists get rewritten before work
+  starts.
+- Labels: exactly one `type:*`, one or more `area:*`, and one `priority:*`
+  (`p0` now, `p1` next, `p2` eventually). Add `status:blocked` with a comment
+  naming the blocker. Parked ideas get `later` and the **Later** milestone.
+- Put the issue in a milestone and on the board. Board status follows the work:
+  Backlog → Next → In progress → In review → Done (or Later).
+
+## 2. Branches
+
+Name branches `<type>/<issue#>-<slug>`, for example `refactor/84-split-ui-rs` or
+`fix/91-atomic-export-writes`. Branch from `main`; never push to `main`.
+
+## 3. Pull request titles
+
+Titles use [Conventional Commits](https://www.conventionalcommits.org/) and are
+checked in CI:
+
+```text
+<type>(<optional scope>): <imperative summary>
+```
+
+Allowed types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`.
+Use an `area:*` name as the scope where it helps, e.g. `fix(mcp): …`. The squash
+commit keeps the title, so it must read well in public release notes.
+
+## 4. Pull request bodies
+
+The [PR template](.github/pull_request_template.md) asks for:
+
+- `Closes #N` (or `Fixes #N`; `Refs #N` for partial work). CI rejects PRs that
+  link no issue.
+- A short summary of the problem and the resulting behavior.
+- Test evidence: commands run and their result, plus untested platforms.
+- Before/after screenshots for any UI change (both themes where relevant), and
+  before/after numbers for performance changes.
+
+## 5. One focus per PR
+
+One issue, one concern, one PR. Split drive-by fixes into their own issue. Do not
+mix refactors with behavior changes, or formatting churn with features.
+
+## 6. Definition of Done
+
+An issue is done only when all of these hold:
+
+- [ ] Every **Done when** item is checked, with evidence linked in the PR.
+- [ ] The PR is merged into `main` with green required checks.
+- [ ] Docs, schemas, fixtures and `AGENTS.md` are updated where behavior changed.
+- [ ] UI changes have before/after screenshots; perf changes have numbers.
+- [ ] Follow-up work is filed as new issues, not left in comments.
+- [ ] The issue is closed by the merge and its board card shows **Done**.
+
+Never call work done from memory. Re-read the issue's checklist against the merged
+diff first.

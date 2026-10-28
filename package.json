@@ -1,7 +1,7 @@
 {
   "name": "voxelite",
   "version": "1.0.0",
-  "description": "Voxelite browser capture and verification tooling",
+  "description": "Quantum website capture and verification tooling",
   "private": true,
   "license": "MIT",
   "keywords": [],
