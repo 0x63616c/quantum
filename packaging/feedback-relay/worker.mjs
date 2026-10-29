@@ -91,7 +91,7 @@ export async function handle(request, env, { fetcher = fetch, api = API, timeout
     const upstream = await fetcher(api, {
       method: 'POST', redirect: 'manual', signal: controller.signal,
       headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, 'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+        Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
         'User-Agent': 'Quantum-feedback-relay' },
       body: JSON.stringify(publicIssue),
     });

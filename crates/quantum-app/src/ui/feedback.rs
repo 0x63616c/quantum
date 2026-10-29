@@ -291,7 +291,7 @@ pub(super) fn fixture(crash: bool, relay: bool, cx: &mut App) {
                 if relay && let Some(handle) = cx.global::<ReportWindow>().0 {
                     handle.update(cx, |view, _, _| {
                         view.endpoint =
-                            Some("https://feedback.quantum.worldwidewebb.co/reports".into())
+                            Some("https://quantum-feedback.worldwidewebb.co/reports".into())
                     })?;
                 }
                 if !crash && let Some(handle) = cx.global::<ReportWindow>().0 {

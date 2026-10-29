@@ -72,7 +72,7 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
 
 1. Approve the Cloudflare account, existing zone, destination hostname, quota and
    zero-contact-retention policy above. Proposed production URL:
-   `https://feedback.quantum.worldwidewebb.co/reports`. This is a proposal, not a
+   `https://quantum-feedback.worldwidewebb.co/reports`. This is a proposal, not a
    provisioned host or live service. Approve DNS/routing and Cloudflare billing.
    Use the existing zone; if DNS must be created, the owner performs that action.
 2. Install the locally verified Wrangler 4.155.0, authenticate as the owner,
@@ -80,12 +80,13 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
    Run `npm install --global wrangler@4.155.0` on the owner machine only.
    Set `WRANGLER_SEND_METRICS=false` in the shell.
    No Wrangler credentials belong in the repository. Replace `account_id`, route
-   pattern (`feedback.quantum.worldwidewebb.co/reports`) and zone name
+   pattern (`quantum-feedback.worldwidewebb.co/reports`) and zone name
    (`worldwidewebb.co`) in `wrangler.jsonc`. Keep workers.dev, preview URLs and
    observability disabled. Record the approved Wrangler version with deployment
    evidence. The v1 migration creates the SQLite Durable Object only on deploy.
 3. Create a fine-grained GitHub token restricted to **0x63616c/quantum**, with
-   **Issues: read and write** and implicit **Metadata: read** only. Set an expiry
+   **Issues: read and write** and implicit **Metadata: read** only (see
+   [GitHub issue permissions](https://docs.github.com/en/rest/issues/issues#create-an-issue)). Set an expiry
    and owner rotation reminder. No Contents/Admin permissions. No GitHub App is
    required. An existing owner-managed App installation token with these same
    repository permissions is an alternative only if the owner supplies rotation
@@ -102,16 +103,20 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
    Enter the token at the secret prompt; never put it in a command, file, build
    variable or PR. The Worker fails closed with 503 before the secret exists.
    Cloudflare deployment authorization uses the owner's Wrangler login, or an
-   owner-managed `CLOUDFLARE_API_TOKEN` with Workers Scripts Edit, Workers Routes
-   Edit for the approved zone and Account Settings Read as required by Wrangler;
-   keep it outside the app/build. `GITHUB_TOKEN` is the only runtime secret.
+   owner-managed `CLOUDFLARE_API_TOKEN`. Under Cloudflare's current role model,
+   initial creation requires Workers product **Admin**; subsequent deploys need
+   **Editor** for this Worker plus **Workers Routes Write** for the approved zone.
+   Legacy token UI names are Workers Scripts Edit and Workers Routes Edit; grant
+   Account Settings Read if Wrangler requires account discovery. Keep this
+   deployment credential outside the app/build. See
+   [Cloudflare permissions](https://developers.cloudflare.com/workers/authorization/workers/). `GITHUB_TOKEN` is the only runtime secret.
 5. Test the approved HTTPS URL with an explicitly public synthetic report:
 
    ```sh
    curl --fail-with-body --max-time 15 --request POST \
      --header 'Content-Type: application/json' \
      --data '{"schema_version":1,"title":"Relay acceptance check","body":"Owner-approved synthetic test. No personal data.","labels":["type:fix"],"kind":"bug"}' \
-     https://feedback.quantum.worldwidewebb.co/reports
+     https://quantum-feedback.worldwidewebb.co/reports
    ```
 
    Expect 201 `created`; inspect the resulting public issue and close it. Verify
@@ -120,7 +125,7 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
    public workers.dev route exists. Record evidence on #206. Test actual Durable
    Object rollover and bounded failures before release.
 6. Only after endpoint/privacy approval, compile the release app with
-   `QUANTUM_REPORT_ENDPOINT=https://feedback.quantum.worldwidewebb.co/reports`
+   `QUANTUM_REPORT_ENDPOINT=https://quantum-feedback.worldwidewebb.co/reports`
    in its build environment. Runtime override is available for owner QA. No
    endpoint is committed; ordinary builds remain browser-only. On a physical Mac,
    verify Welcome crash review, feedback, both themes, confirmation, disconnected
