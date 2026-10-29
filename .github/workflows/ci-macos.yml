@@ -168,7 +168,9 @@ jobs:
     # Only the owner may schedule work on the homelab runner; fork PRs never run here.
     if: (github.event_name != 'pull_request' || needs.changes.outputs.metal == 'true') && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, macOS, ARM64, xcode]
-    timeout-minutes: 60
+    # Nightly/manual runs add a release-profile DMG build (~30+ min) after the
+    # full clippy and test pass (~31 min), which overran 60 minutes (#217).
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 120 || 60 }}
     env:
       CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
