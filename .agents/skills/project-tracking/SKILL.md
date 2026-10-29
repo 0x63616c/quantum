@@ -68,7 +68,8 @@ When labels, models or workflows change, update this skill and
 - Branch from `main` as `<type>/<KEY-N>-<slug>`.
 - Use a Conventional Commit title ending in the ticket key, for example
   `feat(app): add thing [QUA-12]`. CI checks the suffix; bots are exempt.
-- Start the body with `Closes QUA-12` or `Refs QUA-12` to link without closing,
+- Start the body with a linked ticket, `Closes [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)`, or `Refs [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)`
+  to link without closing. CI fails if the title key is not linked like this in the body,
   then the template's Summary, Changes and Testing sections.
 - Include screenshots for UI changes and measured evidence for performance work.
 - Tickets links the PR through a GitHub webhook, moves it to **In review** when
