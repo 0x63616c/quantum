@@ -19,6 +19,18 @@ The current workspace version is **0.4.1**, from [Cargo.toml](Cargo.toml).
 [User documentation](https://quantum.worldwidewebb.co/docs/) ·
 [Downloads](https://github.com/0x63616c/quantum/releases)
 
+## Quick install
+
+Requires macOS 13 Ventura or later on Apple silicon.
+
+```sh
+brew install --cask 0x63616c/tap/quantum
+```
+
+Upgrade with `brew upgrade --cask --greedy quantum` (the app also updates itself).
+Or download [Quantum.dmg](https://github.com/0x63616c/quantum/releases/latest/download/Quantum.dmg)
+from the latest release. See [Install](#install) for details.
+
 ## Screenshots
 
 Autumn Workshop rendered by the production GPU viewport, from the checked-in
