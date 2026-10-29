@@ -2,6 +2,40 @@ use super::{FeedbackView, Report, diagnostics, settings};
 use gpui::TestAppContext;
 
 #[gpui::test]
+fn first_frame_feedback_opens_with_focused_input(cx: &mut TestAppContext) {
+    let dir = tempfile::tempdir().unwrap();
+    cx.update(|cx| {
+        crate::actions::install(cx);
+        settings::init_at(
+            None,
+            Ok(Default::default()),
+            dir.path().join("settings.json"),
+            cx,
+        );
+        super::show(None, cx).unwrap();
+    });
+    let handle = cx.read(|cx| cx.global::<super::ReportWindow>().0.unwrap());
+    handle
+        .update(cx, |view, window, cx| {
+            assert!(view.input.read(cx).focused(window));
+            assert!(crate::text_field::focused(window, cx));
+            let menus = cx.get_menus().unwrap();
+            for op in [crate::actions::Op::Undo, crate::actions::Op::Redo] {
+                assert!(
+                    menus
+                        .iter()
+                        .flat_map(|menu| &menu.items)
+                        .any(|item| matches!(item,
+                            gpui::OwnedMenuItem::Action { action, disabled: false, .. }
+                                if action.as_any().downcast_ref::<crate::actions::Op>() == Some(&op)
+                        ))
+                );
+            }
+        })
+        .unwrap();
+}
+
+#[gpui::test]
 fn feedback_requires_a_fresh_preview_after_editing(cx: &mut TestAppContext) {
     let dir = tempfile::tempdir().unwrap();
     cx.update(|cx| {

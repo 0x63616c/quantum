@@ -252,6 +252,11 @@ The command palette uses the same text-editing bindings, including line-end
 Up/Down while its field is focused. After Escape blurs the input, Up/Down navigate
 results and Enter invokes the selected command; results can also be clicked.
 
+`TextField::any_focused(window, cx)` checks live field focus handles, including
+controlled numeric inputs. Use it for shell menu and keyboard routing: it is safe
+before a window's first draw and does not query GPUI's previous-frame context
+stack. Field registration ends when its entity is released.
+
 Undo and redo are **always consumed while a field has focus**, even with empty
 history. Empty history is a no-op, never a fallback to document undo. Adjacent
 typing within 750 ms coalesces; movement, selection, clipboard operations, commit
@@ -311,3 +316,6 @@ See [the exact lint rules](../../xtask/README.md) for scope and baseline updates
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
 overlay lifecycle, headless tests and interactive dark/light gallery. The app migration and retained platform/layout boundaries are documented in the
 [migration audit](../../docs/design-system-migration.md).
+
+The [polish audit](../../docs/ui-polish.md) records the shared hover/press motion,
+palette focus, empty/loading fixtures and visual review coverage for #135.

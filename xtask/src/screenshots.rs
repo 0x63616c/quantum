@@ -127,6 +127,9 @@ pub(super) const SCREENS: &[Screen] = screens![
         ("dialogs-acknowledgements", "Acknowledgements"),
         ("dialogs-keyboard-guide", "Keyboard guide"),
         ("dialogs-commands", "Command search"),
+        ("dialogs-commands-empty", "Empty command search"),
+        ("overlays-loading", "Scene loading shimmer"),
+        ("overlays-controls", "Shared controls: rest, hover, press, focus, disabled and loading"),
         ("dialogs-tools", "Tool search"),
         ("dialogs-extensions", "Extensions"),
         ("dialogs-unsaved-changes", "Unsaved changes"),
@@ -634,8 +637,8 @@ impl Urls {
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
     let url = urls.image(side, screen.name);
     format!(
-        r#"<img src="{url}" width="{width}" alt="{} — {}">"#,
-        screen.caption, side.label
+        r#"<img src="{url}" width="{width}" alt="{} screenshot">"#,
+        side.label
     )
 }
 
@@ -704,11 +707,7 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
                 zoom_img(urls, head, s)
             );
         }
-        let _ = writeln!(
-            md,
-            "\n<sub><code>quantum {}</code> at {}×{}</sub>\n",
-            s.args, s.size.0, s.size.1
-        );
+        let _ = writeln!(md, "\n`quantum {}` · {}×{}\n", s.args, s.size.0, s.size.1);
     }
     if !same.is_empty() {
         let _ = writeln!(

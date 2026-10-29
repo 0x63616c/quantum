@@ -66,9 +66,9 @@ Each full state below is a prefix plus one suffix. Its screenshot names are
 | --- | --- |
 | `chrome-menu-` | `file`, `edit`, `view`, `tools`, `palette`, `layers`, `agent`, `extensions`, `window`, `help` |
 | `panels-` | `palette`, `history`, `history-preview`, `comments-empty`, `comments`, `comment-thread`, `comment-draft`, `agent`, `agent-inspection` |
-| `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
+| `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `commands-empty`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
 | `popovers-` | `connect-agent`, `palette-chooser`, `palette-menu` |
-| `overlays-` | `debug` |
+| `overlays-` | `debug`, `loading`, `controls` |
 | `settings-` | `general`, `appearance`, `viewport`, `shortcuts`, `agent`, `updates`, `advanced` |
 
 The existing `welcome`, `editor-dark` and `editor-light` captures retain their args
@@ -85,6 +85,12 @@ inspection state also renders three thumbnails; separate captures keep the expan
 event controls visible. The palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
 save-waiting fixture holds the app-owned waiting/cancel surface with a static
 spinner, without opening a desktop portal. Capture states omit live frame cadence in the status bar and debug overlay.
+
+The empty command search fixture includes the real Clear search action. The loading
+fixture holds the production scene shimmer at 400 ms without delaying a render job.
+The controls fixture displays the production primary, secondary, ghost and danger
+actions in all six states, plus a long list row; it freezes decorative motion.
+These three fixtures are also covered by the headless golden gate in both themes.
 
 Native file pickers, macOS menus, Sparkle dialogs, the macOS eyedropper and hover
 tooltip timing/placement still need platform/manual checks. The Linux captures
@@ -481,3 +487,17 @@ Capture states `dialogs-feedback`, `dialogs-feedback-relay`, `dialogs-crash-rela
 report window (880×760); both support `--theme dark|light`. The crash fixture writes
 only to the selected local app data directory. Use an isolated `QUANTUM_DATA_DIR`
 for manual capture runs. These fixtures are for UI review and never send data.
+
+### Error reports
+
+The app prints miette diagnostics to standard error for startup, file-load and
+plugin command failures, including the underlying error chain. Interactive
+failures retain the existing Welcome/status messages and document recovery
+behavior. Headless export failures exit unsuccessfully. Reports do not replace
+the opt-in crash reporter or install a panic hook.
+
+The MCP CLI and xtask use the same terminal reporting convention; MCP standard
+output remains reserved for protocol messages (or explicitly requested CLI
+output such as `--schema`). Domain and plugin libraries retain typed `thiserror`
+errors and do not depend on miette. Terminal styling follows terminal capability
+and `NO_COLOR`; redirected reports contain no ANSI styling.

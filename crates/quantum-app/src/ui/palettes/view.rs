@@ -154,37 +154,37 @@ impl EditorView {
             .border_r_1()
             .border_color(t.color(ColorToken::Border))
             .child(
-                div()
-                    .id("palette-library")
-                    .role(Role::ListBox)
-                    .aria_label("Palettes")
-                    .tab_index(0)
-                    .track_focus(&self.palettes.sidebar_focus)
-                    .flex_1()
-                    .min_h(px(Space::S0.px()))
-                    .flex()
-                    .flex_col()
-                    .border_1()
-                    .border_color(transparent_black())
-                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
-                        if !matches!(e.keystroke.key.as_str(), "up" | "down" | "home" | "end") {
-                            return;
+                quantum_ui::FocusGroup::frame(
+                    "palette-library",
+                    "Palettes",
+                    t,
+                    &self.palettes.sidebar_focus,
+                )
+                .flex_1()
+                .min_h(px(Space::S0.px()))
+                .flex()
+                .flex_col()
+                .border_1()
+                .border_color(transparent_black())
+                .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
+                    if !matches!(e.keystroke.key.as_str(), "up" | "down" | "home" | "end") {
+                        return;
+                    }
+                    if let Some(view) = this.editor.palette_view() {
+                        let current = view
+                            .choices
+                            .iter()
+                            .position(|c| c.id == view.selected)
+                            .unwrap_or(0);
+                        let next =
+                            layout::navigate(current, view.choices.len(), 1, &e.keystroke.key);
+                        if let Some(choice) = view.choices.get(next) {
+                            this.manager_action(PaletteAction::ChoosePalette(choice.id), cx);
                         }
-                        if let Some(view) = this.editor.palette_view() {
-                            let current = view
-                                .choices
-                                .iter()
-                                .position(|c| c.id == view.selected)
-                                .unwrap_or(0);
-                            let next =
-                                layout::navigate(current, view.choices.len(), 1, &e.keystroke.key);
-                            if let Some(choice) = view.choices.get(next) {
-                                this.manager_action(PaletteAction::ChoosePalette(choice.id), cx);
-                            }
-                        }
-                        cx.stop_propagation();
-                    }))
-                    .child(choices),
+                    }
+                    cx.stop_propagation();
+                }))
+                .child(choices),
             )
             .child(
                 div()
@@ -380,44 +380,42 @@ impl EditorView {
             .flex_col()
             .gap(px(Space::S3.px()))
             .child(
-                div()
-                    .id("palette-grid")
-                    .tab_index(0)
-                    .track_focus(&self.palettes.grid_focus)
-                    .role(Role::ListBox)
-                    .aria_label("Palette colors; arrow keys select, Delete removes")
-                    .h(px(metrics::PALETTE_GRID_HEIGHT))
-                    .flex_shrink_0()
-                    .overflow_y_scroll()
-                    .track_scroll(&self.palettes.grid_scroll)
-                    .p(px(Space::S2.px()))
-                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
-                        let Some(view) = this.editor.palette_view() else {
-                            return;
-                        };
-                        let key = e.keystroke.key.as_str();
-                        let action = match key {
-                            "left" | "right" | "up" | "down" | "home" | "end" => {
-                                PaletteAction::SelectSlot(layout::navigate(
-                                    view.state.slot,
-                                    view.palette.order.len(),
-                                    COLUMNS,
-                                    key,
-                                ))
-                            }
-                            "delete" | "backspace" => PaletteAction::RemoveSwatch(view.state.slot),
-                            "d" if ShortcutPlatform::current()
-                                .is_primary(e.keystroke.modifiers) =>
-                            {
-                                PaletteAction::DuplicateSwatch(view.state.slot)
-                            }
-                            _ => return,
-                        };
-                        this.manager_action(action, cx);
-                        this.reveal_palette_swatch();
-                        cx.stop_propagation();
-                    }))
-                    .child(grid),
+                quantum_ui::FocusGroup::frame(
+                    "palette-grid",
+                    "Palette colors; arrow keys select, Delete removes",
+                    t,
+                    &self.palettes.grid_focus,
+                )
+                .h(px(metrics::PALETTE_GRID_HEIGHT))
+                .flex_shrink_0()
+                .overflow_y_scroll()
+                .track_scroll(&self.palettes.grid_scroll)
+                .p(px(Space::S2.px()))
+                .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
+                    let Some(view) = this.editor.palette_view() else {
+                        return;
+                    };
+                    let key = e.keystroke.key.as_str();
+                    let action = match key {
+                        "left" | "right" | "up" | "down" | "home" | "end" => {
+                            PaletteAction::SelectSlot(layout::navigate(
+                                view.state.slot,
+                                view.palette.order.len(),
+                                COLUMNS,
+                                key,
+                            ))
+                        }
+                        "delete" | "backspace" => PaletteAction::RemoveSwatch(view.state.slot),
+                        "d" if ShortcutPlatform::current().is_primary(e.keystroke.modifiers) => {
+                            PaletteAction::DuplicateSwatch(view.state.slot)
+                        }
+                        _ => return,
+                    };
+                    this.manager_action(action, cx);
+                    this.reveal_palette_swatch();
+                    cx.stop_propagation();
+                }))
+                .child(grid),
             )
             .child(self.palette_swatch_actions(slot, count, cx))
     }
@@ -570,11 +568,7 @@ impl EditorView {
                         |(index, rgb)| {
                             Swatch::design(t, rgb_fill(*rgb))
                                 .height(quantum_ui::ControlHeight::Dense)
-                                .build()
-                                .id(("recent-color", index))
-                                .tab_index(0)
-                                .role(Role::Button)
-                                .aria_label(rgb_hex(*rgb))
+                                .interactive(("recent-color", index), rgb_hex(*rgb))
                                 .cursor_pointer()
                                 .anchored_hint(rgb_hex(*rgb), t, TooltipSide::Above, &self.overlays)
                                 .on_click(cx.listener(move |this, _, _, cx| {
@@ -792,18 +786,17 @@ impl EditorView {
         row()
             .h(px(quantum_ui::tokens::ControlSize::Lg.height()))
             .rounded(px(Radius::Sm.px()))
-            .overflow_hidden()
             .border_1()
             .border_color(t.swatch_edge())
             .child(
-                Swatch::previous("previous-color", "Restore previous color")
-                    .tab_index(0)
-                    .role(Role::Button)
-                    .aria_label("Restore previous color")
+                Swatch::design(t, rgb_fill(self.palettes.before))
+                    .interactive("previous-color", "Restore previous color")
                     .flex_1()
                     .h_full()
+                    .border_0()
                     .bg(rgb_fill(self.palettes.before))
                     .rounded_l(px(Radius::Sm.px()))
+                    .rounded_r(px(Space::S0.px()))
                     .cursor_pointer()
                     .anchored_hint(
                         format!(

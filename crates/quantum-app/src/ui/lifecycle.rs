@@ -116,6 +116,7 @@ impl EditorView {
                 self.error = false;
             }
             Err(e) => {
+                eprintln!("{:?}", quantum_app::reports::report(&e));
                 self.status = e.to_string().into();
                 self.error = true;
             }
@@ -193,7 +194,10 @@ impl EditorView {
             .unwrap_or(true)
         });
         cx.observe_window_activation(window, |this, window, cx| {
-            this.reduced_motion = quantum_app::reduce_motion::prefers_reduced_motion();
+            this.reduced_motion = sync_reduced_motion(cx);
+            if this.capture_state == Some(launch::LaunchState::ControlStates) {
+                cx.set_reduce_motion(true);
+            }
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;

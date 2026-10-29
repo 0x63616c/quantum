@@ -157,17 +157,26 @@ impl Button {
             })
             .when(!unavailable, |d| {
                 d.tab_index(self.tab_index)
-                    .hover(move |d| {
-                        d.bg(background(t, style, self.selected, ControlState::Hovered))
-                    })
-                    .active(move |d| {
-                        d.bg(background(t, style, self.selected, ControlState::Pressed))
-                    })
                     .focus_visible(move |d| d.shadow(presentation::ring(t, design.surface)))
             })
             .when(interaction == ControlState::Focused && !unavailable, |d| {
                 d.shadow(presentation::ring(t, design.surface))
             })
+            .when(
+                !unavailable && matches!(interaction, ControlState::Rest | ControlState::Focused),
+                |d| {
+                    d.child(
+                        crate::interaction::InteractionFill::new(
+                            if style == ButtonStyle::Primary && !self.selected {
+                                t.color(C::OnAccent)
+                            } else {
+                                crate::interaction::wash(t)
+                            },
+                        )
+                        .primary(style == ButtonStyle::Primary && !self.selected),
+                    )
+                },
+            )
             .when_some(self.icon, |d, name| {
                 d.child(
                     presentation::glyph(name)
@@ -182,25 +191,7 @@ impl Button {
             .when(!icon_only && !self.label.is_empty(), |d| {
                 d.child(presentation::ellipsis(self.label).when(busy, |d| d.opacity(0.)))
             })
-            .when(busy, |d| {
-                d.child(
-                    div()
-                        .absolute()
-                        .top(px(Space::S0.px()))
-                        .left(px(Space::S0.px()))
-                        .size_full()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child(crate::Spinner::new("button-spinner", t).color(
-                            if style == ButtonStyle::Primary {
-                                C::OnAccent
-                            } else {
-                                C::TextSecondary
-                            },
-                        )),
-                )
-            })
+            .when(busy, |d| d.child(busy_indicator(t, style)))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation());
         if let Some(listener) = self.listener {
             d = d.on_click(move |e, window, cx| {
@@ -211,6 +202,21 @@ impl Button {
         }
         d
     }
+}
+fn busy_indicator(theme: Theme, style: ButtonStyle) -> Div {
+    div()
+        .absolute()
+        .inset_0()
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(crate::Spinner::new("button-spinner", theme).color(
+            if style == ButtonStyle::Primary {
+                C::OnAccent
+            } else {
+                C::TextSecondary
+            },
+        ))
 }
 pub(super) fn foreground(t: Theme, style: ButtonStyle) -> Hsla {
     t.color(match style {
@@ -240,8 +246,12 @@ pub(super) fn background(
         transparent_black()
     };
     match interaction {
-        ControlState::Hovered => base.blend(t.color(C::OnAccent).opacity(state::HOVER)),
-        ControlState::Pressed => base.blend(t.color(C::OnAccent).opacity(state::PRESSED)),
+        ControlState::Hovered => {
+            presentation::over(base, crate::interaction::wash(t), state::HOVER)
+        }
+        ControlState::Pressed => {
+            presentation::over(base, crate::interaction::wash(t), state::PRESSED)
+        }
         _ => base,
     }
 }

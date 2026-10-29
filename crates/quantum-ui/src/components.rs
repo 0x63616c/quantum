@@ -148,8 +148,7 @@ impl Swatch {
     ) -> Stateful<Div> {
         Self::design(theme, color)
             .selected(selected)
-            .build()
-            .id(id)
+            .interactive(id, "Palette color")
             .cursor_pointer()
             .hover(move |d| d.border_color(theme.color(ColorToken::TextPrimary)))
     }
@@ -577,6 +576,7 @@ impl Toggle {
             .aria_toggled(if value { Toggled::True } else { Toggled::False })
             .aria_label(label)
             .aria_value(if value { "On" } else { "Off" })
+            .relative()
             .w(px(metrics::SWITCH))
             .h(px(ControlSize::Sm.height()))
             .flex_shrink_0()
@@ -590,6 +590,9 @@ impl Toggle {
             .when(value, |d| d.justify_end())
             .cursor_pointer()
             .focus_visible(move |d| d.shadow(tokens::focus_ring(theme)))
+            .child(
+                crate::interaction::InteractionFill::new(crate::interaction::wash(theme)).round(),
+            )
             .child(
                 div()
                     .size(px(metrics::THUMB))

@@ -73,7 +73,7 @@ impl EditorView {
         if self.palettes.open && !self.save_flow.dialog_open() {
             return true;
         }
-        if self.palette_focus.is_focused(window) {
+        if self.palette_focus.contains_focused(window, cx) {
             let delta = match EditorKey::from_key(&e.keystroke.key) {
                 EditorKey::Left => Some(-1),
                 EditorKey::Right => Some(1),
@@ -82,6 +82,9 @@ impl EditorView {
                 _ => None,
             };
             if let Some(delta) = delta {
+                // Arrow navigation resumes the active-brush group, including
+                // when Tab placed focus on an individual swatch button.
+                window.focus(&self.palette_focus, cx);
                 if let Some(next) = self
                     .palette_request(PaletteAction::StepSwatch(delta), cx)
                     .and_then(|out| out.selected)
@@ -119,7 +122,7 @@ impl EditorView {
     ) -> bool {
         // Shared editors own their keys and native text input, including fields
         // created inside controlled NumericField elements.
-        if crate::text_field::focused(window) {
+        if crate::text_field::focused(window, cx) {
             return true;
         }
 
@@ -145,8 +148,10 @@ impl EditorView {
         {
             return true;
         }
+        // Focused child controls own activation, including empty-search recovery.
+        // Only the palette's navigation root should dispatch its selected command.
         if !self.focus.is_focused(window)
-            && !self.commands.is_open()
+            && (!self.commands.is_open() || !self.modal_focus.is_focused(window))
             && matches!(key, EditorKey::Enter | EditorKey::Space)
         {
             return true;

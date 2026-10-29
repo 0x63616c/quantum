@@ -10,7 +10,7 @@ mod ui_snapshots;
 #[cfg(target_os = "macos")]
 pub mod updater;
 use gpui::*;
-use quantum_app::editor::Editor;
+use quantum_app::{editor::Editor, reports::report};
 use std::{path::PathBuf, time::Duration};
 use theme::Theme;
 
@@ -103,8 +103,12 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     );
     Ok(options)
 }
+fn main() -> miette::Result<()> {
+    run().map_err(|error| report(error.as_ref()))
+}
+
 #[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
-fn main() -> anyhow::Result<()> {
+fn run() -> anyhow::Result<()> {
     #[cfg(feature = "profiling")]
     initialize_profiling()?;
     #[cfg(feature = "ui-snapshots")]
@@ -147,7 +151,6 @@ fn main() -> anyhow::Result<()> {
     } else {
         quantum_app::startup::open(options.path.as_deref())
     };
-    // Load local preferences before starting GPUI's event loop.
     let preferences = quantum_app::preferences::Preferences::load(
         &quantum_app::local_settings::data_dir().join("settings.json"),
     );
@@ -180,7 +183,8 @@ fn main() -> anyhow::Result<()> {
                 ui::welcome::startup(cx)
             };
             if let Err(error) = result {
-                eprintln!("Cannot open Quantum: {error}");
+                let diagnostic = report(error.as_ref()).wrap_err("Cannot open Quantum");
+                eprintln!("{diagnostic:?}");
                 cx.quit();
             }
             if options.show.is_none() {

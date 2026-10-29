@@ -1,6 +1,6 @@
 {
   "api_version": "quantum.v1",
-  "application_version": "0.4.0",
+  "application_version": "0.4.1",
   "protocol_profiles": [
     "2025-11-25",
     "2026-07-28"

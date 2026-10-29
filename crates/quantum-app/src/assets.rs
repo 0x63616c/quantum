@@ -270,3 +270,35 @@ const RASTER_AND_ICONS: &[(&str, &[u8])] = &[
         include_bytes!("../assets/icons/zoom-in.svg"),
     ),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bundled_action_icons_share_the_lucide_geometry_and_tint_contract() {
+        for (name, bytes) in RASTER_AND_ICONS
+            .iter()
+            .filter(|(name, _)| name.ends_with(".svg"))
+        {
+            let svg = std::str::from_utf8(bytes).unwrap();
+            for attribute in [
+                "viewBox=\"0 0 24 24\"",
+                "fill=\"none\"",
+                "stroke=\"currentColor\"",
+                "stroke-width=\"2\"",
+                "stroke-linecap=\"round\"",
+                "stroke-linejoin=\"round\"",
+            ] {
+                assert!(svg.contains(attribute), "{name}: missing {attribute}");
+            }
+            assert_eq!(Assets.load(name).unwrap().unwrap().as_ref(), *bytes);
+        }
+        for op in crate::actions::search("", false) {
+            if !op.icon().is_empty() {
+                let path = format!("icons/{}.svg", op.icon());
+                assert!(Assets.load(&path).unwrap().is_some(), "missing {path}");
+            }
+        }
+    }
+}

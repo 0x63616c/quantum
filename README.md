@@ -13,7 +13,7 @@ skills, render-to-image feedback and live synchronization with a native editor
 window. Projects use the versioned `.voxl` format; geometry exports as glTF binary
 (`.glb`) and rendered views as `.png`.
 
-The current workspace version is **0.4.0**, from [Cargo.toml](Cargo.toml).
+The current workspace version is **0.4.1**, from [Cargo.toml](Cargo.toml).
 
 [Website](https://quantum.worldwidewebb.co/) ·
 [User documentation](https://quantum.worldwidewebb.co/docs/) ·

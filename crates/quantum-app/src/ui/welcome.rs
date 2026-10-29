@@ -1,6 +1,9 @@
 //! Native project launcher and recent-file integration. The editor remains the
 //! sole document owner; requests made here reuse its unsaved-change flow.
-use super::{AnchoredTooltip, EditorView, TooltipSide, settings, welcome_style as layout};
+use super::{
+    AnchoredTooltip, EditorView, TooltipSide, settings, sync_reduced_motion,
+    welcome_style as layout,
+};
 use crate::{
     actions::{self, Op, OpenRecentProject},
     shortcuts::{ShortcutPlatform, navigation_key},
@@ -52,6 +55,7 @@ pub(crate) fn init(
     preferences: quantum_app::editor::EditorResult<quantum_app::preferences::Preferences>,
     cx: &mut App,
 ) {
+    sync_reduced_motion(cx);
     settings::init_loaded(theme, preferences, cx);
     cx.set_global(Launcher {
         editor: None,
@@ -429,7 +433,7 @@ impl WelcomeView {
             .detach();
         cx.observe_window_activation(window, |this, window, cx| {
             if window.is_window_active() {
-                this.reduced_motion = quantum_app::reduce_motion::prefers_reduced_motion();
+                this.reduced_motion = sync_reduced_motion(cx);
                 history(HistoryChange::Reload, cx);
             }
             cx.notify();
@@ -667,6 +671,7 @@ impl WelcomeView {
                     if let Err(error) = open_editor(editor, cx) {
                         let _ = this.update(cx, |this, cx| {
                             this.busy = false;
+                            eprintln!("{:?}", quantum_app::reports::report(error.as_ref()));
                             this.error = Some(error.to_string());
                             cx.notify();
                         });
@@ -675,6 +680,7 @@ impl WelcomeView {
             }
             Err(error) => {
                 self.busy = false;
+                eprintln!("{:?}", quantum_app::reports::report(&error));
                 self.error = Some(error.to_string());
             }
         }
@@ -866,3 +872,7 @@ pub(super) fn show_deferred(samples: bool, cx: &mut App) {
 mod snapshot;
 #[cfg(feature = "ui-snapshots")]
 pub(crate) use snapshot::{prepare_snapshot, snapshot_ready};
+
+#[cfg(test)]
+#[cfg(feature = "test-support")]
+mod first_frame;

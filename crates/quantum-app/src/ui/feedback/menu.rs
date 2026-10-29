@@ -1,7 +1,7 @@
 //! Keep native commands usable without leaking document shortcuts into a report.
 use super::*;
 
-fn available(op: Op, window: &Window) -> bool {
+fn available(op: Op, window: &Window, cx: &App) -> bool {
     matches!(
         op,
         Op::Feedback
@@ -13,22 +13,22 @@ fn available(op: Op, window: &Window) -> bool {
             | Op::Minimize
             | Op::ZoomWindow
             | Op::FullScreen
-    ) || (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
+    ) || (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window, cx))
 }
 
 impl FeedbackView {
     pub(super) fn sync_menu(&self, window: &Window, cx: &mut Context<Self>) {
-        if cfg!(target_os = "macos") && window.is_window_active() {
+        if crate::actions::sync_native_menus(window) {
             cx.set_menus(crate::actions::menus_for_window(
                 window.is_fullscreen(),
                 |_| false,
-                |op| available(op, window),
+                |op| available(op, window, cx),
             ));
         }
     }
 
     pub(super) fn menu_action(&mut self, op: Op, window: &mut Window, cx: &mut Context<Self>) {
-        if crate::text_field::route_history(op, window, cx) || !available(op, window) {
+        if crate::text_field::route_history(op, window, cx) || !available(op, window, cx) {
             return;
         }
         match op {

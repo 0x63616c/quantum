@@ -70,7 +70,8 @@ Use the public re-exports in `src/lib.rs`; icon assets remain in the app.
   App owns dismissal, navigation and callbacks.
 - `Card` / `Group`: grouped `Panel` surface, optional heading and inset dividers.
 - `FieldFrame`: native field/editor chrome and search rows.
-- `Swatch`: palette/recents swatches; `canvas` retains sidebar selection borders;
+- `FocusGroup`: keyboard list/grid frame with an inset ring, preserving scroll geometry.
+- `Swatch`: palette/recents swatches; `interactive` adds Tab traversal and a contrasting inner focus stroke; `canvas` retains sidebar selection borders;
   `previous` handles the exposed edge of a joined previous/current color sample.
 - `FormRow`: wrapping labels/descriptions and a nonshrinking control.
 - `SidebarItem`, `SidebarSection`: navigation/results rows and section labels;

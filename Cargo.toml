@@ -5,7 +5,7 @@ exclude = ["crates/plugins/Cargo.toml"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 rust-version = "1.99"
 license = "MIT"
@@ -42,6 +42,7 @@ proc-macro2 = { version = "1", features = ["span-locations"] }
 quote = "1"
 serde-saphyr = "2.0.0"
 thiserror = "2.0"
+miette = { version = "7.6", features = ["fancy-no-backtrace"] }
 uuid = { version = "1.18", features = ["serde", "v4"] }
 sha2 = "0.10"
 proptest = "1.9"

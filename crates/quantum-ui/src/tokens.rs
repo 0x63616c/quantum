@@ -232,6 +232,10 @@ impl TextSize {
 
 /// Interaction opacities and geometry, shared by every new control.
 pub mod state {
+    /// Short ease-out for pointer entry, exit and release, with no layout motion.
+    pub const HOVER_DURATION: std::time::Duration = std::time::Duration::from_millis(120);
+    /// Press feedback reaches its target sooner than hover feedback.
+    pub const PRESS_DURATION: std::time::Duration = std::time::Duration::from_millis(80);
     /// Translucency of diagnostic chrome over the viewport.
     pub const DEBUG_OVERLAY: f32 = 0.82;
     /// Quiet thumbnail wash between canvas and hover fills.
@@ -267,6 +271,10 @@ pub mod state {
 }
 /// Component geometry that is not spacing or typography.
 pub mod geometry {
+    /// Width of the development-only control state audit surface.
+    pub const CONTROL_AUDIT_WIDTH: f32 = 800.;
+    /// Fixed state label slot in the control audit.
+    pub const STATE_LABEL_WIDTH: f32 = 96.;
     /// Largest dialog fraction of the available window.
     pub const DIALOG_MAX_FRACTION: f32 = 0.95;
     /// Sidebar fraction inside the illustrative appearance preview.
