@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Added
+
+- publish a Homebrew cask via 0x63616c/homebrew-tap ([#229](https://github.com/0x63616c/quantum/pull/229))
+
+### Fixed
+
+- make first-frame text focus queries safe ([#241](https://github.com/0x63616c/quantum/pull/241))
+
+### Refactored
+
+- replace catch-all editor errors with typed failures ([#223](https://github.com/0x63616c/quantum/pull/223))
+
+### Other
+
+- move PR macOS checks to hosted runners ([#236](https://github.com/0x63616c/quantum/pull/236))
+
 ## [0.4.0]
 
 ### Changed
