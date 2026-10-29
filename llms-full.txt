@@ -40,6 +40,16 @@ Install Quantum. Connect your agent. Make your first model.
 - [Download for Mac](https://quantum.worldwidewebb.co/download/)
 - [Connect MCP](https://quantum.worldwidewebb.co/docs/getting-started/#connect)
 
+## Homebrew
+
+```sh
+brew install --cask 0x63616c/tap/quantum
+```
+
+Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle. The cask sets `auto_updates true`, so `brew upgrade` skips it. Use `brew upgrade --cask --greedy quantum` to reinstall the latest release. Homebrew's recorded version can lag after an in-app update; this is harmless.
+
+Uninstall with `brew uninstall --cask quantum`. For full cleanup, use `brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
+
 ## Build from source
 
 Install Rust with rustup, then run from a repository checkout. The pinned toolchain is Rust 1.99.1.
@@ -51,7 +61,7 @@ cargo build --locked --release \
 ./target/release/quantum
 ```
 
-[Download the native Mac app](https://quantum.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. Homebrew packages are not available yet. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
+[Download the native Mac app](https://quantum.worldwidewebb.co/download/) for macOS 13+ on Apple silicon, with installation instructions. The app is Developer ID signed and notarized by Apple, and checks for updates automatically from version 0.3.0. On macOS, install the Xcode command line tools (`xcode-select --install`) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.
 
 Linux build and desktop dependencies (Debian / Ubuntu)
 
