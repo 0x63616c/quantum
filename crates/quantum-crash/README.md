@@ -89,6 +89,7 @@ cap applies to the full encoded URL in bytes. Oversized reports return
 offer relay submission or copying/saving the report. This function does not open
 the browser. Browser submission also requires confirmation and a GitHub account.
 
-Startup installation, next-launch preview/confirmation dialogs, Help menu feedback,
-native platform metadata/log capture, screenshots, scene attachment handling and
-the site privacy page belong to the later app-wiring work after #82/#104.
+Startup installation, next-launch preview/confirmation dialogs, Help menu feedback
+and native metadata/log capture live in `quantum-app`. Scene attachments remain
+unavailable. Relay deployment and release activation require the owner steps in
+[the runbook](../../packaging/feedback-relay/README.md).
