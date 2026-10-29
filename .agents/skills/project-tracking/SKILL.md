@@ -1,101 +1,82 @@
 ---
 name: project-tracking
-description: Use at the start of any task in this repository, whenever new work is requested, before opening a PR, and before saying anything is done. Keeps work tracked on GitHub issues and the Quantum project board instead of in memory.
+description: Use at the start of repository tasks, before opening a PR and before claiming completion. Track work in Tickets, the sole source of truth.
 ---
 
 # Project tracking
 
-GitHub is the source of truth for what is planned, in progress and done. Memory
-and chat history are not. Follow [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+[Tickets](https://tickets.worldwidewebb.co) is the sole source of truth for planned,
+in-progress and completed work. GitHub issues and Projects are retired. Follow
+[CONTRIBUTING.md](../../../CONTRIBUTING.md).
 
-## 1. Read the board first
+## 1. Read Tickets first
 
-Before planning or coding, list open issues and board state:
+Read the assigned ticket, its **Done when** checklist, dependencies and current
+project work before planning or coding. Quantum uses the `QUA` prefix. Search
+Tickets before creating work to avoid duplicates. API documentation lives in
+`docs/API.md` in `0x63616c/tickets`; use authenticated Tickets tools without
+printing credentials. Existing PRs can still be read with `gh pr list`.
 
-```sh
-gh issue list --repo 0x63616c/quantum --state open --limit 200
-gh pr list --repo 0x63616c/quantum --state open
-gh project item-list <project-number> --owner 0x63616c --limit 200   # needs the `project` scope
-```
+## 2. One ticket per ask
 
-Note what is In progress or In review so you do not duplicate it, and pick work
-from **Next** before **Backlog**. Leave **Later** items alone unless asked.
-
-## 2. One issue per ask
-
-- Every request, idea, bug or promise becomes an issue in the same turn, using a
-  template (Feature, Bug, Refactor, Spike) with **Why** and a **Done when**
-  checklist of observable outcomes.
-- Search first (`gh issue list --search "<words>" --state all`); update an existing
-  issue instead of filing a duplicate.
-- Label it: one `type:*`, one or more `area:*`, one `priority:*`; `status:blocked`
-  plus a comment when blocked; `later` for parked work. Set a milestone and add it
-  to the board.
-- Split anything that would need more than one focused PR into several issues.
+- Reuse the assigned ticket or create one in Tickets for each new request.
+- State **Why** and a **Done when** checklist of observable outcomes.
+- Keep priority, labels and status in Tickets. Move work to **In progress** when
+  starting. Split work requiring separate focused PRs into separate tickets.
+- Record dependencies as Tickets dependency edges. Check blockers before starting.
+- Keep one canonical ticket for duplicates and consolidate acceptance criteria.
 
 ## 3. Model labels
 
-Every open issue carries exactly one of `model:astra` or `model:sol`. Label new
-issues when filing. Pick the model from the issue's label, not by habit.
+Every open ticket carries exactly one of `model:astra` or `model:sol`. Pick the
+model from the ticket label.
 
 - `model:astra`: hard work: UI/design-heavy tasks, complex refactors, spikes and
-  ports of someone else's code. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
-- `model:sol`: everything else: CI config, lint setup, small fixes, straightforward
-  refactors and docs. Run `codex exec -m gpt-6.1-sol`.
+  ports. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
+- `model:sol`: CI config, lint setup, small fixes, straightforward refactors and
+  docs. Run `codex exec -m gpt-6.1-sol`.
 
-If a ticket turns out harder or easier, relabel it and explain why in a comment.
+If the work changes complexity, relabel the ticket and explain why.
 
-## 4. Dependencies and duplicates
+## 4. Worktrees and builds
 
-In the blocked issue's body, add a `## Dependencies` section with one
-`Blocked by #N` line per blocker. Put the lines between `<!-- deps:start -->` and
-`<!-- deps:end -->` markers so they can be rewritten idempotently. Add
-`status:blocked` while any blocker is open. Remove it when the last blocker
-closes. Before starting a ticket, check that its blockers are closed.
+Start agent work with:
 
-For duplicates, keep one issue and move the other's checklist into it. Close the
-other as not planned with "Duplicate of #N" and the `duplicate` label.
+```sh
+P=$(job new quantum QUA-N [slug]); source "$P/.job.env"
+```
 
-## 5. Parallel work
+Use one worktree per ticket and source its `.job.env` before building. Preserve
+its shared build-cache configuration; cap concurrent builds at about 4.
+Remove merged or abandoned worktrees only after checking `git status` and that
+HEAD is on the remote. Never delete uncommitted or unpushed changes.
 
-Run unblocked tickets in parallel only when they do not touch the same files.
-Use one git worktree or clone per ticket, e.g. `/workspace/vx-<issue>-<slug>`,
-with a shared `CARGO_TARGET_DIR`. Cap concurrent builds at about 4.
-
-Remove the worktree or clone once its PR merges or is abandoned. First check
-`git status` and that HEAD is on the remote. Never delete uncommitted or unpushed
-changes.
-
-## 6. Disk hygiene
+## 5. Disk hygiene
 
 Keep the build machine's root disk under 85% (`df -h /`). Before starting jobs,
-if usage is above that, trim the shared cargo cache: stale incremental dirs and
-artifacts not read in over 24 h. Delete merged or abandoned clones and their
-`target/` dirs. Never delete a work dir with uncommitted or unpushed changes.
+if usage is above that, trim stale shared cargo cache artifacts not read in over
+24 hours and merged or abandoned worktrees. Never delete uncommitted or unpushed
+work.
 
-## 7. Keep skills current
+## 6. Keep conventions current
 
-When a convention changes (labels, models, templates or workflow), update this
-skill, `CONTRIBUTING.md` and the issue templates in the same PR or the same day.
+When labels, models or workflows change, update this skill and
+`CONTRIBUTING.md` together. Do not recreate GitHub issue templates.
 
-## 8. Link every PR
+## 7. Link every PR
 
-- Branch `<type>/<issue#>-<slug>`.
-- Conventional Commit PR title: `feat|fix|refactor|chore|docs|test|ci|perf(scope): summary`.
-- PR body starts with `Closes #N` (or `Refs #N` for partial work), then summary,
-  test evidence, and before/after screenshots for UI or numbers for performance.
-- Move the card to **In progress** when you start and **In review** when the PR
-  opens. Merging closes the issue and moves it to **Done**.
+- Branch from `main` as `<type>/<KEY-N>-<slug>`.
+- Use a Conventional Commit title ending in the ticket key, for example
+  `feat(app): add thing [QUA-12]`. CI checks the suffix; bots are exempt.
+- Start the body with `Closes QUA-12` or `Refs QUA-12` to link without closing,
+  then the template's Summary, Changes and Testing sections.
+- Include screenshots for UI changes and measured evidence for performance work.
+- Tickets links the PR through a GitHub webhook, moves it to **In review** when
+  the PR opens and to **Done** on merge. Do not mark unmerged work Done.
 
-## 9. Audit before claiming done
+## 8. Audit before claiming done
 
-Before telling anyone work is done:
-
-1. Open the issue and re-read every **Done when** item.
-2. Check each item against the merged diff, CI results and attached evidence, not
-   against memory or a summary from another agent.
-3. Tick only items that are actually met. File anything left over as a new issue
-   and link it.
-4. Confirm the issue is closed and the board shows **Done**.
-
-If any item is unmet, say so plainly and say what is left.
+Re-read every **Done when** item against the merged diff, CI results and attached
+evidence. Check only items actually met; file remaining work as Tickets tickets
+and link it. Confirm Tickets shows **Done** after merge. For an unmerged PR,
+report that it is open and identify any outstanding validation.

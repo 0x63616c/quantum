@@ -10,7 +10,7 @@ Codex on the agent box and what it costs. Issue #253.
 - `.serena/project.yml` is the project config. Serena rewrites the file into its full
   template on first load, so the committed copy is that normalised form. Values that
   differ from the defaults: `project_name: quantum`, `language_servers: [rust]`,
-  `added_modes: [no-memories]` (AGENTS.md and the issue board are the memory, so
+  `added_modes: [no-memories]` (AGENTS.md and Tickets are the memory, so
   Serena's own memory files and onboarding stay off).
 - `.serena/.gitignore` keeps everything else under `.serena/` (symbol cache,
   `project.local.yml`, memories) untracked.

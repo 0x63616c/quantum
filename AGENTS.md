@@ -397,18 +397,24 @@ UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_r
 
 ## Commits and PRs
 
-- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the issue-first workflow, labels,
-  board statuses, branch names, Conventional Commit PR titles, PR bodies and the
+- [Tickets](https://tickets.worldwidewebb.co) is the sole source of truth; Quantum
+  uses `QUA`. GitHub issues and Projects are retired. Use Tickets dependency
+  edges for blockers. Start agent jobs with
+  `P=$(job new quantum QUA-N [slug]); source "$P/.job.env"`.
+- Tickets links PRs and moves tickets to In review on opening and Done on merge
+  through a GitHub webhook.
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the ticket-first workflow, labels,
+  Tickets statuses, branch names, Conventional Commit PR titles, PR bodies and the
   Definition of Done. Agents also follow the
-  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read the
-  board first, file an issue per ask, link every PR, and audit **Done when** items
+  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read Tickets
+  first, use one ticket per ask, link every PR, and audit **Done when** items
   before claiming anything is done.
 - PRs that change anything visible follow the
   [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md):
   `cargo xtask screenshots --publish <PR#>` (or the **PR screenshots** CI job) fills
   the description's Before | After Screenshots section. Never paste UI screenshots
   by hand, and check the rendered PR page before asking for review.
-- Branch from `main` as `<type>/<issue#>-<slug>`; never push directly to `main`.
+- Branch from `main` as `<type>/<KEY-N>-<slug>`; never push directly to `main`.
   Keep PRs small, focused and limited to one concern. Review harshly before merge: inspect correctness,
   scope, failure paths and actual UI evidence.
 - Author all commits you create as `Calum <6991398+0x63616c@users.noreply.github.com>`:
@@ -421,7 +427,8 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 - Title PRs as Conventional Commits (`feat`, `fix`, `refactor`, `chore`, `docs`,
   `test`, `ci`, `perf`, optional scope) with an imperative summary;
   [PR conventions](.github/workflows/pr-conventions.yml) checks the title and a
-  `Closes`/`Fixes`/`Refs #N` link. Do not add `Co-authored-by` trailers or
+  Tickets key at the end of the title, e.g. `[QUA-12]`. Bodies start with
+  `Closes QUA-12` (or `Refs QUA-12` to link without closing). Do not add `Co-authored-by` trailers or
   tool/agent attribution. Squash merge as `Title (#N)`, then delete the branch.
 - Explain the problem, resulting behavior and validation. Include before/after
   screenshots for UI changes, both themes where relevant, and before/after
@@ -430,7 +437,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), plus Clippy, nextest and doctests for macOS-specific crates on GitHub-hosted `xcode-27` for PRs and main pushes. Keep the hosted check named `macos`, secret-free and filtered at job level. The package list is in Select Rust packages; update it when a crate gains macOS-specific code. The guarded Mac mini `macos-hardware` job runs Metal profiling for matching PR inputs and every main push; nightly/manual runs retain full workspace checks. CI Linux checks the full workspace. Releases require full Mac Clippy and tests before packaging. Main pushes skip the DMG. Nightly and manual main runs build and upload the release-profile ad-hoc DMG; packaging-input PRs build `ci-dist` on hosted macOS. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), plus Clippy, nextest and doctests for macOS-specific crates on GitHub-hosted `xcode-27` for PRs and main pushes. Keep the hosted check named `macos`, secret-free and filtered at job level. The package list is in Select Rust packages; update it when a crate gains macOS-specific code. The guarded Mac mini `macos-hardware` job runs Metal profiling for matching PR inputs and every main push; nightly/manual runs retain full workspace checks. CI Linux checks the full workspace. Releases require full Mac Clippy and tests before packaging. Main pushes skip the DMG. Nightly and manual main runs build and upload the release-profile ad-hoc DMG; packaging-input PRs build `ci-dist` on hosted macOS. Legacy nightly GitHub issue reporting remains in the workflows; track actionable failures in Tickets (see [CI runners](docs/ci-runners.md)). Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
@@ -475,7 +482,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue-first workflow, PR rules and Definition of Done. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Ticket-first workflow, PR rules and Definition of Done. |
 | [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
 | [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |
