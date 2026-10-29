@@ -189,9 +189,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          target_dir="$(dirname "$GITHUB_WORKSPACE")/cargo-target-ci-macos"
-          max_kb=$((15 * 1024 * 1024))      # wipe above 15 GiB
-          min_free_kb=$((15 * 1024 * 1024)) # or when the disk has under 15 GiB free
+          repo_dir="$(dirname "$GITHUB_WORKSPACE")"
+          work_dir="$(dirname "$repo_dir")"
+          target_dir="$repo_dir/cargo-target-ci-macos"
+          max_kb=$((10 * 1024 * 1024))      # wipe above 10 GiB
+          min_free_kb=$((30 * 1024 * 1024)) # or when the disk has under 30 GiB free
+          # A repo rename leaves the old workspace behind with its warm
+          # target dir. Drop warm target dirs that belong to any other workspace on this runner.
+          for stale in "$work_dir"/*/cargo-target-ci-macos; do
+            [[ -d "$stale" && "$stale" != "$target_dir" ]] || continue
+            echo "Removing stale warm target dir: $stale"
+            rm -rf "$stale"
+          done
           if [[ -d "$target_dir" ]]; then
             used_kb=$(du -sk "$target_dir" | cut -f1)
             free_kb=$(df -k "$target_dir" | awk 'NR==2 {print $4}')

@@ -102,6 +102,13 @@ jobs:
           gh release upload "$TAG" "${assets[@]}"
           gh release edit "$TAG" --draft=false
 
+      - name: Remove build output from the self-hosted runner
+        # The next checkout would `git clean` it anyway; deleting now keeps several GiB of
+        # release-profile output from sitting on the Mac mini between runs.
+        if: always()
+        shell: bash
+        run: rm -rf target dist
+
   homebrew-tap:
     needs: dmg
     runs-on: ubuntu-24.04
