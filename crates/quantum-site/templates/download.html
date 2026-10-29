@@ -25,6 +25,10 @@
       <li>Drag <strong>@@product@@</strong> to <strong>Applications</strong>.</li>
       <li>Open <strong>@@product@@</strong> from Applications.</li>
     </ol>
+    <h2 id="homebrew">Homebrew</h2>
+    <pre><code class="language-sh">brew install --cask 0x63616c/tap/quantum</code></pre>
+    <p>Homebrew links <code>quantum-mcp</code> onto PATH. The app updates itself through Sparkle. The cask sets <code>auto_updates true</code>, so <code>brew upgrade</code> skips it. Use <code>brew upgrade --cask --greedy quantum</code> to reinstall the latest release. Homebrew's recorded version can lag after an in-app update; this is harmless.</p>
+    <p>Uninstall with <code>brew uninstall --cask quantum</code>. For full cleanup, use <code>brew uninstall --cask --zap quantum</code>; this never touches <code>~/Documents/Quantum</code>.</p>
     <h2 id="first-launch">First launch and updates</h2>
     <p>@@product@@ is Developer ID signed and notarized by Apple. Open it normally from Applications.</p>
     <p>Starting with version 0.3.0, @@product@@ checks for updates automatically and installs them with your approval.</p>

@@ -107,6 +107,20 @@ is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
 [the site generator](crates/quantum-site/src/main.rs).
 
+### Homebrew
+
+```sh
+brew install --cask 0x63616c/tap/quantum
+```
+
+Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle;
+the cask sets `auto_updates true`, so `brew upgrade` skips it. Run
+`brew upgrade --cask --greedy quantum` to reinstall the latest release through
+Homebrew. Its recorded version can lag after an in-app update; this is harmless.
+
+Uninstall with `brew uninstall --cask quantum`. For full cleanup, use
+`brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
+
 ## Build and run
 
 Run commands from the repository root. [rust-toolchain.toml](rust-toolchain.toml)
