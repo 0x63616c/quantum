@@ -16,6 +16,7 @@ const ROOT_ENTRIES: &[&str] = &[
     ".claude",
     ".cursor",
     ".impeccable",
+    ".serena",
     ".config",
     ".gitattributes",
     ".githooks",
