@@ -16,17 +16,6 @@
 Brand-bearing identifiers live in [brand.toml](brand.toml), with current values
 and explicit compatibility exceptions. Stable ones must not change without a migration.
 
-## Local code graph
-
-Graphify maps symbols and their connections for code navigation. Before starting
-any coding task, run `cargo xtask graphify` from the repository (requires `uv`).
-The entry point pins and verifies the graphify distribution; see
-[tooling notes](xtask/README.md#local-code-graph). Prefer precise `explain <symbol>`
-and `path <a> <b>` queries over noisy plain-English queries, and verify findings
-in source. Output and caches in `graphify-out/` are local-only and never committed.
-The refresh needs no LLM; graphify has no telemetry. Adopted permanently on
-2026-10-28, with reevaluation planned a few weeks after adoption.
-
 ## Architecture and ownership
 
 Read [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) before moving feature

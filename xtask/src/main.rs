@@ -24,7 +24,6 @@ Checks:
   tidy          Check tracked root entries, file sizes and junk files
 
 Maintenance:
-  graphify      Refresh the pinned local code graph
   release       Plan a release (dry run by default)
   bump-version  Update the stable workspace version and current references
   version       Print the app version or check a release tag
@@ -54,8 +53,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Task {
-    /// Refresh the local code graph with pinned graphify (requires uv)
-    Graphify,
     /// Run Clippy, dependency boundaries and source budget ratchets
     Lint,
     /// Render the Quantize SVG masters into app, bundle, site and preview assets
@@ -178,9 +175,6 @@ fn parse_cli(args: impl IntoIterator<Item = OsString>) -> Result<Cli, clap::Erro
 #[expect(clippy::print_stdout, reason = "CLI output")]
 fn dispatch(cli: Cli) -> Result<u8, Box<dyn std::error::Error>> {
     match cli.command {
-        Some(Task::Graphify) => {
-            xtask::graphify::refresh(&Workspace::discover()?, &SystemRunner::default())?;
-        }
         Some(Task::Icons { check, preview }) => {
             xtask::icons::generate(&Workspace::discover()?, check, preview.as_deref())?;
         }
