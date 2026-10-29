@@ -138,6 +138,17 @@ otherwise it falls back to `cargo test --workspace --locked` (including doctests
 The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
 CI snapshot verification; insta inherits that variable under nextest too.
 
+PR and push-to-main macOS checks run on GitHub-hosted `xcode-27` with the pinned
+Rust toolchain and Xcode 27.0. The `macos` check keeps Clippy, nextest and doctests
+for macOS-specific crates, plus `ci-dist` smoke DMGs on packaging-input PRs.
+Filters apply at job level, so docs-only changes can skip the Mac build
+without losing the required check context. Fork PRs can run this secret-free job.
+Metal profiling and golden visuals stay on the guarded Mac mini runners; skipped
+fork hardware jobs still need trusted verification before merge. Full workspace
+checks and release-profile DMGs run nightly on the Mac mini, with failure issues.
+Every PR workflow cancels superseded runs; nightly and release coverage is preserved.
+See [CI runners](docs/ci-runners.md) for check placement, caches and timing evidence.
+
 ## Snapshot tests
 
 insta detects CI (the `CI` environment variable GitHub Actions sets) and then

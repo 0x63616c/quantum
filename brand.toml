@@ -205,3 +205,9 @@ paths = [
 ]
 reason = "Historical rename announcement title; current copy uses the canonical inventory."
 generated_paths = ["blog/index.html", "blog/index.md", "blog/2026-10-28-rename/index.html", "blog/2026-10-28-rename/index.md"]
+
+[compatibility.homebrew]
+current = ["~/Library/Application Support/voxelite", "co.worldwidewebb.voxelite"]
+stable = true
+paths = ["packaging/homebrew/quantum.rb", "xtask/src/macos/tests/fixtures/homebrew.rb"]
+reason = "Explicit zap removes legacy data, preferences and caches left by Voxelite-era builds (old bundle ID and data directory); projects remain untouched."

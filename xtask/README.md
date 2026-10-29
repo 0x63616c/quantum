@@ -128,8 +128,11 @@ The repository checks run in-process from `src/checks/`:
 - `source-lints`: syntax-aware rules described below.
 - `workflows`: parse every workflow YAML file, require explicit top-level
   permissions and full commit SHAs for action/reusable workflow references. Local
-  actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
-  and in `validate`.
+  actions and Docker images pinned by SHA-256 digest are exempt. Each self-hosted
+  job must retain the owner/same-repository guard as a top-level conjunction and
+  set `CARGO_BUILD_JOBS: 4`; `pull_request_target` is forbidden. PR workflows must
+  cancel superseded runs per PR, while scheduled runs use unique concurrency
+  groups to preserve pending coverage. Runs in CI Linux and in `validate`.
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
   metadata offline first and retries online if that command fails. Preserves the
@@ -291,7 +294,9 @@ Drop guards restore keychains and remove temporary files on errors and unwinds.
 
 The `macos` group includes `package [--skip-build] [--dry-run]`, `appcast
 [--dry-run]`, `fetch-appcast <out>`, `check-appcast <file> [--allow-empty]` and
-`release-notes`. Configuration still uses the documented release environment
+`release-notes`, and `homebrew-cask --version X.Y.Z --sha256 HEX --output FILE`.
+The cask renderer accepts stable releases from 0.4.0 and a 64-hex digest.
+Configuration still uses the documented release environment
 variables. `check-appcast` also accepts paired `--release-dir` and `--previous`.
 The registered `appcast` check validates `site/appcast.xml`, allowing an empty feed.
 
