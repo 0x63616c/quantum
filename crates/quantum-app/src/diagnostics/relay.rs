@@ -112,8 +112,7 @@ mod tests {
             std::process::Command::new("sh")
                 .args(["-c", script])
                 .stdout(std::process::Stdio::piped())
-                .spawn()
-                .unwrap(),
+                .spawn()?,
         )
     }
 
