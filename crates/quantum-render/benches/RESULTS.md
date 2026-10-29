@@ -1,9 +1,119 @@
 # Chunk meshing benchmark results
 
-**Review status:** the performance acceptance item in #95 is not yet met.
-Fresh current-main comparisons below reproduce small-batch gains but do not
-establish the required absence of regression for larger batches. Earlier
-acceptance conclusions were too strong for the measured uncertainty.
+**Review status:** the remaining regression is resolved by the final comparison
+below. All twelve production chunk-sync fixtures improve, including sparse 128
+and small serial edits. Earlier unsuccessful comparisons remain below as history.
+
+## Final comparison after the sparse traversal fix
+
+Main `90ccef142f1e4f4a5528a2ab543b358478835b8e` versus implementation
+`563f3dc`, after a normal merge from current main. Same eight-core Intel Xeon VM,
+Rust 1.99.1, optimized bench profile, `CARGO_BUILD_JOBS=4` and
+`CARGO_TARGET_DIR=/home/box/.cache/cargo-shared`. Main received the identical
+`chunks.rs` fixture, Divan dev-dependency/bench declaration and explicit private
+test-module paths; its production algorithm was unchanged. Both revisions were
+built before timing and their executables copied to immutable paths.
+
+The retained fix visits occupied entries when preparing sparse chunks instead of
+binary-searching every cell, including air. Entries are clipped to the identical
+two-cell halo; visible-layer order and transparent overwrite rules are preserved.
+Dense chunks keep indexed reads. Empty face masks bypass rectangle traversal.
+Shared call boundaries keep initialization and meshing out of Rayon's iterator
+code. Allocation experiments reduced spare vertex capacity but did not reliably
+resolve timing, so none of those allocation changes is retained.
+
+Each fixture has twenty paired runs, alternating main/branch order. The complete
+suite used 100 Divan samples per run, starting at one-minute load 2.39. Load across
+accepted runs was 2.17–8.50, including the benchmark's own worker activity. Every
+pair with an observed compiler, Cargo command or Quantum renderer/test process
+before, during or after timing was discarded and repeated: fourteen pairs in the
+complete suite, two in the focused confirmation. Filtering never used timings.
+No builds or tests from this task overlapped timing. This is shared-machine Linux
+CPU evidence, not an idle-machine or Metal performance claim.
+
+The eight-chunk fixtures had wide paired intervals in the 100-sample suite, so a
+separate twenty-pair confirmation increased **both revisions** to 1,000 samples
+per run. It began at load 1.09 (accepted-run range 1.09–4.86). The table uses this
+confirmation for eight chunks and the original suite for every other fixture.
+All paired 95% intervals in this table are below zero; there is no observed
+regression in the changed chunk-sync benchmarks. Sparse 128 improves **5.9%**,
+with paired change **−5.8% (−8.6 to −4.8%)**.
+
+Milliseconds are the median of twenty run medians, with minimum–maximum run
+medians in parentheses. Paired changes use the median of each round's percentage
+change, with a 10,000-resample bootstrap (seed 95). Negative is faster.
+
+| Fixture | Chunks | Samples/run | Main ms (range) | Branch ms (range) | Change | Paired change (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Solid | 1 | 100 | 0.852 (0.776–1.152) | 0.811 (0.733–0.948) | -4.8% | -5.8% (-7.5 to -4.3) |
+| Solid | 3 | 100 | 2.213 (2.016–2.325) | 2.059 (1.880–2.152) | -6.9% | -6.9% (-7.9 to -6.5) |
+| Solid | 4 | 100 | 1.075 (0.898–1.374) | 0.914 (0.772–1.111) | -14.9% | -19.5% (-22.9 to -14.7) |
+| Solid | 8 | 1000 | 1.014 (0.916–1.600) | 0.828 (0.758–1.397) | -18.4% | -16.7% (-20.3 to -13.4) |
+| Solid | 32 | 100 | 3.099 (2.761–4.802) | 2.763 (2.511–3.159) | -10.9% | -12.1% (-13.7 to -8.4) |
+| Solid | 128 | 100 | 8.578 (7.890–10.680) | 7.893 (6.997–8.897) | -8.0% | -8.9% (-11.7 to -6.6) |
+| Sparse | 1 | 100 | 0.493 (0.447–0.737) | 0.459 (0.416–0.612) | -7.0% | -7.2% (-8.4 to -6.4) |
+| Sparse | 3 | 100 | 1.598 (1.437–2.137) | 1.480 (1.330–1.911) | -7.4% | -7.6% (-10.6 to -7.3) |
+| Sparse | 4 | 100 | 0.807 (0.682–0.954) | 0.598 (0.515–0.797) | -25.9% | -25.3% (-30.9 to -20.1) |
+| Sparse | 8 | 1000 | 0.790 (0.677–1.214) | 0.589 (0.486–0.901) | -25.5% | -23.2% (-30.5 to -20.4) |
+| Sparse | 32 | 100 | 3.354 (2.767–4.167) | 3.010 (2.461–3.925) | -10.2% | -12.3% (-14.0 to -5.6) |
+| Sparse | 128 | 100 | 12.010 (11.110–17.660) | 11.305 (10.410–13.210) | -5.9% | -5.8% (-8.6 to -4.8) |
+
+The full 100-sample series is retained here rather than hiding its noisy eight-
+chunk result: sparse 8 was +10.5% by aggregate medians while its paired median
+was −13.3%, with a −22.5 to +3.1% interval. Solid 8's interval was also unresolved.
+The independent 1,000-sample confirmation above resolves both cases with faster
+aggregate and paired medians and wholly negative intervals on the same binaries.
+
+<details>
+<summary>Complete original 100-sample comparison</summary>
+
+| Fixture | Chunks | Samples/run | Main ms (range) | Branch ms (range) | Change | Paired change (95% interval) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Solid | 1 | 100 | 0.852 (0.776–1.152) | 0.811 (0.733–0.948) | -4.8% | -5.8% (-7.5 to -4.3) |
+| Solid | 3 | 100 | 2.213 (2.016–2.325) | 2.059 (1.880–2.152) | -6.9% | -6.9% (-7.9 to -6.5) |
+| Solid | 4 | 100 | 1.075 (0.898–1.374) | 0.914 (0.772–1.111) | -14.9% | -19.5% (-22.9 to -14.7) |
+| Solid | 8 | 100 | 1.237 (0.874–1.858) | 1.216 (0.728–1.578) | -1.8% | -7.6% (-15.1 to +3.7) |
+| Solid | 32 | 100 | 3.099 (2.761–4.802) | 2.763 (2.511–3.159) | -10.9% | -12.1% (-13.7 to -8.4) |
+| Solid | 128 | 100 | 8.578 (7.890–10.680) | 7.893 (6.997–8.897) | -8.0% | -8.9% (-11.7 to -6.6) |
+| Sparse | 1 | 100 | 0.493 (0.447–0.737) | 0.459 (0.416–0.612) | -7.0% | -7.2% (-8.4 to -6.4) |
+| Sparse | 3 | 100 | 1.598 (1.437–2.137) | 1.480 (1.330–1.911) | -7.4% | -7.6% (-10.6 to -7.3) |
+| Sparse | 4 | 100 | 0.807 (0.682–0.954) | 0.598 (0.515–0.797) | -25.9% | -25.3% (-30.9 to -20.1) |
+| Sparse | 8 | 100 | 0.933 (0.699–1.302) | 1.031 (0.543–1.135) | +10.5% | -13.3% (-22.5 to +3.1) |
+| Sparse | 32 | 100 | 3.354 (2.767–4.167) | 3.010 (2.461–3.925) | -10.2% | -12.3% (-14.0 to -5.6) |
+| Sparse | 128 | 100 | 12.010 (11.110–17.660) | 11.305 (10.410–13.210) | -5.9% | -5.8% (-8.6 to -4.8) |
+
+</details>
+
+Executable SHA-256 values (both chunk-sync series use these exact files):
+
+- Main: `c94375f5bbb8a06aaf83d1332ae56a9f756b9b54d88a66e4b400cc93576d6c93`
+- Branch: `9fe3977bb37b4f00f2a8db5d25dd5fd2b436329ee4db2bddb0e01846f8d8419c`
+
+### Unchanged core greedy-mesher control
+
+The existing `quantum-mesh` Divan suite was built independently on main and the
+branch with the same settings. Its two executables are **byte-identical**, SHA-256
+`53963574ae651c4b46ab9cc036466d58d377f67b1df0dbe1a6b22b5fb67ec85e`.
+Ten alternating paired runs per revision use the fixture's existing 20 samples;
+load was 1.36–2.26 and no pairs overlapped the monitored external processes.
+The variation below is a same-binary noise control, not a code regression or a
+claimed speedup in `quantum-mesh`, which this PR does not change.
+
+| Core greedy fixture | Main ms (range) | Branch ms (range) | Change |
+| --- | ---: | ---: | ---: |
+| Chunk Checkerboard | 0.740 (0.705–0.834) | 0.778 (0.707–0.912) | +5.1% |
+| Chunk HollowShell | 0.416 (0.401–0.470) | 0.437 (0.403–0.505) | +5.1% |
+| Chunk Solid | 1.232 (1.167–1.398) | 1.249 (1.185–1.647) | +1.3% |
+| Chunk Sparse | 0.150 (0.137–0.171) | 0.146 (0.139–0.240) | -2.9% |
+| Terrain 2 | 7.664 (7.166–8.091) | 7.899 (7.255–8.895) | +3.1% |
+| Terrain 4 | 38.505 (36.540–40.400) | 38.325 (36.470–40.300) | -0.5% |
+| Terrain 8 | 190.450 (180.300–198.500) | 190.350 (184.900–207.300) | -0.1% |
+
+Per-run medians for both final chunk-sync series and this control are attached in
+[PR #200](https://github.com/0x63616c/quantum/pull/200)'s Testing section. The
+commands and fixture setup below also apply to this final comparison.
+
+## Historical measurements before the fix
 
 ## Revisions and method
 
