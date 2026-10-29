@@ -71,7 +71,7 @@ impl Editor {
             message: Uuid::new_v4(),
             text,
         })?
-        .ok_or_else(|| EditorError::Gesture("Comments plugin is unavailable".into()))?;
+        .ok_or(EditorError::CommentsUnavailable)?;
         Ok(id)
     }
     /// Append an attributed message through shared history.

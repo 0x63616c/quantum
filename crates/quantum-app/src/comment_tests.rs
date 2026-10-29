@@ -231,10 +231,10 @@ fn disabled_or_absent_comments_hide_contributions_but_preserve_file_and_undo() {
         .is_none()
     );
     assert!(!e.resolve_comment(id, true).unwrap());
-    assert!(
-        e.comment(Anchor::Voxel { at: [1; 3] }, "Unavailable".into())
-            .is_err()
-    );
+    assert!(matches!(
+        e.comment(Anchor::Voxel { at: [1; 3] }, "Unavailable".into()),
+        Err(EditorError::CommentsUnavailable)
+    ));
     assert_eq!(e.project().to_bytes().unwrap(), bytes);
     assert_eq!(e.engine.history().count(), history);
     let dir = tempfile::tempdir().unwrap();

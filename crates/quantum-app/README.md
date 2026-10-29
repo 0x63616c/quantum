@@ -39,6 +39,13 @@ cargo test -p quantum-app --no-default-features
   navigation history and window lifecycle respectively. History tests live beside
   its private storage; page and search tests remain in `settings/tests.rs`.
 
+Editor operations return `EditorResult<T>` with typed `EditorError` variants from
+`src/editor/error.rs` for editor preconditions and underlying session, plugin,
+I/O, format and encoding failures. Callers can match variants without parsing
+user-facing messages; `Display` preserves the existing shell messages. Core
+errors from tool and palette operations remain `EditorError::Core`; open failures
+retain the requested path and a typed cause in `EditorError::Open`.
+
 ## UI capture states
 
 The development-only `--show <state>` flag opens a surface at launch on the bundled
