@@ -201,32 +201,32 @@ fn successive_random_voxel_and_box_edits_match_reference() {
 
 #[test]
 fn padded_composite_matches_sampling_across_all_neighbor_chunks() {
-    let mut snapshot = scene();
-    let mut seed = 31;
-    for i in 0..3 {
-        let mut layer = Layer::new(Uuid::from_u128(i + 10), "Composite");
-        layer.visible = i != 1;
-        layer.voxels = volume(
-            Region::new([-19; 3], [19; 3])
-                .unwrap()
-                .cells()
-                .filter_map(|p| {
+    // Cover both dense storage and sparse storage in the center and halo.
+    for divisor in [3, 31] {
+        let mut snapshot = scene();
+        let mut seed = 31;
+        for i in 0..3 {
+            let mut layer = Layer::new(Uuid::from_u128(i + 10), "Composite");
+            layer.visible = i != 1;
+            layer.voxels = volume(Region::new([-19; 3], [19; 3]).unwrap().cells().filter_map(
+                |p| {
                     random(&mut seed)
-                        .is_multiple_of(3)
+                        .is_multiple_of(divisor)
                         .then_some((p, [1, 7, 256][i as usize]))
-                }),
-        );
-        snapshot.layers.push(layer);
-    }
-    for at in Region::new([-1; 3], [1; 3]).unwrap().cells() {
-        let block = LocalCells::new(at, &snapshot);
-        let region = Region::new(block.min, block.min.map(|v| v + PADDED_SIZE as i32)).unwrap();
-        for p in region.cells() {
-            assert_eq!(
-                block.get(p),
-                snapshot.sample(p).map_or(0, |s| s.0),
-                "{at:?}: {p:?}"
-            );
+                },
+            ));
+            snapshot.layers.push(layer);
+        }
+        for at in Region::new([-1; 3], [1; 3]).unwrap().cells() {
+            let block = LocalCells::new(at, &snapshot);
+            let region = Region::new(block.min, block.min.map(|v| v + PADDED_SIZE as i32)).unwrap();
+            for p in region.cells() {
+                assert_eq!(
+                    block.get(p),
+                    snapshot.sample(p).map_or(0, |s| s.0),
+                    "{at:?}: {p:?}"
+                );
+            }
         }
     }
 }

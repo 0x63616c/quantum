@@ -36,7 +36,9 @@ with at most eight workers. Batches below four chunks stay serial. A machine
 with only one available CPU, or a failed pool allocation, also uses the serial
 path. Results retain dirty-set order; cache updates and quad-budget checks run
 serially, preserving failure and recovery behavior. Geometry and AO arithmetic
-are unchanged.
+are unchanged. Composite preparation visits occupied sparse entries, clipped to
+the same two-cell halo, while dense chunks retain indexed reads. Face planes
+without exposed cells skip rectangle traversal.
 
 Benchmark the production chunk synchronization path (CPU only, including AO):
 

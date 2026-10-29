@@ -146,6 +146,8 @@ struct LocalCells {
     slots: [u16; PADDED_SIZE * PADDED_SIZE * PADDED_SIZE],
 }
 impl LocalCells {
+    // Share this hot initialization loop between serial and Rayon callers.
+    #[inline(never)]
     fn new(at: Pos, snapshot: &Snapshot) -> Self {
         let mut cells = Self {
             min: at.map(|a| a * 16 - HALO),
@@ -161,6 +163,20 @@ impl LocalCells {
                         let Some(chunk) = layer.voxels.chunk(neighbor) else {
                             continue;
                         };
+                        // Sparse get() binary-searches even air. Copy occupied
+                        // entries instead, clipped to the same two-cell halo.
+                        // Air must not overwrite an occupied lower layer.
+                        if !chunk.is_dense() {
+                            for (p, slot) in layer.voxels.chunk_entries(neighbor) {
+                                let p: [usize; 3] =
+                                    std::array::from_fn(|a| (p[a] - cells.min[a]) as usize);
+                                if p.iter().all(|&v| v < PADDED_SIZE) {
+                                    cells.slots[(p[2] * PADDED_SIZE + p[1]) * PADDED_SIZE + p[0]] =
+                                        slot;
+                                }
+                            }
+                            continue;
+                        }
                         // Copy only the intersection with the padded block.
                         let lo = offset.map(|d| (-HALO - d * 16).max(0));
                         let hi = offset.map(|d| (16 + HALO - d * 16).min(16));
@@ -357,6 +373,8 @@ fn emit_quad(mesh: &mut ChunkMesh, quad: Quad, face: Face, palette: &[Option<[f3
     feature = "profiling",
     tracing::instrument(name = "mesh.chunk", skip_all)
 )]
+// Avoid duplicating the hot mesher inside Rayon's iterator plumbing.
+#[inline(never)]
 fn mesh_chunk(
     at: Pos,
     cells: &LocalCells,
@@ -370,6 +388,9 @@ fn mesh_chunk(
             for positive in [false, true] {
                 let (mut mask, exposed_faces) = face_mask(at, cells, axis, slice, positive);
                 mesh.exposed_faces += exposed_faces;
+                if exposed_faces == 0 {
+                    continue;
+                }
                 Mesh::greedy_rectangles(
                     &mut mask,
                     [16, 16],
