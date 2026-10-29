@@ -82,7 +82,7 @@ pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
     let mut bytes = Vec::new();
     file.take(4 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
     if bytes.len() > 4 * 1024 * 1024 {
-        return Err(EditorError::Gesture("Settings file too large".into()));
+        return Err(EditorError::SettingsTooLarge);
     }
     Ok(Some(bytes))
 }

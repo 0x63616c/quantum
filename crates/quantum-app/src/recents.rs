@@ -81,9 +81,7 @@ impl Recents {
         let path = path.canonicalize()?;
         let metadata = path.metadata()?;
         if !metadata.is_file() {
-            return Err(crate::editor::EditorError::Gesture(
-                "Project is not a file".into(),
-            ));
+            return Err(crate::editor::EditorError::ProjectNotFile);
         }
         let mut projects = self.load()?;
         projects.retain(|project| project.path != path);

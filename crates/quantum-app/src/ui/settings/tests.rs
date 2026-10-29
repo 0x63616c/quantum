@@ -120,9 +120,7 @@ fn edits_during_io_coalesce_and_drain_even_after_an_older_write_fails() {
                 grid: false,
                 ..Default::default()
             });
-            return Err(quantum_app::editor::EditorError::Gesture(
-                "disk failure".into(),
-            ));
+            return Err(std::io::Error::other("disk failure").into());
         }
         Ok(())
     });
