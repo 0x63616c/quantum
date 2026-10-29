@@ -184,7 +184,7 @@ impl EditorView {
             || self.timeline.name.read(cx).focused(window)
         {
             "TextField"
-        } else if self.palette_focus.is_focused(window) {
+        } else if self.palette_focus.contains_focused(window, cx) {
             "Palette"
         } else if self.commands.is_open() {
             "CommandPalette"

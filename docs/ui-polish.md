@@ -21,6 +21,11 @@ frames only while transitioning and visible. Disabled and loading controls insta
 no wash. Native Reduce Motion is synchronized at startup and window activation
 to GPUI's shared preference; motion becomes immediate. Headless snapshots freeze it.
 
+Sidebar Tab stops expose individual colors; Space/Enter selects the focused color.
+Arrow keys return to the palette's existing active-brush navigation group. Both
+the group and its focused descendants use the palette key context, so navigation
+and tool bindings cannot leak into the viewport.
+
 ## Review procedure
 
 The Impeccable native critique inspected all 90 baseline screens. The baseline

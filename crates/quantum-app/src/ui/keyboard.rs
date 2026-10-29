@@ -73,7 +73,7 @@ impl EditorView {
         if self.palettes.open && !self.save_flow.dialog_open() {
             return true;
         }
-        if self.palette_focus.is_focused(window) {
+        if self.palette_focus.contains_focused(window, cx) {
             let delta = match EditorKey::from_key(&e.keystroke.key) {
                 EditorKey::Left => Some(-1),
                 EditorKey::Right => Some(1),
@@ -82,6 +82,9 @@ impl EditorView {
                 _ => None,
             };
             if let Some(delta) = delta {
+                // Arrow navigation resumes the active-brush group, including
+                // when Tab placed focus on an individual swatch button.
+                window.focus(&self.palette_focus, cx);
                 if let Some(next) = self
                     .palette_request(PaletteAction::StepSwatch(delta), cx)
                     .and_then(|out| out.selected)
