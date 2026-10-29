@@ -4636,7 +4636,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-app"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -4683,7 +4683,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-bench"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "png 0.18.1",
  "quantum-core",
@@ -4695,7 +4695,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-brand"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "serde",
  "toml 1.1.8+spec-1.1.0",
@@ -4703,7 +4703,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "proptest",
  "serde",
@@ -4716,7 +4716,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-crash"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "regex",
  "serde",
@@ -4728,7 +4728,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-format"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "insta",
  "proptest",
@@ -4742,7 +4742,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-mcp"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base64 0.22.1",
  "insta",
@@ -4767,7 +4767,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-mesh"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "divan",
  "glam",
@@ -4779,7 +4779,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-agent"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4787,7 +4787,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-api"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "png 0.18.1",
  "quantum-core",
@@ -4801,7 +4801,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-comments"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4809,7 +4809,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-example"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4817,7 +4817,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-exporters"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "gltf",
  "insta",
@@ -4833,7 +4833,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-gizmo-grid"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4841,7 +4841,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-host"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-core",
  "quantum-format",
@@ -4852,7 +4852,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-mirror"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4860,7 +4860,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-palette"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4868,7 +4868,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-shadows-lighting"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-exporters",
@@ -4878,7 +4878,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugin-tools"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-api",
  "quantum-plugin-host",
@@ -4886,7 +4886,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-plugins-builtin"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quantum-plugin-agent",
  "quantum-plugin-api",
@@ -4902,7 +4902,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-render"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bytemuck",
  "futures-channel",
@@ -4929,11 +4929,11 @@ dependencies = [
 
 [[package]]
 name = "quantum-render-plan"
-version = "0.4.0"
+version = "0.4.1"
 
 [[package]]
 name = "quantum-site"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base64 0.22.1",
  "htmd",
@@ -4951,7 +4951,7 @@ dependencies = [
 
 [[package]]
 name = "quantum-ui"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "gpui-platform-gpui-unofficial",
  "gpui-unofficial",
@@ -7818,7 +7818,7 @@ checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
 
 [[package]]
 name = "xtask"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base64 0.22.1",
  "clap",
