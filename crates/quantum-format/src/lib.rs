@@ -3,6 +3,8 @@
 //! Runtime revisions never enter this format. Optional build recipes replay real
 //! core commands to reconstruct a timeline. Unknown optional metadata
 //! is inert, bounded, preserved, and never interpreted as a URL or executable.
+#![doc = include_str!("../README.md")]
+
 mod build_history;
 pub mod session;
 pub mod storage;

@@ -14,7 +14,7 @@ license = "MIT"
 tracing = "0.1.44"
 quantum-brand = { path = "crates/quantum-brand" }
 slotmap = "1.1.1"
-quantum-core = { path = "crates/quantum-core" }
+quantum-core = { path = "crates/quantum-core", version = "0.4.1" }
 quantum-format = { path = "crates/quantum-format" }
 quantum-mesh = { path = "crates/quantum-mesh" }
 quantum-plugin-api = { path = "crates/quantum-plugin-api" }

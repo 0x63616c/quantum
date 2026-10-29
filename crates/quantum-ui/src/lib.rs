@@ -1,6 +1,8 @@
 //! Shared GPUI controls and presentation primitives for the Quantum shell.
 //! Components own field editing and appearance; the app owns domain state.
 //! See `crates/quantum-ui/AGENTS.md` for tokens, components and migration/verification rules.
+#![doc = include_str!("../README.md")]
+
 pub mod ascii_reveal;
 mod color;
 pub use ascii_reveal::{AsciiImageReveal, AsciiReveal, AsciiSkeleton};
