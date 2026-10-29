@@ -4995,6 +4995,7 @@ name = "quantum-render"
 version = "0.4.1"
 dependencies = [
  "bytemuck",
+ "divan",
  "futures-channel",
  "futures-timer",
  "glam",
@@ -5010,6 +5011,7 @@ dependencies = [
  "quantum-format",
  "quantum-mesh",
  "quantum-render-plan",
+ "rayon",
  "serde",
  "serde_json",
  "tracing",
