@@ -1,0 +1,26 @@
+#!/bin/sh
+# Quantum pre-commit hook (#249): fast checks only. Skip once with `git commit --no-verify`.
+# Enable: git config core.hooksPath .githooks
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+# 1. rustfmt, only when Rust sources are staged (whole-workspace check is ~1s).
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.rs$'; then
+  if ! cargo fmt --all -- --check >/dev/null 2>&1; then
+    echo "pre-commit: cargo fmt found unformatted code. Run 'cargo fmt --all', re-stage, and commit again." >&2
+    cargo fmt --all -- --check 2>&1 | head -40 >&2
+    exit 1
+  fi
+fi
+
+# 2. gitleaks on the staged diff (CI also scans full history in security.yml).
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks git --pre-commit --staged --redact -v --no-banner --log-level warn .; then
+    echo "pre-commit: gitleaks flagged a possible secret in staged changes (output redacted). Remove it, or see CONTRIBUTING.md 'Secret scanning'." >&2
+    exit 1
+  fi
+else
+  echo "pre-commit: gitleaks not installed, skipping secret scan (brew install gitleaks)." >&2
+fi
