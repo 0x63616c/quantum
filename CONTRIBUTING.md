@@ -104,7 +104,8 @@ opening site, GPUI or future SwiftUI UI PRs. Use the locally served site per
 [DESIGN.md](DESIGN.md) and [ART-CHECKLIST.md](design/ART-CHECKLIST.md) override
 skill defaults. Follow [AGENTS.md](AGENTS.md#design-review-impeccable) for the
 project-only impeccable **4.8.0** install/update command, telemetry opt-outs and
-fallback cache. Keep upstream files verbatim; hooks need Calum's approval.
+fallback cache. Keep upstream files verbatim. The repo git hooks in `.githooks/` are approved
+(see [Git hooks](#git-hooks)); any new hook still needs Calum's approval.
 
 ## 5. One focus per PR
 
@@ -148,6 +149,30 @@ fork hardware jobs still need trusted verification before merge. Full workspace
 checks and release-profile DMGs run nightly on the Mac mini, with failure issues.
 Every PR workflow cancels superseded runs; nightly and release coverage is preserved.
 See [CI runners](docs/ci-runners.md) for check placement, caches and timing evidence.
+
+## Git hooks
+
+Fast local hooks live in `.githooks/` (plain POSIX shell, no extra dependency) and
+catch the cheap CI failures before a round-trip. Enable them once per clone or
+worktree:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+- **pre-commit** (about 0.5-2 s): `cargo fmt --all -- --check` when Rust files are
+  staged, then `gitleaks git --pre-commit --staged --redact` on the staged diff.
+  Without gitleaks installed (`brew install gitleaks`) the secret scan is skipped
+  with a notice; CI still scans full history.
+- **pre-push**: `cargo clippy --all-targets --locked -- -D warnings` on only the
+  workspace crates the push changes (`-p <crate>` each, plus
+  `--features quantum-app/test-support` when `quantum-app` is included). Changes to
+  the root `Cargo.toml`, `Cargo.lock`, `clippy.toml`, `rust-toolchain.toml`,
+  `.cargo/` or `vendor/` lint the whole workspace. Pushes with no Rust changes skip
+  clippy. Tests, `cargo xtask lint` and the full CI matrix stay in CI.
+
+Skip a hook for one command with `git commit --no-verify` or `git push --no-verify`.
+Disable them with `git config --unset core.hooksPath`.
 
 ## Snapshot tests
 

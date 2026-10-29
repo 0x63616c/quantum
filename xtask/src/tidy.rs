@@ -18,6 +18,7 @@ const ROOT_ENTRIES: &[&str] = &[
     ".impeccable",
     ".config",
     ".gitattributes",
+    ".githooks",
     ".github",
     ".gitignore",
     "_typos.toml",
