@@ -145,8 +145,10 @@ impl EditorView {
         {
             return true;
         }
+        // Focused child controls own activation, including empty-search recovery.
+        // Only the palette's navigation root should dispatch its selected command.
         if !self.focus.is_focused(window)
-            && !self.commands.is_open()
+            && (!self.commands.is_open() || !self.modal_focus.is_focused(window))
             && matches!(key, EditorKey::Enter | EditorKey::Space)
         {
             return true;

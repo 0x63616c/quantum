@@ -51,6 +51,33 @@ impl FieldFrame {
     }
 }
 impl Swatch {
+    /// Keyboard-reachable swatch. Focus adds a contrasting inner stroke so it is
+    /// distinguishable even when this swatch already has the selection ring.
+    pub fn interactive(
+        self,
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+    ) -> Stateful<Div> {
+        let theme = self.theme;
+        let ink = swatch_ink(theme, self.color);
+        self.build()
+            .id(id)
+            .tab_index(0)
+            .role(Role::Button)
+            .aria_label(label)
+            .cursor_pointer()
+            .focus_visible(move |d| {
+                let mut ring = presentation::ring(theme, C::Surface);
+                ring.push(BoxShadow {
+                    inset: true,
+                    color: ink,
+                    offset: Point::default(),
+                    blur_radius: px(0.),
+                    spread_radius: px(crate::tokens::state::FOCUS_WIDTH),
+                });
+                d.shadow(ring)
+            })
+    }
     /// Selected-ring-only swatch. Document colors remain data, never theme tokens.
     pub fn design(theme: Theme, color: impl Into<Hsla>) -> Self {
         Self {
@@ -78,6 +105,36 @@ impl Swatch {
             })
             .when(self.locked, |d| {
                 d.child(presentation::glyph("lock").text_color(swatch_ink(self.theme, self.color)))
+            })
+    }
+}
+
+/// Keyboard navigation frame for a list or palette grid. The inset ring stays
+/// visible inside scroll clips and never changes the content's geometry.
+pub struct FocusGroup;
+impl FocusGroup {
+    /// The host owns arrow navigation, selection and the persistent focus handle.
+    pub fn frame(
+        id: impl Into<ElementId>,
+        label: impl Into<SharedString>,
+        theme: Theme,
+        focus: &FocusHandle,
+    ) -> Stateful<Div> {
+        div()
+            .id(id)
+            .tab_index(0)
+            .track_focus(focus)
+            .role(Role::ListBox)
+            .aria_label(label)
+            .rounded(px(Radius::Sm.px()))
+            .focus_visible(move |d| {
+                d.shadow(vec![BoxShadow {
+                    inset: true,
+                    color: theme.color(C::AccentText),
+                    offset: Point::default(),
+                    blur_radius: px(0.),
+                    spread_radius: px(crate::tokens::state::FOCUS_WIDTH),
+                }])
             })
     }
 }

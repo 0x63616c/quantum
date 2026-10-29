@@ -118,6 +118,11 @@ impl FeedbackView {
             .detach();
         cx.observe_window_appearance(window, |_, _, cx| cx.notify())
             .detach();
+        cx.observe_window_activation(window, |_, _, cx| {
+            super::sync_reduced_motion(cx);
+            cx.notify();
+        })
+        .detach();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut view = Self {

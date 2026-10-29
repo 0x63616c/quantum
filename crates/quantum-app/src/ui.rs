@@ -5,6 +5,14 @@
 //! `sidebar` and `panel_*` build the editor surfaces; `dialogs` selects overlays.
 mod about;
 
+/// Refresh the shared control preference alongside the existing camera/reveal preference.
+fn sync_reduced_motion(cx: &mut App) -> bool {
+    let reduced =
+        cfg!(feature = "ui-snapshots") || quantum_app::reduce_motion::prefers_reduced_motion();
+    cx.set_reduce_motion(reduced);
+    reduced
+}
+
 /// Version shown in the UI. Pinned in `ui-snapshots` builds so release bumps
 /// do not invalidate the committed goldens.
 pub(crate) const APP_VERSION: &str = if cfg!(feature = "ui-snapshots") {
@@ -26,6 +34,7 @@ mod capture;
 mod chrome;
 mod command_palette;
 mod comments;
+mod control_states;
 mod debug_overlay;
 mod dialogs;
 mod dispatch;

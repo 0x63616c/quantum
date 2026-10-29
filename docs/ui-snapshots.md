@@ -20,7 +20,7 @@ cargo xtask ui-snapshots --rebaseline --screen 'panels-palette-*'
 
 Selectors use the PR screenshots convention: exact names or one trailing `*`,
 repeatable, deduplicated in registry order. Unknown or unmatched selectors fail.
-No selector means all 26 key screens. Only explicit `--rebaseline` writes
+No selector means all 32 key screens. Only explicit `--rebaseline` writes
 `crates/quantum-app/tests/ui-goldens/*.png`, after all selected captures have
 succeeded and their set and dimensions have been validated. Review every changed
 PNG in both themes before committing it. Ordinary runs never write references.
@@ -39,7 +39,7 @@ image; a failed renderer cannot supply pixels. CI uploads available evidence.
 The harness shares the [screen registry](../xtask/src/screenshots.rs), bundled
 Autumn Workshop and [recent-project fixtures](../xtask/src/screenshot_fixtures.rs).
 It covers empty Welcome and Welcome with five recents, the editor, focused palette (including all four layers), empty resolved comments, About, and all seven
-Settings pages. Every view has light and dark references. `welcome` is the
+Settings pages, empty command search, scene loading and the control state matrix. Every view has light and dark references. `welcome` is the
 existing registry name for dark empty Welcome; `welcome-light` is its counterpart.
 
 Logical sizes are 760×620 for Welcome, 1440×900 for editor/panels/About, and

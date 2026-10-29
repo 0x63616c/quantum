@@ -128,7 +128,7 @@ impl ListRow {
         } else {
             transparent_black()
         };
-        let bg = |opacity| base.blend(t.color(C::OnAccent).opacity(opacity));
+        let bg = |opacity| presentation::over(base, crate::interaction::wash(t), opacity);
         let mut d = TextSize::Body
             .apply(row())
             .id(self.id)
@@ -155,13 +155,19 @@ impl ListRow {
             .when(!disabled, |d| {
                 d.tab_index(0)
                     .cursor_pointer()
-                    .hover(move |d| d.bg(base.blend(t.color(C::OnAccent).opacity(state::HOVER))))
-                    .active(move |d| d.bg(base.blend(t.color(C::OnAccent).opacity(state::PRESSED))))
                     .focus_visible(move |d| d.shadow(presentation::ring(t, C::Surface)))
             })
             .when(self.state == ControlState::Focused, |d| {
                 d.shadow(presentation::ring(t, C::Surface))
             })
+            .when(
+                !disabled && matches!(self.state, ControlState::Rest | ControlState::Focused),
+                |d| {
+                    d.child(crate::interaction::InteractionFill::new(
+                        crate::interaction::wash(t),
+                    ))
+                },
+            )
             .when_some(leading, |d, leading| {
                 d.child(
                     div()
@@ -176,19 +182,7 @@ impl ListRow {
                         .child(leading),
                 )
             })
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(Space::S0.px()))
-                    .child(presentation::ellipsis(self.title))
-                    .when_some(self.meta, |d, meta| {
-                        d.child(
-                            TextSize::Small
-                                .apply(presentation::ellipsis(meta))
-                                .text_color(t.color(C::TextSecondary)),
-                        )
-                    }),
-            )
+            .child(row_text(self.title, self.meta, t))
             .when_some(self.trailing, |d, trailing| {
                 d.child(div().flex_shrink_0().child(trailing))
             })
@@ -212,6 +206,19 @@ impl ListRow {
         }
         d
     }
+}
+fn row_text(title: SharedString, meta: Option<SharedString>, theme: Theme) -> Div {
+    div()
+        .flex_1()
+        .min_w(px(Space::S0.px()))
+        .child(presentation::ellipsis(title))
+        .when_some(meta, |d, meta| {
+            d.child(
+                TextSize::Small
+                    .apply(presentation::ellipsis(meta))
+                    .text_color(theme.color(C::TextSecondary)),
+            )
+        })
 }
 impl RenderOnce for ListRow {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {

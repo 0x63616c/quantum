@@ -10,6 +10,8 @@ mod components;
 pub use button::*;
 mod feedback;
 mod field_style;
+pub use field_style::FocusGroup;
+mod interaction;
 mod overlays;
 mod presentation;
 mod rows;
