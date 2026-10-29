@@ -121,3 +121,31 @@ fn stable_tags_automatically_package_and_publish_all_update_assets() {
     }
     assert!(!scripts.contains("--clobber"));
 }
+
+#[test]
+fn optional_report_endpoint_reaches_only_the_release_app_build() {
+    let workflow = workflow();
+    let job = &workflow["jobs"]["dmg"];
+    assert_eq!(
+        job["env"]["APP_REPORT_ENDPOINT"],
+        "${{ vars.QUANTUM_REPORT_ENDPOINT }}"
+    );
+    assert!(job["env"].get("QUANTUM_REPORT_ENDPOINT").is_none());
+    let steps = job["steps"].as_array().unwrap();
+    let build = steps
+        .iter()
+        .find(|step| step["name"] == "Build app without signing credentials")
+        .unwrap();
+    assert!(build.get("env").is_none());
+    assert!(build["run"].as_str().unwrap().contains(
+        "QUANTUM_REPORT_ENDPOINT=\"${APP_REPORT_ENDPOINT:-}\" cargo build --release --locked -p quantum-app --bin quantum"
+    ));
+    for step in steps.iter().filter(|step| step["name"] != build["name"]) {
+        assert!(
+            !step["run"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("QUANTUM_REPORT_ENDPOINT")
+        );
+    }
+}

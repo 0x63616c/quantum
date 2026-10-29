@@ -143,6 +143,8 @@ pub(super) const SCREENS: &[Screen] = screens![
     "^Quantum Feedback$", (880, 760) => [
         ("dialogs-feedback", "Feedback preview and consent"),
         ("dialogs-crash-report", "Next-launch crash report preview"),
+        ("dialogs-feedback-relay", "Configured relay feedback confirmation"),
+        ("dialogs-crash-relay", "Configured relay crash confirmation"),
     ],
     "^Quantum Settings$", (880, 640) => [
         ("settings-general", "Settings: General"),
@@ -635,8 +637,8 @@ impl Urls {
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
     let url = urls.image(side, screen.name);
     format!(
-        r#"<img src="{url}" width="{width}" alt="{} — {}">"#,
-        screen.name, side.label
+        r#"<img src="{url}" width="{width}" alt="{} screenshot">"#,
+        side.label
     )
 }
 

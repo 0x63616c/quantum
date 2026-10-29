@@ -14,8 +14,8 @@ pub struct RelayPayload {
     pub body: String,
     /// Suggested GitHub labels; the relay must enforce its own allowlist.
     pub labels: Vec<String>,
-    /// Private opt-in contact. The relay must store/forward this privately and
-    /// never publish it in the GitHub issue. Omitted without contact consent.
+    /// Private opt-in contact. The relay must handle it privately or discard it
+    /// under its documented policy, never publish it. Omitted without consent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contact_email: Option<String>,
     /// Feedback classification.
