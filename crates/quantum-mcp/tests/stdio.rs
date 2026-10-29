@@ -403,3 +403,18 @@ fn malformed_protocol_parameters_are_rejected_in_both_profiles() {
         c.exit();
     }
 }
+
+#[test]
+fn cli_failure_is_a_diagnostic_on_stderr_only() {
+    let output = Command::new(env!("CARGO_BIN_EXE_quantum-mcp"))
+        .arg("--root")
+        .env("NO_COLOR", "1")
+        .env("TERM", "dumb")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty(), "stdout is reserved for MCP");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("--root needs a directory"), "{stderr}");
+    assert!(!stderr.contains('\u{1b}'));
+}

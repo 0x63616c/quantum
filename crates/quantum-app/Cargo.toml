@@ -28,6 +28,7 @@ name = "ascii_loading"
 required-features = ["native"]
 
 [dependencies]
+miette.workspace = true
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
 tracing-tracy = { version = "0.12", default-features = false, features = ["enable", "ondemand", "only-localhost"], optional = true }
 tracing = { workspace = true, optional = true }

@@ -8,7 +8,7 @@ description = "Agent-first Quantum MCP server over stdio"
 
 [features]
 default = ["standalone"]
-standalone = ["dep:quantum-plugins-builtin"]
+standalone = ["dep:quantum-plugins-builtin", "dep:miette"]
 
 [[bin]]
 name = "quantum-mcp"
@@ -16,6 +16,7 @@ path = "src/main.rs"
 required-features = ["standalone"]
 
 [dependencies]
+miette = { workspace = true, optional = true }
 quantum-core.workspace = true
 quantum-plugin-api.workspace = true
 quantum-plugin-host.workspace = true

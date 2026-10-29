@@ -172,6 +172,7 @@ impl EditorView {
                     _ => 2,
                 };
                 if let Err(error) = self.editor.set_mirror_axis(a, !self.editor.mirror_axes()[a]) {
+                    eprintln!("{:?}", quantum_app::reports::report(&error));
                     self.status = error.to_string().into();
                     self.error = true;
                 }
