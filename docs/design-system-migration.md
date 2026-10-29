@@ -81,5 +81,6 @@ the Metal surface handoff. The owner should inspect Welcome, editor, every Setti
 page and the save/close flow in both themes on a physical Mac; check field-local
 undo, an IME composition and native menu focus restoration. CI macOS compile/tests
 are reported separately in the PR. No new signing credentials or product publication
-are required. Project-board movement remains blocked by the missing `project` token
-scope tracked in #148; the owner can move #134 to In review after granting that scope.
+are required. The original review was blocked on GitHub Project permissions (#148).
+Work is now tracked in [Tickets](https://tickets.worldwidewebb.co); its webhook
+moves tickets to In review when a PR opens and Done on merge.

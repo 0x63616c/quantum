@@ -20,7 +20,7 @@ against skill defaults.
 
 ## 1. Write the PR body from the template
 
-Keep the template's sections and order: `Closes #N`, **Summary** (plain English, 1–3
+Keep the template's sections and order: `Closes QUA-N`, **Summary** (plain English, 1–3
 sentences), **Changes** (bullets), **Testing**, **Checklist**. Do not add a Screenshots
 section by hand. The tool inserts it, so non-UI PRs never have an empty one.
 

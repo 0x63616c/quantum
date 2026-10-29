@@ -61,5 +61,6 @@ on a physical Mac. Also inspect native titlebars, save panels and the Metal surf
 handoff. CI macOS compilation/tests do not replace these visual/input checks.
 No signing, publishing or new credentials are required for the UI change.
 
-Project-board updates require the token's missing `project` scope, tracked in
-#148. The owner can move #135 to In review; the PR remains unmerged for review.
+The original review was blocked on GitHub Project permissions (#148). Work is
+now tracked in [Tickets](https://tickets.worldwidewebb.co); its webhook moves
+tickets to In review when a PR opens and Done on merge.

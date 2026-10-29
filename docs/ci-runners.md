@@ -113,7 +113,7 @@ These are historical measurements, not hosted-runner results.
 
 `macos` remains the stable check name. CI macOS and Rendering checks always start
 on PRs; their `changes` jobs use paginated, rename-aware file lists to skip work
-at job level. Docs-only PRs (docs/, design/, .agents/, PR/issue templates and
+at job level. Docs-only PRs (docs/, design/, .agents/, the PR template and
 top-level Markdown) skip Mac builds; every other path, including site content and
 specs that crate tests read, still runs the hosted `macos` job. An API failure
 fails change detection instead of declaring the PR irrelevant. Site and portable
@@ -130,8 +130,10 @@ can supersede earlier main pushes because each latest push still runs all of its
 checks. Nightly and manual macOS/rendering runs have unique concurrency groups,
 so PRs and other runs cannot cancel or replace their pending work. Release macOS
 and its serialization are unchanged. The 10:00 UTC CI macOS nightly and 10:30 UTC
-rendering nightly open or update `type:ci`, `area:ci`, `priority:p0` issues on
-failures, including failed change detection or skipped hardware jobs.
+rendering nightly still use legacy GitHub automation to open or update `type:ci`, `area:ci`, `priority:p0` issues on
+failures, including failed change detection or skipped hardware jobs. GitHub issues
+are retired as a work tracker: record actionable failures in
+[Tickets](https://tickets.worldwidewebb.co), the sole source of truth.
 
 The target is a median PR feedback time under 10 minutes. Removing routine Rust
 builds from the two shared Mac slots should reduce both queues, but this requires
