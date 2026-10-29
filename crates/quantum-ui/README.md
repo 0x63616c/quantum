@@ -6,6 +6,31 @@ GPUI for UI/runtime services (default features disabled) and the already locked
 dependencies. The application selects native platform support. Plugins
 must not depend on this crate.
 
+## Getting started
+
+MIT licensed; Rust 2024 with MSRV 1.99. Use the exact GPUI version selected in
+`Cargo.toml`; GPUI types cross the public API. The host supplies platform support,
+fonts, icon assets, window creation and event routing. See [DESIGN.md](DESIGN.md)
+for the final typed component inventory and controlled overlay lifecycle.
+
+```rust
+use quantum_ui::{Button, Theme};
+
+let action = Button::new("apply", "Apply", Theme::Dark).build();
+```
+
+Run `cargo run -p quantum-ui --locked --example editing` for a windowless editor
+example, and `cargo test -p quantum-ui --locked` for controls, editing, numeric,
+Unicode/UTF-16, overlay placement and animation contracts. The repository-only
+`cargo run -p quantum-ui --locked --example ui_kit` opens the interactive gallery
+using the app's licensed fonts and icons. The archive contains the independent
+editing example and inline tests; the gallery stays in the repository.
+
+Native IME, accessibility and AppKit/Metal behavior require macOS verification.
+The workspace's macOS GPUI patch is not applied automatically by downstream
+consumers; see the [crate release checklist](https://github.com/0x63616c/quantum/blob/main/docs/publishing-crates.md)
+for this limitation and the owner's publication steps. No publication is authorized.
+
 ## ASCII loading and reveals
 
 `AsciiSkeleton`, `AsciiReveal` and `AsciiImageReveal` port **ascii-reveal 0.3.0**

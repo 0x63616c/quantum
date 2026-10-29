@@ -4,6 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Reusable GPUI controls, design tokens and Unicode text editing for Quantum"
+repository = "https://github.com/0x63616c/quantum"
+keywords = ["gpui", "gui", "widgets", "text-editing"]
+categories = ["gui"]
+readme = "README.md"
+include = ["LICENSE", "src/**", "README.md", "DESIGN.md", "NOTICE", "examples/editing.rs"]
 
 [dependencies]
 gpui.workspace = true
