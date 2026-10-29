@@ -23,7 +23,9 @@ Feedback contains caller-supplied version/OS/architecture, a bug/feature kind an
 what happened. Either report may carry an optional contact email: setting that
 field is explicit consent to send it privately to maintainers through the relay.
 It is never included in the public issue title/body or browser fallback URL.
-The relay must store/forward `contact_email` privately and never publish it.
+The relay must never publish `contact_email`; it may discard it under its documented
+policy. The prepared Cloudflare relay discards contact immediately and the app
+offers no contact field. See [the deployment runbook](../../packaging/feedback-relay/README.md).
 Emails in all other fields remain redacted regardless of contact consent. Malformed contact
 text is redacted normally. A crash report's scene flag records consent only; this
 crate never reads, embeds or uploads scene contents, even when the flag is true.

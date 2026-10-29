@@ -140,6 +140,8 @@ pub(super) const SCREENS: &[Screen] = screens![
     "^Quantum Feedback$", (880, 760) => [
         ("dialogs-feedback", "Feedback preview and consent"),
         ("dialogs-crash-report", "Next-launch crash report preview"),
+        ("dialogs-feedback-relay", "Configured relay feedback confirmation"),
+        ("dialogs-crash-relay", "Configured relay crash confirmation"),
     ],
     "^Quantum Settings$", (880, 640) => [
         ("settings-general", "Settings: General"),

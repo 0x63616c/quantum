@@ -81,3 +81,49 @@ fn browser_url_failure_retains_local_report_and_complete_preview(cx: &mut TestAp
         .unwrap();
     assert!(path.exists());
 }
+
+#[gpui::test]
+fn configured_relay_requires_preview_and_failure_keeps_crash_file(cx: &mut TestAppContext) {
+    let dir = tempfile::tempdir().unwrap();
+    cx.update(|cx| {
+        settings::init_at(
+            None,
+            Ok(Default::default()),
+            dir.path().join("settings.json"),
+            cx,
+        )
+    });
+    let report = Report::Crash(quantum_crash::CrashReport {
+        environment: diagnostics::environment(),
+        panic_message: "Example".into(),
+        location: None,
+        backtrace: String::new(),
+        timestamp_utc: 0,
+        log_lines: vec![],
+        user_note: None,
+        contact_email: None,
+        scene_attachment: false,
+    });
+    let path =
+        quantum_crash::write(dir.path(), &report, &diagnostics::redactor().unwrap()).unwrap();
+    let pending = path.clone();
+    let handle =
+        cx.add_window(move |window, cx| FeedbackView::new(Some((pending, report)), window, cx));
+    handle
+        .update(cx, |view, _, cx| {
+            view.endpoint = Some("http://invalid.example/reports".into());
+            let preview = view.preview.clone();
+            view.submit(cx);
+            assert!(!view.sending);
+            assert_eq!(view.preview, preview);
+            assert!(view.error.as_ref().unwrap().contains("Nothing was sent"));
+            assert!(path.exists());
+            assert!(view.privacy().contains("http://invalid.example/reports"));
+            view.preview = None;
+            view.error = None;
+            view.submit(cx);
+            assert!(view.error.is_none());
+            assert!(!view.sending);
+        })
+        .unwrap();
+}

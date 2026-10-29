@@ -13,7 +13,7 @@ impl FeedbackView {
             .child(
                 div()
                     .text_color(t.color(ColorToken::TextSecondary))
-                    .child(PRIVACY),
+                    .child(self.privacy()),
             )
             .when(!self.is_crash(), |d| {
                 d.child(
@@ -95,10 +95,21 @@ impl FeedbackView {
                         .on_click(cx.listener(|this, _, window, cx| this.save(window, cx))),
                 )
                 .child(
-                    Button::design("report-continue", "Continue to GitHub…", t)
-                        .style(quantum_ui::ButtonStyle::Primary)
-                        .build()
-                        .on_click(cx.listener(|this, _, _, cx| this.continue_in_browser(cx))),
+                    Button::design(
+                        "report-continue",
+                        if self.sending {
+                            "Sending…"
+                        } else if self.endpoint.is_some() {
+                            "Send public report"
+                        } else {
+                            "Continue to GitHub…"
+                        },
+                        t,
+                    )
+                    .style(quantum_ui::ButtonStyle::Primary)
+                    .disabled(self.sending)
+                    .build()
+                    .on_click(cx.listener(|this, _, _, cx| this.continue_in_browser(cx))),
                 )
             })
     }

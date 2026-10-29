@@ -90,6 +90,8 @@ struct FeedbackView {
     preview: Option<String>,
     error: Option<String>,
     focus: FocusHandle,
+    endpoint: Option<String>,
+    sending: bool,
 }
 
 impl FeedbackView {
@@ -127,6 +129,8 @@ impl FeedbackView {
             preview: None,
             error: None,
             focus,
+            endpoint: diagnostics::endpoint(),
+            sending: false,
         };
         if view.is_crash() {
             view.prepare(cx);
@@ -169,6 +173,10 @@ impl FeedbackView {
     }
 
     fn continue_in_browser(&mut self, cx: &mut Context<Self>) {
+        if self.endpoint.is_some() {
+            self.submit(cx);
+            return;
+        }
         if self.preview.is_none() {
             return;
         }
@@ -245,9 +253,10 @@ impl FeedbackView {
 }
 
 mod menu;
+mod relay;
 mod view;
 
-pub(super) fn fixture(crash: bool, cx: &mut App) {
+pub(super) fn fixture(crash: bool, relay: bool, cx: &mut App) {
     cx.spawn(async move |cx| {
         cx.background_executor()
             .timer(std::time::Duration::from_millis(1))
@@ -279,6 +288,12 @@ pub(super) fn fixture(crash: bool, cx: &mut App) {
                     None
                 };
                 show(pending, cx)?;
+                if relay && let Some(handle) = cx.global::<ReportWindow>().0 {
+                    handle.update(cx, |view, _, _| {
+                        view.endpoint =
+                            Some("https://feedback.quantum.worldwidewebb.co/reports".into())
+                    })?;
+                }
                 if !crash && let Some(handle) = cx.global::<ReportWindow>().0 {
                     handle.update(cx, |view, _, cx| {
                         view.input.update(cx, |field, cx| {

@@ -270,7 +270,13 @@ fn screen_names_are_unique_and_state_screens_have_matching_themes() {
             screen.size,
             if state.starts_with("settings-") {
                 (880, 640)
-            } else if state == "dialogs-feedback" || state == "dialogs-crash-report" {
+            } else if matches!(
+                state,
+                "dialogs-feedback"
+                    | "dialogs-crash-report"
+                    | "dialogs-feedback-relay"
+                    | "dialogs-crash-relay"
+            ) {
                 (880, 760)
             } else {
                 (1440, 900)

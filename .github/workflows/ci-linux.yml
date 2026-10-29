@@ -52,6 +52,9 @@ jobs:
         with:
           tool: cargo-nextest@0.9.150
 
+      - name: Test feedback relay (offline fake GitHub)
+        run: node --test packaging/feedback-relay/test/*.test.mjs
+
       - name: Test workspace
         run: cargo nextest run --workspace --locked --features quantum-app/test-support --profile ci
 

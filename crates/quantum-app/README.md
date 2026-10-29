@@ -477,7 +477,7 @@ Keep for later retains it and Delete report explicitly removes it.
 See the [privacy note](../../site/content/getting-started.html) for collected fields,
 redaction limits, storage/retention and unsupported crash types.
 
-Capture states `dialogs-feedback` and `dialogs-crash-report` open the independent
+Capture states `dialogs-feedback`, `dialogs-feedback-relay`, `dialogs-crash-relay` and `dialogs-crash-report` open the independent
 report window (880×760); both support `--theme dark|light`. The crash fixture writes
 only to the selected local app data directory. Use an isolated `QUANTUM_DATA_DIR`
 for manual capture runs. These fixtures are for UI review and never send data.

@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quantum-feedback-relay",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-28",
+  // Owner must replace this before deploying. No resource has been provisioned.
+  "account_id": "REPLACE_WITH_OWNER_ACCOUNT_ID",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "REPLACE_WITH_APPROVED_HOST/reports", "zone_name": "REPLACE_WITH_EXISTING_ZONE" }],
+  "observability": { "enabled": false },
+  "durable_objects": { "bindings": [{ "name": "ABUSE", "class_name": "AbuseGate" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AbuseGate"] }]
+}

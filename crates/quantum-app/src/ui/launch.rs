@@ -17,8 +17,7 @@ pub(crate) enum LaunchState {
     AgentInspection,
     ConnectAgent,
     About,
-    Feedback,
-    CrashReport,
+    Report { crash: bool, relay: bool },
     Acknowledgements,
     KeyboardGuide,
     Commands,
@@ -57,8 +56,34 @@ impl LaunchState {
         ("panels-agent-inspection", Self::AgentInspection),
         ("popovers-connect-agent", Self::ConnectAgent),
         ("dialogs-about", Self::About),
-        ("dialogs-feedback", Self::Feedback),
-        ("dialogs-crash-report", Self::CrashReport),
+        (
+            "dialogs-feedback",
+            Self::Report {
+                crash: false,
+                relay: false,
+            },
+        ),
+        (
+            "dialogs-crash-report",
+            Self::Report {
+                crash: true,
+                relay: false,
+            },
+        ),
+        (
+            "dialogs-feedback-relay",
+            Self::Report {
+                crash: false,
+                relay: true,
+            },
+        ),
+        (
+            "dialogs-crash-relay",
+            Self::Report {
+                crash: true,
+                relay: true,
+            },
+        ),
         ("dialogs-acknowledgements", Self::Acknowledgements),
         ("dialogs-keyboard-guide", Self::KeyboardGuide),
         ("dialogs-commands", Self::Commands),
@@ -152,9 +177,7 @@ impl EditorView {
                 self.capture_agent_activity(state, cx)?;
             }
             LaunchState::ConnectAgent => self.invoke(Op::Agent, window, cx),
-            LaunchState::Feedback | LaunchState::CrashReport => {
-                feedback::fixture(state == LaunchState::CrashReport, cx);
-            }
+            LaunchState::Report { crash, relay } => feedback::fixture(crash, relay, cx),
             LaunchState::About => self.invoke(Op::About, window, cx),
             LaunchState::Acknowledgements => {
                 self.info = Some(("Acknowledgements", InfoContent::Acknowledgements));
