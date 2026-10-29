@@ -64,7 +64,7 @@ jobs:
         run: |
           cargo build --release --locked -p xtask
           target/release/xtask version --check-tag "$TAG"
-          QUANTUM_REPORT_ENDPOINT="$APP_REPORT_ENDPOINT" cargo build --release --locked -p quantum-app --bin quantum
+          QUANTUM_REPORT_ENDPOINT="${APP_REPORT_ENDPOINT:-}" cargo build --release --locked -p quantum-app --bin quantum
           cargo build --release --locked -p quantum-mcp
       - name: Sign and package
         env:

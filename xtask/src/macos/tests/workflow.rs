@@ -138,7 +138,7 @@ fn optional_report_endpoint_reaches_only_the_release_app_build() {
         .unwrap();
     assert!(build.get("env").is_none());
     assert!(build["run"].as_str().unwrap().contains(
-        "QUANTUM_REPORT_ENDPOINT=\"$APP_REPORT_ENDPOINT\" cargo build --release --locked -p quantum-app --bin quantum"
+        "QUANTUM_REPORT_ENDPOINT=\"${APP_REPORT_ENDPOINT:-}\" cargo build --release --locked -p quantum-app --bin quantum"
     ));
     for step in steps.iter().filter(|step| step["name"] != build["name"]) {
         assert!(
