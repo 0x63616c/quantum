@@ -126,8 +126,22 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
    Object rollover and bounded failures before release.
 6. Only after endpoint/privacy approval, compile the release app with
    `QUANTUM_REPORT_ENDPOINT=https://quantum-feedback.worldwidewebb.co/reports`
-   in its build environment. Runtime override is available for owner QA. No
-   endpoint is committed; ordinary builds remain browser-only. On a physical Mac,
+   in its build environment. For an owner-only local Mac QA package (no publishing):
+
+   ```sh
+   QUANTUM_REPORT_ENDPOINT=https://quantum-feedback.worldwidewebb.co/reports cargo xtask macos package
+   ```
+
+   After QA and approval, configure the optional release-build repository variable:
+
+   ```sh
+   gh variable set QUANTUM_REPORT_ENDPOINT --repo 0x63616c/quantum --body https://quantum-feedback.worldwidewebb.co/reports
+   ```
+
+   The release workflow reads that variable only for its app build step. Leaving
+   it unset/empty preserves the browser fallback; no client token is involved.
+   Runtime override is also available for owner QA. No endpoint is committed.
+   On a physical Mac,
    verify Welcome crash review, feedback, both themes, confirmation, disconnected
    failure, copy/save and retained crash file, and confirm there is no background
    retry. Publish the matching site privacy update naming the now-live endpoint;
@@ -135,7 +149,13 @@ Durable Object runtime behavior, real GitHub permissions or AppKit interaction.
    qualification separately; this PR does not authorize publishing.
 7. Rotate with `wrangler secret put GITHUB_TOKEN`, then revoke the old token.
    For incidents, disable the Worker route/revoke the GitHub token immediately;
-   remove the endpoint from subsequent app builds for browser fallback. Existing
+   remove the endpoint from subsequent app builds for browser fallback:
+
+   ```sh
+   gh variable delete QUANTUM_REPORT_ENDPOINT --repo 0x63616c/quantum
+   ```
+
+   Existing
    configured apps show a failure and retain reports. Do not promise fallback
    browser submission after a failed relay attempt. Remove the Worker and its
    Durable Object namespace via the owner's dashboard if retiring the service.

@@ -59,6 +59,9 @@ jobs:
       - name: Test workspace
         run: cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast
       - name: Build app without signing credentials
+        env:
+          # Empty until the owner approves and deploys the relay. No client token.
+          QUANTUM_REPORT_ENDPOINT: ${{ vars.QUANTUM_REPORT_ENDPOINT }}
         run: |
           cargo build --release --locked -p xtask
           target/release/xtask version --check-tag "$TAG"

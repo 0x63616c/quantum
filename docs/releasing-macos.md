@@ -71,6 +71,15 @@ site** follows successful publication. Credentials and real macOS qualification
 below remain prerequisites. Fixture tests prove command orchestration, not Apple
 service behavior or a shipped release; shipping v0.3.2 remains tracked in #88.
 
+## Optional feedback relay activation
+
+The release app build reads the optional repository variable
+`QUANTUM_REPORT_ENDPOINT`. Leave it unset until the owner has deployed and
+verified the relay, approved its privacy policy and completed Mac QA. An unset
+or empty value keeps browser-only feedback. It is a public HTTPS destination,
+never a token; GitHub credentials stay in the Worker. Exact activation, QA and
+rollback commands are in the [relay runbook](../packaging/feedback-relay/README.md).
+
 ## Secrets to create
 
 | Secret | Value and source |
