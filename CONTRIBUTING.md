@@ -44,8 +44,9 @@ commit keeps the title, so it must read well in public release notes.
 
 The [PR template](.github/pull_request_template.md) asks for:
 
-- `Closes QUA-N` (or `Refs QUA-N` to link without closing). CI requires a
-  Tickets key at the end of the title, e.g. `feat(app): add thing [QUA-12]`.
+- `Closes [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` (or `Refs [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` to link without closing).
+  CI requires a Tickets key at the end of the title, e.g. `feat(app): add thing [QUA-12]`,
+  and the same key linked like this in the body; on failure it prints the exact line to add.
 - **Summary**: the problem and the resulting behavior, in plain English.
 - **Changes**: bullets, most important first.
 - **Testing**: commands run and their result, plus untested platforms;

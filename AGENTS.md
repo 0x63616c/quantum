@@ -427,8 +427,8 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 - Title PRs as Conventional Commits (`feat`, `fix`, `refactor`, `chore`, `docs`,
   `test`, `ci`, `perf`, optional scope) with an imperative summary;
   [PR conventions](.github/workflows/pr-conventions.yml) checks the title and a
-  Tickets key at the end of the title, e.g. `[QUA-12]`. Bodies start with
-  `Closes QUA-12` (or `Refs QUA-12` to link without closing). Do not add `Co-authored-by` trailers or
+  Tickets key at the end of the title, e.g. `[QUA-12]`. Bodies start with the linked ticket,
+  `Closes [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)` (or `Refs [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)` to link without closing); CI checks it. Do not add `Co-authored-by` trailers or
   tool/agent attribution. Squash merge as `Title (#N)`, then delete the branch.
 - Explain the problem, resulting behavior and validation. Include before/after
   screenshots for UI changes, both themes where relevant, and before/after
