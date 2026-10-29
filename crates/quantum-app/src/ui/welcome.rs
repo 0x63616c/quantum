@@ -667,6 +667,7 @@ impl WelcomeView {
                     if let Err(error) = open_editor(editor, cx) {
                         let _ = this.update(cx, |this, cx| {
                             this.busy = false;
+                            eprintln!("{:?}", quantum_app::reports::report(error.as_ref()));
                             this.error = Some(error.to_string());
                             cx.notify();
                         });
@@ -675,6 +676,7 @@ impl WelcomeView {
             }
             Err(error) => {
                 self.busy = false;
+                eprintln!("{:?}", quantum_app::reports::report(&error));
                 self.error = Some(error.to_string());
             }
         }
