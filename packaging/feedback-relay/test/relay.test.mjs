@@ -44,7 +44,7 @@ test('HTTP limits, malformed input, unavailable configuration and gate fail clos
   assert.equal(calls, 0);
 });
 
-test('response caps, redirects, malformed confirmations, failures and timeouts never accept or retry', async () => {
+test('response caps, redirects, malformed confirmations, failures and timeouts never accept or retry', { timeout: 5000 }, async () => {
   for (const response of [new Response(null, { status: 302 }), new Response(null, { status: 403 }),
     new Response(null, { status: 500 }), new Response('not JSON', { status: 201 }),
     Response.json({ number: 7, html_url: 'https://other.invalid' }, { status: 201 }),
@@ -57,6 +57,7 @@ test('response caps, redirects, malformed confirmations, failures and timeouts n
     assert.equal((await result.text()).includes('private@'), false);
   }
   const timeout = await handle(request(), env, { timeout: 10, fetcher: async (_, init) => {
+    init.signal.throwIfAborted();
     await new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(new Error('timeout')), { once: true }));
   } });
   assert.equal(timeout.status, 504);
