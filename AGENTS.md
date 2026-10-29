@@ -16,6 +16,15 @@
 Brand-bearing identifiers live in [brand.toml](brand.toml), with current values
 and explicit compatibility exceptions. Stable ones must not change without a migration.
 
+## Symbol navigation
+
+When Serena's MCP tools are available (see [docs/serena.md](docs/serena.md)):
+
+- For Rust symbols, use `find_symbol`, `find_referencing_symbols` and `get_symbols_overview`. That covers where something is defined, who calls it, which impl a method belongs to, and what a file contains. Same-named methods (for example `build_design`) and `Self::` uses resolve correctly, which `rg` cannot do.
+- Use `rg` for text: strings, comments, docs, TOML/YAML/WGSL, macro-generated or `cfg`-gated names, and quick existence checks.
+- The first reference lookup in a session takes about 30–40 s while rust-analyzer analyses the workspace, and needs about 4 GB of RAM. Use `rg` when one text search answers the question.
+- Reference results can leave out `impl Trait for Type` header lines. Check with `rg -w` before a rename that touches impl headers.
+
 ## Architecture and ownership
 
 Read [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) before moving feature
