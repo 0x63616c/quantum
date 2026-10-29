@@ -55,6 +55,11 @@ jobs:
       - name: Test workspace
         run: cargo nextest run --workspace --locked --features quantum-app/test-support --profile ci
 
+      - name: Test release window startup
+        env:
+          CARGO_BUILD_JOBS: 4
+        run: cargo nextest run --release -p quantum-app --bin quantum --locked --features test-support --profile ci -E 'test(first_frame)'
+
       - name: Check opt-in profiling
         env:
           XDG_RUNTIME_DIR: /tmp

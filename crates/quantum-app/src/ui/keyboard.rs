@@ -119,7 +119,7 @@ impl EditorView {
     ) -> bool {
         // Shared editors own their keys and native text input, including fields
         // created inside controlled NumericField elements.
-        if crate::text_field::focused(window) {
+        if crate::text_field::focused(window, cx) {
             return true;
         }
 

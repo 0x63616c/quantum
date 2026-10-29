@@ -9,6 +9,9 @@ use crate::{
 use gpui::{prelude::*, *};
 use std::{ops::Range, time::Duration};
 
+#[path = "text_field_focus.rs"]
+mod focus;
+
 /// Field-local action. Its binding context prevents document undo interception.
 #[derive(Clone, Debug, PartialEq, Eq, Action)]
 #[action(no_json)]
@@ -121,8 +124,7 @@ impl TextField {
         let start = executor.now();
         cx.new(|cx| Self {
             editor: Editor::default(),
-            // GPUI uses the tracked handle's tab policy, not the Div's flags.
-            focus: cx.focus_handle().tab_stop(true),
+            focus: Self::register_focus(cx),
             placeholder,
             theme: Theme::Dark,
             embedded: false,
