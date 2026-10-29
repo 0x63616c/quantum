@@ -8,6 +8,17 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <link>https://voxelite.worldwidewebb.co</link>
         <description>Signed macOS releases will appear here when published.</description>
         <item>
+            <title>0.4.1</title>
+            <pubDate>Wed, 28 Oct 2026 19:20:12 -0700</pubDate>
+            <link>https://quantum.worldwidewebb.co</link>
+            <sparkle:version>0.4.1</sparkle:version>
+            <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <sparkle:releaseNotesLink sparkle:edSignature="bOcx/bqsdhBPfc3uuq4n/h5W8diecBQAMxe4vBiYfPSATSCA/3tttMpJOpYGuyHrR7Q89qFcrXjPnCIs3hdWDA==" sparkle:length="1251">https://github.com/0x63616c/quantum/releases/download/v0.4.1/Quantum.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/0x63616c/quantum/releases/download/v0.4.1/Quantum.dmg" length="33345180" type="application/octet-stream" sparkle:edSignature="ByzGIrmyrcyI2dvV2Rf04oQPi0Wy4/cVj54uF4lcCQXf2B1I/PV6HKeaOfzghRnlGQp4hgoUMYXS5p7Ht4VaDA=="/>
+        </item>
+        <item>
             <title>0.4.0</title>
             <pubDate>Wed, 28 Oct 2026 16:23:08 -0700</pubDate>
             <link>https://quantum.worldwidewebb.co</link>
@@ -43,6 +54,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: mX9rjLx5KDnGWs4vDJ/Ax9vHCAD52GcoUqg/S3DPTzlPUkPBAvwbCkjmV3fK4+QyoIPfFC++zwU/mrYWCNOWDg==
-length: 3634
+edSignature: 6ofiF9gLywdvN1lc9MxBjwISKXHytwbSueP0G9C0x3uLC9K/GRL65nSaP7egy6OvqlqDiZuofLXV3jQcm/unAQ==
+length: 4641
 -->
