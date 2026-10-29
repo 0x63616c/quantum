@@ -201,4 +201,7 @@ fn hex(value: &str, length: usize) -> bool {
 }
 
 #[cfg(test)]
+mod main_protection;
+
+#[cfg(test)]
 mod tests;
