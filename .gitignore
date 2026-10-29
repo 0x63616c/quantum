@@ -26,9 +26,6 @@ __pycache__/
 /site/changelog/
 /site/blog/
 
-# Local graphify graph, reports and extraction cache
-/graphify-out/
-
 # Impeccable runtime state; only shared configuration belongs in git.
 /.impeccable/*
 !/.impeccable/config.json
