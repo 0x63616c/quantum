@@ -19,6 +19,7 @@ mod persistence;
 pub mod preferences;
 pub mod recents;
 pub mod reduce_motion;
+pub mod reports;
 pub mod samples;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;

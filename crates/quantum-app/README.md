@@ -481,3 +481,17 @@ Capture states `dialogs-feedback` and `dialogs-crash-report` open the independen
 report window (880×760); both support `--theme dark|light`. The crash fixture writes
 only to the selected local app data directory. Use an isolated `QUANTUM_DATA_DIR`
 for manual capture runs. These fixtures are for UI review and never send data.
+
+### Error reports
+
+The app prints miette diagnostics to standard error for startup, file-load and
+plugin command failures, including the underlying error chain. Interactive
+failures retain the existing Welcome/status messages and document recovery
+behavior. Headless export failures exit unsuccessfully. Reports do not replace
+the opt-in crash reporter or install a panic hook.
+
+The MCP CLI and xtask use the same terminal reporting convention; MCP standard
+output remains reserved for protocol messages (or explicitly requested CLI
+output such as `--schema`). Domain and plugin libraries retain typed `thiserror`
+errors and do not depend on miette. Terminal styling follows terminal capability
+and `NO_COLOR`; redirected reports contain no ANSI styling.

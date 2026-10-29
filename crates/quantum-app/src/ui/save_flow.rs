@@ -333,6 +333,7 @@ impl EditorView {
                         this.status = "Project opened".into();
                     }
                     Err(error) => {
+                        eprintln!("{:?}", quantum_app::reports::report(&error));
                         this.status = error.to_string().into();
                         this.error = true;
                     }
@@ -357,6 +358,7 @@ impl EditorView {
                     match result.and_then(Editor::from_session) {
                         Ok(editor) => this.replace_editor(editor, cx),
                         Err(error) => {
+                            eprintln!("{:?}", quantum_app::reports::report(&error));
                             this.status = error.to_string().into();
                             this.error = true;
                         }
@@ -421,6 +423,7 @@ impl EditorView {
                         }
                     }
                     Err(error) => {
+                        eprintln!("{:?}", quantum_app::reports::report(&error));
                         this.status = error.to_string().into();
                         this.error = true;
                     }
@@ -491,6 +494,7 @@ impl EditorView {
                         this.error = false;
                     }
                     Err(error) => {
+                        eprintln!("{:?}", quantum_app::reports::report(error.as_ref()));
                         this.status = error.to_string().into();
                         this.error = true;
                     }

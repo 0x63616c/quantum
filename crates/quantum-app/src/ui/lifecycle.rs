@@ -116,6 +116,7 @@ impl EditorView {
                 self.error = false;
             }
             Err(e) => {
+                eprintln!("{:?}", quantum_app::reports::report(&e));
                 self.status = e.to_string().into();
                 self.error = true;
             }

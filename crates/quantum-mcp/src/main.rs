@@ -1,9 +1,14 @@
 //! Stdio entry point. Standard output is reserved for MCP JSON-RPC messages.
+mod reports;
 use quantum_mcp::QuantumServer;
 
 #[tokio::main]
+async fn main() -> miette::Result<()> {
+    run().await.map_err(|error| reports::report(error.as_ref()))
+}
+
 #[expect(clippy::print_stdout, reason = "CLI output")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let mut root = std::env::current_dir()?;
     while let Some(arg) = args.next() {
