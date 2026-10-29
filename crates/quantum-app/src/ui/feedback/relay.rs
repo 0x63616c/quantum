@@ -11,6 +11,11 @@ impl FeedbackView {
     }
 
     pub(super) fn submit(&mut self, cx: &mut Context<Self>) {
+        if self.capture_only {
+            self.error = Some("This is a capture fixture. No report was sent.".into());
+            cx.notify();
+            return;
+        }
         if self.sending || self.preview.is_none() {
             return;
         }

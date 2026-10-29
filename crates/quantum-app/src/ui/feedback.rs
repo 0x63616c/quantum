@@ -92,6 +92,7 @@ struct FeedbackView {
     focus: FocusHandle,
     endpoint: Option<String>,
     sending: bool,
+    capture_only: bool,
 }
 
 impl FeedbackView {
@@ -131,6 +132,7 @@ impl FeedbackView {
             focus,
             endpoint: diagnostics::endpoint(),
             sending: false,
+            capture_only: false,
         };
         if view.is_crash() {
             view.prepare(cx);
@@ -290,6 +292,7 @@ pub(super) fn fixture(crash: bool, relay: bool, cx: &mut App) {
                 show(pending, cx)?;
                 if relay && let Some(handle) = cx.global::<ReportWindow>().0 {
                     handle.update(cx, |view, _, _| {
+                        view.capture_only = true;
                         view.endpoint =
                             Some("https://quantum-feedback.worldwidewebb.co/reports".into())
                     })?;

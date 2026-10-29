@@ -124,6 +124,12 @@ fn configured_relay_requires_preview_and_failure_keeps_crash_file(cx: &mut TestA
             view.submit(cx);
             assert!(view.error.is_none());
             assert!(!view.sending);
+            view.capture_only = true;
+            view.endpoint = Some("https://unused.invalid/reports".into());
+            view.submit(cx);
+            assert!(!view.sending);
+            assert!(view.error.as_ref().unwrap().contains("capture fixture"));
+            assert!(path.exists());
         })
         .unwrap();
 }

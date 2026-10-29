@@ -19,6 +19,8 @@ jobs:
       CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       TAG: ${{ inputs.tag || github.ref_name }}
+      # Public URL only; the app receives it only on its explicit build command.
+      APP_REPORT_ENDPOINT: ${{ vars.QUANTUM_REPORT_ENDPOINT }}
     steps:
       - name: Validate release tag
         shell: bash
@@ -59,13 +61,10 @@ jobs:
       - name: Test workspace
         run: cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast
       - name: Build app without signing credentials
-        env:
-          # Empty until the owner approves and deploys the relay. No client token.
-          QUANTUM_REPORT_ENDPOINT: ${{ vars.QUANTUM_REPORT_ENDPOINT }}
         run: |
           cargo build --release --locked -p xtask
           target/release/xtask version --check-tag "$TAG"
-          cargo build --release --locked -p quantum-app --bin quantum
+          QUANTUM_REPORT_ENDPOINT="$APP_REPORT_ENDPOINT" cargo build --release --locked -p quantum-app --bin quantum
           cargo build --release --locked -p quantum-mcp
       - name: Sign and package
         env:
