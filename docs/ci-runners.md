@@ -57,7 +57,7 @@ CI macOS / `macos-hardware` keeps the existing two caches on the Mac mini:
 1. **Warm target dir.** `_work/quantum/cargo-target-ci-macos`, one per runner, outside the
    checkout so `actions/checkout` does not delete it. It is cleared above 10 GiB or when
    the disk has under 30 GiB free. Warm target dirs under any other workspace in the same
-   `_work` (for example `_work/voxelite/` left by the repo rename) are deleted each run.
+   `_work` (for example the old workspace left by the repo rename) are deleted each run.
 2. **Shared sccache.** One sccache server serves both runners on `127.0.0.1:4227`, with
    an 8 GiB cache in `~/Library/Caches/sccache-quantum`. Its base directories are both
    runners' `_work` dirs, so a crate built by one runner is a cache hit on the other.
@@ -70,8 +70,8 @@ answering (`AbandonProcessGroup` keeps launchd from killing the daemon). The set
 are the environment variables `SCCACHE_SERVER_PORT=4227`, `SCCACHE_DIR`,
 `SCCACHE_CACHE_SIZE=8G` and `SCCACHE_BASEDIRS` (both `_work` dirs, colon-separated).
 Only one server may use the cache dir: sccache's disk cache is not safe for two servers.
-The Mac mini set up before the rename still runs this agent as `dev.voxelite.sccache`
-with `~/Library/Caches/sccache-voxelite`; the settings are the same.
+The Mac mini was set up before the repo rename, so its agent and cache dir still use the
+old name (`launchctl list | grep sccache` shows the live label); the settings are the same.
 
 **Disk budget.** On the 228 GiB Mac mini, Quantum CI should stay under about 30 GiB:
 two warm target dirs (10 GiB each) plus the 8 GiB sccache. Release and render jobs

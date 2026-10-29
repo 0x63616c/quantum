@@ -194,7 +194,7 @@ jobs:
           target_dir="$repo_dir/cargo-target-ci-macos"
           max_kb=$((10 * 1024 * 1024))      # wipe above 10 GiB
           min_free_kb=$((30 * 1024 * 1024)) # or when the disk has under 30 GiB free
-          # A repo rename (voxelite -> quantum) leaves the old workspace behind with its warm
+          # A repo rename leaves the old workspace behind with its warm
           # target dir. Drop warm target dirs that belong to any other workspace on this runner.
           for stale in "$work_dir"/*/cargo-target-ci-macos; do
             [[ -d "$stale" && "$stale" != "$target_dir" ]] || continue
