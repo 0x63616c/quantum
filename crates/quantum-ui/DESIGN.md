@@ -48,11 +48,14 @@ not another palette. Tests pin all values and require 4.5:1 contrast for text on
 four surfaces and white on primary/rest, primary/hover and primary/pressed. Disabled controls are
 intentionally exempt from normal text contrast.
 
-State tokens: hover white 5%, pressed white 8%, selected accent 16% with primary
+State tokens: neutral hover 5%, pressed 8% (white in dark, primary text ink in light), selected accent 16% with primary
 text and accent icon, navigation/tab indicator 2px, keyboard focus ring 2px with
 1px offset, disabled opacity 40%, scrim black 50%, primary hover 6% white mixed
 into accent in sRGB. `ControlState` allows deterministic state previews; ordinary
-controls use GPUI hover/active/focus-visible hooks. Selection never implies focus. `Button::on_surface(ColorToken)` sets the surrounding
+controls use an absolute painted wash and GPUI focus-visible hooks. Pointer hover/release
+ease out over 120 ms, press over 80 ms, retargeting from the current painted value.
+No geometry or text moves. Reduced motion applies immediately; idle, hidden and
+removed controls schedule no ongoing frames. Focus is immediate. Selection never implies focus. `Button::on_surface(ColorToken)` sets the surrounding
 surface used for the focus offset; menus, segments and dialogs supply it automatically.
 
 ## Components
@@ -72,7 +75,8 @@ surface used for the focus offset; menus, segments and dialogs supply it automat
 | Popover | `Popover::design` surface plus `Popover::anchored(trigger_bounds, side, content)`; measured flip, 4px gap, viewport clamping |
 | Dialog | `Dialog::design(id, title, theme, focus, cancel)`; cancel callback required, Cancel always supplied, Escape capture and tab trap; `danger` left, `primary` right |
 | TextField | `TextField::design(placeholder, cx)` uses the existing editor; `appearance` and `error` control theme and inline validation; keyboard focus ring only |
-| Swatch | `Swatch::design(theme, document_color)`; selection changes the outer ring only |
+| Swatch | `Swatch::design(theme, document_color)`; selection changes the outer ring only; `interactive(id, label)` adds Tab traversal and a contrasting inner focus stroke |
+| FocusGroup | Focusable list/grid frame with an inset ring that survives scroll clipping; host owns selection and arrow navigation |
 | StatusBarItem | Proportional label, fixed-width tabular value, overflow/padding, optional separator |
 | Toast / InlineError | `message(text, FeedbackKind::{Info, Success, Danger}, theme)`; glyph plus color |
 | Spinner / Shimmer | Eight-dot inline spinner; automatically respects GPUI reduced motion, with additional host-preference/snapshot controls; `Shimmer` aliases the existing `AsciiSkeleton` |

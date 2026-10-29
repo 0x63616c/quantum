@@ -316,3 +316,6 @@ See [the exact lint rules](../../xtask/README.md) for scope and baseline updates
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
 overlay lifecycle, headless tests and interactive dark/light gallery. The app migration and retained platform/layout boundaries are documented in the
 [migration audit](../../docs/design-system-migration.md).
+
+The [polish audit](../../docs/ui-polish.md) records the shared hover/press motion,
+palette focus, empty/loading fixtures and visual review coverage for #135.

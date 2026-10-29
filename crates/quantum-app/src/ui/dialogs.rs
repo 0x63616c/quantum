@@ -31,6 +31,9 @@ impl EditorView {
 
     pub(super) fn overlay(&self, window: &Window, cx: &Context<Self>) -> Option<AnyElement> {
         let t = self.theme;
+        if self.capture_state == Some(launch::LaunchState::ControlStates) {
+            return Some(self.control_states());
+        }
         if self.agent.open && !self.save_flow.dialog_open() {
             return Some(self.agent_popover(cx));
         }
@@ -249,10 +252,25 @@ impl EditorView {
                             }))
                             .when(matches.is_empty(), |d| {
                                 d.child(
-                                    div()
-                                        .p(px(Space::S6.px()))
-                                        .text_color(t.color(ColorToken::TextSecondary))
-                                        .child("No matching commands"),
+                                    quantum_ui::EmptyState::new(
+                                        "search",
+                                        "No matching commands",
+                                        t,
+                                    )
+                                    .secondary(
+                                        Button::design("clear-command-search", "Clear search", t)
+                                            .style(ButtonStyle::Ghost)
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.command_input.update(cx, |field, cx| {
+                                                    field.set(String::new(), cx)
+                                                });
+                                                this.commands.set_query("");
+                                                this.command_input.update(cx, |field, cx| {
+                                                    field.focus(window, cx)
+                                                });
+                                                cx.notify();
+                                            })),
+                                    ),
                                 )
                             }),
                     )

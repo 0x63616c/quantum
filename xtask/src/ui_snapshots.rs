@@ -34,6 +34,9 @@ fn registry() -> Vec<&'static Screen> {
                 || s.name.starts_with("panels-palette-")
                 || s.name.starts_with("panels-comments-empty-")
                 || s.name.starts_with("dialogs-about-")
+                || s.name.starts_with("dialogs-commands-empty-")
+                || s.name.starts_with("overlays-loading-")
+                || s.name.starts_with("overlays-controls-")
         })
         .collect()
 }

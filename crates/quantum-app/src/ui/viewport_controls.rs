@@ -65,11 +65,11 @@ impl EditorView {
             .h_full()
             .overflow_hidden()
             .cursor_crosshair()
-            .child(surface)
             .when(
-                !self.viewport.has_frame() && self.viewport.rendering(),
-                |d| d.child(self.scene_loading()),
+                self.capture_state != Some(launch::LaunchState::SceneLoading),
+                |d| d.child(surface),
             )
+            .when(self.scene_is_loading(), |d| d.child(self.scene_loading()))
             .child(self.scene_heading())
             .children(self.comment_pins(cx))
             .when(self.editor.preview.is_some(), |d| {

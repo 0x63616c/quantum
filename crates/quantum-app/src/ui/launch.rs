@@ -22,6 +22,9 @@ pub(crate) enum LaunchState {
     Acknowledgements,
     KeyboardGuide,
     Commands,
+    CommandsEmpty,
+    SceneLoading,
+    ControlStates,
     Tools,
     Extensions,
     UnsavedChanges,
@@ -62,6 +65,9 @@ impl LaunchState {
         ("dialogs-acknowledgements", Self::Acknowledgements),
         ("dialogs-keyboard-guide", Self::KeyboardGuide),
         ("dialogs-commands", Self::Commands),
+        ("dialogs-commands-empty", Self::CommandsEmpty),
+        ("overlays-loading", Self::SceneLoading),
+        ("overlays-controls", Self::ControlStates),
         ("dialogs-tools", Self::Tools),
         ("dialogs-extensions", Self::Extensions),
         ("dialogs-unsaved-changes", Self::UnsavedChanges),
@@ -120,14 +126,7 @@ impl EditorView {
             }
             LaunchState::Palette => self.invoke(Op::ShowPalette, window, cx),
             LaunchState::History | LaunchState::HistoryPreview => {
-                self.editor.add_layer()?;
-                let version = self.editor.save_version("Workshop study".into())?;
-                self.panel = SidebarTab::History;
-                if state == LaunchState::HistoryPreview {
-                    // Preserve the model and window title while showing read-only controls.
-                    self.editor.preview_version(version)?;
-                }
-                self.request_render(cx);
+                self.capture_history(state, cx)?;
             }
             LaunchState::CommentsEmpty => {
                 // The example has an open review note but no resolved threads.
@@ -161,7 +160,11 @@ impl EditorView {
                 window.focus(&self.modal_focus, cx);
             }
             LaunchState::KeyboardGuide => self.invoke(Op::Help, window, cx),
-            LaunchState::Commands => self.invoke(Op::Commands, window, cx),
+            LaunchState::Commands | LaunchState::CommandsEmpty => {
+                self.capture_commands(state, window, cx);
+            }
+            LaunchState::SceneLoading => {}
+            LaunchState::ControlStates => cx.set_reduce_motion(true),
             LaunchState::Tools => self.invoke(Op::ToolPicker, window, cx),
             LaunchState::Extensions => self.invoke(Op::Extensions, window, cx),
             LaunchState::UnsavedChanges => {
@@ -205,6 +208,34 @@ impl EditorView {
             LaunchState::Settings(section) => self.open_settings(section, window, cx),
         }
         cx.notify();
+        Ok(())
+    }
+    fn capture_commands(
+        &mut self,
+        state: LaunchState,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.invoke(Op::Commands, window, cx);
+        if state == LaunchState::CommandsEmpty {
+            self.command_input
+                .update(cx, |field, cx| field.set("No matching action".into(), cx));
+            self.commands.set_query("No matching action");
+        }
+    }
+    fn capture_history(
+        &mut self,
+        state: LaunchState,
+        cx: &mut Context<Self>,
+    ) -> anyhow::Result<()> {
+        self.editor.add_layer()?;
+        let version = self.editor.save_version("Workshop study".into())?;
+        self.panel = SidebarTab::History;
+        if state == LaunchState::HistoryPreview {
+            // Inspect an immutable preview; never replay edits into the live document.
+            self.editor.preview_version(version)?;
+        }
+        self.request_render(cx);
         Ok(())
     }
     fn capture_agent_activity(

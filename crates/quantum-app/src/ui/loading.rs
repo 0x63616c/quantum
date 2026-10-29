@@ -211,8 +211,20 @@ pub(super) fn recent_element(
 }
 
 impl EditorView {
+    pub(super) fn scene_is_loading(&self) -> bool {
+        self.capture_state == Some(launch::LaunchState::SceneLoading)
+            || (!self.viewport.has_frame() && self.viewport.rendering())
+    }
     pub(super) fn scene_loading(&self) -> Div {
         let t = self.theme;
+        let skeleton = quantum_ui::Shimmer::new("scene-loading", t)
+            .rows(12)
+            .reduced_motion(self.reduced_motion);
+        let skeleton = if self.capture_state == Some(launch::LaunchState::SceneLoading) {
+            skeleton.elapsed(std::time::Duration::from_millis(400))
+        } else {
+            skeleton
+        };
         div()
             .absolute()
             .inset_0()
@@ -220,11 +232,18 @@ impl EditorView {
             .items_center()
             .justify_center()
             .child(
-                div().w(px(metrics::SCENE_LOADING_WIDTH)).child(
-                    quantum_ui::AsciiSkeleton::new("scene-loading", t)
-                        .rows(12)
-                        .reduced_motion(self.reduced_motion),
-                ),
+                div()
+                    .id("scene-loading-status")
+                    .w(px(metrics::SCENE_LOADING_WIDTH))
+                    .aria_label("Rendering scene")
+                    .child(skeleton)
+                    .child(
+                        quantum_ui::TextSize::Small
+                            .apply(div())
+                            .mt(px(Space::S4.px()))
+                            .text_color(t.color(ColorToken::TextSecondary))
+                            .child("Rendering scene…"),
+                    ),
             )
     }
     pub(super) fn scene_heading(&self) -> Div {

@@ -1,5 +1,5 @@
 //! Settings presented in a native utility window.
-use super::{AnchoredTooltip, EditorView, TooltipSide, icon, mono, row};
+use super::{AnchoredTooltip, EditorView, TooltipSide, icon, mono, row, sync_reduced_motion};
 use crate::{
     actions::{self, Op},
     shortcuts::ShortcutPlatform,
@@ -246,8 +246,11 @@ impl SettingsView {
         cx.observe(&search, |_, _, cx| cx.notify()).detach();
         cx.observe_global::<SettingsState>(|_, cx| cx.notify())
             .detach();
-        cx.observe_window_activation(window, |_, _, cx| cx.notify())
-            .detach();
+        cx.observe_window_activation(window, |_, _, cx| {
+            sync_reduced_motion(cx);
+            cx.notify();
+        })
+        .detach();
         cx.observe_window_appearance(window, |_, _, cx| cx.notify())
             .detach();
         let focus = cx.focus_handle();
