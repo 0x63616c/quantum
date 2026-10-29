@@ -150,13 +150,13 @@ impl EditorView {
             window.set_window_edited(edited);
             self.last_edited = Some(edited);
         }
-        if cfg!(target_os = "macos") && window.is_window_active() {
+        if crate::actions::sync_native_menus(window) {
             let menus = crate::actions::menus_from_host(
                 &self.editor.plugin_host(),
                 window.is_fullscreen(),
                 |op| self.selected(op),
                 |op| {
-                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
+                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window, cx))
                         || self.enabled(op)
                 },
             );

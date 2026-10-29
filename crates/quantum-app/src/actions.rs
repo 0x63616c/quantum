@@ -483,6 +483,14 @@ pub fn keyboard_guide_sections(platform: ShortcutPlatform) -> [Vec<GuideSection>
 
 pub use quantum_ui::ClipboardOp;
 
+/// Whether this window should publish its native menu state during rendering.
+pub fn sync_native_menus(window: &gpui::Window) -> bool {
+    // TestPlatform reports new windows inactive, even on macOS. Exercise the
+    // native first-draw menu path on every test host, including Linux CI.
+    cfg!(all(test, feature = "test-support"))
+        || (cfg!(target_os = "macos") && window.is_window_active())
+}
+
 /// Build both initial and live menus from the same action list.
 pub fn menus(selected: impl Fn(Op) -> bool, enabled: impl Fn(Op) -> bool) -> Vec<Menu> {
     menus_for_platform(cfg!(target_os = "macos"), selected, enabled)

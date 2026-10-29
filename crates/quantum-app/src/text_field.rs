@@ -14,7 +14,7 @@ pub fn route_history(
         crate::actions::Op::Redo => Command::Redo,
         _ => return false,
     };
-    if !focused(window) {
+    if !focused(window, cx) {
         return false;
     }
     window.dispatch_action(Box::new(quantum_ui::TextFieldAction { command }), cx);
@@ -23,9 +23,7 @@ pub fn route_history(
 }
 
 /// Includes persistent fields created by controlled numeric components.
-pub fn focused(window: &gpui::Window) -> bool {
-    window
-        .context_stack()
-        .iter()
-        .any(|c| c.contains("SharedTextInput"))
+/// Safe during open_window's synchronous first draw, before any dispatch tree.
+pub fn focused(window: &gpui::Window, cx: &gpui::App) -> bool {
+    TextField::any_focused(window, cx)
 }

@@ -866,3 +866,7 @@ pub(super) fn show_deferred(samples: bool, cx: &mut App) {
 mod snapshot;
 #[cfg(feature = "ui-snapshots")]
 pub(crate) use snapshot::{prepare_snapshot, snapshot_ready};
+
+#[cfg(test)]
+#[cfg(feature = "test-support")]
+mod first_frame;

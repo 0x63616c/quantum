@@ -465,7 +465,7 @@ fn sample_summary(preview: &SamplePreview) -> String {
 
 impl WelcomeView {
     fn refresh_menus(&self, window: &Window, cx: &mut Context<Self>) {
-        if cfg!(target_os = "macos") && window.is_window_active() {
+        if crate::actions::sync_native_menus(window) {
             let native_menus = actions::menus_for_window(
                 window.is_fullscreen(),
                 |_| false,

@@ -1,6 +1,58 @@
 //! Field binding precedence and input-context regressions.
+use super::TextField;
 use super::{ClipboardOp, Command, TextFieldAction, editing, key_bindings};
+use gpui::{Context, Entity, IntoElement, Render, TestAppContext, Window};
 use gpui::{KeyBinding, KeyContext, Keymap, Keystroke};
+
+struct FocusProbe(Entity<TextField>);
+
+impl Render for FocusProbe {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Runs while the first dispatch tree is still being constructed.
+        assert!(self.0.read(cx).focused(window));
+        assert!(TextField::any_focused(window, cx));
+        self.0.clone()
+    }
+}
+
+#[gpui::test]
+fn first_frame_focus_uses_live_fields_and_releases_registration(cx: &mut TestAppContext) {
+    let handle = cx.add_window(|window, cx| {
+        assert!(!TextField::any_focused(window, cx));
+        let field = TextField::new("First frame", cx);
+        field.update(cx, |field, cx| field.focus(window, cx));
+        assert!(TextField::any_focused(window, cx));
+        FocusProbe(field)
+    });
+    handle
+        .update(cx, |view, window, cx| {
+            assert!(TextField::any_focused(window, cx));
+            let field_focus = view.0.read(cx).focus.clone();
+            window.blur(cx);
+            assert!(!TextField::any_focused(window, cx));
+            window.focus(&cx.focus_handle(), cx);
+            assert!(!TextField::any_focused(window, cx));
+            window.focus(&field_focus, cx);
+            assert!(TextField::any_focused(window, cx));
+        })
+        .unwrap();
+    // A different window's field must never make an unfocused window match.
+    let other = cx.add_empty_window();
+    other.update(|window, cx| {
+        assert!(!TextField::any_focused(window, cx));
+        let field = TextField::new("Released", cx);
+        field.update(cx, |field, cx| field.focus(window, cx));
+        assert!(TextField::any_focused(window, cx));
+        // Retaining a stale focus handle must not retain field registration.
+        let focus = field.read(cx).focus.clone();
+        drop(field);
+        window.defer(cx, move |window, cx| {
+            window.focus(&focus, cx);
+            assert!(!TextField::any_focused(window, cx));
+        });
+    });
+    cx.run_until_parked();
+}
 
 #[test]
 fn installed_bindings_parse_and_only_resolve_in_a_field() {
