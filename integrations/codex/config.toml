@@ -1,3 +1,0 @@
-[mcp_servers.quantum]
-command = "/Applications/Quantum.app/Contents/MacOS/quantum-mcp"
-args = ["--root","<project dir>"]
