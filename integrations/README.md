@@ -1,54 +1,37 @@
 # Connect an agent
 
-Install Quantum for Mac in `/Applications`. The app bundles its MCP executable at
-`/Applications/Quantum.app/Contents/MacOS/quantum-mcp`. For a source build, run `cargo build --release --locked -p quantum-mcp`
-and replace the command path with your built binary's absolute path.
-
-[Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=quantum&config=eyJjb21tYW5kIjoiL0FwcGxpY2F0aW9ucy9RdWFudHVtLmFwcC9Db250ZW50cy9NYWNPUy9xdWFudHVtLW1jcCIsImFyZ3MiOlsiLS1yb290IiwiJHt3b3Jrc3BhY2VGb2xkZXJ9Il19) · [Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22quantum%22%2C%22command%22%3A%22%2FApplications%2FQuantum.app%2FContents%2FMacOS%2Fquantum-mcp%22%2C%22args%22%3A%5B%22--root%22%2C%22%24%7BworkspaceFolder%7D%22%5D%7D)
-
-Open your project folder before installing. Cursor and VS Code resolve
-`${workspaceFolder}` to that folder. Review and confirm the server in your host.
-
-For Claude Code and Codex, run from your project directory. `"$PWD"` becomes the
-absolute file root when the shell runs the command:
+Build once from the repository root:
 
 ```sh
-claude mcp add quantum -- '/Applications/Quantum.app/Contents/MacOS/quantum-mcp' --root "$PWD"
-codex mcp add quantum -- '/Applications/Quantum.app/Contents/MacOS/quantum-mcp' --root "$PWD"
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo build --release -p voxelite-mcp
 ```
 
-Claude Code also accepts `--scope user` after `claude mcp add` to make the server
-available across projects; its file root still points to the original directory.
+Use an absolute executable path so GUI-launched hosts do not depend on a shell's
+PATH. `--root` must name an existing project directory. File tools accept paths
+relative to that directory. Each launched process owns its own editing session;
+save `.voxl` files before disconnecting.
 
-VS Code CLI (the quoted workspace variable is resolved by VS Code):
+| Host | Example | Installation |
+| --- | --- | --- |
+| Cursor | [cursor/mcp.json](cursor/mcp.json) | Merge `mcpServers.voxelite` into `.cursor/mcp.json` in this repository. The example uses Cursor's `${workspaceFolder}` interpolation. For a different project, replace the executable path with the built binary's absolute path. |
+| Claude Code | [claude/mcp.json](claude/mcp.json) | Replace both `/absolute/path/to/...` values, then merge the entry into the project's `.mcp.json`. |
+| Codex | [codex/config.toml](codex/config.toml) | Replace both absolute paths, then merge the table into `~/.codex/config.toml` or a trusted project's `.codex/config.toml`. |
 
-```sh
-code --add-mcp '{"name":"quantum","command":"/Applications/Quantum.app/Contents/MacOS/quantum-mcp","args":["--root","${workspaceFolder}"]}'
-```
+Keep existing host settings when merging. Restart/reconnect the host, list tools,
+and call `voxelite_capabilities_get`. It should report `voxelite.v1`, a CPU
+renderer, an epoch, and an empty document list. Then ask the agent:
 
-| Host | Manual configuration |
-| --- | --- |
-| Cursor | Merge [cursor/mcp.json](cursor/mcp.json) into `.cursor/mcp.json`. |
-| VS Code | Merge [vscode/mcp.json](vscode/mcp.json) into `.vscode/mcp.json`. |
-| Claude Code | Replace `<project dir>` in [claude/mcp.json](claude/mcp.json), then merge into `.mcp.json`. |
-| Codex | Replace `<project dir>` in [codex/config.toml](codex/config.toml), then merge into `~/.codex/config.toml` or a trusted project's `.codex/config.toml`. |
-| Claude Desktop / Windsurf / Other | Replace `<project dir>` in [other/mcp.json](other/mcp.json), then merge into your host's MCP settings. |
+> Create a 32³ voxel scene using a small atomic batch. Render it from four angles,
+> inspect the silhouettes, add an anchored comment, save a named version, and save
+> the project as `first-scene.voxl`. Use returned epoch/revisions for edits.
 
-Preserve existing host settings. The file root must be an existing absolute
-directory. File tools accept relative paths inside it. Each standalone process
-owns its own session; save `.voxl` files before disconnecting. For the live native
-canvas, use **Copy MCP configuration** in the app's Agent connection panel instead.
+To remove the integration, remove only the `voxelite` entry/table and reconnect.
+These are configuration examples; no host plugin, marketplace installation, or
+runtime editor plugin is installed by this stage. The Rust process tests exercise
+both protocol profiles; the host applications themselves were not available on
+the Linux build machine.
 
-Restart/reconnect the host, list tools and call `quantum_capabilities_get` with
-`{}`. Expect API `quantum.v1`, an epoch and available document IDs. Then ask:
-
-> Create a 32³ scene with an atomic batch. Inspect four real renders, refine it,
-> and save first-scene.voxl. Use returned epoch/revisions for edits.
-
-To remove the integration, remove only the `quantum` entry/table and reconnect.
-Install workflow instructions separately using [the skills guide](../skills/README.md).
-Host application launches and macOS signing require verification on those hosts.
-
-These examples are generated from `crates/quantum-site/src/install.rs` and this
-README's template in `crates/quantum-site/templates/integrations.md`.
-Run `scripts/build-site.sh` to refresh them.
+Configuration fields were checked against the official [Cursor MCP docs](https://cursor.com/docs/mcp),
+[Claude Code MCP docs](https://code.claude.com/docs/en/mcp), and
+[Codex MCP docs](https://developers.openai.com/codex/mcp) on 2026-10-25.

@@ -1,0 +1,59 @@
+[package]
+name = "voxelite-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+voxelite-core.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.glam]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+gpu = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:wgpu", "dep:bytemuck", "dep:futures-channel", "dep:web-sys", "dep:raw-window-handle"]
+perf = ["dep:wasm-bindgen"]
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = { version = "0.2.120", optional = true }
+
+[dependencies.wgpu]
+version = "=30.0.1"
+default-features = false
+features = ["std", "parking_lot", "wgsl", "webgpu", "webgl", "metal", "vulkan", "gles"]
+optional = true
+
+[dependencies.bytemuck]
+version = "1"
+features = ["derive"]
+optional = true
+
+[dependencies.futures-channel]
+version = "0.3"
+optional = true
+
+[target.'cfg(target_family = "wasm")'.dependencies.web-sys]
+version = "0.3"
+features = ["HtmlCanvasElement", "Document", "Window", "console"]
+optional = true
+
+[target.'cfg(target_family = "wasm")'.dependencies.raw-window-handle]
+version = "0.6"
+optional = true
+
+[target.'cfg(target_family = "wasm")'.dependencies.wasm-bindgen-futures]
+version = "0.4"
+optional = true
+
+[target.'cfg(target_family = "wasm")'.dependencies.js-sys]
+version = "0.3"
+optional = true
