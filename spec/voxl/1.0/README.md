@@ -1,6 +1,6 @@
 # `.voxl` 1.0
 
-A project is one UTF-8 JSON object, MIME `application/vnd.quantum.project+json`.
+A project is one UTF-8 JSON object, MIME `application/vnd.voxelite.project+json`.
 `schema.json` describes structure; the Rust validator additionally checks references,
 coordinate uniqueness, order permutations, budgets and snapshot hashes.
 
@@ -47,7 +47,7 @@ round trips.
 `build_history` is a versioned command recipe for projects built from an empty
 `Document::new(document.id, base_layer)` scene. Version 1 stores `base_layer` and
 1–64 `steps`, each with a stable `id`, human-readable `label`, `origin`, logical
-`elapsed_ms`, and a typed `quantum-core::Command`. Commands use snake-case external
+`elapsed_ms`, and a typed `voxelite-core::Command`. Commands use snake-case external
 tags; `set_voxels.voxels` uses `[x, y, z, slot]` tuples (zero erases). Optional command
 arguments are explicit nulls. Unknown fields inside recipes and noncanonical UUIDs
 are rejected; recipe schema changes require a new recipe version.
@@ -75,7 +75,7 @@ name. Each section is an envelope, for example:
 
 ```json
 "extensions": {
-  "dev.quantum.example": {
+  "dev.voxelite.example": {
     "state": {"schema_version": 2, "encoding": "json", "payload": {"scale": 1.25}},
     "cache": {"schema_version": 1, "encoding": "bytes", "payload": [0, 255, 128]}
   }
@@ -123,13 +123,3 @@ engine. Disabled or unavailable owners remain opaque. All successful migrations
 commit as one undoable, dirty edit. No migration is saved implicitly. A malformed
 section reports its owner/name and fails the open atomically, preserving the
 previous session and the original file (including all other sections).
-
-## Product rename compatibility
-
-Writers emit `"format": "quantum"` and the media type above. Readers also accept
-the legacy discriminator listed in `schema.json`; `fixtures/legacy.input.voxl`
-proves it loads and re-saves to the current canonical fixture. The `.voxl`
-extension, document IDs, content, paths and format version remain unchanged.
-Older applications that require the previous discriminator cannot read newly
-saved files. Keep an original copy when sharing with an older application.
-See [rename compatibility](../../../docs/rename-compatibility.md).

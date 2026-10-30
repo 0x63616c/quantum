@@ -3,8 +3,8 @@
 Regenerate the bundled demo from an empty scene, without a renderer or display:
 
 ```sh
-cargo run --locked -p quantum-format --example demo-history
-cargo run --locked -p quantum-format --example demo-history -- --check
+cargo run --locked -p voxelite-format --example demo-history
+cargo run --locked -p voxelite-format --example demo-history -- --check
 ```
 
 The generator locates `examples/autumn-workshop.voxl` relative to the crate, so it
@@ -26,7 +26,7 @@ scene in the macOS editor or MCP reconstructs the undo and scrub timeline.
 An unchanged save retains the recipe; later interactive edits follow the existing
 session-local history behavior (see the [format specification](../spec/voxl/1.0/README.md)).
 
-`cargo test -p quantum-format --locked` pins the original artwork's snapshot and
+`cargo test -p voxelite-format --locked` pins the original artwork's snapshot and
 project hashes from `5afad1f`, including **all** layer voxels, hidden/overlapping
 cells, palette slots/order, layer metadata, comments and named versions. It also
 checks byte-for-byte regeneration, format round trips, empty initial state,
@@ -36,7 +36,7 @@ The editor tests exercise the actual bundled-demo loader and unchanged save/reop
 The existing export command uses the same builder and retains the history:
 
 ```sh
-cargo run --release --locked -p quantum-plugin-exporters --example cottage
+cargo run --release --locked -p voxelite-plugin-exporters --example cottage
 ```
 
 It additionally writes the GLB and reference PNG views under `docs/screenshots`.
@@ -45,7 +45,7 @@ To render small AO-off/default comparisons of the pinned workshop, the export
 step fixture and the single-voxel format fixture, without modifying the models:
 
 ```sh
-cargo run --release --locked -p quantum-plugin-exporters --example cottage -- --ao-comparisons
+cargo run --release --locked -p voxelite-plugin-exporters --example cottage -- --ao-comparisons
 ```
 
 The six 384² PNGs go to `docs/images` (an optional second argument changes
