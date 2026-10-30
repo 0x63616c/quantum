@@ -291,31 +291,3 @@ fn ao_leaves_unoccluded_surfaces_unchanged() {
         assert_eq!(original, render(&snapshot, &options).unwrap());
     }
 }
-
-#[cfg(feature = "profiling")]
-#[test]
-fn profiling_enters_render_and_mesh_zones_without_changing_pixels() {
-    use std::sync::{Arc, Mutex};
-    use tracing_subscriber::{Layer, layer::Context, prelude::*, registry::LookupSpan};
-
-    struct Zones(Arc<Mutex<Vec<&'static str>>>);
-    impl<S: tracing::Subscriber + for<'a> LookupSpan<'a>> Layer<S> for Zones {
-        fn on_enter(&self, id: &tracing::span::Id, ctx: Context<'_, S>) {
-            self.0.lock().unwrap().push(ctx.span(id).unwrap().name());
-        }
-    }
-
-    let snapshot = scene();
-    let options = options();
-    let expected = render(&snapshot, &options).unwrap();
-    let zones = Arc::new(Mutex::new(Vec::new()));
-    let subscriber = tracing_subscriber::registry().with(Zones(Arc::clone(&zones)));
-    let actual = tracing::subscriber::with_default(subscriber, || {
-        RasterCache::default().render(&snapshot, &options).unwrap()
-    });
-    assert_eq!(actual.rgba, expected.rgba);
-    let names = zones.lock().unwrap();
-    for name in ["render.cpu.cached", "render.cpu", "mesh.greedy"] {
-        assert!(names.contains(&name), "missing entered zone: {name}");
-    }
-}

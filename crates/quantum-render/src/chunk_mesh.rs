@@ -35,10 +35,6 @@ impl ChunkMeshes {
     /// Synchronize a snapshot already validated by the document engine. Returns
     /// precisely the chunk buffers to replace/delete, including AO halo changes.
     /// Palette/layer-order/visibility changes invalidate the visible composite.
-    #[cfg_attr(
-        feature = "profiling",
-        tracing::instrument(name = "mesh.sync", skip_all)
-    )]
     pub(crate) fn sync_validated(&mut self, snapshot: &Snapshot) -> RenderResult<Vec<Pos>> {
         let full = self.source.as_ref().is_none_or(|old| {
             old.palette != snapshot.palette
@@ -146,8 +142,6 @@ struct LocalCells {
     slots: [u16; PADDED_SIZE * PADDED_SIZE * PADDED_SIZE],
 }
 impl LocalCells {
-    // Share this hot initialization loop between serial and Rayon callers.
-    #[inline(never)]
     fn new(at: Pos, snapshot: &Snapshot) -> Self {
         let mut cells = Self {
             min: at.map(|a| a * 16 - HALO),
@@ -163,20 +157,6 @@ impl LocalCells {
                         let Some(chunk) = layer.voxels.chunk(neighbor) else {
                             continue;
                         };
-                        // Sparse get() binary-searches even air. Copy occupied
-                        // entries instead, clipped to the same two-cell halo.
-                        // Air must not overwrite an occupied lower layer.
-                        if !chunk.is_dense() {
-                            for (p, slot) in layer.voxels.chunk_entries(neighbor) {
-                                let p: [usize; 3] =
-                                    std::array::from_fn(|a| (p[a] - cells.min[a]) as usize);
-                                if p.iter().all(|&v| v < PADDED_SIZE) {
-                                    cells.slots[(p[2] * PADDED_SIZE + p[1]) * PADDED_SIZE + p[0]] =
-                                        slot;
-                                }
-                            }
-                            continue;
-                        }
                         // Copy only the intersection with the padded block.
                         let lo = offset.map(|d| (-HALO - d * 16).max(0));
                         let hi = offset.map(|d| (16 + HALO - d * 16).min(16));
@@ -208,52 +188,51 @@ impl LocalCells {
     }
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "internal invariant: one worker per chunk"
+)]
 fn mesh_dirty(
     dirty: &[Pos],
     snapshot: &Snapshot,
     palette: &[Option<[f32; 3]>],
 ) -> Vec<RenderResult<ChunkMesh>> {
-    // Preserve the small-edit serial path and the existing eight-worker bound.
-    // Reuse workers across syncs rather than allocating thread stacks each time.
-    let pool = (dirty.len() >= 4).then(mesh_pool).flatten();
-    mesh_dirty_with_pool(dirty, snapshot, palette, pool)
-}
-
-fn mesh_dirty_with_pool(
-    dirty: &[Pos],
-    snapshot: &Snapshot,
-    palette: &[Option<[f32; 3]>],
-    pool: Option<&rayon::ThreadPool>,
-) -> Vec<RenderResult<ChunkMesh>> {
-    let mesh = |&at: &Pos| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
-    if let Some(pool) = pool {
-        use rayon::prelude::*;
-        // Indexed collection retains dirty-set order, including errors. Applying
-        // results (and enforcing the aggregate quad budget) remains serial.
-        return pool.install(|| dirty.par_iter().map(mesh).collect());
-    }
-    dirty.iter().map(mesh).collect()
-}
-
-fn mesh_pool() -> Option<&'static rayon::ThreadPool> {
-    use std::sync::OnceLock;
-    static POOL: OnceLock<Option<rayon::ThreadPool>> = OnceLock::new();
-    POOL.get_or_init(|| {
+    let mesh = |at| mesh_chunk(at, &LocalCells::new(at, snapshot), palette);
+    // Small edits avoid thread startup.
+    if dirty.len() >= 4 {
+        use std::sync::{
+            OnceLock,
+            atomic::{AtomicUsize, Ordering},
+        };
+        // Bound per-sync thread stacks and scratch storage on high-core machines.
         let workers = std::thread::available_parallelism()
             .map_or(1, usize::from)
-            .min(8);
-        if workers <= 1 {
-            return None;
+            .min(8)
+            .min(dirty.len());
+        if workers > 1 {
+            let next = AtomicUsize::new(0);
+            let results: Vec<_> = dirty.iter().map(|_| OnceLock::new()).collect();
+            std::thread::scope(|scope| {
+                for _ in 0..workers {
+                    scope.spawn(|| {
+                        loop {
+                            let i = next.fetch_add(1, Ordering::Relaxed);
+                            let Some(&at) = dirty.get(i) else { break };
+                            results[i].set(mesh(at)).expect("one worker per chunk");
+                        }
+                    });
+                }
+            });
+            return results
+                .into_iter()
+                .map(|r| {
+                    r.into_inner()
+                        .expect("scoped workers completed every chunk before joining")
+                })
+                .collect();
         }
-        // Thread allocation can fail under resource pressure. Serial meshing
-        // remains correct; avoid a global-pool initialization panic in that case.
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(workers)
-            .thread_name(|i| format!("quantum-mesh-{i}"))
-            .build()
-            .ok()
-    })
-    .as_ref()
+    }
+    dirty.iter().map(|&at| mesh(at)).collect()
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -369,12 +348,6 @@ fn emit_quad(mesh: &mut ChunkMesh, quad: Quad, face: Face, palette: &[Option<[f3
     }
 }
 
-#[cfg_attr(
-    feature = "profiling",
-    tracing::instrument(name = "mesh.chunk", skip_all)
-)]
-// Avoid duplicating the hot mesher inside Rayon's iterator plumbing.
-#[inline(never)]
 fn mesh_chunk(
     at: Pos,
     cells: &LocalCells,
@@ -388,9 +361,6 @@ fn mesh_chunk(
             for positive in [false, true] {
                 let (mut mask, exposed_faces) = face_mask(at, cells, axis, slice, positive);
                 mesh.exposed_faces += exposed_faces;
-                if exposed_faces == 0 {
-                    continue;
-                }
                 Mesh::greedy_rectangles(
                     &mut mask,
                     [16, 16],
@@ -419,8 +389,6 @@ fn mesh_chunk(
 }
 
 #[cfg(test)]
-#[path = "chunk_mesh/reference.rs"]
 mod reference;
 #[cfg(test)]
-#[path = "chunk_mesh/tests.rs"]
 mod tests;

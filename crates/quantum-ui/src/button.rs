@@ -1,4 +1,4 @@
-//! Action controls with shared design-system state and geometry.
+//! Action controls. Legacy constructors preserve #134 screen pixels.
 use crate::tokens::{self, ControlSize, Theme, metrics, radius, space, type_size};
 use crate::{icon, row};
 use gpui::{prelude::*, *};
@@ -7,7 +7,7 @@ pub use design::{ButtonStyle, ControlState};
 
 type ClickListener = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 
-/// Compatibility action hierarchy; new composition uses `ButtonStyle`.
+/// Legacy button hierarchy; migrate to `ButtonStyle` in #134.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ButtonVariant {
     /// Strong primary action.
@@ -79,26 +79,11 @@ impl Button {
     /// Set the action hierarchy.
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
-        if let Some(design) = &mut self.design {
-            design.style = match variant {
-                ButtonVariant::Primary => ButtonStyle::Primary,
-                ButtonVariant::Secondary => ButtonStyle::Secondary,
-                ButtonVariant::Danger => ButtonStyle::Danger,
-                ButtonVariant::Ghost | ButtonVariant::Icon => ButtonStyle::Ghost,
-            };
-        }
         self
     }
     /// Set the shared height.
     pub fn size(mut self, size: ControlSize) -> Self {
         self.size = size;
-        if let Some(design) = &mut self.design {
-            design.height = match size {
-                ControlSize::Sm => crate::ControlHeight::Dense,
-                ControlSize::Md => crate::ControlHeight::Default,
-                ControlSize::Lg => crate::ControlHeight::Large,
-            };
-        }
         self
     }
     /// Add a leading icon from `icons/<name>.svg`.
@@ -238,10 +223,10 @@ impl IconButton {
         theme: Theme,
     ) -> Self {
         Self {
-            button: Button::design(id, label, theme)
+            button: Button::new(id, label, theme)
                 .variant(ButtonVariant::Icon)
                 .icon(name),
-            side: crate::ControlHeight::Default.px(),
+            side: ControlSize::Md.height(),
             rail: false,
             badge: None,
             overlays: None,

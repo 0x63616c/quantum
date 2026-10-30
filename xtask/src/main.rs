@@ -148,14 +148,12 @@ struct Harness {
     args: Vec<OsString>,
 }
 
-mod reports;
-
 fn main() -> ExitCode {
     let cli = parse_cli(std::env::args_os()).unwrap_or_else(|error| error.exit());
     match dispatch(cli) {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
-            eprintln!("{:?}", reports::report(error.as_ref()));
+            eprintln!("{error}");
             ExitCode::FAILURE
         }
     }

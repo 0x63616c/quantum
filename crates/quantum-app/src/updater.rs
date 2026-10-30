@@ -12,69 +12,6 @@ use objc2::{
 };
 use std::{cell::OnceCell, mem::ManuallyDrop};
 
-/// Migrate bundle-keyed state before GPUI and Sparkle read preferences or caches.
-pub fn migrate_data() -> std::io::Result<()> {
-    if quantum_app::local_settings::has_data_override() {
-        return Ok(());
-    }
-    let home = std::env::var_os("HOME")
-        .filter(|home| !home.is_empty())
-        .ok_or_else(|| std::io::Error::other("Missing home directory for data migration"))?;
-    quantum_app::local_settings::bundle_migration::initialize(
-        std::path::Path::new(&home),
-        &mut NativeDefaults,
-    )
-}
-
-struct NativeDefaults;
-impl quantum_app::local_settings::bundle_migration::Defaults for NativeDefaults {
-    type Value = Retained<AnyObject>;
-
-    fn read(
-        &mut self,
-        domain: &str,
-    ) -> std::io::Result<std::collections::BTreeMap<String, Self::Value>> {
-        use objc2_foundation::{NSString, NSUserDefaults};
-        let defaults = NSUserDefaults::standardUserDefaults();
-        let mut values = std::collections::BTreeMap::new();
-        if let Some(domain) = defaults.persistentDomainForName(&NSString::from_str(domain)) {
-            let (keys, objects) = domain.to_vecs();
-            for (key, value) in keys.into_iter().zip(objects) {
-                values.insert(key.to_string(), value);
-            }
-        }
-        Ok(values)
-    }
-
-    fn write(
-        &mut self,
-        domain: &str,
-        values: std::collections::BTreeMap<String, Self::Value>,
-    ) -> std::io::Result<()> {
-        use objc2_foundation::{NSDictionary, NSString, NSUserDefaults};
-        let (keys, values): (Vec<_>, Vec<_>) = values
-            .into_iter()
-            .map(|(key, value)| (NSString::from_str(&key), value))
-            .unzip();
-        let keys: Vec<_> = keys.iter().map(|key| &**key).collect();
-        let dictionary = NSDictionary::from_retained_objects(&keys, &values);
-        let defaults = NSUserDefaults::standardUserDefaults();
-        // SAFETY: String keys and all values came from persistentDomainForName,
-        // so they are valid property-list objects. No deserialization or casts.
-        unsafe {
-            defaults.setPersistentDomain_forName(&dictionary, &NSString::from_str(domain));
-        }
-        // This migration needs persistence before its filesystem completion
-        // marker, rather than the ordinary asynchronous preferences write.
-        if !defaults.synchronize() {
-            return Err(std::io::Error::other(
-                "Could not persist migrated preferences",
-            ));
-        }
-        Ok(())
-    }
-}
-
 thread_local! {
     // Only accessed on the main thread. Keep the controller alive for the app's
     // lifetime; Sparkle's asynchronous work can outlive an individual menu call.

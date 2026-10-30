@@ -320,7 +320,11 @@ fn build<'a, 'b>(
     if !dry {
         mkdir(&stage)?;
     }
-    super::update_compat::stage(context, &app, &stage)?;
+    context
+        .command("ditto")
+        .arg(&app)
+        .arg(stage.join("Quantum.app"))
+        .run(context.runner)?;
     context.plan(format_args!(
         "symlink {} -> /Applications",
         stage.join("Applications").display()

@@ -1,6 +1,6 @@
 {
-  "api_version": "quantum.v1",
-  "application_version": "0.4.1",
+  "api_version": "voxelite.v1",
+  "application_version": "0.3.1",
   "protocol_profiles": [
     "2025-11-25",
     "2026-07-28"
@@ -31,8 +31,5 @@
     "cargo_build_workspace": true,
     "cargo_fmt_check": true,
     "cargo_clippy_workspace_all_targets_deny_warnings": true
-  },
-  "legacy_api_versions": [
-    "voxelite.v1"
-  ]
+  }
 }

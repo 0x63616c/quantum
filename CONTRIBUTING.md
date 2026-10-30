@@ -1,31 +1,39 @@
 # Contributing to Quantum
 
-[Tickets](https://tickets.worldwidewebb.co) is the sole source of truth for planned,
-in-progress and completed work. GitHub issues and Projects are retired. Quantum
-uses the `QUA` prefix. Every change starts as a ticket and lands as one focused
-pull request. These rules apply to people and coding agents alike;
-[AGENTS.md](AGENTS.md) covers technical conventions.
+Quantum is tracked on the
+[Quantum project board](https://github.com/users/0x63616c/projects). Every change
+starts as an issue and lands as one focused pull request that closes it. These
+rules apply to people and coding agents alike; [AGENTS.md](AGENTS.md) covers the
+technical conventions.
 
-## 1. Ticket first
+## 1. Issue first
 
-- Search Tickets before starting work and reuse an existing ticket when possible.
-- Every ticket states **Why** and a **Done when** checklist of observable outcomes
-  (behavior, tests, docs, screenshots).
-- Track priority, labels and status in Tickets. Check dependencies before starting
-  work and record blockers as Tickets dependency edges.
+- Open an issue before starting work, using a template: **Feature**, **Bug**,
+  **Refactor** or **Spike**. Search open issues first and reuse one if it exists.
+- Every issue states **Why** and a **Done when** checklist of observable outcomes
+  (behavior, tests, docs, screenshots). Vague checklists get rewritten before work
+  starts.
+- Labels: exactly one `type:*`, one or more `area:*`, and one `priority:*`
+  (`p0` now, `p1` next, `p2` eventually). Add `status:blocked` with a comment
+  naming the blocker. Parked ideas get `later` and the **Later** milestone.
+- Put the issue in a milestone and on the board. Board status follows the work:
+  Backlog → Next → In progress → In review → Done (or Later).
 
-Every open ticket carries exactly one model label:
+Every open issue carries exactly one model label:
 
 - `model:sol`: everyday work: CI config, lint setup, small fixes, straightforward
   refactors and docs. Run `codex exec -m gpt-6.1-sol`.
 - `model:astra`: hard work: UI/design-heavy tasks, complex refactors, spikes and
   ports of someone else's code. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
 
-Use Tickets dependency edges for blockers; do not encode dependencies in body text.
+In the issue body's `## Dependencies` section, put one `Blocked by #N` line per
+blocker between `<!-- deps:start -->` and `<!-- deps:end -->` markers. Keep
+`status:blocked` while any blocker is open; remove it when the last one closes.
 
 ## 2. Branches
 
-Name branches `<type>/<KEY-N>-<slug>`, for example `ci/QUA-87-tickets-conventions`. Branch from `main`; never push to `main`.
+Name branches `<type>/<issue#>-<slug>`, for example `refactor/84-split-ui-rs` or
+`fix/91-atomic-export-writes`. Branch from `main`; never push to `main`.
 
 ## 3. Pull request titles
 
@@ -33,7 +41,7 @@ Titles use [Conventional Commits](https://www.conventionalcommits.org/) and are
 checked in CI:
 
 ```text
-<type>(<optional scope>): <imperative summary> [QUA-N]
+<type>(<optional scope>): <imperative summary>
 ```
 
 Allowed types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`.
@@ -44,9 +52,8 @@ commit keeps the title, so it must read well in public release notes.
 
 The [PR template](.github/pull_request_template.md) asks for:
 
-- `Closes [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` (or `Refs [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` to link without closing).
-  CI requires a Tickets key at the end of the title, e.g. `feat(app): add thing [QUA-12]`,
-  and the same key linked like this in the body; on failure it prints the exact line to add.
+- `Closes #N` (or `Fixes #N`; `Refs #N` for partial work). CI rejects PRs that
+  link no issue.
 - **Summary**: the problem and the resulting behavior, in plain English.
 - **Changes**: bullets, most important first.
 - **Testing**: commands run and their result, plus untested platforms;
@@ -55,9 +62,7 @@ The [PR template](.github/pull_request_template.md) asks for:
 
 Keep the sections and their order so every PR reads the same way.
 
-Bot PRs (including Dependabot and Renovate) are exempt from the Ticket key check.
-Tickets links PRs through a GitHub webhook, moves tickets to **In review** when
-the PR opens and to **Done** on merge. GitHub Actions updates
+Dependabot PRs are exempt from the linked-issue check. GitHub Actions updates
 use the accepted `ci:` commit-message prefix and one weekly group so related
 actions, including upload/download-artifact, are reviewed together. Keep action
 references SHA-pinned with exact version comments when reviewing that group.
@@ -90,35 +95,23 @@ never pushed to `pr-assets`. Non-UI PRs get no Screenshots section.
 Details, adding screens and troubleshooting:
 [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md).
 
-### Design review (impeccable)
-
-Agents and Codex jobs run `/impeccable critique` then `/impeccable polish` before
-opening site, GPUI or future SwiftUI UI PRs. Use the locally served site per
-[site/README.md](site/README.md), or native PR screenshots from
-`cargo xtask screenshots`; reviewers critique the Before | After images.
-[DESIGN.md](DESIGN.md) and [ART-CHECKLIST.md](design/ART-CHECKLIST.md) override
-skill defaults. Follow [AGENTS.md](AGENTS.md#design-review-impeccable) for the
-project-only impeccable **4.8.0** install/update command, telemetry opt-outs and
-fallback cache. Keep upstream files verbatim. The repo git hooks in `.githooks/` are approved
-(see [Git hooks](#git-hooks)); any new hook still needs Calum's approval.
-
 ## 5. One focus per PR
 
-One ticket, one concern, one PR. Split drive-by fixes into their own ticket. Do not
+One issue, one concern, one PR. Split drive-by fixes into their own issue. Do not
 mix refactors with behavior changes, or formatting churn with features.
 
 ## 6. Definition of Done
 
-A ticket is done only when all of these hold:
+An issue is done only when all of these hold:
 
 - [ ] Every **Done when** item is checked, with evidence linked in the PR.
 - [ ] The PR is merged into `main` with green required checks.
 - [ ] Docs, schemas, fixtures and `AGENTS.md` are updated where behavior changed.
 - [ ] UI changes have before/after screenshots; perf changes have numbers.
-- [ ] Follow-up work is filed as new tickets, not left in comments.
-- [ ] Tickets shows **Done** after the merge.
+- [ ] Follow-up work is filed as new issues, not left in comments.
+- [ ] The issue is closed by the merge and its board card shows **Done**.
 
-Never call work done from memory. Re-read the ticket's checklist against the merged
+Never call work done from memory. Re-read the issue's checklist against the merged
 diff first.
 
 ## Running Rust tests
@@ -130,41 +123,6 @@ Install the CI version locally with `cargo install cargo-nextest --version 0.9.1
 otherwise it falls back to `cargo test --workspace --locked` (including doctests).
 The `ci` profile disables fail-fast and retries. Set `CI=true` locally to match
 CI snapshot verification; insta inherits that variable under nextest too.
-
-PR and push-to-main macOS checks run on GitHub-hosted `xcode-27` with the pinned
-Rust toolchain and Xcode 27.0. The `macos` check keeps Clippy, nextest and doctests
-for macOS-specific crates, plus `ci-dist` smoke DMGs on packaging-input PRs.
-Filters apply at job level, so docs-only changes can skip the Mac build
-without losing the required check context. Fork PRs can run this secret-free job.
-Metal profiling and golden visuals stay on the guarded Mac mini runners; skipped
-fork hardware jobs still need trusted verification before merge. Full workspace
-checks and release-profile DMGs run nightly on the Mac mini, with failure reporting (see the legacy automation note in [CI runners](docs/ci-runners.md)).
-Every PR workflow cancels superseded runs; nightly and release coverage is preserved.
-See [CI runners](docs/ci-runners.md) for check placement, caches and timing evidence.
-
-## Git hooks
-
-Fast local hooks live in `.githooks/` (plain POSIX shell, no extra dependency) and
-catch the cheap CI failures before a round-trip. Enable them once per clone or
-worktree:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-- **pre-commit** (about 0.5-2 s): `cargo fmt --all -- --check` when Rust files are
-  staged, then `gitleaks git --pre-commit --staged --redact` on the staged diff.
-  Without gitleaks installed (`brew install gitleaks`) the secret scan is skipped
-  with a notice; CI still scans full history.
-- **pre-push**: `cargo clippy --all-targets --locked -- -D warnings` on only the
-  workspace crates the push changes (`-p <crate>` each, plus
-  `--features quantum-app/test-support` when `quantum-app` is included). Changes to
-  the root `Cargo.toml`, `Cargo.lock`, `clippy.toml`, `rust-toolchain.toml`,
-  `.cargo/` or `vendor/` lint the whole workspace. Pushes with no Rust changes skip
-  clippy. Tests, `cargo xtask lint` and the full CI matrix stay in CI.
-
-Skip a hook for one command with `git commit --no-verify` or `git push --no-verify`.
-Disable them with `git config --unset core.hooksPath`.
 
 ## Snapshot tests
 

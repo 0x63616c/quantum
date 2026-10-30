@@ -3,11 +3,8 @@
 //! EditorView supplies the document and GPUI task callbacks; only this module
 //! owns render state. Picking and playback use the same displayed-frame identity.
 use super::*;
-use geometry::VOXEL_OUTLINE;
 use quantum_app::frame_meter::{FrameMeter, RendererKind};
 use quantum_render::AmbientOcclusionStrength;
-use quantum_ui::ColorToken;
-use quantum_ui::tokens::geometry;
 mod gpu_viewport;
 
 /// Image identity includes the editor incarnation, since reopening the same ID
@@ -290,7 +287,7 @@ impl Viewport {
 
     fn dimensions(&mut self, available: [f32; 2], scale_factor: f32) -> [u32; 2] {
         let actual = self.bounds.get().size;
-        let (width, height) = if actual.width > Pixels::ZERO && actual.height > Pixels::ZERO {
+        let (width, height) = if actual.width > px(0.) && actual.height > px(0.) {
             (f32::from(actual.width), f32::from(actual.height))
         } else {
             (available[0], available[1])
@@ -531,7 +528,7 @@ impl EditorView {
                 }
                 let mut presented = None;
                 let visible = bounds.intersect(&window.content_mask().bounds);
-                if visible.size.width > Pixels::ZERO && visible.size.height > Pixels::ZERO {
+                if visible.size.width > px(0.0) && visible.size.height > px(0.0) {
                     #[cfg(target_os = "macos")]
                     if let Some((frame, serial)) = gpu_frame {
                         // GPUI scales the selected NV12 surface to these display bounds.
@@ -570,7 +567,7 @@ impl EditorView {
                     });
                 }
                 if let Some(region) = comment_region.or(tool_region) {
-                    let mut path = PathBuilder::stroke(px(VOXEL_OUTLINE));
+                    let mut path = PathBuilder::stroke(px(1.4));
                     let (lo, hi) = (region.min, region.max);
                     for bits in 0..8 {
                         for a in 0..3 {
@@ -586,7 +583,7 @@ impl EditorView {
                         }
                     }
                     if let Ok(path) = path.build() {
-                        window.paint_path(path, t.color(ColorToken::AccentText));
+                        window.paint_path(path, t.accent());
                     }
                 }
             },

@@ -6,31 +6,6 @@ GPUI for UI/runtime services (default features disabled) and the already locked
 dependencies. The application selects native platform support. Plugins
 must not depend on this crate.
 
-## Getting started
-
-MIT licensed; Rust 2024 with MSRV 1.99. Use the exact GPUI version selected in
-`Cargo.toml`; GPUI types cross the public API. The host supplies platform support,
-fonts, icon assets, window creation and event routing. See [DESIGN.md](DESIGN.md)
-for the final typed component inventory and controlled overlay lifecycle.
-
-```rust
-use quantum_ui::{Button, Theme};
-
-let action = Button::new("apply", "Apply", Theme::Dark).build();
-```
-
-Run `cargo run -p quantum-ui --locked --example editing` for a windowless editor
-example, and `cargo test -p quantum-ui --locked` for controls, editing, numeric,
-Unicode/UTF-16, overlay placement and animation contracts. The repository-only
-`cargo run -p quantum-ui --locked --example ui_kit` opens the interactive gallery
-using the app's licensed fonts and icons. The archive contains the independent
-editing example and inline tests; the gallery stays in the repository.
-
-Native IME, accessibility and AppKit/Metal behavior require macOS verification.
-The workspace's macOS GPUI patch is not applied automatically by downstream
-consumers; see the [crate release checklist](https://github.com/0x63616c/quantum/blob/main/docs/publishing-crates.md)
-for this limitation and the owner's publication steps. No publication is authorized.
-
 ## ASCII loading and reveals
 
 `AsciiSkeleton`, `AsciiReveal` and `AsciiImageReveal` port **ascii-reveal 0.3.0**
@@ -277,11 +252,6 @@ The command palette uses the same text-editing bindings, including line-end
 Up/Down while its field is focused. After Escape blurs the input, Up/Down navigate
 results and Enter invokes the selected command; results can also be clicked.
 
-`TextField::any_focused(window, cx)` checks live field focus handles, including
-controlled numeric inputs. Use it for shell menu and keyboard routing: it is safe
-before a window's first draw and does not query GPUI's previous-frame context
-stack. Field registration ends when its entity is released.
-
 Undo and redo are **always consumed while a field has focus**, even with empty
 history. Empty history is a no-op, never a fallback to document undo. Adjacent
 typing within 750 ms coalesces; movement, selection, clipboard operations, commit
@@ -339,8 +309,5 @@ See [the exact lint rules](../../xtask/README.md) for scope and baseline updates
 ## Typed design system (#133)
 
 See [DESIGN.md](DESIGN.md) for the palette, type/geometry scales, opt-in builders,
-overlay lifecycle, headless tests and interactive dark/light gallery. The app migration and retained platform/layout boundaries are documented in the
-[migration audit](../../docs/design-system-migration.md).
-
-The [polish audit](../../docs/ui-polish.md) records the shared hover/press motion,
-palette focus, empty/loading fixtures and visual review coverage for #135.
+overlay lifecycle, headless tests and interactive dark/light gallery. Existing
+constructors retain their screen appearance until the #134 migration.

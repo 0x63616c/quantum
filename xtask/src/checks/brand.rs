@@ -172,7 +172,7 @@ impl Audit<'_> {
         );
         let hardcoded = regex::Regex::new(r#"app_id\s*:\s*Some\(\s*""#)
             .map_err(|error| Error::Invalid(error.to_string()))?;
-        for name in ["welcome", "settings/window"] {
+        for name in ["welcome", "settings"] {
             let path = format!("crates/quantum-app/src/ui/{name}.rs");
             let source = self.workspace.read(&path)?;
             self.require(
@@ -292,13 +292,13 @@ impl Audit<'_> {
                 source,
             })?;
         self.equal(
-            &format!("{path}: canonical format"),
-            schema["properties"]["format"]["enum"][0].clone(),
+            &format!("{path}: format const"),
+            schema["properties"]["format"]["const"].clone(),
             self.identifier("format_magic")?,
         );
         for (pattern, name) in [
             (r#"format:\s*"([^"]+)"\.into\(\)"#, "format_magic"),
-            (r#"if\s*\(wire\.format\s*!=\s*"([^"]+)""#, "format_magic"),
+            (r#"wire\.format\s*!=\s*"([^"]+)""#, "format_magic"),
             (
                 r#"const\s+MIME_TYPE\s*:\s*&str\s*=\s*"([^"]+)""#,
                 "format_mime_type",

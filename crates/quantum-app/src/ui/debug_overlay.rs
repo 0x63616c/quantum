@@ -1,10 +1,6 @@
 //! Passive viewport diagnostics; text formatting stays in the portable library.
 use super::*;
-use quantum_ui::ColorToken;
-use quantum_ui::Radius;
-use quantum_ui::Space;
-use quantum_ui::TextStyle;
-use quantum_ui::tokens::state;
+use quantum_ui::tokens::{radius, space, type_size};
 
 impl EditorView {
     pub(super) fn debug_overlay(&self) -> Div {
@@ -18,15 +14,14 @@ impl EditorView {
             } else {
                 52.
             }))
-            .left(px(Space::S6.px()))
-            .p(px(Space::S3.px()))
-            .rounded(px(Radius::Xs.px()))
-            .bg(self
-                .theme
-                .color(ColorToken::Canvas)
-                .opacity(state::DEBUG_OVERLAY))
-            .text_color(self.theme.color(ColorToken::TextPrimary))
-            .text_style(quantum_ui::TextSize::Mono)
+            .left(px(24.))
+            .p(px(space::SM))
+            .rounded(px(radius::SM))
+            .bg(self.theme.background().opacity(0.82))
+            .text_color(self.theme.text())
+            .font_family(type_size::MONO)
+            .text_size(px(type_size::CAPTION))
+            .line_height(px(type_size::LINE_SM))
             .children(
                 quantum_app::debug_overlay::lines(
                     meter.renderer(),

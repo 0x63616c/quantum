@@ -1,8 +1,7 @@
 //! Shared surface chrome. Layout, placement and dismissal remain with the caller.
-use crate::{ColorToken, Radius, TextSize};
 use crate::{
     Theme, row,
-    tokens::{self, metrics, radius, space},
+    tokens::{self, metrics, radius, space, type_size},
 };
 use gpui::{prelude::*, *};
 
@@ -46,27 +45,27 @@ impl Panel {
     }
     /// Unframed section within an existing surface. Insets belong to the section's layout.
     pub fn section(theme: Theme) -> Div {
-        TextSize::Body
-            .apply(div())
-            .border_color(theme.color(ColorToken::BorderSubtle))
+        div().border_color(theme.line())
     }
     /// Grouped form card, retaining its quiet separator opacity and clipping.
     pub fn card(theme: Theme) -> Div {
         div()
-            .rounded(px(Radius::Md.px()))
+            .rounded(px(radius::XL))
             .border_1()
-            .border_color(theme.color(ColorToken::BorderSubtle))
+            .border_color(theme.separator().opacity(0.55))
             .overflow_hidden()
-            .bg(theme.color(ColorToken::Raised))
+            .bg(theme.card())
     }
     /// Section heading; append trailing actions to the returned row.
     pub fn title(title: impl Into<SharedString>) -> Div {
-        TextSize::Title.apply(row()).child(title.into())
+        row()
+            .text_size(px(type_size::TITLE))
+            .font_weight(type_size::SEMIBOLD)
+            .child(title.into())
     }
     /// Full-height tool rail, sharing the editor's canvas surface.
     pub fn rail(theme: Theme) -> Div {
         Self::section(theme)
-            .bg(theme.color(ColorToken::Surface))
             .w(px(metrics::RAIL_WIDTH))
             .flex_shrink_0()
             .h_full()
@@ -81,7 +80,6 @@ impl Panel {
     /// Editor sidebar surface; add scrolling and content at the call site.
     pub fn sidebar(theme: Theme) -> Div {
         Self::section(theme)
-            .bg(theme.color(ColorToken::Surface))
             .w(px(metrics::SIDEBAR_WIDTH))
             .flex_shrink_0()
             .h_full()

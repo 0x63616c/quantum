@@ -2,14 +2,10 @@
 use super::*;
 use crate::ui::palette_layout::{self as layout, CELL, COLUMNS, GAP};
 use quantum_plugin_api::{PaletteKind, RecentColorTarget};
-use quantum_ui::ColorToken;
-use quantum_ui::Radius;
-use quantum_ui::Space;
-use quantum_ui::TextSize;
-use quantum_ui::TextStyle;
-use quantum_ui::tokens::geometry;
+use quantum_ui::tokens::ControlSize;
 use quantum_ui::{
-    Badge, Card, ColorSquare, HueSlider, Menu, Segment, SegmentedControl, SidebarSection, Swatch,
+    Badge, Card, ColorSquare, HueSlider, Menu, Segment, SegmentedControl, SidebarItem,
+    SidebarSection, Swatch,
 };
 
 #[derive(Clone)]
@@ -21,7 +17,7 @@ struct SwatchDrag {
 }
 impl Render for SwatchDrag {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        Swatch::design(self.theme, rgb_fill(self.rgb))
+        Swatch::new(self.theme, rgb_fill(self.rgb))
             .selected(true)
             .build()
     }
@@ -31,8 +27,8 @@ fn rgb_fill(rgb: [u8; 3]) -> Hsla {
 }
 fn caption(text: impl Into<SharedString>, t: Theme) -> Div {
     div()
-        .text_style(TextSize::Small)
-        .text_color(t.color(ColorToken::TextSecondary))
+        .text_size(px(type_size::BODY))
+        .text_color(t.muted())
         .child(text.into())
 }
 fn thumbnail(palette: &Palette, t: Theme) -> Div {
@@ -42,9 +38,9 @@ fn thumbnail(palette: &Palette, t: Theme) -> Div {
         .collect();
     div()
         .w(px(metrics::THUMBNAIL_WIDTH))
-        .h(px(Space::S7.px()))
+        .h(px(space::PANE))
         .flex_shrink_0()
-        .rounded(px(Radius::Xs.px()))
+        .rounded(px(radius::SM))
         .overflow_hidden()
         .border_1()
         .border_color(t.swatch_edge())
@@ -63,10 +59,7 @@ fn thumbnail(palette: &Palette, t: Theme) -> Div {
                                     bounds.left() + width * (i % columns) as f32,
                                     bounds.top() + height * (i / columns) as f32,
                                 ),
-                                size(
-                                    width + px(geometry::COLOR_CELL_OVERLAP),
-                                    height + px(geometry::COLOR_CELL_OVERLAP),
-                                ),
+                                size(width + px(0.5), height + px(0.5)),
                             ),
                             *color,
                         ));
@@ -82,10 +75,10 @@ impl EditorView {
         let mut choices = div()
             .id("palette-library-scroll")
             .flex_1()
-            .min_h(px(Space::S0.px()))
+            .min_h(px(space::NONE))
             .overflow_y_scroll()
             .track_scroll(&self.palettes.sidebar_scroll)
-            .px(px(Space::S4.px()));
+            .px(px(space::INSET));
         for (kind, label) in [
             (PaletteKind::Project, "Project"),
             (PaletteKind::BuiltIn, "Built-in"),
@@ -112,32 +105,66 @@ impl EditorView {
                     }
                 );
                 choices = choices.child(
-                    quantum_ui::ListRow::new(("palette-choice", index), choice.name.clone(), t)
-                        .meta(color_count)
-                        .leading(thumbnail(&choice.palette, t))
-                        .selected(selected)
-                        .navigation(true)
-                        .trailing(div().when(choice.read_only, |d| {
-                            d.child(icon("lock").text_color(t.color(ColorToken::TextSecondary)))
+                    SidebarItem::custom(
+                        ("palette-choice", index),
+                        format!(
+                            "{}, {}{}",
+                            choice.name,
+                            color_count,
+                            if choice.read_only { ", read-only" } else { "" }
+                        ),
+                        selected,
+                        t,
+                    )
+                    .tab_stop(false)
+                    .h(px(metrics::COMMAND_SEARCH_HEIGHT))
+                    .px(px(space::MD))
+                    .gap(px(space::INSET))
+                    .mb(px(space::XXS))
+                    .child(thumbnail(&choice.palette, t))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(space::NONE))
+                            .child(
+                                div()
+                                    .text_size(px(type_size::BODY_LG))
+                                    .overflow_hidden()
+                                    .text_ellipsis()
+                                    .child(choice.name.clone()),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(type_size::CAPTION))
+                                    .text_color(if selected {
+                                        t.accent_fg().opacity(0.8)
+                                    } else {
+                                        t.muted()
+                                    })
+                                    .child(color_count),
+                            ),
+                    )
+                    .when(choice.read_only, |d| {
+                        d.child(icon("lock").size(px(space::LG)).text_color(if selected {
+                            t.accent_fg().opacity(0.8)
+                        } else {
+                            t.muted()
                         }))
-                        .build()
-                        .tab_stop(false)
-                        .h(px(metrics::COMMAND_SEARCH_HEIGHT))
-                        .mb(px(Space::S1.px()))
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.manager_action(PaletteAction::ChoosePalette(id), cx);
-                            this.palettes
-                                .grid_scroll
-                                .set_offset(point(px(Space::S0.px()), px(Space::S0.px())));
-                            window.focus(&this.palettes.sidebar_focus, cx);
-                        })),
+                    })
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.manager_action(PaletteAction::ChoosePalette(id), cx);
+                        this.palettes
+                            .grid_scroll
+                            .set_offset(point(px(space::NONE), px(space::NONE)));
+                        window.focus(&this.palettes.sidebar_focus, cx);
+                    })),
                 );
             }
             if count == 0 {
                 choices = choices.child(
                     caption("Your palettes appear here.", t)
-                        .px(px(Space::S4.px()))
-                        .py(px(Space::S3.px())),
+                        .px(px(space::LG))
+                        .py(px(space::MD)),
                 );
             }
         }
@@ -147,55 +174,56 @@ impl EditorView {
             .h_full()
             .flex()
             .flex_col()
-            .bg(t.color(ColorToken::Surface))
+            .bg(t.sidebar())
             // This background meets the dialog's bottom-left border. GPUI's
             // overflow mask is rectangular, so it needs its own inner corner.
-            .rounded_bl(px(radius::concentric(Radius::Lg.px(), metrics::EDGE)))
+            .rounded_bl(px(radius::concentric(radius::XL, metrics::EDGE)))
             .border_r_1()
-            .border_color(t.color(ColorToken::Border))
+            .border_color(t.separator())
             .child(
-                quantum_ui::FocusGroup::frame(
-                    "palette-library",
-                    "Palettes",
-                    t,
-                    &self.palettes.sidebar_focus,
-                )
-                .flex_1()
-                .min_h(px(Space::S0.px()))
-                .flex()
-                .flex_col()
-                .border_1()
-                .border_color(transparent_black())
-                .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
-                    if !matches!(e.keystroke.key.as_str(), "up" | "down" | "home" | "end") {
-                        return;
-                    }
-                    if let Some(view) = this.editor.palette_view() {
-                        let current = view
-                            .choices
-                            .iter()
-                            .position(|c| c.id == view.selected)
-                            .unwrap_or(0);
-                        let next =
-                            layout::navigate(current, view.choices.len(), 1, &e.keystroke.key);
-                        if let Some(choice) = view.choices.get(next) {
-                            this.manager_action(PaletteAction::ChoosePalette(choice.id), cx);
+                div()
+                    .id("palette-library")
+                    .role(Role::ListBox)
+                    .aria_label("Palettes")
+                    .tab_index(0)
+                    .track_focus(&self.palettes.sidebar_focus)
+                    .flex_1()
+                    .min_h(px(space::NONE))
+                    .flex()
+                    .flex_col()
+                    .border_1()
+                    .border_color(transparent_black())
+                    .focus_visible(move |d| d.border_color(t.accent()))
+                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
+                        if !matches!(e.keystroke.key.as_str(), "up" | "down" | "home" | "end") {
+                            return;
                         }
-                    }
-                    cx.stop_propagation();
-                }))
-                .child(choices),
+                        if let Some(view) = this.editor.palette_view() {
+                            let current = view
+                                .choices
+                                .iter()
+                                .position(|c| c.id == view.selected)
+                                .unwrap_or(0);
+                            let next =
+                                layout::navigate(current, view.choices.len(), 1, &e.keystroke.key);
+                            if let Some(choice) = view.choices.get(next) {
+                                this.manager_action(PaletteAction::ChoosePalette(choice.id), cx);
+                            }
+                        }
+                        cx.stop_propagation();
+                    }))
+                    .child(choices),
             )
             .child(
                 div()
-                    .p(px(Space::S4.px()))
+                    .p(px(space::LG))
                     .border_t_1()
-                    .border_color(t.color(ColorToken::Border))
+                    .border_color(t.separator())
                     .flex()
                     .flex_col()
-                    .gap(px(Space::S3.px()))
+                    .gap(px(space::SM))
                     .child(
-                        Button::design("new-palette", "New palette", t)
+                        Button::new("new-palette", "New palette", t)
                             .icon("plus")
                             .build()
                             .w_full()
@@ -204,8 +232,8 @@ impl EditorView {
                             })),
                     )
                     .child(
-                        Button::design("duplicate-palette", "Duplicate palette", t)
-                            .style(quantum_ui::ButtonStyle::Ghost)
+                        Button::new("duplicate-palette", "Duplicate palette", t)
+                            .variant(ButtonVariant::Ghost)
                             .icon("copy")
                             .build()
                             .w_full()
@@ -215,12 +243,12 @@ impl EditorView {
                     )
                     .when(view.kind == PaletteKind::Custom, |d| {
                         d.child(
-                            Button::design("delete-palette", "Delete palette…", t)
-                                .style(quantum_ui::ButtonStyle::Ghost)
+                            Button::new("delete-palette", "Delete palette…", t)
+                                .variant(ButtonVariant::Ghost)
                                 .icon("trash-2")
                                 .build()
                                 .w_full()
-                                .text_color(t.color(ColorToken::Danger))
+                                .text_color(t.danger())
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.palettes.delete_confirmation = true;
                                     cx.notify();
@@ -229,7 +257,8 @@ impl EditorView {
                     })
                     .child(
                         caption("Editing a read-only palette makes an editable copy.", t)
-                            .mt(px(Space::S3.px())),
+                            .mt(px(space::SM))
+                            .line_height(px(type_size::LINE_SM)),
                     ),
             )
     }
@@ -246,7 +275,7 @@ impl EditorView {
             .flex_wrap()
             .gap(px(GAP))
             .w(px(COLUMNS as f32 * (CELL + GAP) - GAP))
-            .p(px(Space::S0.px()))
+            .p(px(space::NONE))
             .child(
                 canvas(move |b, _, _| painted.set(b), |_, _, _, _| ())
                     .absolute()
@@ -262,7 +291,7 @@ impl EditorView {
                 None => rgb_hex(rgb),
             };
             grid = grid.child(
-                Swatch::design(t, rgb_fill(rgb))
+                Swatch::new(t, rgb_fill(rgb))
                     .selected(index == view.state.slot)
                     .build()
                     .id(("manager-swatch", index))
@@ -270,7 +299,7 @@ impl EditorView {
                     .aria_label(label.clone())
                     .aria_selected(index == view.state.slot)
                     .cursor_pointer()
-                    .anchored_hint(label, t, TooltipSide::Above, &self.overlays)
+                    .anchored_hint(label, t, TooltipSide::Above)
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.manager_action(PaletteAction::SelectSlot(index), cx);
                         window.focus(&this.palettes.grid_focus, cx);
@@ -287,12 +316,12 @@ impl EditorView {
             );
         }
         grid = grid.child(
-            Button::design("add-swatch", "+", t)
-                .height(quantum_ui::ControlHeight::Default)
+            Button::new("add-swatch", "+", t)
+                .size(ControlSize::Md)
                 .disabled(count == 256)
                 .build()
                 .w(px(CELL))
-                .px(px(Space::S0.px()))
+                .px(px(space::NONE))
                 .anchored_hint(
                     if count == 256 {
                         "256 swatches maximum per palette"
@@ -301,7 +330,6 @@ impl EditorView {
                     },
                     t,
                     TooltipSide::Above,
-                    &self.overlays,
                 )
                 .when(count < 256, |d| {
                     d.on_click(cx.listener(|this, _, window, cx| {
@@ -328,9 +356,9 @@ impl EditorView {
                     .absolute()
                     .left(px(col as f32 * (CELL + GAP) - GAP / 2. - 1.))
                     .top(px(row as f32 * (CELL + GAP) - 1.))
-                    .w(px(Space::S1.px()))
-                    .h(px(CELL + geometry::EDGE * 2.))
-                    .bg(t.color(ColorToken::AccentText)),
+                    .w(px(space::XXS))
+                    .h(px(CELL + 2.))
+                    .bg(t.accent()),
             );
         }
         grid = grid
@@ -378,46 +406,87 @@ impl EditorView {
         div()
             .flex()
             .flex_col()
-            .gap(px(Space::S3.px()))
+            .gap(px(space::MD))
             .child(
-                quantum_ui::FocusGroup::frame(
-                    "palette-grid",
-                    "Palette colors; arrow keys select, Delete removes",
-                    t,
-                    &self.palettes.grid_focus,
-                )
-                .h(px(metrics::PALETTE_GRID_HEIGHT))
-                .flex_shrink_0()
-                .overflow_y_scroll()
-                .track_scroll(&self.palettes.grid_scroll)
-                .p(px(Space::S2.px()))
-                .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
-                    let Some(view) = this.editor.palette_view() else {
-                        return;
-                    };
-                    let key = e.keystroke.key.as_str();
-                    let action = match key {
-                        "left" | "right" | "up" | "down" | "home" | "end" => {
-                            PaletteAction::SelectSlot(layout::navigate(
-                                view.state.slot,
-                                view.palette.order.len(),
-                                COLUMNS,
-                                key,
-                            ))
-                        }
-                        "delete" | "backspace" => PaletteAction::RemoveSwatch(view.state.slot),
-                        "d" if ShortcutPlatform::current().is_primary(e.keystroke.modifiers) => {
-                            PaletteAction::DuplicateSwatch(view.state.slot)
-                        }
-                        _ => return,
-                    };
-                    this.manager_action(action, cx);
-                    this.reveal_palette_swatch();
-                    cx.stop_propagation();
-                }))
-                .child(grid),
+                div()
+                    .id("palette-grid")
+                    .tab_index(0)
+                    .track_focus(&self.palettes.grid_focus)
+                    .role(Role::ListBox)
+                    .aria_label("Palette colors; arrow keys select, Delete removes")
+                    .h(px(metrics::PALETTE_GRID_HEIGHT))
+                    .flex_shrink_0()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.palettes.grid_scroll)
+                    .p(px(space::COMPACT))
+                    .focus_visible(move |d| d.bg(t.sidebar()).rounded(px(radius::SM)))
+                    .on_key_down(cx.listener(|this, e: &KeyDownEvent, _, cx| {
+                        let Some(view) = this.editor.palette_view() else {
+                            return;
+                        };
+                        let key = e.keystroke.key.as_str();
+                        let action = match key {
+                            "left" | "right" | "up" | "down" | "home" | "end" => {
+                                PaletteAction::SelectSlot(layout::navigate(
+                                    view.state.slot,
+                                    view.palette.order.len(),
+                                    COLUMNS,
+                                    key,
+                                ))
+                            }
+                            "delete" | "backspace" => PaletteAction::RemoveSwatch(view.state.slot),
+                            "d" if ShortcutPlatform::current()
+                                .is_primary(e.keystroke.modifiers) =>
+                            {
+                                PaletteAction::DuplicateSwatch(view.state.slot)
+                            }
+                            _ => return,
+                        };
+                        this.manager_action(action, cx);
+                        this.reveal_palette_swatch();
+                        cx.stop_propagation();
+                    }))
+                    .child(grid),
             )
-            .child(self.palette_swatch_actions(slot, count, cx))
+            .child(
+                row()
+                    .gap(px(space::SM))
+                    .child(caption(format!("Color {}", slot + 1), t).flex_1())
+                    .child(
+                        Button::new("duplicate-swatch", "Duplicate swatch", t)
+                            .variant(ButtonVariant::Ghost)
+                            .size(ControlSize::Sm)
+                            .disabled(count == 256)
+                            .build()
+                            .when(count < 256, |d| {
+                                d.on_click(cx.listener(move |this, _, _, cx| {
+                                    this.manager_action(PaletteAction::DuplicateSwatch(slot), cx);
+                                    this.reveal_palette_swatch();
+                                }))
+                            }),
+                    )
+                    .child(
+                        Button::new("remove-swatch", "Remove", t)
+                            .variant(ButtonVariant::Ghost)
+                            .size(ControlSize::Sm)
+                            .disabled(count <= 1)
+                            .build()
+                            .anchored_hint(
+                                if count <= 1 {
+                                    "Cannot remove the last swatch from a palette"
+                                } else {
+                                    "Remove selected swatch"
+                                },
+                                t,
+                                TooltipSide::Above,
+                            )
+                            .when(count > 1, |d| {
+                                d.on_click(cx.listener(move |this, _, _, cx| {
+                                    this.manager_action(PaletteAction::RemoveSwatch(slot), cx)
+                                }))
+                            }),
+                    ),
+            )
     }
     fn reveal_palette_swatch(&self) {
         let Some(view) = self.editor.palette_view() else {
@@ -434,7 +503,7 @@ impl EditorView {
         };
         self.palettes
             .grid_scroll
-            .set_offset(point(px(Space::S0.px()), -px(offset)));
+            .set_offset(point(px(space::NONE), -px(offset)));
     }
     fn palette_color_editor(&self, view: &PaletteView, cx: &Context<Self>) -> Div {
         let t = self.theme;
@@ -442,43 +511,95 @@ impl EditorView {
         let hsb = self.palettes.hsb;
         let fields = div()
             .flex_1()
-            .min_w(px(Space::S0.px()))
+            .min_w(px(space::NONE))
             .flex_shrink_0()
             .flex()
             .flex_col()
-            .gap(px(Space::S4.px()))
+            .gap(px(space::INSET))
             .child(
                 row()
-                    .gap(px(Space::S4.px()))
+                    .gap(px(space::INSET))
                     .child(
                         div()
-                            .child(caption("Hex", t).mb(px(Space::S2.px())))
+                            .child(caption("Hex", t).mb(px(space::XS)))
                             .child(self.palettes.hex.clone()),
                     )
                     .child(
                         div()
                             .flex_1()
-                            .child(caption("Previous / current", t).mb(px(Space::S2.px())))
-                            .child(self.previous_color(current, cx)),
+                            .child(caption("Previous / current", t).mb(px(space::XS)))
+                            .child(
+                                row()
+                                    .h(px(quantum_ui::tokens::ControlSize::Lg.height()))
+                                    .rounded(px(radius::CONTROL))
+                                    .overflow_hidden()
+                                    .border_1()
+                                    .border_color(t.swatch_edge())
+                                    .child(
+                                        Swatch::previous(
+                                            "previous-color",
+                                            "Restore previous color",
+                                        )
+                                        .tab_index(0)
+                                        .role(Role::Button)
+                                        .aria_label("Restore previous color")
+                                        .flex_1()
+                                        .h_full()
+                                        .bg(rgb_fill(self.palettes.before))
+                                        .rounded_l(px(radius::CONTROL))
+                                        .cursor_pointer()
+                                        .focus_visible(move |d| {
+                                            d.border_2().border_color(t.accent())
+                                        })
+                                        .anchored_hint(
+                                            format!(
+                                                "Previous {} · Click to restore",
+                                                rgb_hex(self.palettes.before)
+                                            ),
+                                            t,
+                                            TooltipSide::Above,
+                                        )
+                                        .on_click(
+                                            cx.listener(|this, _, _, cx| {
+                                                this.manager_action(
+                                                    PaletteAction::SetColor {
+                                                        rgb: this.palettes.before,
+                                                        commit: true,
+                                                    },
+                                                    cx,
+                                                )
+                                            }),
+                                        ),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .h_full()
+                                            .border_l_1()
+                                            .border_color(t.swatch_edge())
+                                            .bg(rgb_fill(current))
+                                            .rounded_r(px(radius::CONTROL)),
+                                    ),
+                            ),
                     ),
             )
             .children((0..2).map(|group| {
-                row().gap(px(Space::S3.px())).children((0..3).map(|column| {
+                row().gap(px(space::MD)).children((0..3).map(|column| {
                     let index = group * 3 + column;
                     div()
                         .flex_1()
                         .child(
                             caption(["R", "G", "B", "H °", "S %", "B %"][index], t)
-                                .mb(px(Space::S2.px())),
+                                .mb(px(space::XS)),
                         )
                         .child(self.palettes.channels[index].clone())
                 }))
             }));
         Card::new(t).rows([div()
-            .p(px(Space::S5.px()))
+            .p(px(space::XL))
             .flex()
             .flex_col()
-            .gap(px(Space::S4.px()))
+            .gap(px(space::LG))
             .child(
                 row()
                     .child(
@@ -499,15 +620,15 @@ impl EditorView {
             .child(
                 row()
                     .items_start()
-                    .gap(px(Space::S5.px()))
+                    .gap(px(space::XL))
                     .child(
                         div()
                             .w(px(metrics::COLOR_EDITOR_WIDTH))
                             .flex_shrink_0()
-                            .min_w(px(Space::S0.px()))
+                            .min_w(px(space::NONE))
                             .flex()
                             .flex_col()
-                            .gap(px(Space::S3.px()))
+                            .gap(px(space::MD))
                             .child(
                                 ColorSquare::new("palette-sb", t, hsb)
                                     .gesture(self.palettes.square_gesture.clone())
@@ -532,10 +653,10 @@ impl EditorView {
         div()
             .flex()
             .flex_col()
-            .gap(px(Space::S3.px()))
+            .gap(px(space::MD))
             .child(row().child(caption("Recent colors", t).flex_1()).child(
-                SegmentedControl::design(t).children([false, true].map(|target_add| {
-                    Segment::design(
+                SegmentedControl::row(t).children([false, true].map(|target_add| {
+                    Segment::new(
                         if target_add {
                             "recent-add"
                         } else {
@@ -548,7 +669,7 @@ impl EditorView {
                         },
                         t,
                     )
-                    .height(quantum_ui::ControlHeight::Dense)
+                    .size(ControlSize::Sm)
                     .selected(add == target_add)
                     .build()
                     .on_click(cx.listener(move |this, _, _, cx| {
@@ -559,18 +680,22 @@ impl EditorView {
             ))
             .child(
                 row()
-                    .gap(px(Space::S3.px()))
-                    .h(px(Space::S6.px()))
+                    .gap(px(space::MD))
+                    .h(px(space::XXL))
                     .when(view.state.recent_colors.is_empty(), |d| {
                         d.child(caption("Colors you use will appear here.", t))
                     })
                     .children(view.state.recent_colors.iter().take(16).enumerate().map(
                         |(index, rgb)| {
-                            Swatch::design(t, rgb_fill(*rgb))
-                                .height(quantum_ui::ControlHeight::Dense)
-                                .interactive(("recent-color", index), rgb_hex(*rgb))
+                            Swatch::new(t, rgb_fill(*rgb))
+                                .size(ControlSize::Sm)
+                                .build()
+                                .id(("recent-color", index))
+                                .tab_index(0)
+                                .role(Role::Button)
+                                .aria_label(rgb_hex(*rgb))
                                 .cursor_pointer()
-                                .anchored_hint(rgb_hex(*rgb), t, TooltipSide::Above, &self.overlays)
+                                .anchored_hint(rgb_hex(*rgb), t, TooltipSide::Above)
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.manager_action(
                                         PaletteAction::UseRecentColor {
@@ -611,27 +736,27 @@ impl EditorView {
         let main = Panel::section(t)
             .id("palette-main-scroll")
             .flex_1()
-            .min_w(px(Space::S0.px()))
-            .min_h(px(Space::S0.px()))
+            .min_w(px(space::NONE))
+            .min_h(px(space::NONE))
             .overflow_y_scroll()
-            .p(px(Space::S5.px()))
+            .p(px(space::XL))
             .flex()
             .flex_col()
-            .gap(px(Space::S4.px()))
+            .gap(px(space::INSET))
             .child(
                 row()
-                    .gap(px(Space::S4.px()))
+                    .gap(px(space::LG))
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(Space::S0.px()))
+                            .min_w(px(space::NONE))
                             .when(view.read_only, |d| {
                                 d.child(
-                                    quantum_ui::FieldFrame::design(t)
+                                    quantum_ui::FieldFrame::new(t)
                                         .build()
                                         .flex()
                                         .items_center()
-                                        .py(px(Space::S0.px()))
+                                        .py(px(space::NONE))
                                         .cursor_default()
                                         .overflow_hidden()
                                         .text_ellipsis()
@@ -643,18 +768,18 @@ impl EditorView {
                     .child(Badge::label(kind, t))
                     .child(caption(format!("{} / 256", view.palette.order.len()), t)),
             )
-            .child(caption(notice, t).h(px(Space::S5.px())))
+            .child(caption(notice, t).h(px(space::SECTION)))
             .child(self.palette_grid(&view, cx))
             .child(self.palette_color_editor(&view, cx))
             .child(self.palette_recents(&view, cx))
             .when(self.palettes.delete_confirmation, |d| {
                 d.child(
                     row()
-                        .gap(px(Space::S3.px()))
+                        .gap(px(space::MD))
                         .child(caption(format!("Delete “{}”?", view.name), t).flex_1())
                         .child(
-                            Button::design("cancel-delete-palette", "Cancel", t)
-                                .height(quantum_ui::ControlHeight::Dense)
+                            Button::new("cancel-delete-palette", "Cancel", t)
+                                .size(ControlSize::Sm)
                                 .build()
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.palettes.delete_confirmation = false;
@@ -662,9 +787,9 @@ impl EditorView {
                                 })),
                         )
                         .child(
-                            Button::design("confirm-delete-palette", "Delete", t)
-                                .style(quantum_ui::ButtonStyle::Danger)
-                                .height(quantum_ui::ControlHeight::Dense)
+                            Button::new("confirm-delete-palette", "Delete", t)
+                                .variant(ButtonVariant::Danger)
+                                .size(ControlSize::Sm)
                                 .build()
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.palette_edit(PaletteOperation::Delete, cx)
@@ -674,10 +799,10 @@ impl EditorView {
             })
             .child(
                 div()
-                    .min_h(px(Space::S5.px()))
-                    .text_style(TextSize::Small)
+                    .min_h(px(space::SECTION))
+                    .text_size(px(type_size::BODY))
                     .when_some(self.palettes.error.clone(), |d, error| {
-                        d.text_color(t.color(ColorToken::Danger)).child(error)
+                        d.text_color(t.danger()).child(error)
                     }),
             );
         let menu = self.palettes.menu;
@@ -697,7 +822,7 @@ impl EditorView {
                     deferred(
                         Menu::panel("palette-file-menu", t)
                             .absolute()
-                            .right(px(Space::S0.px()))
+                            .right(px(space::NONE))
                             .top(px(metrics::SWATCH_PITCH))
                             .on_mouse_down_out(cx.listener(|this, _, _, cx| {
                                 this.palettes.menu = false;
@@ -717,14 +842,14 @@ impl EditorView {
                             )
                             .child(
                                 caption("HEX, GPL, JASC-PAL", t)
-                                    .px(px(Space::S4.px()))
-                                    .pb(px(Space::S3.px())),
+                                    .px(px(space::LG))
+                                    .pb(px(space::MD)),
                             )
                             .child(
                                 div()
                                     .h(px(metrics::EDGE))
-                                    .bg(t.color(ColorToken::Border))
-                                    .my(px(Space::S2.px())),
+                                    .bg(t.separator())
+                                    .my(px(space::XS)),
                             )
                             .children(view.formats.iter().enumerate().map(|(index, format)| {
                                 Menu::item(
@@ -745,7 +870,7 @@ impl EditorView {
         let panel = Dialog::panel("palette-manager", "Palettes", t, &self.modal_focus)
             .w(px(metrics::PALETTE_DIALOG_WIDTH))
             .h(px(metrics::PALETTE_DIALOG_HEIGHT))
-            .p(px(Space::S0.px()))
+            .p(px(space::NONE))
             .capture_key_down(cx.listener(Self::palette_dialog_key))
             .on_mouse_up(
                 MouseButton::Left,
@@ -757,8 +882,8 @@ impl EditorView {
             )
             .child(
                 Dialog::title("Palettes", t).child(trigger).child(
-                    Button::design("close-palettes", "Done", t)
-                        .style(quantum_ui::ButtonStyle::Primary)
+                    Button::new("close-palettes", "Done", t)
+                        .variant(ButtonVariant::Primary)
                         .build()
                         .on_click(
                             cx.listener(|this, _, window, cx| this.close_palettes(window, cx)),
@@ -768,7 +893,7 @@ impl EditorView {
             .child(
                 row()
                     .flex_1()
-                    .min_h(px(Space::S0.px()))
+                    .min_h(px(space::NONE))
                     .items_stretch()
                     .child(self.palette_sidebar(&view, cx))
                     .child(main),
@@ -777,98 +902,5 @@ impl EditorView {
             cx.listener(|this, paths: &ExternalPaths, _, cx| this.palette_drop_file(paths, cx)),
         );
         Dialog::scrim(t, false).child(panel).into_any_element()
-    }
-}
-
-impl EditorView {
-    fn previous_color(&self, current: [u8; 3], cx: &Context<Self>) -> Div {
-        let t = self.theme;
-        row()
-            .h(px(quantum_ui::tokens::ControlSize::Lg.height()))
-            .rounded(px(Radius::Sm.px()))
-            .border_1()
-            .border_color(t.swatch_edge())
-            .child(
-                Swatch::design(t, rgb_fill(self.palettes.before))
-                    .interactive("previous-color", "Restore previous color")
-                    .flex_1()
-                    .h_full()
-                    .border_0()
-                    .bg(rgb_fill(self.palettes.before))
-                    .rounded_l(px(Radius::Sm.px()))
-                    .rounded_r(px(Space::S0.px()))
-                    .cursor_pointer()
-                    .anchored_hint(
-                        format!(
-                            "Previous {} · Click to restore",
-                            rgb_hex(self.palettes.before)
-                        ),
-                        t,
-                        TooltipSide::Above,
-                        &self.overlays,
-                    )
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.manager_action(
-                            PaletteAction::SetColor {
-                                rgb: this.palettes.before,
-                                commit: true,
-                            },
-                            cx,
-                        )
-                    })),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .h_full()
-                    .border_l_1()
-                    .border_color(t.swatch_edge())
-                    .bg(rgb_fill(current))
-                    .rounded_r(px(Radius::Sm.px())),
-            )
-    }
-}
-
-impl EditorView {
-    fn palette_swatch_actions(&self, slot: usize, count: usize, cx: &Context<Self>) -> Div {
-        let t = self.theme;
-        row()
-            .gap(px(Space::S3.px()))
-            .child(caption(format!("Color {}", slot + 1), t).flex_1())
-            .child(
-                Button::design("duplicate-swatch", "Duplicate swatch", t)
-                    .style(quantum_ui::ButtonStyle::Ghost)
-                    .height(quantum_ui::ControlHeight::Dense)
-                    .disabled(count == 256)
-                    .build()
-                    .when(count < 256, |d| {
-                        d.on_click(cx.listener(move |this, _, _, cx| {
-                            this.manager_action(PaletteAction::DuplicateSwatch(slot), cx);
-                            this.reveal_palette_swatch();
-                        }))
-                    }),
-            )
-            .child(
-                Button::design("remove-swatch", "Remove", t)
-                    .style(quantum_ui::ButtonStyle::Ghost)
-                    .height(quantum_ui::ControlHeight::Dense)
-                    .disabled(count <= 1)
-                    .build()
-                    .anchored_hint(
-                        if count <= 1 {
-                            "Cannot remove the last swatch from a palette"
-                        } else {
-                            "Remove selected swatch"
-                        },
-                        t,
-                        TooltipSide::Above,
-                        &self.overlays,
-                    )
-                    .when(count > 1, |d| {
-                        d.on_click(cx.listener(move |this, _, _, cx| {
-                            this.manager_action(PaletteAction::RemoveSwatch(slot), cx)
-                        }))
-                    }),
-            )
     }
 }

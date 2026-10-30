@@ -1,6 +1,5 @@
 //! Focus-aware keyboard routing for the editor shell.
 use super::*;
-use quantum_ui::Space;
 
 use crate::shortcuts::EditorKey;
 
@@ -73,7 +72,7 @@ impl EditorView {
         if self.palettes.open && !self.save_flow.dialog_open() {
             return true;
         }
-        if self.palette_focus.contains_focused(window, cx) {
+        if self.palette_focus.is_focused(window) {
             let delta = match EditorKey::from_key(&e.keystroke.key) {
                 EditorKey::Left => Some(-1),
                 EditorKey::Right => Some(1),
@@ -82,15 +81,12 @@ impl EditorView {
                 _ => None,
             };
             if let Some(delta) = delta {
-                // Arrow navigation resumes the active-brush group, including
-                // when Tab placed focus on an individual swatch button.
-                window.focus(&self.palette_focus, cx);
                 if let Some(next) = self
                     .palette_request(PaletteAction::StepSwatch(delta), cx)
                     .and_then(|out| out.selected)
                 {
                     self.swatch_scroll.set_offset(point(
-                        px(Space::S0.px()),
+                        px(space::NONE),
                         -px((next / 8) as f32 * metrics::SWATCH_PITCH),
                     ));
                     cx.notify();
@@ -122,7 +118,7 @@ impl EditorView {
     ) -> bool {
         // Shared editors own their keys and native text input, including fields
         // created inside controlled NumericField elements.
-        if crate::text_field::focused(window, cx) {
+        if crate::text_field::focused(window) {
             return true;
         }
 
@@ -148,10 +144,8 @@ impl EditorView {
         {
             return true;
         }
-        // Focused child controls own activation, including empty-search recovery.
-        // Only the palette's navigation root should dispatch its selected command.
         if !self.focus.is_focused(window)
-            && (!self.commands.is_open() || !self.modal_focus.is_focused(window))
+            && !self.commands.is_open()
             && matches!(key, EditorKey::Enter | EditorKey::Space)
         {
             return true;

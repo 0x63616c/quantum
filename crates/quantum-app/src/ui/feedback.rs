@@ -90,9 +90,6 @@ struct FeedbackView {
     preview: Option<String>,
     error: Option<String>,
     focus: FocusHandle,
-    endpoint: Option<String>,
-    sending: bool,
-    capture_only: bool,
 }
 
 impl FeedbackView {
@@ -121,11 +118,6 @@ impl FeedbackView {
             .detach();
         cx.observe_window_appearance(window, |_, _, cx| cx.notify())
             .detach();
-        cx.observe_window_activation(window, |_, _, cx| {
-            super::sync_reduced_motion(cx);
-            cx.notify();
-        })
-        .detach();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut view = Self {
@@ -135,9 +127,6 @@ impl FeedbackView {
             preview: None,
             error: None,
             focus,
-            endpoint: diagnostics::endpoint(),
-            sending: false,
-            capture_only: false,
         };
         if view.is_crash() {
             view.prepare(cx);
@@ -180,10 +169,6 @@ impl FeedbackView {
     }
 
     fn continue_in_browser(&mut self, cx: &mut Context<Self>) {
-        if self.endpoint.is_some() {
-            self.submit(cx);
-            return;
-        }
         if self.preview.is_none() {
             return;
         }
@@ -260,10 +245,9 @@ impl FeedbackView {
 }
 
 mod menu;
-mod relay;
 mod view;
 
-pub(super) fn fixture(crash: bool, relay: bool, cx: &mut App) {
+pub(super) fn fixture(crash: bool, cx: &mut App) {
     cx.spawn(async move |cx| {
         cx.background_executor()
             .timer(std::time::Duration::from_millis(1))
@@ -295,13 +279,6 @@ pub(super) fn fixture(crash: bool, relay: bool, cx: &mut App) {
                     None
                 };
                 show(pending, cx)?;
-                if relay && let Some(handle) = cx.global::<ReportWindow>().0 {
-                    handle.update(cx, |view, _, _| {
-                        view.capture_only = true;
-                        view.endpoint =
-                            Some("https://quantum-feedback.worldwidewebb.co/reports".into())
-                    })?;
-                }
                 if !crash && let Some(handle) = cx.global::<ReportWindow>().0 {
                     handle.update(cx, |view, _, cx| {
                         view.input.update(cx, |field, cx| {

@@ -118,17 +118,3 @@ fn plugin_check_keeps_exit_codes_and_diagnostic_streams() {
             .contains("0 passed, 1 failed, 0 skipped")
     );
 }
-
-#[test]
-fn dispatch_failure_renders_a_diagnostic_and_exits_unsuccessfully() {
-    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .args(["check", "not-a-check"])
-        .env("NO_COLOR", "1")
-        .env("TERM", "dumb")
-        .output()
-        .unwrap();
-    assert_eq!(output.status.code(), Some(1));
-    let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("not-a-check"), "{stderr}");
-    assert!(!stderr.contains('\u{1b}'));
-}

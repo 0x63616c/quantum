@@ -29,8 +29,8 @@ use std::{
 use tokio::sync::Semaphore;
 
 /// Application tool contract version, independent of MCP and `.voxl` versions.
-// Canonical envelope identity; the compatibility manifest records legacy aliases.
-pub const API_VERSION: &str = "quantum.v1";
+// Frozen response-envelope identity for clients that validate the v1 contract.
+pub const API_VERSION: &str = "voxelite.v1";
 
 /// One serialized document authority shared by all requests on this service.
 ///
@@ -107,7 +107,7 @@ impl ServerHandler for QuantumServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new("quantum-mcp",env!("CARGO_PKG_VERSION")))
-            .with_instructions("Quantum API quantum.v1. Start with quantum_capabilities_get. Use explicit model/layer IDs and returned epoch/revision on edits; keep operation_id unchanged on exact retries. Coordinates are integers, Y up; region maxima are exclusive. Edits are in memory until document_save. Render CPU PNG feedback to inspect your work.")
+            .with_instructions("Quantum API voxelite.v1. Start with quantum_capabilities_get. Use explicit model/layer IDs and returned epoch/revision on edits; keep operation_id unchanged on exact retries. Coordinates are integers, Y up; region maxima are exclusive. Edits are in memory until document_save. Render CPU PNG feedback to inspect your work.")
     }
     fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
         Cow::Owned(vec![

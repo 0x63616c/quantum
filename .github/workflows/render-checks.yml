@@ -2,6 +2,17 @@ name: Rendering checks
 
 on:
   pull_request:
+    # Dependency bumps (Cargo.toml/Cargo.lock) don't trigger this; the nightly run on main
+    # catches render changes from them. Dispatch visual by hand when a render dep changes.
+    paths:
+      - 'crates/quantum-render/**'
+      - 'crates/quantum-core/**'
+      - 'crates/quantum-bench/**'
+      - 'xtask/src/main.rs'
+      - 'bench/**'
+      - 'examples/*.voxl'
+      - '.cargo/config.toml'
+      - '.github/workflows/render-checks.yml'
   schedule:
     # Nightly visual gate on main (03:30 PT), so dependency bumps still get golden coverage.
     - cron: '30 10 * * *'
@@ -31,44 +42,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: render-checks-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: render-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  changes:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      pull-requests: read
-    outputs:
-      render: ${{ steps.filter.outputs.render }}
-    steps:
-      - name: Detect rendering changes
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
-            echo 'render=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | .filename, (.previous_filename // empty)')
-          render=false
-          [[ -z "$files" ]] && render=true
-          while IFS= read -r file; do
-            # Dependencies retain nightly golden coverage; dispatch visual for a render dep change.
-            case "$file" in
-              crates/quantum-render/*|crates/quantum-core/*|crates/quantum-bench/*|xtask/src/main.rs|bench/*|examples/*.voxl|.cargo/config.toml|.github/workflows/render-checks.yml) render=true ;;
-            esac
-          done <<< "$files"
-          echo "render=$render" >> "$GITHUB_OUTPUT"
-
   render:
-    needs: changes
     # Only owner-triggered, same-repository code may use self-hosted runners.
-    if: needs.changes.outputs.render == 'true' && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     # Both runners are on the same Mac mini. homelab-quantum-2 passed visual --determinism
     # bit-exact against the committed goldens (run 40628010315, see #165), so visual jobs use
     # either runner. Timing baselines need one fixed machine, so benchmarks require golden.
@@ -159,40 +139,3 @@ jobs:
           path: bench/baseline/
           if-no-files-found: error
           retention-days: 14
-
-      - name: Remove build output from the self-hosted runner
-        # The next checkout would `git clean` it anyway; deleting now keeps several GiB of
-        # release-profile output from sitting on the Mac mini between runs.
-        if: always()
-        shell: bash
-        run: rm -rf target
-
-  report-nightly-failure:
-    needs: [changes, render]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'schedule' && (needs.changes.result != 'success' || needs.render.result != 'success')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      issues: write
-    steps:
-      - name: Open or update nightly failure issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          RENDER_RESULT: ${{ needs.render.result }}
-        run: |
-          set -euo pipefail
-          title='ci: Rendering checks nightly failed'
-          body="Nightly visual checks did not complete successfully: $RUN_URL
-
-          Changes: $CHANGES_RESULT; render: $RENDER_RESULT.
-          Check the run logs and restore the golden visual and determinism gate."
-          issue=$(gh issue list --state open --search "$title in:title" --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
-          if [[ -n "$issue" ]]; then
-            gh issue edit "$issue" --add-label 'type:ci,area:ci,priority:p0'
-            gh issue comment "$issue" --body "$body"
-          else
-            gh issue create --title "$title" --body "$body" --label 'type:ci,area:ci,priority:p0'
-          fi

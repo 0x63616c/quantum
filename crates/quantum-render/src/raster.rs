@@ -148,10 +148,6 @@ impl Basis {
 pub struct RasterCache(Arc<Mutex<OccupancyCache>>);
 impl RasterCache {
     /// Render using incremental occupancy. AO and raster geometry are unchanged.
-    #[cfg_attr(
-        feature = "profiling",
-        tracing::instrument(name = "render.cpu.cached", skip_all)
-    )]
     pub fn render(
         &self,
         snapshot: &Snapshot,
@@ -190,10 +186,6 @@ pub fn render(snapshot: &Snapshot, options: &RenderOptions) -> RenderResult<Rend
 #[expect(
     clippy::expect_used,
     reason = "internal invariant: exact shadow rendering initializes occupancy"
-)]
-#[cfg_attr(
-    feature = "profiling",
-    tracing::instrument(name = "render.cpu", skip_all)
 )]
 fn render_with_occupancy(
     snapshot: &Snapshot,

@@ -4,12 +4,6 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Bounded canonical .voxl project serialization and durable document sessions"
-repository = "https://github.com/0x63616c/quantum"
-keywords = ["voxel", "voxl", "serialization"]
-categories = ["encoding", "filesystem"]
-readme = "README.md"
-include = ["LICENSE", "src/**", "README.md", "examples/roundtrip.rs", "tests/portable.rs"]
 
 [dependencies]
 tempfile.workspace = true

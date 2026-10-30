@@ -16,15 +16,6 @@
 Brand-bearing identifiers live in [brand.toml](brand.toml), with current values
 and explicit compatibility exceptions. Stable ones must not change without a migration.
 
-## Symbol navigation
-
-When Serena's MCP tools are available (see [docs/serena.md](docs/serena.md)):
-
-- For Rust symbols, use `find_symbol`, `find_referencing_symbols` and `get_symbols_overview`. That covers where something is defined, who calls it, which impl a method belongs to, and what a file contains. Same-named methods (for example `build_design`) and `Self::` uses resolve correctly, which `rg` cannot do.
-- Use `rg` for text: strings, comments, docs, TOML/YAML/WGSL, macro-generated or `cfg`-gated names, and quick existence checks.
-- The first reference lookup in a session takes about 30–40 s while rust-analyzer analyses the workspace, and needs about 4 GB of RAM. Use `rg` when one text search answers the question.
-- Reference results can leave out `impl Trait for Type` header lines. Check with `rg -w` before a rename that touches impl headers.
-
 ## Architecture and ownership
 
 Read [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) before moving feature
@@ -265,34 +256,6 @@ cargo xtask bench --scene autumn --runs 3 --out target/bench/before.json
 cargo xtask bench --scene autumn --runs 3 --out target/bench/after.json --compare target/bench/before.json --markdown target/bench/comparison.md
 ```
 
-## Design review (impeccable)
-
-- Project-local impeccable is pinned to **4.8.0** for Codex, Claude and Cursor.
-  Always set `IMPECCABLE_NO_TELEMETRY=1 DO_NOT_TRACK=1` when running it or npx;
-  shared `.impeccable/config.json` also sets `"telemetry": false`.
-- Agents and Codex jobs run `/impeccable critique` then `/impeccable polish`
-  before opening UI PRs: inspect the locally served site per [site/README.md](site/README.md)
-  for site changes, and PR screenshots from `cargo xtask screenshots` for GPUI
-  and future SwiftUI changes. Reviewers run critique on the Before | After images.
-- Read [DESIGN.md](DESIGN.md) and [ART-CHECKLIST.md](design/ART-CHECKLIST.md)
-  first; they override impeccable defaults, including pure black and Geist warnings.
-  Native work uses `adapt.native.md`, `audit.native.md` and `ios.md` in the
-  vendored skill reference directory; critique judges native screenshots.
-- Skill-only installation: hooks are off. Enabling provider hooks requires
-  Calum's approval. Never install globally into provider home directories.
-- Install or update from this worktree using the following exact command (replace
-  the exact version for an approved update), then review the entire diff:
-
-  ```sh
-  IMPECCABLE_NO_TELEMETRY=1 DO_NOT_TRACK=1 npx -y impeccable@4.8.0 install --providers=codex,claude,cursor --scope=project --yes --no-hooks
-  ```
-
-- For bundled launchers, set `IMPECCABLE_HOME="$PWD/.impeccable"` so fallback
-  engine downloads stay in the ignored project cache. Verify `telemetry status`
-  from the project root both with the two opt-out variables unset and set.
-- Keep vendored impeccable files verbatim. Their JS/shell helpers are a
-  vendored-skill exception, not permission to add first-party scripts.
-
 ## Shared UI and text editing
 
 - Use [quantum-ui](crates/quantum-ui/README.md) for buttons, icon buttons,
@@ -397,24 +360,18 @@ UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_r
 
 ## Commits and PRs
 
-- [Tickets](https://tickets.worldwidewebb.co) is the sole source of truth; Quantum
-  uses `QUA`. GitHub issues and Projects are retired. Use Tickets dependency
-  edges for blockers. Start agent jobs with
-  `P=$(job new quantum QUA-N [slug]); source "$P/.job.env"`.
-- Tickets links PRs and moves tickets to In review on opening and Done on merge
-  through a GitHub webhook.
-- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the ticket-first workflow, labels,
-  Tickets statuses, branch names, Conventional Commit PR titles, PR bodies and the
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the issue-first workflow, labels,
+  board statuses, branch names, Conventional Commit PR titles, PR bodies and the
   Definition of Done. Agents also follow the
-  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read Tickets
-  first, use one ticket per ask, link every PR, and audit **Done when** items
+  [project-tracking skill](.agents/skills/project-tracking/SKILL.md): read the
+  board first, file an issue per ask, link every PR, and audit **Done when** items
   before claiming anything is done.
 - PRs that change anything visible follow the
   [ui-pr-screenshots skill](.agents/skills/ui-pr-screenshots/SKILL.md):
   `cargo xtask screenshots --publish <PR#>` (or the **PR screenshots** CI job) fills
   the description's Before | After Screenshots section. Never paste UI screenshots
   by hand, and check the rendered PR page before asking for review.
-- Branch from `main` as `<type>/<KEY-N>-<slug>`; never push directly to `main`.
+- Branch from `main` as `<type>/<issue#>-<slug>`; never push directly to `main`.
   Keep PRs small, focused and limited to one concern. Review harshly before merge: inspect correctness,
   scope, failure paths and actual UI evidence.
 - Author all commits you create as `Calum <6991398+0x63616c@users.noreply.github.com>`:
@@ -427,8 +384,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 - Title PRs as Conventional Commits (`feat`, `fix`, `refactor`, `chore`, `docs`,
   `test`, `ci`, `perf`, optional scope) with an imperative summary;
   [PR conventions](.github/workflows/pr-conventions.yml) checks the title and a
-  Tickets key at the end of the title, e.g. `[QUA-12]`. Bodies start with the linked ticket,
-  `Closes [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)` (or `Refs [QUA-12](https://tickets.worldwidewebb.co/t/QUA-12)` to link without closing); CI checks it. Do not add `Co-authored-by` trailers or
+  `Closes`/`Fixes`/`Refs #N` link. Do not add `Co-authored-by` trailers or
   tool/agent attribution. Squash merge as `Title (#N)`, then delete the branch.
 - Explain the problem, resulting behavior and validation. Include before/after
   screenshots for UI changes, both themes where relevant, and before/after
@@ -437,7 +393,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 
 | Workflow | Required evidence |
 | --- | --- |
-| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), plus Clippy, nextest and doctests for macOS-specific crates on GitHub-hosted `xcode-27` for PRs and main pushes. Keep the hosted check named `macos`, secret-free and filtered at job level. The package list is in Select Rust packages; update it when a crate gains macOS-specific code. The guarded Mac mini `macos-hardware` job runs Metal profiling for matching PR inputs and every main push; nightly/manual runs retain full workspace checks. CI Linux checks the full workspace. Releases require full Mac Clippy and tests before packaging. Main pushes skip the DMG. Nightly and manual main runs build and upload the release-profile ad-hoc DMG; packaging-input PRs build `ci-dist` on hosted macOS. Legacy nightly GitHub issue reporting remains in the workflows; track actionable failures in Tickets (see [CI runners](docs/ci-runners.md)). Formatting runs in CI Linux. |
+| [CI macOS](.github/workflows/ci-macos.yml) | Plugin rule/tests and packaging task tests (GitHub-hosted Linux), then Clippy and tests for macOS-specific crates on the Mac mini for PRs and main pushes. The package list is in the workflow’s Select Rust packages step; update it when a crate gains macOS-specific code. CI Linux checks the full workspace. Nightly and manual Mac runs check the full workspace; releases require full Mac Clippy and tests before packaging. Main pushes skip the DMG. Nightly and manual main runs also build and upload the full release-profile ad-hoc DMG; PRs that touch packaging inputs still build it. Nightly failures open or update a `type:ci`, `area:ci`, `priority:p0` issue. Formatting runs in CI Linux. |
 | [Rendering checks](.github/workflows/render-checks.yml) | Visual/determinism gate when path filters match; request explicitly for other rendering-impacting changes. |
 | [Deploy site](.github/workflows/deploy-site.yml) | Ubuntu build/verification on PRs; production publication only for trusted `main` triggers. |
 
@@ -482,7 +438,7 @@ git config user.email 6991398+0x63616c@users.noreply.github.com
 | Reference | Use |
 | --- | --- |
 | [README.md](README.md) | Product overview, crate inventory, builds and entry points. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Ticket-first workflow, PR rules and Definition of Done. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue-first workflow, PR rules and Definition of Done. |
 | [Product direction](docs/adr/0003-product-direction.md) | Product scope and deferred work; verify implementation. |
 | [Domain glossary](docs/glossary.md) | Domain terminology; distinguish proposed seams from current code. |
 | [ADRs](docs/adr/), [ADR 0001](docs/adr/0001-record-architecture-decisions.md) | Architecture decisions and review order. |

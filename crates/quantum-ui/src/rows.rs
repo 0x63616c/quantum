@@ -22,23 +22,6 @@ pub struct ListRow {
 }
 type RowListener = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 impl ListRow {
-    /// Shared interactive frame for rows whose rich content is composed by the host.
-    /// Selection, hover, press, focus, typography and corners match ordinary rows.
-    pub fn frame(
-        id: impl Into<ElementId>,
-        label: impl Into<SharedString>,
-        theme: Theme,
-        selected: bool,
-    ) -> Stateful<Div> {
-        Button::design(id, "", theme)
-            .style(crate::ButtonStyle::Ghost)
-            .selected(selected)
-            .build()
-            .aria_label(label)
-            .h_auto()
-            .min_h(px(ControlHeight::Default.px()))
-            .justify_start()
-    }
     /// Construct a row; long titles always ellipsize inside the flexible column.
     pub fn new(id: impl Into<ElementId>, title: impl Into<SharedString>, theme: Theme) -> Self {
         Self {
@@ -128,7 +111,7 @@ impl ListRow {
         } else {
             transparent_black()
         };
-        let bg = |opacity| presentation::over(base, crate::interaction::wash(t), opacity);
+        let bg = |opacity| base.blend(t.color(C::OnAccent).opacity(opacity));
         let mut d = TextSize::Body
             .apply(row())
             .id(self.id)
@@ -155,19 +138,13 @@ impl ListRow {
             .when(!disabled, |d| {
                 d.tab_index(0)
                     .cursor_pointer()
+                    .hover(move |d| d.bg(base.blend(t.color(C::OnAccent).opacity(state::HOVER))))
+                    .active(move |d| d.bg(base.blend(t.color(C::OnAccent).opacity(state::PRESSED))))
                     .focus_visible(move |d| d.shadow(presentation::ring(t, C::Surface)))
             })
             .when(self.state == ControlState::Focused, |d| {
                 d.shadow(presentation::ring(t, C::Surface))
             })
-            .when(
-                !disabled && matches!(self.state, ControlState::Rest | ControlState::Focused),
-                |d| {
-                    d.child(crate::interaction::InteractionFill::new(
-                        crate::interaction::wash(t),
-                    ))
-                },
-            )
             .when_some(leading, |d, leading| {
                 d.child(
                     div()
@@ -182,7 +159,19 @@ impl ListRow {
                         .child(leading),
                 )
             })
-            .child(row_text(self.title, self.meta, t))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(Space::S0.px()))
+                    .child(presentation::ellipsis(self.title))
+                    .when_some(self.meta, |d, meta| {
+                        d.child(
+                            TextSize::Small
+                                .apply(presentation::ellipsis(meta))
+                                .text_color(t.color(C::TextSecondary)),
+                        )
+                    }),
+            )
             .when_some(self.trailing, |d, trailing| {
                 d.child(div().flex_shrink_0().child(trailing))
             })
@@ -206,19 +195,6 @@ impl ListRow {
         }
         d
     }
-}
-fn row_text(title: SharedString, meta: Option<SharedString>, theme: Theme) -> Div {
-    div()
-        .flex_1()
-        .min_w(px(Space::S0.px()))
-        .child(presentation::ellipsis(title))
-        .when_some(meta, |d, meta| {
-            d.child(
-                TextSize::Small
-                    .apply(presentation::ellipsis(meta))
-                    .text_color(theme.color(C::TextSecondary)),
-            )
-        })
 }
 impl RenderOnce for ListRow {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
@@ -336,7 +312,7 @@ impl RenderOnce for EmptyState {
 }
 
 impl crate::SidebarItem {
-    /// Opt into the shared ListRow API and its complete interaction states.
+    /// Opt into the shared ListRow API; legacy `row` preserves existing screen pixels.
     pub fn design(
         id: impl Into<ElementId>,
         title: impl Into<SharedString>,
@@ -346,14 +322,14 @@ impl crate::SidebarItem {
     }
 }
 impl crate::FormRow {
-    /// Settings-row presentation with shared typography and horizontal insets.
+    /// New settings-row presentation; legacy `row` remains frozen until #134.
     pub fn design(
         title: impl Into<SharedString>,
         description: impl Into<SharedString>,
         control: impl IntoElement,
         theme: Theme,
     ) -> Div {
-        SettingsRow::row(title, description, control, theme).px(px(Space::S5.px()))
+        SettingsRow::row(title, description, control, theme)
     }
 }
 

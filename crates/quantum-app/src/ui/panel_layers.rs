@@ -1,7 +1,5 @@
 //! Layer selection, visibility and locking in the sidebar.
 use super::*;
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
 
 impl EditorView {
     pub(super) fn layers_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
@@ -13,22 +11,14 @@ impl EditorView {
             } else {
                 metrics::COLOR_EDITOR_WIDTH
             }))
-            .px(px(PANEL_GUTTER - Space::S3.px()))
-            .py(px(if compact {
-                Space::S3.px()
-            } else {
-                Space::S5.px()
-            }))
+            .px(px(PANEL_GUTTER - space::MD))
+            .py(px(if compact { space::MD } else { space::XL }))
             .border_t_1()
-            .border_color(t.color(ColorToken::BorderSubtle))
+            .border_color(t.line())
             .child(
                 row()
-                    .pl(px(Space::S3.px()))
-                    .mb(px(if compact {
-                        Space::S2.px()
-                    } else {
-                        Space::S3.px()
-                    }))
+                    .pl(px(space::MD))
+                    .mb(px(if compact { space::XS } else { space::MD }))
                     .justify_between()
                     .child(section_title("Layers"))
                     .child(self.button(
@@ -72,20 +62,42 @@ impl EditorView {
         let id = layer.id;
         let visible = layer.visible;
         let locked = layer.locked;
-        quantum_ui::ListRow::new(("layer", i), layer.name.clone(), t)
-            .icon("layer")
-            .selected(id == self.editor.layer)
-            .navigation(true)
-            .trailing(
-                row()
-                    .child(self.layer_visibility(i, id, visible, cx))
-                    .child(self.layer_lock(i, id, locked, cx)),
-            )
-            .build()
-            .when(!visible, |d| {
-                d.text_color(t.color(ColorToken::TextSecondary))
+        Button::custom(("layer", i), layer.name.clone())
+            .tab_index(0)
+            .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+            .active(move |d| d.bg(t.selected()))
+            .h(px(if compact {
+                quantum_ui::tokens::ControlSize::Md.height()
+            } else {
+                metrics::RAIL_BUTTON
+            }))
+            .pl(px(space::SM))
+            .pr(px(space::MD))
+            .gap(px(space::MD))
+            .rounded(px(radius::CONTROL))
+            .cursor_pointer()
+            .border_l_2()
+            .border_color(if id == self.editor.layer {
+                t.accent()
+            } else {
+                t.background()
             })
-            .when(compact, |d| d.py(px(Space::S0.px())))
+            .when(id == self.editor.layer, |d| {
+                d.bg(t.hover()).font_weight(FontWeight::MEDIUM)
+            })
+            .hover(move |d| d.bg(t.hover()))
+            .text_color(if visible { t.text() } else { t.muted() })
+            .child(icon("layer").size(px(space::XL)).text_color(t.muted()))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(space::NONE))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(layer.name.clone()),
+            )
+            .child(self.layer_visibility(i, id, visible, cx))
+            .child(self.layer_lock(i, id, locked, cx))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.editor.layer = id;
                 this.editor.box_start = None;
@@ -101,19 +113,24 @@ impl EditorView {
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let t = self.theme;
-        IconButton::new(
+        IconButton::custom(
             ("eye", i),
-            if visible { "eye" } else { "eye-off" },
             if visible { "Hide layer" } else { "Show layer" },
-            t,
+            quantum_ui::tokens::ControlSize::Md,
         )
-        .height(quantum_ui::ControlHeight::Dense)
-        .build()
-        .anchored_hint(
-            if visible { "Hide layer" } else { "Show layer" },
-            t,
-            TooltipSide::Below,
-            &self.overlays,
+        .tab_index(0)
+        .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+        .active(move |d| d.bg(t.selected()))
+        .w(px(space::XXXL))
+        .h(px(space::XXXL))
+        .justify_center()
+        .rounded(px(radius::CONTROL))
+        .tooltip(hint(if visible { "Hide layer" } else { "Show layer" }, t))
+        .hover(move |d| d.bg(t.selected()))
+        .child(
+            icon(if visible { "eye" } else { "eye-off" })
+                .size(px(metrics::ICON_DENSE))
+                .text_color(t.muted()),
         )
         .on_click(cx.listener(move |this, _, _, cx| {
             cx.stop_propagation();
@@ -130,20 +147,25 @@ impl EditorView {
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let t = self.theme;
-        IconButton::new(
+        IconButton::custom(
             ("lock", i),
-            if locked { "lock" } else { "unlock" },
             if locked { "Unlock layer" } else { "Lock layer" },
-            t,
+            quantum_ui::tokens::ControlSize::Md,
         )
-        .selected(locked)
-        .height(quantum_ui::ControlHeight::Dense)
-        .build()
-        .anchored_hint(
-            if locked { "Unlock layer" } else { "Lock layer" },
-            t,
-            TooltipSide::Below,
-            &self.overlays,
+        .tab_index(0)
+        .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+        .active(move |d| d.bg(t.selected()))
+        .w(px(space::XXXL))
+        .h(px(space::XXXL))
+        .justify_center()
+        .rounded(px(radius::CONTROL))
+        .tooltip(hint(if locked { "Unlock layer" } else { "Lock layer" }, t))
+        .when(locked, |d| d.bg(t.selected()))
+        .hover(move |d| d.bg(t.selected()))
+        .child(
+            icon(if locked { "lock" } else { "unlock" })
+                .size(px(metrics::ICON_DENSE))
+                .text_color(if locked { t.accent() } else { t.muted() }),
         )
         .on_click(cx.listener(move |this, _, _, cx| {
             cx.stop_propagation();

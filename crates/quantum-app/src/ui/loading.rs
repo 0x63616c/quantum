@@ -1,10 +1,6 @@
 //! Prepared preview pixels and ASCII grids. Disk I/O, resizing and sampling run
 //! with the existing background jobs; render only clones shared handles.
 use super::*;
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
-use quantum_ui::tokens::geometry;
-use quantum_ui::tokens::state;
 use quantum_ui::{
     AsciiImageReveal, AsciiSkeleton,
     ascii_reveal::media::{MAX_MEDIA_EDGE, Media, MediaOptions},
@@ -152,11 +148,7 @@ pub(super) fn recent(path: &std::path::Path) -> anyhow::Result<PreparedPreview> 
             metrics::welcome::THUMB_WIDTH as u32,
             metrics::welcome::THUMB_HEIGHT as u32,
         ],
-        |theme| {
-            theme
-                .color(ColorToken::Canvas)
-                .blend(theme.hover().opacity(state::THUMBNAIL_WASH))
-        },
+        |theme| theme.background().blend(theme.hover().opacity(0.5)),
     )
 }
 
@@ -181,21 +173,15 @@ pub(super) fn recent_element(
                     .child(
                         img(preview.image.clone())
                             .absolute()
-                            .left(relative(-geometry::THUMBNAIL_OVERSCAN))
-                            .top(px(
-                                -metrics::welcome::THUMB_HEIGHT * geometry::THUMBNAIL_OVERSCAN
-                            ))
-                            .w(relative(geometry::THUMBNAIL_SCALE))
-                            .h(px(
-                                metrics::welcome::THUMB_HEIGHT * geometry::THUMBNAIL_SCALE
-                            ))
+                            .left(relative(-0.06))
+                            .top(px(-metrics::welcome::THUMB_HEIGHT * 0.06))
+                            .w(relative(1.12))
+                            .h(px(metrics::welcome::THUMB_HEIGHT * 1.12))
                             .object_fit(ObjectFit::Contain),
                     ),
             )
             .into_any_element(),
-        Some(None) => icon("cube")
-            .text_color(theme.color(ColorToken::TextSecondary))
-            .into_any_element(),
+        Some(None) => icon("cube").text_color(theme.muted()).into_any_element(),
         None => div()
             .w(px(metrics::welcome::THUMB_WIDTH))
             .h(px(metrics::welcome::THUMB_HEIGHT))
@@ -211,20 +197,8 @@ pub(super) fn recent_element(
 }
 
 impl EditorView {
-    pub(super) fn scene_is_loading(&self) -> bool {
-        self.capture_state == Some(launch::LaunchState::SceneLoading)
-            || (!self.viewport.has_frame() && self.viewport.rendering())
-    }
     pub(super) fn scene_loading(&self) -> Div {
         let t = self.theme;
-        let skeleton = quantum_ui::Shimmer::new("scene-loading", t)
-            .rows(12)
-            .reduced_motion(self.reduced_motion);
-        let skeleton = if self.capture_state == Some(launch::LaunchState::SceneLoading) {
-            skeleton.elapsed(std::time::Duration::from_millis(400))
-        } else {
-            skeleton
-        };
         div()
             .absolute()
             .inset_0()
@@ -232,18 +206,11 @@ impl EditorView {
             .items_center()
             .justify_center()
             .child(
-                div()
-                    .id("scene-loading-status")
-                    .w(px(metrics::SCENE_LOADING_WIDTH))
-                    .aria_label("Rendering scene")
-                    .child(skeleton)
-                    .child(
-                        quantum_ui::TextSize::Small
-                            .apply(div())
-                            .mt(px(Space::S4.px()))
-                            .text_color(t.color(ColorToken::TextSecondary))
-                            .child("Rendering scene…"),
-                    ),
+                div().w(px(metrics::SCENE_LOADING_WIDTH)).child(
+                    quantum_ui::AsciiSkeleton::new("scene-loading", t)
+                        .rows(12)
+                        .reduced_motion(self.reduced_motion),
+                ),
             )
     }
     pub(super) fn scene_heading(&self) -> Div {
@@ -266,12 +233,12 @@ impl EditorView {
         let heading = heading.elapsed(std::time::Duration::from_secs(60));
         div()
             .absolute()
-            .top(px(Space::S5.px()))
-            .left(px(Space::S6.px()))
+            .top(px(space::PANEL))
+            .left(px(space::XXL))
             .child(
                 row()
-                    .gap(px(Space::S4.px()))
-                    .text_color(t.color(ColorToken::TextSecondary))
+                    .gap(px(space::INSET))
+                    .text_color(t.muted())
                     .child(heading),
             )
     }
@@ -281,7 +248,6 @@ impl EditorView {
 mod tests {
     use super::{MAX_MEDIA_EDGE, PreparedPreview, Theme, recent};
     use gpui::Rgba;
-    use quantum_ui::ColorToken;
 
     #[test]
     fn preview_validates_dimensions_before_resizing_and_samples_both_backdrops() {
@@ -298,7 +264,7 @@ mod tests {
             .ready();
         for (media, theme) in preview.media.iter().zip([Theme::Dark, Theme::Light]) {
             assert_eq!(media.size(), [64; 2]);
-            let color: Rgba = theme.color(ColorToken::Surface).into();
+            let color: Rgba = theme.surface().into();
             assert_eq!(
                 media.options().background,
                 [color.r, color.g, color.b].map(|c| (c * 255.).round() as u8)
@@ -338,14 +304,7 @@ mod tests {
         let preview = recent(file.path()).unwrap().ready();
         for (media, theme) in preview.media.iter().zip([Theme::Dark, Theme::Light]) {
             assert_eq!(media.size(), [60, 46]);
-            let color: Rgba = theme
-                .color(ColorToken::Canvas)
-                .blend(
-                    theme
-                        .hover()
-                        .opacity(quantum_ui::tokens::state::THUMBNAIL_WASH),
-                )
-                .into();
+            let color: Rgba = theme.background().blend(theme.hover().opacity(0.5)).into();
             assert_eq!(
                 media.options().background,
                 [color.r, color.g, color.b].map(|value| (value * 255.).round() as u8)

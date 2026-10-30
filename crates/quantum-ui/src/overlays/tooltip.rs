@@ -32,16 +32,6 @@ struct TooltipRuntime {
     timer: Option<Task<()>>,
     _subscription: Subscription,
 }
-
-fn position_trigger(mut trigger: Stateful<Div>, cover: bool) -> Stateful<Div> {
-    if cover {
-        return trigger.absolute().inset_0();
-    }
-    if trigger.style().position.is_none() {
-        trigger = trigger.relative();
-    }
-    trigger
-}
 impl TooltipRuntime {
     fn dismiss(&mut self, cx: &mut Context<Self>) {
         self.dwell.dismiss();
@@ -58,7 +48,6 @@ pub struct Tooltip {
     theme: Theme,
     overlays: Entity<OverlayState>,
     delay: Duration,
-    side: PopoverSide,
 }
 impl Tooltip {
     /// The required label also names icon-only triggers for accessibility.
@@ -73,7 +62,6 @@ impl Tooltip {
             theme,
             overlays: overlays.clone(),
             delay: state::TOOLTIP_DELAY,
-            side: PopoverSide::Below,
         }
     }
     /// Add one shortcut chip, without nesting keycap borders.
@@ -85,19 +73,6 @@ impl Tooltip {
     pub fn delay(mut self, delay: Duration) -> Self {
         self.delay = delay;
         self
-    }
-    /// Preferred side; measured placement flips and clamps to the viewport.
-    pub fn side(mut self, side: PopoverSide) -> Self {
-        self.side = side;
-        self
-    }
-    /// Decorate a host-composed control while retaining its event and style hooks.
-    /// The transparent child follows the control's bounds without changing layout.
-    pub fn decorate(self, trigger: Stateful<Div>) -> Stateful<Div> {
-        let id = Element::id(&trigger).unwrap_or_else(|| self.label.clone().into());
-        let mut hint = self.attach(id, div().id("tooltip-hitbox").size_full());
-        hint.cover = true;
-        position_trigger(trigger, false).child(hint)
     }
     /// Build tooltip content for a static gallery or the delayed trigger.
     pub fn build(&self) -> Div {
@@ -125,7 +100,6 @@ impl Tooltip {
             id: id.into(),
             tooltip: self,
             trigger,
-            cover: false,
         }
     }
 }
@@ -135,7 +109,6 @@ pub struct TooltipTrigger {
     id: ElementId,
     tooltip: Tooltip,
     trigger: Stateful<Div>,
-    cover: bool,
 }
 impl RenderOnce for TooltipTrigger {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
@@ -157,7 +130,8 @@ impl RenderOnce for TooltipTrigger {
         let press_out = state.clone();
         let show = state.read(cx).dwell.visible && overlays.read(cx).allows_tooltip();
         let tooltip = self.tooltip;
-        position_trigger(self.trigger, self.cover)
+        self.trigger
+            .relative()
             .aria_label(tooltip.label.clone())
             .on_hover(move |inside, window, cx| {
                 let allowed = overlays.read(cx).allows_tooltip();
@@ -202,7 +176,7 @@ impl RenderOnce for TooltipTrigger {
             .when(show, |d| {
                 d.child(OverlayLayer::Tooltip.defer(PlacedOverlay::measured(
                     bounds,
-                    tooltip.side,
+                    PopoverSide::Below,
                     tooltip.build(),
                 )))
             })
@@ -226,22 +200,6 @@ impl Kbd {
 mod tests {
     use super::*;
     use core::prelude::v1::test;
-    #[test]
-    fn decorated_tooltip_hitboxes_never_consume_control_layout_space() {
-        let mut overlay = position_trigger(div().id("cover").size_full(), true);
-        assert_eq!(overlay.style().position, Some(Position::Absolute));
-        assert_eq!(overlay.style().inset.top, Some(px(0.).into()));
-        assert_eq!(overlay.style().inset.left, Some(px(0.).into()));
-        let mut ordinary = position_trigger(div().id("ordinary"), false);
-        assert_eq!(ordinary.style().position, Some(Position::Relative));
-        let mut marker = position_trigger(
-            div().id("marker").absolute().top(px(12.)).left(px(4.)),
-            false,
-        );
-        assert_eq!(marker.style().position, Some(Position::Absolute));
-        assert_eq!(marker.style().inset.top, Some(px(12.).into()));
-        assert_eq!(marker.style().inset.left, Some(px(4.).into()));
-    }
     #[test]
     fn shortcut_uses_caption_type_and_tooltip_uses_small_type() {
         for theme in [Theme::Dark, Theme::Light] {

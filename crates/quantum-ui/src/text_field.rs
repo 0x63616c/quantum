@@ -9,9 +9,6 @@ use crate::{
 use gpui::{prelude::*, *};
 use std::{ops::Range, time::Duration};
 
-#[path = "text_field_focus.rs"]
-mod focus;
-
 /// Field-local action. Its binding context prevents document undo interception.
 #[derive(Clone, Debug, PartialEq, Eq, Action)]
 #[action(no_json)]
@@ -124,7 +121,8 @@ impl TextField {
         let start = executor.now();
         cx.new(|cx| Self {
             editor: Editor::default(),
-            focus: Self::register_focus(cx),
+            // GPUI uses the tracked handle's tab policy, not the Div's flags.
+            focus: cx.focus_handle().tab_stop(true),
             placeholder,
             theme: Theme::Dark,
             embedded: false,
@@ -220,10 +218,6 @@ impl TextField {
     /// Whether the field currently owns keyboard input.
     pub fn focused(&self, window: &Window) -> bool {
         self.focus.is_focused(window)
-    }
-    /// Whether an embedding search row should show its keyboard focus ring.
-    pub fn focus_visible(&self, window: &Window) -> bool {
-        self.focused(window) && window.last_input_was_keyboard()
     }
     /// Focus from a keyboard command, selecting all on entry.
     pub fn focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -944,5 +938,60 @@ impl Render for TextField {
 }
 
 #[cfg(test)]
-#[path = "text_field_tests.rs"]
-mod tests;
+mod tests {
+    use super::{ClipboardOp, Command, TextFieldAction, editing, key_bindings};
+    use gpui::{KeyBinding, KeyContext, Keymap, Keystroke};
+
+    #[test]
+    fn installed_bindings_parse_and_only_resolve_in_a_field() {
+        for mac in [true, false] {
+            let bindings = key_bindings(mac);
+            let keymap = Keymap::new(bindings.clone());
+            for (binding, expected) in bindings.iter().zip(editing::bindings(mac)) {
+                for (context, count) in [("TextField SharedTextInput", 1), ("Editor", 0)] {
+                    let (matched, pending) = keymap.bindings_for_input(
+                        binding.keystrokes(),
+                        &[KeyContext::parse(context).unwrap()],
+                    );
+                    assert!(!pending, "{}", expected.key);
+                    assert_eq!(matched.len(), count, "{} in {context}", expected.key);
+                    if let Some(matched) = matched.first() {
+                        assert_eq!(
+                            matched.action().as_any().downcast_ref::<TextFieldAction>(),
+                            Some(&TextFieldAction {
+                                command: expected.command
+                            }),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn field_undo_bindings_take_precedence_over_document_bindings() {
+        for mac in [true, false] {
+            let primary = if mac { "cmd-z" } else { "ctrl-z" };
+            // A distinct action represents a document's global Undo binding.
+            let mut bindings = vec![KeyBinding::new(primary, ClipboardOp::Cut, None)];
+            bindings.extend(key_bindings(mac));
+            let keymap = Keymap::new(bindings);
+            let (matched, _) = keymap.bindings_for_input(
+                &[Keystroke::parse(primary).unwrap()],
+                &[
+                    KeyContext::parse("Editor").unwrap(),
+                    KeyContext::parse("TextField").unwrap(),
+                ],
+            );
+            assert_eq!(
+                matched[0]
+                    .action()
+                    .as_any()
+                    .downcast_ref::<TextFieldAction>(),
+                Some(&TextFieldAction {
+                    command: Command::Undo
+                }),
+            );
+        }
+    }
+}

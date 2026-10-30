@@ -1,6 +1,6 @@
 # `.voxl` 1.0
 
-A project is one UTF-8 JSON object, MIME `application/vnd.quantum.project+json`.
+A project is one UTF-8 JSON object, MIME `application/vnd.voxelite.project+json`.
 `schema.json` describes structure; the Rust validator additionally checks references,
 coordinate uniqueness, order permutations, budgets and snapshot hashes.
 
@@ -126,10 +126,7 @@ previous session and the original file (including all other sections).
 
 ## Product rename compatibility
 
-Writers emit `"format": "quantum"` and the media type above. Readers also accept
-the legacy discriminator listed in `schema.json`; `fixtures/legacy.input.voxl`
-proves it loads and re-saves to the current canonical fixture. The `.voxl`
-extension, document IDs, content, paths and format version remain unchanged.
-Older applications that require the previous discriminator cannot read newly
-saved files. Keep an original copy when sharing with an older application.
-See [rename compatibility](../../../docs/rename-compatibility.md).
+Quantum deliberately keeps `"format": "voxelite"` and the media type above as
+frozen v1 wire identifiers. Both old and new writers use the same discriminator,
+so 0.3.x applications can open projects saved by Quantum. The `.voxl` extension,
+canonical bytes, document paths and format version are unchanged by the rename.

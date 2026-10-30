@@ -10,7 +10,7 @@ mod ui_snapshots;
 #[cfg(target_os = "macos")]
 pub mod updater;
 use gpui::*;
-use quantum_app::{editor::Editor, reports::report};
+use quantum_app::editor::Editor;
 use std::{path::PathBuf, time::Duration};
 use theme::Theme;
 
@@ -103,22 +103,14 @@ fn options(args: impl IntoIterator<Item = String>) -> anyhow::Result<Options> {
     );
     Ok(options)
 }
-fn main() -> miette::Result<()> {
-    run().map_err(|error| report(error.as_ref()))
-}
-
 #[expect(clippy::expect_used, reason = "internal invariant: bundled fonts")]
-fn run() -> anyhow::Result<()> {
-    #[cfg(feature = "profiling")]
-    initialize_profiling()?;
+fn main() -> anyhow::Result<()> {
     #[cfg(feature = "ui-snapshots")]
     if std::env::args().nth(1).as_deref() == Some("--ui-snapshot") {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
         return ui_snapshots::run();
     }
     quantum_app::local_settings::initialize_data_dir()?;
-    #[cfg(target_os = "macos")]
-    updater::migrate_data()?;
     install_diagnostics()?;
     let options = options(std::env::args().skip(1))?;
     if let Some(path) = options.viewport_png {
@@ -151,6 +143,7 @@ fn run() -> anyhow::Result<()> {
     } else {
         quantum_app::startup::open(options.path.as_deref())
     };
+    // Load local preferences before starting GPUI's event loop.
     let preferences = quantum_app::preferences::Preferences::load(
         &quantum_app::local_settings::data_dir().join("settings.json"),
     );
@@ -183,8 +176,7 @@ fn run() -> anyhow::Result<()> {
                 ui::welcome::startup(cx)
             };
             if let Err(error) = result {
-                let diagnostic = report(error.as_ref()).wrap_err("Cannot open Quantum");
-                eprintln!("{diagnostic:?}");
+                eprintln!("Cannot open Quantum: {error}");
                 cx.quit();
             }
             if options.show.is_none() {
@@ -231,21 +223,6 @@ fn install_diagnostics() -> anyhow::Result<()> {
     {
         eprintln!("Could not enable local crash reports; the editor will still start.");
     }
-    Ok(())
-}
-
-#[cfg(feature = "profiling")]
-fn initialize_profiling() -> anyhow::Result<()> {
-    use tracing_subscriber::prelude::*;
-    let targets = tracing_subscriber::filter::Targets::new()
-        .with_target("quantum", tracing::Level::INFO)
-        .with_target("quantum_app", tracing::Level::INFO)
-        .with_target("quantum_render", tracing::Level::INFO)
-        .with_target("quantum_mesh", tracing::Level::INFO);
-    tracing::subscriber::set_global_default(
-        tracing_subscriber::registry()
-            .with(tracing_tracy::TracyLayer::default().with_filter(targets)),
-    )?;
     Ok(())
 }
 

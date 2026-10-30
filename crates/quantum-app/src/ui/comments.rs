@@ -2,9 +2,6 @@
 use super::*;
 use quantum_core::Origin;
 use quantum_plugin_api::{CommentsAction, CommentsOutcome, CommentsView, ToolGesture};
-use quantum_ui::ColorToken;
-use quantum_ui::Radius;
-use quantum_ui::Space;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum SidebarTab {
     Session,
@@ -17,7 +14,7 @@ pub(super) struct Discussion {
 }
 impl Discussion {
     pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
-        let text = crate::text_field::TextField::design("Write a comment…", cx);
+        let text = crate::text_field::TextField::new("Write a comment…", cx);
         cx.subscribe_in(
             &text,
             window,
@@ -100,7 +97,7 @@ impl EditorView {
     }
     pub(super) fn panel_tabs(&self, cx: &Context<Self>) -> Stateful<Div> {
         let t = self.theme;
-        TabBar::design("panel-tabs", t).children(
+        TabBar::row(t).children(
             [
                 (SidebarTab::Session, "Session"),
                 (SidebarTab::Comments, "Comments"),
@@ -110,7 +107,7 @@ impl EditorView {
             .filter(|(panel, _)| *panel != SidebarTab::Comments || self.editor.comments_enabled())
             .enumerate()
             .map(|(i, (panel, label))| {
-                Tab::design(("panel-tab", i), label, t)
+                Tab::new(("panel-tab", i), label, t)
                     .selected(self.panel == panel)
                     .build()
                     .flex_1()
@@ -131,7 +128,7 @@ impl EditorView {
         if let Some(thread) = self.thread_panel(&view, cx) {
             return div()
                 .flex_1()
-                .min_h(px(Space::S0.px()))
+                .min_h(px(space::NONE))
                 .flex()
                 .flex_col()
                 .child(thread);
@@ -141,8 +138,8 @@ impl EditorView {
             .min_h(px(metrics::COMMENTS_MIN_HEIGHT))
             .flex()
             .flex_col()
-            .p(px(Space::S5.px()))
-            .gap(px(Space::S4.px()))
+            .p(px(space::PANEL))
+            .gap(px(space::LG))
             .child(
                 row()
                     .justify_between()
@@ -159,7 +156,7 @@ impl EditorView {
                         .into_iter()
                         .enumerate()
                         .map(|(i, label)| {
-                            Segment::design(("comment-filter", i), label, t)
+                            Segment::new(("comment-filter", i), label, t)
                                 .icon(["comment", "check-check", "layer"][i])
                                 .build()
                                 .aria_selected(self.editor.comments_state.filter == i)
@@ -189,36 +186,91 @@ impl EditorView {
                         cx.notify();
                     },
                 )
-                .anchored_hint(
-                    "Toggle one voxel or a two-corner region",
-                    t,
-                    TooltipSide::Below,
-                    &self.overlays,
-                ),
+                .tooltip(hint("Toggle one voxel or a two-corner region", t)),
             )
             .child(
                 div()
                     .id("comments-scroll")
                     .flex_1()
-                    .min_h(px(Space::S0.px()))
+                    .min_h(px(space::NONE))
                     .overflow_y_scroll()
                     .when(comments.is_empty(), |d| {
-                        d.child(quantum_ui::EmptyState::new(
-                            "comment",
+                        d.child(div().py(px(space::XL)).text_color(t.muted()).child(
                             if view.empty {
                                 "Pin a discussion to your model."
                             } else {
                                 "No threads in this filter."
                             },
-                            t,
                         ))
                     })
-                    .children(
-                        comments
-                            .iter()
-                            .enumerate()
-                            .map(|(i, c)| self.comment_row(i, c, cx)),
-                    ),
+                    .children(comments.iter().enumerate().map(|(i, c)| {
+                        let id = c.id;
+                        let first = &c.messages[0];
+                        Button::tile(("thread", i), first.text.clone())
+                            .tab_index(0)
+                            .focus_visible(move |d| d.bg(t.hover()).shadow(focus_ring(t)))
+                            .active(move |d| d.bg(t.selected()))
+                            .p(px(space::LG))
+                            .mb(px(space::MD))
+                            .rounded(px(radius::LG))
+                            .border_b_1()
+                            .border_color(if self.editor.comments_state.selected == Some(id) {
+                                t.accent()
+                            } else {
+                                t.line()
+                            })
+                            .cursor_pointer()
+                            .hover(move |d| d.bg(t.hover()))
+                            .child(
+                                row()
+                                    .gap(px(space::MD))
+                                    .child(
+                                        mono(
+                                            self.editor
+                                                .comments_state
+                                                .numbers
+                                                .get(&id)
+                                                .copied()
+                                                .unwrap_or(i + 1)
+                                                .to_string(),
+                                        )
+                                        .text_color(t.accent()),
+                                    )
+                                    .child(
+                                        icon(if c.resolved { "check" } else { "comment" })
+                                            .text_color(t.muted()),
+                                    )
+                                    .child(div().font_weight(FontWeight::MEDIUM).child(
+                                        if first.origin == Origin::Human {
+                                            "Human"
+                                        } else {
+                                            "Agent"
+                                        },
+                                    )),
+                            )
+                            .child(
+                                div()
+                                    .mt(px(space::MD))
+                                    .child(first.text.chars().take(160).collect::<String>()),
+                            )
+                            .child(
+                                mono(format!(
+                                    "{} messages · {:?}",
+                                    c.messages.len(),
+                                    self.editor.display_snapshot().anchor_state(c)
+                                ))
+                                .mt(px(space::SM))
+                                .text_color(t.muted()),
+                            )
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.discussion_action(CommentsAction::Select(Some(id)), cx);
+                                this.discussion
+                                    .text
+                                    .update(cx, |f, cx| f.set(String::new(), cx));
+                                window.focus(&this.focus, cx);
+                                cx.notify();
+                            }))
+                    })),
             )
     }
     pub(super) fn comment_pins(&self, cx: &Context<Self>) -> Vec<AnyElement> {
@@ -237,32 +289,24 @@ impl EditorView {
                 let i = pin.index;
                 let uv = pin.uv;
                 let dim = pin.dim;
-                quantum_ui::ListRow::frame(("comment-pin", i), pin.tooltip.clone(), t, pin.selected)
+                Button::custom(("comment-pin", i), pin.tooltip.clone())
                     .absolute()
                     .left(relative(uv[0] as f32))
                     .top(relative(uv[1] as f32))
-                    .ml(px(-Space::S5.px()))
-                    .mt(px(-Space::S7.px()))
-                    .size(px(Space::S7.px()))
+                    .ml(px(-space::XL))
+                    .mt(px(-space::XXXL))
+                    .size(px(space::XXXL))
                     .justify_center()
-                    .rounded(px(Radius::Md.px()))
+                    .rounded(px(radius::LG))
                     .border_1()
-                    .border_color(if pin.selected {
-                        t.color(ColorToken::AccentText)
-                    } else {
-                        t.color(ColorToken::BorderSubtle)
-                    })
-                    .bg(t.color(ColorToken::Canvas))
-                    .text_color(if dim {
-                        t.color(ColorToken::TextSecondary)
-                    } else {
-                        t.color(ColorToken::AccentText)
-                    })
-                    .shadow(quantum_ui::tokens::panel_shadow())
+                    .border_color(if pin.selected { t.accent() } else { t.line() })
+                    .bg(t.background())
+                    .text_color(if dim { t.muted() } else { t.accent() })
+                    .shadow_sm()
                     .cursor_pointer()
-                    .anchored_hint(pin.tooltip, t, TooltipSide::Below, &self.overlays)
+                    .tooltip(hint(pin.tooltip, t))
                     .when(pin.resolved, |d| {
-                        d.child(icon("check").text_color(t.color(ColorToken::AccentText)))
+                        d.child(icon("check").text_color(t.accent()))
                     })
                     .when(!pin.resolved, |d| d.child(pin.number.to_string()))
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
@@ -288,11 +332,11 @@ impl EditorView {
         Some(
             Panel::section(t)
                 .flex_1()
-                .min_h(px(Space::S0.px()))
-                .p(px(Space::S5.px()))
+                .min_h(px(space::NONE))
+                .p(px(space::PANEL))
                 .flex()
                 .flex_col()
-                .gap(px(Space::S5.px()))
+                .gap(px(space::XL))
                 .child(
                     row()
                         .justify_between()
@@ -322,7 +366,7 @@ impl EditorView {
                                         .unwrap_or(i + 1)
                                 )
                             }))
-                            .text_color(t.color(ColorToken::TextSecondary)),
+                            .text_color(t.muted()),
                         ),
                 )
                 .when_some(thread, |d, (_, c)| {
@@ -331,8 +375,8 @@ impl EditorView {
                     let anchor = c.anchor.region().ok();
                     d.child(
                         row()
-                            .gap(px(Space::S3.px()))
-                            .child(icon("comment").text_color(t.color(ColorToken::TextSecondary)))
+                            .gap(px(space::MD))
+                            .child(icon("comment").text_color(t.muted()))
                             .child(section_title("Discussion")),
                     )
                     .child(
@@ -340,7 +384,7 @@ impl EditorView {
                             || "Detached anchor".into(),
                             |r| format!("X {}   Y {}   Z {}", r.min[0], r.min[1], r.min[2]),
                         ))
-                        .text_color(t.color(ColorToken::TextSecondary)),
+                        .text_color(t.muted()),
                     )
                     .child(
                         div()
@@ -351,19 +395,19 @@ impl EditorView {
                             .overflow_y_scroll()
                             .children(c.messages.iter().map(|m| {
                                 div()
-                                    .mb(px(Space::S6.px()))
+                                    .mb(px(space::XXL))
                                     .child(
                                         row()
-                                            .gap(px(Space::S3.px()))
+                                            .gap(px(space::MD))
                                             .child(
                                                 icon(if m.origin == Origin::Human {
                                                     "user"
                                                 } else {
                                                     "spark"
                                                 })
-                                                .text_color(t.color(ColorToken::TextSecondary)),
+                                                .text_color(t.muted()),
                                             )
-                                            .child(div().font_weight(type_size::MEDIUM).child(
+                                            .child(div().font_weight(FontWeight::MEDIUM).child(
                                                 if m.origin == Origin::Human {
                                                     "Human"
                                                 } else {
@@ -371,7 +415,12 @@ impl EditorView {
                                                 },
                                             )),
                                     )
-                                    .child(div().mt(px(Space::S3.px())).child(m.text.clone()))
+                                    .child(
+                                        div()
+                                            .mt(px(space::MD))
+                                            .line_height(px(type_size::LINE_COMMENT))
+                                            .child(m.text.clone()),
+                                    )
                             })),
                     )
                     .when(!preview, |d| {
@@ -408,96 +457,21 @@ impl EditorView {
                                 window.focus(&this.focus, cx);
                             },
                         )
-                        .justify_center(),
+                        .justify_center()
+                        .bg(t.text())
+                        .text_color(t.background()),
                     )
                 })
                 .when(preview, |d| {
                     d.child(
                         row()
-                            .gap(px(Space::S3.px()))
-                            .text_color(t.color(ColorToken::TextSecondary))
-                            .child(icon("lock").text_color(t.color(ColorToken::TextSecondary)))
+                            .gap(px(space::MD))
+                            .text_color(t.muted())
+                            .child(icon("lock").text_color(t.muted()))
                             .child("Read-only history preview"),
                     )
                 })
                 .into_any_element(),
         )
-    }
-}
-
-impl EditorView {
-    fn comment_row(
-        &self,
-        i: usize,
-        c: &quantum_core::Comment,
-        cx: &Context<Self>,
-    ) -> Stateful<Div> {
-        let t = self.theme;
-
-        let id = c.id;
-        let first = &c.messages[0];
-        quantum_ui::ListRow::frame(("thread", i), first.text.clone(), t, false)
-            .flex_col()
-            .items_stretch()
-            .tab_index(0)
-            .p(px(Space::S4.px()))
-            .mb(px(Space::S3.px()))
-            .rounded(px(Radius::Md.px()))
-            .border_b_1()
-            .border_color(if self.editor.comments_state.selected == Some(id) {
-                t.color(ColorToken::AccentText)
-            } else {
-                t.color(ColorToken::BorderSubtle)
-            })
-            .cursor_pointer()
-            .child(
-                row()
-                    .gap(px(Space::S3.px()))
-                    .child(
-                        mono(
-                            self.editor
-                                .comments_state
-                                .numbers
-                                .get(&id)
-                                .copied()
-                                .unwrap_or(i + 1)
-                                .to_string(),
-                        )
-                        .text_color(t.color(ColorToken::AccentText)),
-                    )
-                    .child(
-                        icon(if c.resolved { "check" } else { "comment" })
-                            .text_color(t.color(ColorToken::TextSecondary)),
-                    )
-                    .child(div().font_weight(type_size::MEDIUM).child(
-                        if first.origin == Origin::Human {
-                            "Human"
-                        } else {
-                            "Agent"
-                        },
-                    )),
-            )
-            .child(
-                div()
-                    .mt(px(Space::S3.px()))
-                    .child(first.text.chars().take(160).collect::<String>()),
-            )
-            .child(
-                mono(format!(
-                    "{} messages · {:?}",
-                    c.messages.len(),
-                    self.editor.display_snapshot().anchor_state(c)
-                ))
-                .mt(px(Space::S3.px()))
-                .text_color(t.color(ColorToken::TextSecondary)),
-            )
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.discussion_action(CommentsAction::Select(Some(id)), cx);
-                this.discussion
-                    .text
-                    .update(cx, |f, cx| f.set(String::new(), cx));
-                window.focus(&this.focus, cx);
-                cx.notify();
-            }))
     }
 }

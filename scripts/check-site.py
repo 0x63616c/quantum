@@ -76,11 +76,6 @@ class Page(HTMLParser):
 # content/ contains build-time article fragments, not standalone pages.
 pages = {p: Page(p.read_text()) for p in sorted(SITE.rglob('*.html'))
          if 'content' not in p.relative_to(SITE).parts}
-for path in pages:
-    footer = re.search(r'<footer\b[^>]*>(.*?)</footer>', path.read_text(), re.S)
-    assert footer, f'{path.relative_to(SITE)}: missing footer'
-    destinations = Page(footer.group(1)).links
-    assert len(destinations) == len(set(destinations)), f'{path.relative_to(SITE)}: repeated footer destination'
 checked = 0
 
 def check(source, link):

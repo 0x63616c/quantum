@@ -2,40 +2,6 @@ use super::{FeedbackView, Report, diagnostics, settings};
 use gpui::TestAppContext;
 
 #[gpui::test]
-fn first_frame_feedback_opens_with_focused_input(cx: &mut TestAppContext) {
-    let dir = tempfile::tempdir().unwrap();
-    cx.update(|cx| {
-        crate::actions::install(cx);
-        settings::init_at(
-            None,
-            Ok(Default::default()),
-            dir.path().join("settings.json"),
-            cx,
-        );
-        super::show(None, cx).unwrap();
-    });
-    let handle = cx.read(|cx| cx.global::<super::ReportWindow>().0.unwrap());
-    handle
-        .update(cx, |view, window, cx| {
-            assert!(view.input.read(cx).focused(window));
-            assert!(crate::text_field::focused(window, cx));
-            let menus = cx.get_menus().unwrap();
-            for op in [crate::actions::Op::Undo, crate::actions::Op::Redo] {
-                assert!(
-                    menus
-                        .iter()
-                        .flat_map(|menu| &menu.items)
-                        .any(|item| matches!(item,
-                            gpui::OwnedMenuItem::Action { action, disabled: false, .. }
-                                if action.as_any().downcast_ref::<crate::actions::Op>() == Some(&op)
-                        ))
-                );
-            }
-        })
-        .unwrap();
-}
-
-#[gpui::test]
 fn feedback_requires_a_fresh_preview_after_editing(cx: &mut TestAppContext) {
     let dir = tempfile::tempdir().unwrap();
     cx.update(|cx| {
@@ -114,56 +80,4 @@ fn browser_url_failure_retains_local_report_and_complete_preview(cx: &mut TestAp
         })
         .unwrap();
     assert!(path.exists());
-}
-
-#[gpui::test]
-fn configured_relay_requires_preview_and_failure_keeps_crash_file(cx: &mut TestAppContext) {
-    let dir = tempfile::tempdir().unwrap();
-    cx.update(|cx| {
-        settings::init_at(
-            None,
-            Ok(Default::default()),
-            dir.path().join("settings.json"),
-            cx,
-        )
-    });
-    let report = Report::Crash(quantum_crash::CrashReport {
-        environment: diagnostics::environment(),
-        panic_message: "Example".into(),
-        location: None,
-        backtrace: String::new(),
-        timestamp_utc: 0,
-        log_lines: vec![],
-        user_note: None,
-        contact_email: None,
-        scene_attachment: false,
-    });
-    let path =
-        quantum_crash::write(dir.path(), &report, &diagnostics::redactor().unwrap()).unwrap();
-    let pending = path.clone();
-    let handle =
-        cx.add_window(move |window, cx| FeedbackView::new(Some((pending, report)), window, cx));
-    handle
-        .update(cx, |view, _, cx| {
-            view.endpoint = Some("http://invalid.example/reports".into());
-            let preview = view.preview.clone();
-            view.submit(cx);
-            assert!(!view.sending);
-            assert_eq!(view.preview, preview);
-            assert!(view.error.as_ref().unwrap().contains("Nothing was sent"));
-            assert!(path.exists());
-            assert!(view.privacy().contains("http://invalid.example/reports"));
-            view.preview = None;
-            view.error = None;
-            view.submit(cx);
-            assert!(view.error.is_none());
-            assert!(!view.sending);
-            view.capture_only = true;
-            view.endpoint = Some("https://unused.invalid/reports".into());
-            view.submit(cx);
-            assert!(!view.sending);
-            assert!(view.error.as_ref().unwrap().contains("capture fixture"));
-            assert!(path.exists());
-        })
-        .unwrap();
 }

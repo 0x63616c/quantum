@@ -2,9 +2,6 @@
 use quantum_crash::{Environment, FeedbackKind, FeedbackReport, Redactor, Report};
 use std::path::PathBuf;
 
-mod relay;
-pub use relay::{Transport, endpoint};
-
 /// Failure compiling privacy rules or reading local report storage.
 #[derive(Debug, thiserror::Error)]
 pub enum DiagnosticsError {

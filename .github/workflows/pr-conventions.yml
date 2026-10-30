@@ -2,7 +2,7 @@ name: PR conventions
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+    types: [opened, edited, reopened, synchronize]
 
 permissions: {}
 
@@ -34,38 +34,20 @@ jobs:
           requireScope: false
           subjectPattern: ^\S.*$
 
-  ticket-key:
-    # Tickets (https://tickets.worldwidewebb.co) is the system of record. Bots (Renovate, Dependabot) are exempt.
-    name: Ticket key
+  linked-issue:
+    name: Linked issue
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    if: github.event.pull_request.user.type != 'Bot'
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     steps:
-      - name: Require a Tickets key in the title and a linked ticket in the body
+      - name: Require Closes/Fixes/Refs #N in the PR body
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          key=$(printf '%s' "$PR_TITLE" | grep -Eo '\[[A-Z]{1,10}-[0-9]+\][[:space:]]*$' | grep -Eo '[A-Z]{1,10}-[0-9]+' || true)
-          if [ -z "$key" ]; then
-            echo "::error title=Missing ticket key::PR title must end with a Tickets key, e.g. 'feat(app): add thing [WWW-12]'. See CONTRIBUTING.md."
-            exit 1
-          fi
-          url="https://tickets.worldwidewebb.co/t/$key"
-          line="Closes [$key]($url)"
-          pattern="(^|[^[:alnum:]])([Cc]loses|[Ff]ixes|[Rr]esolves|[Rr]efs|CLOSES|FIXES|RESOLVES|REFS):?[*_]{0,2}:?[[:space:]]+\[$key\]\(https://tickets\.worldwidewebb\.co/t/$key/?\)"
-          if printf '%s' "$PR_BODY" | tr -d '\r' | grep -Eq "$pattern"; then
-            echo "Ticket $key is in the title and linked in the body."
+          pattern='(^|[^[:alnum:]_])(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]*:?[[:space:]]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#[0-9]+'
+          if printf '%s' "$PR_BODY" | grep -Eiq "$pattern"; then
+            echo "Linked issue found."
           else
-            echo "::error title=Missing ticket link::The PR description must link $key. Add this line to the description: $line (use 'Refs' instead of 'Closes' if this PR should not close the ticket)."
-            {
-              echo "### Missing ticket link"
-              echo "Add this line to the PR description:"
-              echo
-              echo '```'
-              echo "$line"
-              echo '```'
-              echo "Use \`Refs\` instead of \`Closes\` if this PR should not close $key."
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::PR body must link an issue with 'Closes #N', 'Fixes #N' or 'Refs #N'. See CONTRIBUTING.md."
             exit 1
           fi

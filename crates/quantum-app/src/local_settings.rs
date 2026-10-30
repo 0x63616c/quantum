@@ -1,7 +1,6 @@
 //! Host-owned bounded local settings storage.
 use crate::editor::{EditorError, EditorResult};
 
-pub mod bundle_migration;
 mod migration;
 use std::path::{Path, PathBuf};
 
@@ -30,13 +29,6 @@ fn settings_dir(home: &Path, xdg: Option<&Path>, macos: bool) -> PathBuf {
 // Kept only as an explicit override for existing launch scripts.
 fn legacy_override() -> Option<std::ffi::OsString> {
     std::env::var_os("VOXELITE_DATA_DIR")
-}
-
-/// Whether startup uses an explicitly isolated data directory.
-pub fn has_data_override() -> bool {
-    std::env::var_os("QUANTUM_DATA_DIR")
-        .or_else(legacy_override)
-        .is_some()
 }
 
 /// Move previous installations' data before any settings, recents or palettes load.
@@ -82,7 +74,7 @@ pub fn read_local(path: &Path) -> EditorResult<Option<Vec<u8>>> {
     let mut bytes = Vec::new();
     file.take(4 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
     if bytes.len() > 4 * 1024 * 1024 {
-        return Err(EditorError::SettingsTooLarge);
+        return Err(EditorError::Gesture("Settings file too large".into()));
     }
     Ok(Some(bytes))
 }

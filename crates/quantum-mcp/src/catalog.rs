@@ -205,7 +205,7 @@ pub(crate) fn output_schema(shape: Output, scope: Scope) -> Value {
         opt("current_revision", revision()),
     ]);
     let data = data_schema(shape, scope);
-    json!({"type":"object","properties":{"api_version":{"const":"quantum.v1"},"session_id":uuid(),"epoch":uuid(),"ok":{"type":"boolean"},"data":data,"error":error},"required":["api_version","session_id","epoch","ok"],"additionalProperties":false,"oneOf":[{"properties":{"ok":{"const":true}},"required":["data"],"not":{"required":["error"]}},{"properties":{"ok":{"const":false}},"required":["error"],"not":{"required":["data"]}}]})
+    json!({"type":"object","properties":{"api_version":{"const":"voxelite.v1"},"session_id":uuid(),"epoch":uuid(),"ok":{"type":"boolean"},"data":data,"error":error},"required":["api_version","session_id","epoch","ok"],"additionalProperties":false,"oneOf":[{"properties":{"ok":{"const":true}},"required":["data"],"not":{"required":["error"]}},{"properties":{"ok":{"const":false}},"required":["error"],"not":{"required":["data"]}}]})
 }
 pub(crate) fn count() -> Value {
     integer(0, i64::MAX)
@@ -323,7 +323,7 @@ pub(crate) fn data_schema(shape: Output, scope: Scope) -> Value {
     }
     match shape {
         Output::Capabilities => fields.extend([
-            req("api_version", json!({"const":"quantum.v1"})),
+            req("api_version", json!({"const":"voxelite.v1"})),
             req("protocol_versions", array(choice(&["2025-11-25", "2026-07-28"]), 2, 2)),
             req("limits", object(["open_documents", "request_bytes", "result_bytes", "batch_operations", "explicit_voxels", "read_voxels", "work_units", "operation_receipts", "receipt_bytes"].into_iter().map(|key| req(key, count())).collect())),
             req("documents", array(object(document_fields()), 0, 8)),

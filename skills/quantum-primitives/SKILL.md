@@ -3,7 +3,7 @@ name: quantum-primitives
 description: Build Quantum subjects from integer primitive masses, mirrored boxes and bounded explicit voxel batches for curved shapes.
 ---
 
-Requires a connected `quantum.v1` MCP server. Inspect capabilities, current
+Requires a connected `voxelite.v1` MCP server. Inspect capabilities, current
 model bounds, layers and palette. Use the returned epoch/revision and a fresh
 operation UUID for every mutation. Preserve the user's chosen scale and subject.
 

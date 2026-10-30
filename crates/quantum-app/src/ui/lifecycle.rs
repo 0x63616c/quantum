@@ -56,7 +56,6 @@ impl EditorView {
         Self::monitor_gpu(cx);
         Self {
             capture_state: None,
-            overlays: quantum_ui::OverlayState::new(cx),
             reduced_motion: quantum_app::reduce_motion::prefers_reduced_motion(),
             agent,
             palettes,
@@ -86,7 +85,6 @@ impl EditorView {
             overlay_hover: None,
             overlay_bounds: Rc::default(),
             menu: None,
-            menu_bounds: Default::default(),
             menu_index: 0,
             commands: command_palette::CommandPalette::default(),
             command_input,
@@ -116,7 +114,6 @@ impl EditorView {
                 self.error = false;
             }
             Err(e) => {
-                eprintln!("{:?}", quantum_app::reports::report(&e));
                 self.status = e.to_string().into();
                 self.error = true;
             }
@@ -194,10 +191,7 @@ impl EditorView {
             .unwrap_or(true)
         });
         cx.observe_window_activation(window, |this, window, cx| {
-            this.reduced_motion = sync_reduced_motion(cx);
-            if this.capture_state == Some(launch::LaunchState::ControlStates) {
-                cx.set_reduce_motion(true);
-            }
+            this.reduced_motion = quantum_app::reduce_motion::prefers_reduced_motion();
             if !window.is_window_active() {
                 this.drag = None;
                 this.hover = None;
@@ -212,7 +206,7 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Entity<crate::text_field::TextField> {
-        let command_input = crate::text_field::TextField::design("Type a command…", cx);
+        let command_input = crate::text_field::TextField::new("Type a command…", cx);
         command_input.update(cx, |field, _| field.embed());
         cx.subscribe_in(
             &command_input,

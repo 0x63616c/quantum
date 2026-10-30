@@ -1,6 +1,5 @@
 //! Characterization of the original editor gestures, shared by the plugin migration.
 use super::*;
-use quantum_plugin_api::ToolError;
 
 fn front_ray() -> Ray {
     Ray {

@@ -71,15 +71,6 @@ site** follows successful publication. Credentials and real macOS qualification
 below remain prerequisites. Fixture tests prove command orchestration, not Apple
 service behavior or a shipped release; shipping v0.3.2 remains tracked in #88.
 
-## Optional feedback relay activation
-
-The release app build reads the optional repository variable
-`QUANTUM_REPORT_ENDPOINT`. Leave it unset until the owner has deployed and
-verified the relay, approved its privacy policy and completed Mac QA. An unset
-or empty value keeps browser-only feedback. It is a public HTTPS destination,
-never a token; GitHub credentials stay in the Worker. Exact activation, QA and
-rollback commands are in the [relay runbook](../packaging/feedback-relay/README.md).
-
 ## Secrets to create
 
 | Secret | Value and source |
@@ -218,12 +209,10 @@ expire after **3 days**. New push/PR runs cancel older change runs for the same
 ref. Nightly/manual runs use a separate concurrency group and are not cancelled
 by pushes or newer runs. Nightly runs intentionally check unchanged main too,
 because runner and toolchain drift can break packaging without a source change.
-Legacy GitHub automation for a failed nightly or manual main run opens an issue, or comments on the existing
+A failed nightly or manual main run opens an issue, or comments on the existing
 open `ci: CI macOS nightly checks failed` issue, with the run link and labels
 `type:ci`, `area:ci`, `priority:p0`. A skipped Mac job also reports the missing
-verification; the owner/fork guard remains in force. Track actionable failures in
-[Tickets](https://tickets.worldwidewebb.co), the sole source of truth; GitHub issues
-are retired as a work tracker.
+verification; the owner/fork guard remains in force.
 
 ## Release behavior
 
@@ -563,32 +552,3 @@ Quantum release: preserve the bundle identifier and signing key, verify the
 old-host appcast returns the unchanged signed bytes directly, and test a real
 0.3.x update. Existing installed bundle filenames may remain unchanged after
 Sparkle updates them; new downloads use Quantum.app.
-
-## Homebrew tap
-
-After the DMG job publishes a release, the separate Ubuntu `homebrew-tap` job
-downloads the DMG and checksum, verifies the bytes and renders
-`packaging/homebrew/quantum.rb` with `cargo xtask macos homebrew-cask`. It commits
-only changed casks to `0x63616c/homebrew-tap` with a normal fast-forward push.
-Render locally without publishing:
-
-```sh
-cargo xtask macos homebrew-cask --version 0.4.0 --sha256 <64-hex-digest> --output /tmp/quantum.rb
-```
-
-The renderer rejects prereleases and versions before 0.4.0, validates the digest
-and normalizes it to lowercase. Reruns with identical metadata do nothing. A failure is nonblocking so it cannot
-prevent site deployment; inspect the job logs after a release. A missing secret
-produces a warning and skips publishing. Never replace published release assets.
-
-`HOMEBREW_TAP_DEPLOY_KEY` is an ed25519 SSH key with write access only to the tap.
-To rotate it, generate a new ed25519 key, add its public half as a write deploy
-key on `0x63616c/homebrew-tap` only, then set the private half:
-
-```sh
-gh secret set HOMEBREW_TAP_DEPLOY_KEY -R 0x63616c/quantum < key
-```
-
-Remove the old deploy key after verifying the replacement. GitHub SSH host keys
-are pinned in `packaging/homebrew/github_known_hosts` from GitHub's published
-`https://api.github.com/meta` SSH keys; review changes against that source.

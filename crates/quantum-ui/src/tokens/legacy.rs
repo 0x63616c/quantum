@@ -1,12 +1,13 @@
-//! Compatibility names for shared layout metrics and the typed design tokens.
+//! Frozen compatibility tokens for existing screens; migrate in #134.
 //! New components must use the typed tokens in the parent module.
 use super::{ColorToken, Theme};
 use gpui::{Hsla, rgb};
 
 impl Theme {
     /// Existing application-modal scrim, retaining its exact 8-bit alpha.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn app_scrim(self) -> Hsla {
-        super::state::scrim()
+        gpui::rgba(0x00000070).into()
     }
     /// Appearance-preview artwork, separate from live UI surfaces.
     pub fn preview_background(self) -> Hsla {
@@ -33,55 +34,97 @@ impl Theme {
         rgb(if light_background { 0x000000 } else { 0xffffff }).into()
     }
     /// Canvas background.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn background(self) -> Hsla {
-        self.color(ColorToken::Canvas)
+        rgb(if self == Self::Dark {
+            0x000000
+        } else {
+            0xffffff
+        })
+        .into()
     }
     /// Primary text.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn text(self) -> Hsla {
-        self.color(ColorToken::TextPrimary)
+        rgb(if self == Self::Dark {
+            0xfafafa
+        } else {
+            0x171717
+        })
+        .into()
     }
     /// Secondary text.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn muted(self) -> Hsla {
-        self.color(ColorToken::TextSecondary)
+        rgb(if self == Self::Dark {
+            0xa3a3a3
+        } else {
+            0x525252
+        })
+        .into()
     }
     /// Canvas separators.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn line(self) -> Hsla {
-        self.color(ColorToken::BorderSubtle)
+        rgb(if self == Self::Dark {
+            0x232323
+        } else {
+            0xe5e5e5
+        })
+        .into()
     }
     /// Canvas hover fill.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn hover(self) -> Hsla {
-        self.color(ColorToken::Surface).blend(
-            self.color(ColorToken::OnAccent)
-                .opacity(super::state::HOVER),
-        )
+        rgb(if self == Self::Dark {
+            0x141414
+        } else {
+            0xf5f5f5
+        })
+        .into()
     }
     /// A quiet inset edge keeps black and white swatches visible on the canvas.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn swatch_edge(self) -> Hsla {
         self.text().opacity(0.18)
     }
     /// Legible accent foreground.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn accent(self) -> Hsla {
         self.color(ColorToken::AccentText)
     }
     /// Quiet selected fill.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn selected(self) -> Hsla {
-        self.color(ColorToken::Accent)
-            .opacity(super::state::SELECTED)
+        rgb(if self == Self::Dark {
+            0x142033
+        } else {
+            0xeff5ff
+        })
+        .into()
     }
     /// Selected text background, distinct from a selected control surface.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn text_selection(self) -> Hsla {
         self.accent().opacity(0.25)
     }
     /// Destructive foreground.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn danger(self) -> Hsla {
-        self.color(ColorToken::Danger)
+        rgb(if self == Self::Dark {
+            0xfca5a5
+        } else {
+            0xb91c1c
+        })
+        .into()
     }
     /// Disabled foreground.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn disabled(self) -> Hsla {
-        self.color(ColorToken::TextPrimary)
-            .opacity(super::state::DISABLED)
+        rgb(0x737373).into()
     }
     /// Conventional world-axis colors with legible inverse labels in both themes.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn axis(self, axis: usize) -> Hsla {
         rgb(match self {
             Self::Dark => [0xf87171, 0x86efac, 0x93c5fd][axis],
@@ -97,48 +140,58 @@ impl Theme {
         rgb(if self == Self::Dark { dark } else { light }).into()
     }
     /// Window surface used by settings and dialogs.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn surface(self) -> Hsla {
-        self.color(ColorToken::Surface)
+        self.pair(0x1e1e1e, 0xf5f5f7)
     }
     /// Raised controls and search fields.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn surface_raised(self) -> Hsla {
-        self.color(ColorToken::Raised)
+        self.pair(0x2b2b2b, 0xe0e0e3)
     }
     /// Grouped form background.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn card(self) -> Hsla {
-        self.color(ColorToken::Raised)
+        self.pair(0x262626, 0xffffff)
     }
     /// Sidebar background.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn sidebar(self) -> Hsla {
-        self.color(ColorToken::Surface)
+        self.pair(0x191919, 0xebebed)
     }
     /// Secondary control fill.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn control(self) -> Hsla {
-        self.color(ColorToken::Raised)
+        self.pair(0x353535, 0xe6e6e9)
     }
     /// Group and control hairlines.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn separator(self) -> Hsla {
-        self.color(ColorToken::Border)
+        self.pair(0x393939, 0xd7d7db)
     }
     /// Filled selection / switch tint.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn tint(self) -> Hsla {
-        self.color(ColorToken::Accent)
+        rgb(0x007aff).into()
     }
     /// Foreground on the filled tint.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn accent_fg(self) -> Hsla {
         self.color(ColorToken::OnAccent)
     }
     /// Modal backdrop.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn scrim(self) -> Hsla {
-        super::state::scrim()
+        gpui::black().opacity(0.38)
     }
     /// Quiet backdrop for the small About panel.
+    /// Compatibility accessor: migrate in #134; new UI uses `Theme::color`.
     pub fn quiet_scrim(self) -> Hsla {
-        super::state::scrim()
+        gpui::black().opacity(0.12)
     }
 }
 
-/// Compatibility spacing aliases and shared optical exceptions.
+/// Legacy spacing aliases and optical exceptions; migrate in #134.
 pub mod space {
     /// No inset; also useful for flexible layout minimums and coordinate origins.
     pub const NONE: f32 = 0.;
@@ -177,7 +230,7 @@ pub mod space {
     /// Thirty-two pixels.
     pub const XXXL: f32 = 32.;
 }
-/// Compatibility radius aliases for shared layout geometry.
+/// Legacy radius aliases; migrate in #134.
 pub mod radius {
     /// The corner radius of buttons, tabs, segments and square rail controls.
     pub const CONTROL: f32 = MD;
@@ -217,7 +270,7 @@ pub mod radius {
         }
     }
 }
-/// Shared font families and compatibility typography aliases.
+/// Legacy typography and shared font families; migrate sizes in #134.
 pub mod type_size {
     /// ASCII skeleton paragraph line height, matching upstream's 1.3em.
     pub const ASCII_LINE_EM: f32 = 1.3;
@@ -270,7 +323,7 @@ pub mod type_size {
     /// Geist Mono advance, in em units (from the bundled font's metrics).
     pub const MONO_ADVANCE: f32 = 0.6;
 }
-/// Compatibility 24/32/40 control sizes; new controls use `ControlHeight`.
+/// Legacy 24/32/40 control sizes; migrate to `ControlHeight` in #134.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ControlSize {
     /// Compact 24-pixel control.
@@ -291,7 +344,7 @@ impl ControlSize {
         }
     }
 }
-/// Shared application geometry, independent of control presentation.
+/// Legacy application geometry; migrate control metrics in #134.
 pub mod metrics {
     /// Diagnostics window width, accommodating explicit consent actions.
     pub const REPORT_WIDTH: f32 = 880.0;
@@ -420,9 +473,9 @@ pub mod metrics {
     /// Palette preview thumbnail width.
     pub const THUMBNAIL_WIDTH: f32 = 44.;
     /// Two rows of sidebar swatches.
-    pub const PALETTE_SCROLL_STEP: f32 = SWATCH_PITCH * 2.;
+    pub const PALETTE_SCROLL_STEP: f32 = 76.;
     /// Sidebar swatch size plus gap.
-    pub const SWATCH_PITCH: f32 = crate::ControlHeight::Default.px() + crate::Space::S3.px();
+    pub const SWATCH_PITCH: f32 = 38.;
     /// Settings window initial width.
     pub const SETTINGS_WIDTH: f32 = 880.;
     /// Settings window initial height.

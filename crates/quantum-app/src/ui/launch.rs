@@ -17,13 +17,11 @@ pub(crate) enum LaunchState {
     AgentInspection,
     ConnectAgent,
     About,
-    Report { crash: bool, relay: bool },
+    Feedback,
+    CrashReport,
     Acknowledgements,
     KeyboardGuide,
     Commands,
-    CommandsEmpty,
-    SceneLoading,
-    ControlStates,
     Tools,
     Extensions,
     UnsavedChanges,
@@ -59,40 +57,11 @@ impl LaunchState {
         ("panels-agent-inspection", Self::AgentInspection),
         ("popovers-connect-agent", Self::ConnectAgent),
         ("dialogs-about", Self::About),
-        (
-            "dialogs-feedback",
-            Self::Report {
-                crash: false,
-                relay: false,
-            },
-        ),
-        (
-            "dialogs-crash-report",
-            Self::Report {
-                crash: true,
-                relay: false,
-            },
-        ),
-        (
-            "dialogs-feedback-relay",
-            Self::Report {
-                crash: false,
-                relay: true,
-            },
-        ),
-        (
-            "dialogs-crash-relay",
-            Self::Report {
-                crash: true,
-                relay: true,
-            },
-        ),
+        ("dialogs-feedback", Self::Feedback),
+        ("dialogs-crash-report", Self::CrashReport),
         ("dialogs-acknowledgements", Self::Acknowledgements),
         ("dialogs-keyboard-guide", Self::KeyboardGuide),
         ("dialogs-commands", Self::Commands),
-        ("dialogs-commands-empty", Self::CommandsEmpty),
-        ("overlays-loading", Self::SceneLoading),
-        ("overlays-controls", Self::ControlStates),
         ("dialogs-tools", Self::Tools),
         ("dialogs-extensions", Self::Extensions),
         ("dialogs-unsaved-changes", Self::UnsavedChanges),
@@ -151,7 +120,14 @@ impl EditorView {
             }
             LaunchState::Palette => self.invoke(Op::ShowPalette, window, cx),
             LaunchState::History | LaunchState::HistoryPreview => {
-                self.capture_history(state, cx)?;
+                self.editor.add_layer()?;
+                let version = self.editor.save_version("Workshop study".into())?;
+                self.panel = SidebarTab::History;
+                if state == LaunchState::HistoryPreview {
+                    // Preserve the model and window title while showing read-only controls.
+                    self.editor.preview_version(version)?;
+                }
+                self.request_render(cx);
             }
             LaunchState::CommentsEmpty => {
                 // The example has an open review note but no resolved threads.
@@ -176,18 +152,16 @@ impl EditorView {
                 self.capture_agent_activity(state, cx)?;
             }
             LaunchState::ConnectAgent => self.invoke(Op::Agent, window, cx),
-            LaunchState::Report { crash, relay } => feedback::fixture(crash, relay, cx),
+            LaunchState::Feedback | LaunchState::CrashReport => {
+                feedback::fixture(state == LaunchState::CrashReport, cx);
+            }
             LaunchState::About => self.invoke(Op::About, window, cx),
             LaunchState::Acknowledgements => {
                 self.info = Some(("Acknowledgements", InfoContent::Acknowledgements));
                 window.focus(&self.modal_focus, cx);
             }
             LaunchState::KeyboardGuide => self.invoke(Op::Help, window, cx),
-            LaunchState::Commands | LaunchState::CommandsEmpty => {
-                self.capture_commands(state, window, cx);
-            }
-            LaunchState::SceneLoading => {}
-            LaunchState::ControlStates => cx.set_reduce_motion(true),
+            LaunchState::Commands => self.invoke(Op::Commands, window, cx),
             LaunchState::Tools => self.invoke(Op::ToolPicker, window, cx),
             LaunchState::Extensions => self.invoke(Op::Extensions, window, cx),
             LaunchState::UnsavedChanges => {
@@ -231,34 +205,6 @@ impl EditorView {
             LaunchState::Settings(section) => self.open_settings(section, window, cx),
         }
         cx.notify();
-        Ok(())
-    }
-    fn capture_commands(
-        &mut self,
-        state: LaunchState,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.invoke(Op::Commands, window, cx);
-        if state == LaunchState::CommandsEmpty {
-            self.command_input
-                .update(cx, |field, cx| field.set("No matching action".into(), cx));
-            self.commands.set_query("No matching action");
-        }
-    }
-    fn capture_history(
-        &mut self,
-        state: LaunchState,
-        cx: &mut Context<Self>,
-    ) -> anyhow::Result<()> {
-        self.editor.add_layer()?;
-        let version = self.editor.save_version("Workshop study".into())?;
-        self.panel = SidebarTab::History;
-        if state == LaunchState::HistoryPreview {
-            // Inspect an immutable preview; never replay edits into the live document.
-            self.editor.preview_version(version)?;
-        }
-        self.request_render(cx);
         Ok(())
     }
     fn capture_agent_activity(
