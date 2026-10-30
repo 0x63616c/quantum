@@ -1,11 +1,10 @@
-<img src="site/assets/mark.svg" width="96" height="96" alt="Quantize: a smooth hemisphere beside a grid of rounded voxels">
-
 # Quantum
 
 An Aseprite-style 3D voxel editor for people and agents.
 
-Compatibility with existing projects, settings and macOS updates is documented
-in [rename compatibility](docs/rename-compatibility.md).
+Quantum was renamed from Voxelite. Crates, binaries, bundle IDs and the GitHub
+repo slug still use `voxelite` until the separate code-wide rename lands; commands
+and paths below use their current names.
 
 Quantum is an all-Rust macOS desktop editor built with GPUI. Its
 agent-first workflow combines a Model Context Protocol (MCP) server, reusable
@@ -13,23 +12,11 @@ skills, render-to-image feedback and live synchronization with a native editor
 window. Projects use the versioned `.voxl` format; geometry exports as glTF binary
 (`.glb`) and rendered views as `.png`.
 
-The current workspace version is **0.4.1**, from [Cargo.toml](Cargo.toml).
+The current workspace version is **0.3.1**, from [Cargo.toml](Cargo.toml).
 
-[Website](https://quantum.worldwidewebb.co/) ·
-[User documentation](https://quantum.worldwidewebb.co/docs/) ·
-[Downloads](https://github.com/0x63616c/quantum/releases)
-
-## Quick install
-
-Requires macOS 13 Ventura or later on Apple silicon.
-
-```sh
-brew install --cask 0x63616c/tap/quantum
-```
-
-Upgrade with `brew upgrade --cask --greedy quantum` (the app also updates itself).
-Or download [Quantum.dmg](https://github.com/0x63616c/quantum/releases/latest/download/Quantum.dmg)
-from the latest release. See [Install](#install) for details.
+[Website](https://voxelite.worldwidewebb.co/) ·
+[User documentation](https://voxelite.worldwidewebb.co/docs/) ·
+[Downloads](https://github.com/0x63616c/voxelite/releases)
 
 ## Screenshots
 
@@ -38,28 +25,14 @@ Apple M2 Metal golden set:
 
 ![Autumn Workshop voxel cottage, garden and orange tree, with the ground grid on a black background](bench/golden/apple-m2-metal/autumn_fit.png)
 
-Current Quantum editor showing Autumn Workshop and its session history, in dark
-and light themes:
+Native editor captures showing an agent session in dark mode and the workspace
+in light mode. These are real earlier review captures: their toolbar Save/Share
+controls and status copy predate the current shell. Current Save actions live in
+the File menu, and hosted sharing is not implemented.
 
-![Quantum editor in dark mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-dark.png)
+![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](docs/images/agent-dark.png)
 
-![Quantum editor in light mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-light.png)
-
-Welcome offers bundled samples and actions to create or open a project:
-
-![Quantum Welcome in dark mode with Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin samples](crates/quantum-app/tests/ui-goldens/welcome.png)
-
-These images link directly to the checked-in [headless GPUI goldens](docs/ui-snapshots.md),
-which use the Linux CPU viewport. No duplicate screenshot assets are maintained.
-Verify them with `cargo xtask ui-snapshots`; after an intentional UI change,
-regenerate the README views with:
-
-```sh
-cargo xtask ui-snapshots --rebaseline --screen 'editor-*' --screen welcome
-```
-
-Inspect the regenerated PNGs before committing. Welcome's fixed `0.0.0` version
-is a capture fixture, not the current release version.
+![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](docs/images/main-light.png)
 
 ## What is implemented
 
@@ -93,45 +66,30 @@ is a capture fixture, not the current release version.
   word/line navigation, selection, clipboard, local undo and IME handling.
   Packaged macOS builds integrate Sparkle update checks.
 
-With no file argument, the app shows Welcome by default, or a blank editor when
-**Show at launch** is off. Use `--example` to open the bundled Autumn Workshop
-directly. For controls and their generated shortcut table, see the
-[native editor guide](crates/quantum-app/README.md). Roadmap entries and older
+The app opens the bundled Autumn Workshop directly when no file is supplied.
+For controls and their generated shortcut table, see the
+[native editor guide](crates/voxelite-app/README.md). Roadmap entries and older
 reviews can describe earlier stages; they are not a list of shipped features.
 
 ## Install
 
 For macOS 13 or later on Apple silicon, download
-[`Quantum.dmg`](https://github.com/0x63616c/quantum/releases/latest/download/Quantum.dmg)
-from [GitHub Releases](https://github.com/0x63616c/quantum/releases), open it and
-drag `Quantum.app` into Applications. Consult the selected release's notes for
-its signing and installation status. The bundle also contains `quantum-mcp` at
-`/Applications/Quantum.app/Contents/MacOS/quantum-mcp`.
+[`Voxelite.dmg`](https://github.com/0x63616c/voxelite/releases/latest/download/Voxelite.dmg)
+from [GitHub Releases](https://github.com/0x63616c/voxelite/releases), open it and
+drag `Voxelite.app` into Applications. Consult the selected release's notes for
+its signing and installation status. The bundle also contains `voxelite-mcp` at
+`/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp`.
 
 Packaged builds include Sparkle and check the
-[site-hosted update feed](https://quantum.worldwidewebb.co/appcast.xml).
+[site-hosted update feed](https://voxelite.worldwidewebb.co/appcast.xml).
 Automatic checks are enabled; automatic download/installation is off by default.
 Manual checks are available from the application menu and Settings → Updates.
 Unbundled `cargo run` builds do not have the bundled updater available.
 
-The [published documentation](https://quantum.worldwidewebb.co/docs/)
+The [published documentation](https://voxelite.worldwidewebb.co/docs/)
 is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
-[the site generator](crates/quantum-site/src/main.rs).
-
-### Homebrew
-
-```sh
-brew install --cask 0x63616c/tap/quantum
-```
-
-Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle;
-the cask sets `auto_updates true`, so `brew upgrade` skips it. Run
-`brew upgrade --cask --greedy quantum` to reinstall the latest release through
-Homebrew. Its recorded version can lag after an in-app update; this is harmless.
-
-Uninstall with `brew uninstall --cask quantum`. For full cleanup, use
-`brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
+[the site generator](crates/voxelite-site/src/main.rs).
 
 ## Build and run
 
@@ -147,35 +105,35 @@ workflows use Apple silicon and
 installed Xcode location locally.
 
 ```sh
-cargo run -p quantum-app --bin quantum
-cargo run -p quantum-app --bin quantum -- examples/autumn-workshop.voxl
-cargo run -p quantum-app --bin quantum -- examples/autumn-workshop.voxl --theme light
-cargo run -p quantum-app --bin quantum -- --theme dark
+cargo run -p voxelite-app --bin voxelite
+cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl
+cargo run -p voxelite-app --bin voxelite -- examples/autumn-workshop.voxl --theme light
+cargo run -p voxelite-app --bin voxelite -- --theme dark
 ```
 
 The `native` feature is enabled by default. To test display-independent editor
 state without enabling its GPUI dependency:
 
 ```sh
-cargo test -p quantum-app --no-default-features
+cargo test -p voxelite-app --no-default-features
 ```
 
 To render a PNG without initializing a window or GPU:
 
 ```sh
-cargo run -p quantum-app --bin quantum -- --viewport-png target/viewport.png
+cargo run -p voxelite-app --bin voxelite -- --viewport-png target/viewport.png
 ```
 
-`QUANTUM_DATA_DIR` overrides the desktop settings, palette library and default
+`VOXELITE_DATA_DIR` overrides the desktop settings, palette library and default
 session-socket directory for isolated runs. See the
-[native guide](crates/quantum-app/README.md) for preferences and capture scripts.
+[native guide](crates/voxelite-app/README.md) for preferences and capture scripts.
 
 ### Linux and platform boundaries
 
 Core, format, mesh, export, plugin and MCP code can run on Linux without a
 display. The native GPUI app also has an X11/Wayland build; its development
 dependencies and Xvfb capture instructions are in the
-[native guide](crates/quantum-app/README.md). Building the full workspace still
+[native guide](crates/voxelite-app/README.md). Building the full workspace still
 requires the native GPUI system libraries even when no window is opened.
 
 The production Metal/IOSurface viewport, AppKit integration, Sparkle, DMG
@@ -201,7 +159,7 @@ publishes trusted `main` builds to `site-dist`; commit the sources, not the outp
 Start a standalone stdio server rooted at the current existing directory:
 
 ```sh
-cargo run --release --locked -p quantum-mcp -- --root "$PWD"
+cargo run --release --locked -p voxelite-mcp -- --root "$PWD"
 ```
 
 This process expects MCP messages on stdin. It owns an in-memory session; save
@@ -214,8 +172,8 @@ For the live canvas, use the app's Agent connection panel, or start these in
 separate terminals with the same unused socket path:
 
 ```sh
-cargo run -p quantum-app --bin quantum -- --session-socket /tmp/quantum-session.sock
-cargo run -p quantum-mcp -- --connect /tmp/quantum-session.sock
+cargo run -p voxelite-app --bin voxelite -- --session-socket /tmp/voxelite-session.sock
+cargo run -p voxelite-mcp -- --connect /tmp/voxelite-session.sock
 ```
 
 Attachment shares the editor's engine, revision and undo history. The app owns
@@ -229,27 +187,25 @@ only a container.
 
 | Crate | Responsibility |
 | --- | --- |
-| [quantum-crash](crates/quantum-crash/) | Opt-in crash/feedback reports, redaction, local panic capture and relay request preparation; no automatic sending. |
-| [quantum-core](crates/quantum-core/) | Document invariants, voxel storage, palettes/layers, atomic commands, snapshots and undo/redo. |
-| [quantum-format](crates/quantum-format/) | Canonical, bounded `.voxl` JSON, build-history replay and document-session persistence. |
-| [quantum-mesh](crates/quantum-mesh/) | Deterministic greedy surface geometry shared by rendering and GLB export. |
-| [quantum-render](crates/quantum-render/) | Cameras, CPU rasterization, exact shadows and the optional GPU viewport/headless harness interface. |
-| [quantum-plugin-api](crates/quantum-plugin-api/) | Portable plugin manifests, contributions and capability-scoped behavior contracts. |
-| [quantum-plugin-host](crates/quantum-plugin-host/) | Registry, enablement, lifecycle, dispatch, fault isolation and conformance checks. |
-| [quantum-ui](crates/quantum-ui/) | Shared GPUI controls, design tokens, text editing and fixed-width status components. |
-| [quantum-app](crates/quantum-app/) | Editor state and native GPUI shell; native binary `quantum`. |
-| [quantum-mcp](crates/quantum-mcp/) | Standalone MCP authority, stdio transport and live native-session bridge. |
-| [quantum-bench](crates/quantum-bench/) | Production-GPU performance measurements and golden-image comparisons. |
-| [quantum-brand](crates/quantum-brand/) | Typed product metadata shared by site generation and repository checks. |
-| [quantum-site](crates/quantum-site/) | Static site, MCP reference, Markdown/LLM indexes, changelog, blog and integrations. |
-| [quantum-plugin-tools](crates/plugins/quantum-plugin-tools/) | Place, Erase, Paint, Fill, Box and Picker behavior through typed command proposals. |
-| [quantum-plugin-mirror](crates/plugins/quantum-plugin-mirror/) | Centered X/Y/Z transformations of pending tool commands. |
-| [quantum-plugin-gizmo-grid](crates/plugins/quantum-plugin-gizmo-grid/) | Camera orientation widget, navigation interaction and ground-grid overlays. |
-| [quantum-plugin-palette](crates/plugins/quantum-plugin-palette/) | Presets, local palette management, portable panel behavior and palette interchange. |
-| [quantum-plugin-comments](crates/plugins/quantum-plugin-comments/) | Discussion panel, anchor-placement tool and viewport pins. |
-| [quantum-plugin-exporters](crates/plugins/quantum-plugin-exporters/) | Bounded, deterministic GLB/PNG encoders and registered HEX/GPL export callbacks without filesystem access. |
-| [quantum-plugin-agent](crates/plugins/quantum-plugin-agent/) | Agent/Extensions command declarations; execution remains in the app. |
-| [quantum-plugin-example](crates/plugins/quantum-plugin-example/) | Minimal declaration-only plugin template, not linked into the app. |
+| [voxelite-core](crates/voxelite-core/) | Document invariants, voxel storage, palettes/layers, atomic commands, snapshots and undo/redo. |
+| [voxelite-format](crates/voxelite-format/) | Canonical, bounded `.voxl` JSON, build-history replay and document-session persistence. |
+| [voxelite-mesh](crates/voxelite-mesh/) | Deterministic greedy surface geometry shared by rendering and GLB export. |
+| [voxelite-render](crates/voxelite-render/) | Cameras, CPU rasterization, exact shadows and the optional GPU viewport/headless harness interface. |
+| [voxelite-plugin-api](crates/voxelite-plugin-api/) | Portable plugin manifests, contributions and capability-scoped behavior contracts. |
+| [voxelite-plugin-host](crates/voxelite-plugin-host/) | Registry, enablement, lifecycle, dispatch, fault isolation and conformance checks. |
+| [voxelite-ui](crates/voxelite-ui/) | Shared GPUI controls, design tokens, text editing and fixed-width status components. |
+| [voxelite-app](crates/voxelite-app/) | Editor state and native GPUI shell; native binary `voxelite`. |
+| [voxelite-mcp](crates/voxelite-mcp/) | Standalone MCP authority, stdio transport and live native-session bridge. |
+| [voxelite-bench](crates/voxelite-bench/) | Production-GPU performance measurements and golden-image comparisons. |
+| [voxelite-site](crates/voxelite-site/) | Static site, MCP reference, Markdown/LLM indexes and integration generation. |
+| [voxelite-plugin-tools](crates/plugins/voxelite-plugin-tools/) | Place, Erase, Paint, Fill, Box and Picker behavior through typed command proposals. |
+| [voxelite-plugin-mirror](crates/plugins/voxelite-plugin-mirror/) | Centered X/Y/Z transformations of pending tool commands. |
+| [voxelite-plugin-gizmo-grid](crates/plugins/voxelite-plugin-gizmo-grid/) | Camera orientation widget, navigation interaction and ground-grid overlays. |
+| [voxelite-plugin-palette](crates/plugins/voxelite-plugin-palette/) | Presets, local palette management, portable panel behavior and palette interchange. |
+| [voxelite-plugin-comments](crates/plugins/voxelite-plugin-comments/) | Discussion panel, anchor-placement tool and viewport pins. |
+| [voxelite-plugin-exporters](crates/plugins/voxelite-plugin-exporters/) | Bounded, deterministic GLB/PNG encoders and registered HEX/GPL export callbacks without filesystem access. |
+| [voxelite-plugin-agent](crates/plugins/voxelite-plugin-agent/) | Agent/Extensions command declarations; execution remains in the app. |
+| [voxelite-plugin-example](crates/plugins/voxelite-plugin-example/) | Minimal declaration-only plugin template, not linked into the app. |
 
 | Top-level directory | Contents |
 | --- | --- |
@@ -270,92 +226,69 @@ only a container.
 
 The **core architecture** spans several crates: the engine and document model,
 undo, `.voxl` persistence, renderer/camera, and plugin host/registry remain trusted
-infrastructure. `quantum-core` itself is a pure model/transaction crate, not the
+infrastructure. `voxelite-core` itself is a pure model/transaction crate, not the
 application shell. Human tools and MCP edits pass through the same validated
 engine; renderers consume immutable snapshots.
 
-Built-in plugins use `quantum-plugin-api` to return typed commands, portable
+Built-in plugins use `voxelite-plugin-api` to return typed commands, portable
 views, overlays and encoded bytes. The host validates contributions and handles
 enablement and faults. The app registers its required core contribution and the
 seven enabled feature plugins in
-[core_plugin.rs](crates/quantum-app/src/core_plugin.rs).
-[actions.rs](crates/quantum-app/src/actions.rs) projects registry metadata into
+[core_plugin.rs](crates/voxelite-app/src/core_plugin.rs).
+[actions.rs](crates/voxelite-app/src/actions.rs) projects registry metadata into
 menus, command search, shortcuts and help; settings read declared contributions.
 GPUI layout, focus, platform dialogs and filesystem policy remain host concerns.
 See [ADR 0002](docs/adr/0002-built-in-plugin-architecture.md) and
 [the plugin guide](crates/plugins/README.md).
 
-The renderer is isolated from the shell and exporters. `quantum-mesh` supplies
-shared geometry; `quantum-render` exposes cameras, image rendering and optional
+The renderer is isolated from the shell and exporters. `voxelite-mesh` supplies
+shared geometry; `voxelite-render` exposes cameras, image rendering and optional
 GPU entry points, keeping occupancy, traversal, chunk meshes and GPU resources
 private. Encoders receive geometry or pixels, and hosts supply render callbacks.
 The test `normal_workspace_dependencies_preserve_renderer_boundary` in
-[boundary.rs](crates/quantum-render/tests/boundary.rs) enforces the normal
-workspace dependency boundary. `cargo xtask check plugin-deps`
+[boundary.rs](crates/voxelite-render/tests/boundary.rs) enforces the normal
+workspace dependency boundary. [scripts/check-plugin-deps.py](scripts/check-plugin-deps.py)
 separately rejects plugin normal/build dependencies on any workspace crate except
-`quantum-plugin-api`, including optional and target-specific dependencies.
+`voxelite-plugin-api`, including optional and target-specific dependencies.
 
-The shell shares controls and editing through [quantum-ui](crates/quantum-ui/README.md).
+The shell shares controls and editing through [voxelite-ui](crates/voxelite-ui/README.md).
 Plugins do not depend on GPUI or the UI crate. The
 [core architecture notes](docs/architecture/core.md) explain model invariants;
 their stage-specific introduction predates the current shell and plugin work.
 
 ## Tests and checks
 
-Run `cargo xtask validate` for tidy, plugin dependency boundaries, branding,
-documentation links and images, formatting, Clippy (all targets), workspace
-tests, dependency policy and unused dependencies. Missing tools are reported as
-skips; `--strict` makes them failures. Select checks with
-`cargo xtask check tidy fmt`, list them with `cargo xtask check --list`, or use
-`cargo xtask validate --skip test` / `--only tidy fmt`.
-
-`cargo xtask bump-version patch --dry-run` previews a stable version bump; omit
-`--dry-run` to update the workspace manifest, README, download template, MCP
-compatibility version and workspace lockfile entries. It also accepts `major`,
-`minor` or `X.Y.Z`. Historical releases and appcasts are left intact. This does
-not tag or publish a release. See [xtask/README.md](xtask/README.md) for the
-maintenance modules and how to add commands.
-
-The standard workspace test gate is `cargo xtask check test`; it uses nextest
-when installed and falls back to Cargo otherwise. Install nextest with
-`cargo install cargo-nextest --version 0.9.150 --locked`. The exact
-format, lint and test invocations in [CI Linux](.github/workflows/ci-linux.yml) and
-[CI macOS](.github/workflows/ci-macos.yml) are:
+The standard workspace test command is `cargo test --workspace`. The exact
+format, lint and test invocations in [CI macOS](.github/workflows/ci-macos.yml) are:
 
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --locked -- -D warnings
-cargo nextest run --workspace --locked --profile ci
-cargo test --doc --workspace --locked
-cargo xtask check plugin-deps
-cargo nextest run -p xtask --locked --profile ci
-cargo test --doc -p xtask --locked
+cargo test --workspace --locked --no-fail-fast
+python3 -B scripts/check-plugin-deps.py
+python3 -B -m unittest discover -s scripts/tests -p 'test_plugin_deps.py'
+python3 -B -m unittest discover -s scripts/tests -p 'test_macos_*.py'
 ```
 
-Run the platform-independent repository checks with
-`cargo xtask check plugin-deps brand docs-links docs-assets`.
-Remaining site and PII scan script checks are separate from `validate`.
-The Rust packaging tests inject macOS tools and run on Linux. Run remaining script
+The Python packaging tests mock macOS tools and run on Linux. Run all script
 tests with `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'`.
 Useful focused Rust checks include:
 
 ```sh
-cargo test -p quantum-core --locked
-cargo test -p quantum-app --no-default-features --locked
-cargo test -p quantum-ui --locked
-cargo test -p quantum-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
+cargo test -p voxelite-core --locked
+cargo test -p voxelite-app --no-default-features --locked
+cargo test -p voxelite-ui --locked
+cargo test -p voxelite-render --locked --test boundary normal_workspace_dependencies_preserve_renderer_boundary
 ```
 
-The shortcut table belongs to `crates/quantum-app/README.md`, not this root file.
+The shortcut table belongs to `crates/voxelite-app/README.md`, not this root file.
 After changing command contributions, regenerate it with:
 
 ```sh
-UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_registry
+UPDATE_README=1 cargo test -p voxelite-app --bin voxelite readme_shortcuts_match_registry
 ```
 
 ### Rendering correctness and performance
-
-For live frame traces, see [Tracy profiling](docs/perf/profiling.md).
 
 Read [docs/perf/rendering-harness.md](docs/perf/rendering-harness.md) and
 [bench/README.md](bench/README.md) before changing the renderer. Both harnesses
@@ -415,14 +348,14 @@ rows, run spread and load in performance PRs.
 Generator tests build into temporary directories and need no local site bundle:
 
 ```sh
-cargo test --locked -p quantum-site
+cargo test --locked -p voxelite-site
 ```
 
 After building the site:
 
 ```sh
 python3 scripts/check-site.py
-cargo xtask macos check-appcast site/appcast.xml --allow-empty
+python3 scripts/check-macos-appcast.py site/appcast.xml --allow-empty
 ```
 
 The site checker expects the complete generated site.
@@ -435,7 +368,7 @@ With a local site server and Playwright installed, browser checks are available 
 ## Releases and deployment
 
 Follow [docs/releasing-macos.md](docs/releasing-macos.md). Use a focused version
-bump PR titled `chore(release): prepare vX.Y.Z` (see [CONTRIBUTING.md](CONTRIBUTING.md)): update
+bump PR, following the existing `Prepare v0.3.0 release (#42)` pattern: update
 workspace versions and `Cargo.lock`, and synchronize affected download and
 compatibility metadata before merging. Tag the approved commit separately.
 
@@ -453,12 +386,12 @@ Signing and notarization secret names are `MACOS_CERTIFICATE_P12_BASE64`,
 an optional `SPARKLE_PUBLIC_ED_KEY` variable must match it. Never put private
 keys or credential values in the repository.
 
-`cargo xtask macos release-notes`
+[scripts/generate-macos-release-notes.py](scripts/generate-macos-release-notes.py)
 combines the packaging notes with non-merge commit subjects since the previous
 stable ancestor tag. Write meaningful commit subjects: they become release notes.
-`cargo xtask macos appcast` preserves
+[scripts/generate-macos-appcast.sh](scripts/generate-macos-appcast.sh) preserves
 prior feed entries and signs the update feed and notes. Published assets include
-`Quantum.dmg`, `Quantum.dmg.sha256`, `Quantum.html` and `appcast.xml`.
+`Voxelite.dmg`, `Voxelite.dmg.sha256`, `Voxelite.html` and `appcast.xml`.
 
 [Deploy site](.github/workflows/deploy-site.yml) builds and verifies the complete
 static site on Ubuntu for PRs and `main`. Successful owner-triggered releases
@@ -473,7 +406,7 @@ failed site deployment rather than replacing published release assets.
 | Read | For |
 | --- | --- |
 | [docs/](docs/) | Engineering guides and implementation evidence. |
-| [Native editor guide](crates/quantum-app/README.md) | Running the app, controls and platform notes. |
+| [Native editor guide](crates/voxelite-app/README.md) | Running the app, controls and platform notes. |
 | [MCP guide](docs/mcp.md), [integrations](integrations/README.md), [skills](skills/README.md) | Agent setup and workflows. |
 | [Site guide](site/README.md) | Website builds and generated documentation. |
 | [Domain glossary](docs/glossary.md) | Shared terminology and proposed architecture seams. |

@@ -4,7 +4,7 @@ sleep 3
 capture_ui2() {
   sleep 0.6
   kill -0 "$app_pid"
-  timeout 15s import -window "$window" "$QUANTUM_CAPTURE_DIR/$1-$theme.png"
+  timeout 15s import -window "$window" "$VOXELITE_CAPTURE_DIR/$1-$theme.png"
 }
 xdotool mousemove --window "$window" 700 60
 capture_ui2 main
@@ -17,10 +17,10 @@ sleep 0.3
 xdotool mousemove --window "$window" 40 264
 sleep 1
 capture_ui2 tooltip-tool-b
-convert "$QUANTUM_CAPTURE_DIR/tooltip-tool-b-$theme.png" -crop 220x80+4+215 +repage -filter point -resize 400% "$QUANTUM_CAPTURE_DIR/keycap-tooltip-$theme.png"
+convert "$VOXELITE_CAPTURE_DIR/tooltip-tool-b-$theme.png" -crop 220x80+4+215 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/keycap-tooltip-$theme.png"
 xdotool mousemove --window "$window" 700 60
 capture_ui2 keycap-search-source
-convert "$QUANTUM_CAPTURE_DIR/keycap-search-source-$theme.png" -crop 280x64+1160+32 +repage -filter point -resize 400% "$QUANTUM_CAPTURE_DIR/keycap-search-$theme.png"
+convert "$VOXELITE_CAPTURE_DIR/keycap-search-source-$theme.png" -crop 280x64+1160+32 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/keycap-search-$theme.png"
 # Below the top toolbar / above the bottom controls.
 xdotool mousemove --window "$window" 1370 64
 sleep 1
@@ -37,7 +37,7 @@ xdotool key b
 xdotool mousemove --window "$window" 1047 180
 sleep 0.2
 capture_ui2 gizmo-hover
-convert "$QUANTUM_CAPTURE_DIR/gizmo-hover-$theme.png" -crop 128x128+956+100 +repage -filter point -resize 400% "$QUANTUM_CAPTURE_DIR/gizmo-zoom-$theme.png"
+convert "$VOXELITE_CAPTURE_DIR/gizmo-hover-$theme.png" -crop 128x128+956+100 +repage -filter point -resize 400% "$VOXELITE_CAPTURE_DIR/gizmo-zoom-$theme.png"
 xdotool click 1
 sleep 5
 capture_ui2 gizmo-right
@@ -109,21 +109,21 @@ done
 [[ -n "$settings_window" ]]
 xdotool windowfocus "$settings_window"
 sleep 1
-timeout 15s import -window "$settings_window" "$QUANTUM_CAPTURE_DIR/settings-general-$theme.png"
+timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-general-$theme.png"
 xdotool mousemove --window "$settings_window" 100 207 click 1
 sleep 0.5
-timeout 15s import -window "$settings_window" "$QUANTUM_CAPTURE_DIR/settings-appearance-$theme.png"
+timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-appearance-$theme.png"
 xdotool mousemove --window "$settings_window" 100 285 click 1
 sleep 0.5
-timeout 15s import -window "$settings_window" "$QUANTUM_CAPTURE_DIR/settings-viewport-$theme.png"
+timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-viewport-$theme.png"
 xdotool mousemove --window "$settings_window" 100 323 click 1
 sleep 0.5
-timeout 15s import -window "$settings_window" "$QUANTUM_CAPTURE_DIR/settings-shortcuts-$theme.png"
+timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-shortcuts-$theme.png"
 xdotool key Escape
 xdotool windowfocus "$window"
 
 # Compare the actual captured pixels, including hover entry at different corners.
-python3 - "$QUANTUM_CAPTURE_DIR" "$theme" <<'PYTEST'
+python3 - "$VOXELITE_CAPTURE_DIR" "$theme" <<'PYTEST'
 from pathlib import Path
 from PIL import Image, ImageChops
 import os, sys
@@ -138,7 +138,7 @@ assert not same("main", "gizmo-right", art), "positive axis did not snap"
 assert not same("gizmo-right", "gizmo-left", art), "negative axis did not show the opposite view"
 assert not same("main", "gizmo-orbited", art), "gizmo drag did not orbit"
 assert same("main", "gizmo-reset", art), "double-click did not reset to isometric"
-if os.environ.get("QUANTUM_CAPTURE_MAC_UI"):
+if os.environ.get("VOXELITE_CAPTURE_MAC_UI"):
     source = image("keycap-search-source")
     columns = {}
     for x in range(1382, 1401):

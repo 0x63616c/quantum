@@ -2,9 +2,17 @@ name: Rendering checks
 
 on:
   pull_request:
-  schedule:
-    # Nightly visual gate on main (03:30 PT), so dependency bumps still get golden coverage.
-    - cron: '30 10 * * *'
+    paths:
+      - 'crates/voxelite-render/**'
+      - 'crates/voxelite-core/**'
+      - 'crates/voxelite-bench/**'
+      - 'xtask/**'
+      - 'bench/**'
+      - 'examples/*.voxl'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
+      - '.github/workflows/render-checks.yml'
   workflow_dispatch:
     inputs:
       command:
@@ -13,11 +21,6 @@ on:
         options: [visual, bench, rebaseline-visual, bench-baseline]
         default: visual
         required: true
-      runner_label:
-        description: Runner for visual runs (any, or a runner label to re-verify one runner); bench always uses golden
-        type: choice
-        options: [any, golden, runner-2]
-        default: any
       runs:
         description: Benchmark repetitions in one process
         type: string
@@ -31,59 +34,22 @@ permissions:
   contents: read
 
 concurrency:
-  group: render-checks-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: render-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  changes:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      pull-requests: read
-    outputs:
-      render: ${{ steps.filter.outputs.render }}
-    steps:
-      - name: Detect rendering changes
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
-            echo 'render=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | .filename, (.previous_filename // empty)')
-          render=false
-          [[ -z "$files" ]] && render=true
-          while IFS= read -r file; do
-            # Dependencies retain nightly golden coverage; dispatch visual for a render dep change.
-            case "$file" in
-              crates/quantum-render/*|crates/quantum-core/*|crates/quantum-bench/*|xtask/src/main.rs|bench/*|examples/*.voxl|.cargo/config.toml|.github/workflows/render-checks.yml) render=true ;;
-            esac
-          done <<< "$files"
-          echo "render=$render" >> "$GITHUB_OUTPUT"
-
   render:
-    needs: changes
-    # Only owner-triggered, same-repository code may use self-hosted runners.
-    if: needs.changes.outputs.render == 'true' && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    # Both runners are on the same Mac mini. homelab-quantum-2 passed visual --determinism
-    # bit-exact against the committed goldens (run 40628010315, see #165), so visual jobs use
-    # either runner. Timing baselines need one fixed machine, so benchmarks require golden.
-    # Re-verify a new runner (give it a neutral label, add it to runner_label) before it
-    # takes visual jobs.
-    runs-on: ${{ fromJSON((inputs.command == 'bench' || inputs.command == 'bench-baseline') && '["self-hosted","macOS","ARM64","xcode","golden"]' || (inputs.runner_label == 'golden' && '["self-hosted","macOS","ARM64","xcode","golden"]') || (inputs.runner_label == 'runner-2' && '["self-hosted","macOS","ARM64","xcode","runner-2"]') || '["self-hosted","macOS","ARM64","xcode"]') }}
+    # Only owner-triggered, same-repository code may use the golden machine.
+    if: github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, macOS, ARM64, xcode]
     timeout-minutes: 60
     env:
-      CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
       RENDER_COMMAND: ${{ inputs.command || 'visual' }}
       RENDER_RUNS: ${{ inputs.runs || '3' }}
       RENDER_SCENES: ${{ inputs.scenes || 'autumn terrain1m sponge1m terrain10m' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Set up runner tools
@@ -129,7 +95,7 @@ jobs:
           cargo xtask "${args[@]}"
       - name: Upload visual reports and mismatch images
         if: always() && (env.RENDER_COMMAND == 'visual' || env.RENDER_COMMAND == 'rebaseline-visual')
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: visual-report-${{ github.run_id }}
           path: target/visual/
@@ -137,7 +103,7 @@ jobs:
           retention-days: 14
       - name: Upload performance JSON and markdown
         if: always() && (env.RENDER_COMMAND == 'bench' || env.RENDER_COMMAND == 'bench-baseline')
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: bench-report-${{ github.run_id }}
           path: target/bench/
@@ -145,7 +111,7 @@ jobs:
           retention-days: 14
       - name: Upload explicitly generated goldens
         if: success() && env.RENDER_COMMAND == 'rebaseline-visual'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: visual-goldens-${{ github.run_id }}
           path: bench/golden/
@@ -153,46 +119,9 @@ jobs:
           retention-days: 14
       - name: Upload explicitly generated performance baseline
         if: success() && env.RENDER_COMMAND == 'bench-baseline'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: bench-baseline-${{ github.run_id }}
           path: bench/baseline/
           if-no-files-found: error
           retention-days: 14
-
-      - name: Remove build output from the self-hosted runner
-        # The next checkout would `git clean` it anyway; deleting now keeps several GiB of
-        # release-profile output from sitting on the Mac mini between runs.
-        if: always()
-        shell: bash
-        run: rm -rf target
-
-  report-nightly-failure:
-    needs: [changes, render]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'schedule' && (needs.changes.result != 'success' || needs.render.result != 'success')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      issues: write
-    steps:
-      - name: Open or update nightly failure issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          RENDER_RESULT: ${{ needs.render.result }}
-        run: |
-          set -euo pipefail
-          title='ci: Rendering checks nightly failed'
-          body="Nightly visual checks did not complete successfully: $RUN_URL
-
-          Changes: $CHANGES_RESULT; render: $RENDER_RESULT.
-          Check the run logs and restore the golden visual and determinism gate."
-          issue=$(gh issue list --state open --search "$title in:title" --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
-          if [[ -n "$issue" ]]; then
-            gh issue edit "$issue" --add-label 'type:ci,area:ci,priority:p0'
-            gh issue comment "$issue" --body "$body"
-          else
-            gh issue create --title "$title" --body "$body" --label 'type:ci,area:ci,priority:p0'
-          fi

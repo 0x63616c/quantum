@@ -1,5 +1,5 @@
 # Sourced by capture-native.sh inside its Xvfb / D-Bus session.
-artifact="$QUANTUM_CAPTURE_ROOT/screenshots/polish-2"
+artifact="$VOXELITE_CAPTURE_ROOT/screenshots/polish-2"
 mkdir -p "$artifact"
 search() {
   xdotool key --clearmodifiers ctrl+k
@@ -47,7 +47,7 @@ xdotool type --clearmodifiers --delay 15 '#CC8844'
 sleep 0.25
 xdotool mousemove 780 429 click 1
 sleep 0.3
-python3 - "$QUANTUM_DATA_DIR/palettes.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/palettes.json" <<'PYTEST'
 import json, sys
 p = json.load(open(sys.argv[1]))['entries'][0]
 assert p['name'] == 'Studio warm', p
@@ -58,7 +58,7 @@ xdotool mousemove 943 478 click 1
 sleep 0.2
 xdotool click 1
 sleep 0.2
-python3 - "$QUANTUM_DATA_DIR/palettes.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/palettes.json" <<'PYTEST'
 import json, sys
 p = json.load(open(sys.argv[1]))['entries'][0]['palette']
 assert p['slots'][2]['rgba'] == [204, 136, 68, 255], p

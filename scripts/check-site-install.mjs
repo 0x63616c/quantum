@@ -2,10 +2,10 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const base = process.env.QUANTUM_SITE_URL || 'http://127.0.0.1:8090';
+const base = process.env.VOXELITE_SITE_URL || 'http://127.0.0.1:8090';
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const server = {
-  command: '/Applications/Quantum.app/Contents/MacOS/quantum-mcp',
+  command: '/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp',
   args: ['--root', '${workspaceFolder}']
 };
 try {
@@ -24,19 +24,19 @@ try {
         assert.deepEqual(await tabs.allTextContents(), ['Cursor', 'Claude Code', 'Codex', 'VS Code', 'Other']);
         assert.equal(await page.getByRole('tabpanel').count(), 1);
         const cursor = new URL(await page.locator('.cursor-install').getAttribute('href'));
-        assert.equal(cursor.searchParams.get('name'), 'quantum');
+        assert.equal(cursor.searchParams.get('name'), 'voxelite');
         assert.equal(Buffer.from(cursor.searchParams.get('config'), 'base64').toString(), JSON.stringify(server));
         assert.equal(await page.locator(`.badge-${theme}`).isVisible(), true);
         assert.equal(await page.locator(`.badge-${theme === 'dark' ? 'light' : 'dark'}`).isVisible(), false);
         const vscode = await page.locator('#install-vscode a.button').getAttribute('href');
-        assert.equal(vscode, 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify({ name: 'quantum', ...server })));
+        assert.equal(vscode, 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify({ name: 'voxelite', ...server })));
         await tabs.first().focus();
         await page.keyboard.press('ArrowRight');
         assert.equal(await page.locator(':focus').textContent(), 'Claude Code');
         assert.equal(await page.getByRole('tab', { name: 'Claude Code' }).getAttribute('aria-selected'), 'true');
         const panel = page.getByRole('tabpanel');
         const command = await panel.locator('pre').textContent();
-        assert.ok(command.startsWith('claude mcp add quantum -- '));
+        assert.ok(command.startsWith('claude mcp add voxelite -- '));
         assert.ok(command.endsWith('--root "$PWD"'));
         await panel.getByRole('button', { name: 'Copy code example' }).click();
         assert.equal(await page.evaluate(() => navigator.clipboard.readText()), command);
@@ -44,7 +44,7 @@ try {
         await page.keyboard.press('End');
         assert.equal(await page.locator(':focus').textContent(), 'Other');
         assert.deepEqual(JSON.parse(await page.getByRole('tabpanel').locator('pre').textContent()), {
-          mcpServers: { quantum: { ...server, args: ['--root', '<project dir>'] } }
+          mcpServers: { voxelite: { ...server, args: ['--root', '<project dir>'] } }
         });
         await page.keyboard.press('ArrowRight');
         assert.equal(await page.locator(':focus').textContent(), 'Cursor');
@@ -57,10 +57,10 @@ try {
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         }
         if (route === '/docs/skills/') {
-          for (const name of ['quantum-workflow', 'quantum-palettes', 'quantum-primitives', 'quantum-render-review']) {
+          for (const name of ['voxelite-workflow', 'voxelite-palettes', 'voxelite-primitives', 'voxelite-render-review']) {
             const section = page.locator(`section:has(> h3#${name})`);
             await section.getByRole('button', { name: 'Copy code example' }).click();
-            assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `npx skills add 0x63616c/quantum --skill ${name}`);
+            assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `npx skills add 0x63616c/voxelite --skill ${name}`);
           }
         }
       }

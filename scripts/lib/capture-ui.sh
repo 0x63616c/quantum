@@ -15,7 +15,7 @@ capture_settings() {
   xdotool mousemove --window "$settings_window" 870 630
   sleep 0.4
   kill -0 "$app_pid"
-  timeout 15s import -window "$settings_window" "$QUANTUM_CAPTURE_DIR/settings-$1-$theme.png"
+  timeout 15s import -window "$settings_window" "$VOXELITE_CAPTURE_DIR/settings-$1-$theme.png"
 }
 capture_settings general
 # One settings window per editor, including repeated shortcut invocation.
@@ -34,7 +34,7 @@ capture_settings search-setting
 xdotool mousemove --window "$settings_window" 110 165 click 1
 xdotool mousemove --window "$settings_window" 816 246 click 1
 sleep 0.4
-python3 - "$QUANTUM_DATA_DIR/settings.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/settings.json" <<'PYTEST'
 import json, sys
 assert json.load(open(sys.argv[1]))['antialiasing'] is False
 PYTEST
@@ -55,14 +55,14 @@ capture_settings appearance
 if [[ "$theme" == dark ]]; then opposite=light; opposite_x=555; else opposite=dark; opposite_x=744; fi
 xdotool mousemove --window "$settings_window" "$opposite_x" 250 click 1
 sleep 0.5
-python3 - "$QUANTUM_DATA_DIR/settings.json" "$opposite" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/settings.json" "$opposite" <<'PYTEST'
 import json, sys
 assert json.load(open(sys.argv[1]))['appearance'] == sys.argv[2]
 PYTEST
 capture_settings changed-appearance
 xdotool mousemove --window "$settings_window" 370 250 click 1
 sleep 0.3
-python3 - "$QUANTUM_DATA_DIR/settings.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/settings.json" <<'PYTEST'
 import json, sys
 assert json.load(open(sys.argv[1]))['appearance'] == 'system'
 PYTEST
@@ -74,7 +74,7 @@ capture_settings viewport
 # Toggle the grid; check this is a real persisted preference.
 xdotool mousemove --window "$settings_window" 816 180 click 1
 sleep 0.5
-python3 - "$QUANTUM_DATA_DIR/settings.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/settings.json" <<'PYTEST'
 import json, sys
 assert json.load(open(sys.argv[1]))['grid'] is False
 PYTEST
@@ -83,7 +83,7 @@ xdotool mousemove --window "$settings_window" 816 180 click 1
 xdotool mousemove --window "$settings_window" 110 169 click 1
 xdotool mousemove --window "$settings_window" 816 177 click 1
 sleep 0.4
-python3 - "$QUANTUM_DATA_DIR/settings.json" <<'PYTEST'
+python3 - "$VOXELITE_DATA_DIR/settings.json" <<'PYTEST'
 import json, sys
 assert json.load(open(sys.argv[1]))['navigation_hints'] is False
 PYTEST
@@ -91,7 +91,7 @@ PYTEST
 xdotool key --clearmodifiers Escape
 sleep 0.5
 xdotool windowfocus "$window"
-timeout 15s import -window "$window" "$QUANTUM_CAPTURE_DIR/cog-without-guide-$theme.png"
+timeout 15s import -window "$window" "$VOXELITE_CAPTURE_DIR/cog-without-guide-$theme.png"
 xdotool mousemove --window "$window" 96 836 click 1
 sleep 0.5
 settings_window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '^Quantum Settings$' | head -1)"
@@ -105,7 +105,7 @@ xdotool key u
 xdotool mousemove --window "$window" 510 510 click 1
 xdotool mousemove --window "$window" 560 540
 sleep 1
-import -window "$window" "$QUANTUM_CAPTURE_DIR/status-selection-$theme.png"
+import -window "$window" "$VOXELITE_CAPTURE_DIR/status-selection-$theme.png"
 xdotool key Escape b
 # Show Palette focuses the live widget; Enter must not paint into the document.
 xdotool key --clearmodifiers ctrl+k
@@ -115,5 +115,5 @@ sleep 0.3
 xdotool key Right Return
 sleep 0.3
 [[ "$(xdotool getwindowname "$window")" != *"•"* ]]
-import -window "$window" "$QUANTUM_CAPTURE_DIR/palette-focused-$theme.png"
+import -window "$window" "$VOXELITE_CAPTURE_DIR/palette-focused-$theme.png"
 xdotool key Escape

@@ -10,7 +10,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'site'
-BASE_URL = 'https://quantum.worldwidewebb.co'
+BASE_URL = 'https://voxelite.worldwidewebb.co'
 
 for name in ('index.html', 'docs/index.html', 'download/index.html'):
     if not (SITE / name).is_file():
@@ -76,11 +76,6 @@ class Page(HTMLParser):
 # content/ contains build-time article fragments, not standalone pages.
 pages = {p: Page(p.read_text()) for p in sorted(SITE.rglob('*.html'))
          if 'content' not in p.relative_to(SITE).parts}
-for path in pages:
-    footer = re.search(r'<footer\b[^>]*>(.*?)</footer>', path.read_text(), re.S)
-    assert footer, f'{path.relative_to(SITE)}: missing footer'
-    destinations = Page(footer.group(1)).links
-    assert len(destinations) == len(set(destinations)), f'{path.relative_to(SITE)}: repeated footer destination'
 checked = 0
 
 def check(source, link):
@@ -149,13 +144,9 @@ def check_seo(path, page):
     assert page.meta('twitter:image') == image, 'Twitter and OG images differ'
     assert page.meta('twitter:image:alt') == page.meta('og:image:alt', 'property'), 'Image alt text differs'
     icons = [attrs for attrs in page.tags('link') if 'icon' in attrs.get('rel', '').split()]
-    actual_icons = [(attrs.get('type'), urlsplit(attrs.get('href', '')).path,
-                     attrs.get('sizes')) for attrs in icons]
-    assert actual_icons == [
-        ('image/png', '/assets/favicon-16.png', '16x16'),
-        ('image/png', '/assets/favicon-32.png', '32x32'),
-        ('image/svg+xml', '/assets/favicon.svg', None),
-    ], 'Expected the Quantize SVG favicon and both PNG fallbacks'
+    assert len(icons) == 1, 'Expected one favicon'
+    assert icons[0].get('type') == 'image/svg+xml', 'Expected an SVG favicon'
+    assert icons[0].get('href') in ('/assets/mark.svg', f'{BASE_URL}/assets/mark.svg'), 'Incorrect favicon'
 
 
 ANALYTICS_SCRIPTS = ('/_vercel/insights/script.js', '/_vercel/speed-insights/script.js')
@@ -300,7 +291,7 @@ assert 'outputDirectory' not in hosting, 'site/ is published as the site-dist ro
 assert any(rule['source'] == '/assets/fonts/(.*)' and
            {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
            for rule in hosting['headers']), 'Missing immutable font cache headers'
-with ZipFile(SITE / 'assets/quantum-skills.zip') as archive:
+with ZipFile(SITE / 'assets/voxelite-skills.zip') as archive:
     expected = {str(p.relative_to(ROOT)): p for folder in ('skills', 'integrations') for p in (ROOT / folder).rglob('*') if p.is_file()}
     assert set(archive.namelist()) == set(expected)
     for name, source in expected.items():

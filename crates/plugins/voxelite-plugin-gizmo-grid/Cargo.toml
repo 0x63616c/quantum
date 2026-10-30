@@ -1,0 +1,16 @@
+[package]
+name = "voxelite-plugin-gizmo-grid"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+voxelite-plugin-api.workspace = true
+
+[dev-dependencies]
+voxelite-plugin-host.workspace = true
+
+[lints]
+workspace = true
