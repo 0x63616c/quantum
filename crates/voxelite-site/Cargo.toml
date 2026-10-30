@@ -1,0 +1,18 @@
+[package]
+name = "voxelite-site"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+voxelite-mcp = { path = "../voxelite-mcp" }
+
+[dev-dependencies]
+voxelite-format.workspace = true
+uuid.workspace = true
+tempfile = "3"
+
+[lints]
+workspace = true

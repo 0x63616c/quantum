@@ -1,4 +1,0 @@
-# Only project.yml is shared; caches, local overrides and memories stay local.
-/*
-!/.gitignore
-!/project.yml

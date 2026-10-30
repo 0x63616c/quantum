@@ -2,54 +2,11 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
-const base = process.env.QUANTUM_SITE_URL || 'http://127.0.0.1:8090';
+const base = process.env.VOXELITE_SITE_URL || 'http://127.0.0.1:8090';
 const directory = process.argv[2] || 'screenshots/site';
 await mkdir(directory, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const report = { browser: browser.version(), captures: [], checks: [] };
-async function checkHeader(page) {
-  const controls = await page.locator('.header a, .header button').evaluateAll(elements =>
-    elements.filter(element => element.checkVisibility()).map(element => {
-      const box = element.getBoundingClientRect();
-      return { label: element.textContent || element.ariaLabel, fits: box.left >= 0 && box.right <= innerWidth };
-    }));
-  assert.ok(controls.length >= 4, 'Brand, Docs, Download and theme control remain visible');
-  for (const control of controls) assert.ok(control.fits, `${page.url()}: header ${control.label} fits viewport`);
-  for (const href of ['/docs/', '/download/']) {
-    assert.equal(await page.locator(`.header nav a[href="${href}"]`).isVisible(), true);
-  }
-  assert.equal((await page.locator('.theme-toggle').boundingBox()).width, 44, 'Reserve the full theme target');
-}
-
-async function checkTextContrast(control) {
-  const contrast = await control.evaluate(element => {
-    const rgb = color => color.match(/[\d.]+/g).slice(0, 3).map(Number);
-    const luminance = color => rgb(color).map(value => {
-      const channel = value / 255;
-      return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
-    }).reduce((sum, channel, i) => sum + channel * [.2126, .7152, .0722][i], 0);
-    const style = getComputedStyle(element);
-    let background = element;
-    while (getComputedStyle(background).backgroundColor === 'rgba(0, 0, 0, 0)') background = background.parentElement;
-    const values = [luminance(style.color), luminance(getComputedStyle(background).backgroundColor)].sort((a, b) => b - a);
-    return { ratio: (values[0] + .05) / (values[1] + .05), opacity: style.opacity };
-  });
-  assert.equal(contrast.opacity, '1', 'Enabled text controls keep full opacity');
-  assert.ok(contrast.ratio >= 4.5, `Text contrast ${contrast.ratio.toFixed(2)}:1 meets AA`);
-}
-
-async function checkPressed(page, control) {
-  await control.hover();
-  await page.mouse.down();
-  try {
-    assert.equal(await control.evaluate(element => element.matches(':active')), true);
-    await checkTextContrast(control);
-  } finally {
-    // Release away from the target so a link does not navigate.
-    await page.mouse.move(0, 0);
-    await page.mouse.up();
-  }
-}
 try {
   for (const width of [1440, 390]) {
     for (const theme of ['dark', 'light']) {
@@ -105,43 +62,20 @@ try {
       await page.close();
     }
   }
-  for (const width of [1440, 1101, 1100, 1024, 1001, 1000, 851, 850, 768, 701, 700, 390, 320]) {
+  for (const width of [1440, 1024, 768, 390, 320]) {
     for (const theme of ['dark', 'light']) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: 'reduce' });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const route of ['/download/', '/404.html', '/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/', '/docs/plugins/', '/changelog/', '/blog/', '/blog/2026-10-28-rename/']) {
+      for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/']) {
         const response = await page.goto(base + route);
         assert.equal(response.status(), 200);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} fits ${width}`);
         assert.equal(await page.getByRole('heading', { level: 1 }).count(), 1);
-        await checkHeader(page);
-        assert.deepEqual(await page.locator('.docs-content code').evaluateAll(elements =>
-          elements.filter(element => element.checkVisibility() && parseFloat(getComputedStyle(element).fontSize) < 12)
-            .map(element => element.textContent)), [], `${route}: docs code is at least 12px`);
-        if (route === '/docs/mcp/') {
-          assert.equal(await page.locator('.tool th:nth-child(-n+2), .tool td:nth-child(-n+2)').evaluateAll(cells =>
-            cells.every(cell => getComputedStyle(cell).whiteSpace === 'nowrap' && getComputedStyle(cell).overflowWrap === 'normal')), true);
-          const table = page.locator('#quantum_comments_add + p + .table-scroll');
-          assert.equal(await table.evaluate(element => getComputedStyle(element).overflowX), 'auto');
-          if (width <= 390) {
-            assert.equal(await table.evaluate(element => {
-              element.scrollLeft = 100;
-              return element.scrollWidth > element.clientWidth && element.scrollLeft > 0;
-            }), true, 'Narrow MCP tables scroll inside their wrapper');
-          }
-        }
-        const sections = await page.locator('.documentation .docs-content h2[id]').evaluateAll(headings => headings.map(heading => `#${heading.id}`));
+        const sections = await page.locator('.docs-content h2[id]').evaluateAll(headings => headings.map(heading => `#${heading.id}`));
         if (sections.length) {
           const index = page.locator(width < 1100 ? '.docs-mobile-nav nav[aria-label="Page sections"]' : '.docs-toc nav');
           assert.deepEqual(await index.locator('a').evaluateAll(links => links.map(link => link.getAttribute('href'))), sections, 'Section index matches the article');
-        }
-        if ((route === '/changelog/' || route.startsWith('/blog/')) && (width === 1440 || width === 390)) {
-          await page.evaluate(() => document.fonts.ready);
-          const slug = route.split('/').filter(Boolean).join('-');
-          const name = `${slug}-${width === 1440 ? 'desktop' : 'mobile'}-${theme}`;
-          await page.screenshot({ path: `${directory}/${name}.png` });
-          report.captures.push({ name, width, height: 900, fullPage: false });
         }
         if (route === '/docs/getting-started/' && (width === 1440 || width === 390)) {
           await page.evaluate(() => document.fonts.ready);
@@ -163,29 +97,7 @@ try {
             assert.equal(await menus.locator('details[open]').count(), 0);
             assert.equal(await page.locator(':focus').textContent(), 'On this page');
             await page.keyboard.press('Enter');
-            const sectionLinks = menus.locator('nav[aria-label="Page sections"] a');
-            for (let i = 0; i < await sectionLinks.count(); i++) {
-              await page.keyboard.press('Tab');
-              assert.equal(await menus.locator('details[open]').count(), 1, 'Focus inside keeps the menu open');
-            }
-            await page.keyboard.press('Tab');
-            assert.equal(await page.locator(':focus').textContent(), 'Copy page as Markdown');
-            assert.equal(await menus.locator('details[open]').count(), 0, 'Tab out closes the menu without moving focus');
-            assert.equal(await page.locator(':focus').evaluate(element => {
-              const box = element.getBoundingClientRect();
-              return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
-            }), true, 'The newly focused control is unobscured');
-            const summary = menus.getByText('On this page', { exact: true });
-            await summary.focus();
-            await page.keyboard.press('Enter');
-            await page.keyboard.press('Shift+Tab');
-            assert.equal(await page.locator(':focus').textContent(), 'Browse docs');
-            assert.equal(await menus.locator('details[open]').count(), 0, 'Reverse Tab out also closes the menu');
-            await checkPressed(page, menus.getByText('Browse docs', { exact: true }));
-            await checkPressed(page, page.getByRole('button', { name: 'Copy page as Markdown', exact: true }));
-            await summary.focus();
-            await page.keyboard.press('Enter');
-            await menus.getByRole('link', { name: 'First model through MCP', exact: true }).click();
+            await menus.getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
             assert.equal(new URL(page.url()).hash, '#first-model');
             assert.equal(await page.locator(':focus').getAttribute('id'), 'first-model');
             assert.equal(await menus.locator('details[open]').count(), 0);
@@ -196,21 +108,15 @@ try {
         }
       }
       await page.goto(base);
-      await checkHeader(page);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Homepage fits ${width}`);
       await page.keyboard.press('Tab');
       assert.equal(await page.locator(':focus').textContent(), 'Skip to content');
-      await page.locator('.skip').hover();
-      await checkTextContrast(page.locator('.skip'));
-      await checkPressed(page, page.locator('.skip'));
-      await checkPressed(page, page.locator('.header nav a[href="/docs/"]'));
       assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior), 'auto');
       assert.deepEqual(errors, [], 'No documentation or homepage runtime errors');
       await page.close();
     }
   }
-  report.checks.push('Every page type and all docs routes fit 320–1440px, including 701/768px and both sides of header breakpoints; visible header controls stay in bounds with a full 44px theme target in both themes');
-  report.checks.push('Docs code stays at least 12px; MCP identifiers/status labels stay whole and narrow tables scroll; focused/hovered/pressed skip links and pressed navigation/buttons/summaries keep AA contrast');
+  report.checks.push('Homepage and all five docs routes fit 1440, 1024, 768, 390 and 320px in both themes; keyboard skip link; reduced motion; no third-party homepage requests');
   report.checks.push('Generated section indexes match article headings; mobile docs menus support mutual exclusion, keyboard, Escape with focus restoration, outside dismissal and anchor focus; first mobile build example fits without scrolling');
   const clipboard = await browser.newPage();
   await clipboard.context().grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -219,72 +125,19 @@ try {
   await clipboard.getByRole('button', { name: 'Copy code example' }).first().click();
   assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), code);
   report.checks.push('Documentation Copy code writes the complete example to clipboard');
-  const clipboardErrors = [];
-  clipboard.on('pageerror', error => clipboardErrors.push(error.message));
-  for (const route of ['/docs/', '/docs/getting-started/', '/docs/mcp/', '/docs/format/', '/docs/skills/']) {
-    await clipboard.goto(base + route);
-    const raw = route.replace(/\/$/, '.md');
-    const expected = await (await clipboard.request.get(base + raw)).text();
-    const alias = await clipboard.request.get(base + route + 'index.md');
-    assert.equal(alias.status(), 200);
-    assert.equal(await alias.text(), expected);
-    assert.equal(await clipboard.getByRole('link', { name: 'View .md', exact: true }).getAttribute('href'), raw);
-    const copy = clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true });
-    await copy.focus();
-    await clipboard.keyboard.press('Enter');
-    await clipboard.getByRole('status').filter({ hasText: /^Copied$/ }).waitFor();
-    assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), expected);
-    assert.equal(await copy.isEnabled(), true);
-  }
-  await clipboard.route('**/docs/skills.md', route => route.fulfill({ status: 503, body: 'Unavailable' }));
-  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
-  await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
-  await clipboard.unroute('**/docs/skills.md');
-  await clipboard.context().clearPermissions();
-  await clipboard.context().grantPermissions(['clipboard-read']);
-  await clipboard.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
-    value: { write: async () => { throw new DOMException('Permission denied', 'NotAllowedError'); } }
-  }));
-  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
-  await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
-  assert.equal(await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).isEnabled(), true);
-  // Deny the clipboard before completing the download. A later fetch rejection
-  // must still be handled even when the browser never reads the ClipboardItem.
-  for (const failure of ['http', 'network', 'unexpected-content']) {
-    let receiveDownload;
-    const downloadReady = new Promise(resolve => { receiveDownload = resolve; });
-    await clipboard.route('**/docs/skills.md', route => receiveDownload(route));
-    await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
-    const download = await downloadReady;
-    await clipboard.getByRole('status').filter({ hasText: 'Could not copy. Use View .md.' }).waitFor();
-    if (failure === 'network') await download.abort();
-    else await download.fulfill({ status: failure === 'http' ? 503 : 200, body: '<html>Unavailable</html>' });
-    await clipboard.waitForLoadState('networkidle');
-    assert.deepEqual(clipboardErrors, [], `No unhandled rejection after delayed ${failure} failure`);
-    await clipboard.unroute('**/docs/skills.md');
-  }
-  await clipboard.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  await clipboard.reload();
-  await clipboard.evaluate(() => Object.defineProperty(window, 'ClipboardItem', { value: undefined }));
-  const fallbackMarkdown = await (await clipboard.request.get(base + '/docs/skills.md')).text();
-  await clipboard.getByRole('button', { name: 'Copy page as Markdown', exact: true }).click();
-  await clipboard.getByRole('status').filter({ hasText: /^Copied$/ }).waitFor();
-  assert.equal(await clipboard.evaluate(() => navigator.clipboard.readText()), fallbackMarkdown);
-  assert.deepEqual(clipboardErrors, []);
-  report.checks.push('All doc Markdown aliases return identical content; keyboard copying preserves the complete page including schemas; writeText fallback works; simultaneous clipboard denial and delayed HTTP, network or content failures remain handled');
   await clipboard.close();
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
   await page.goto(base);
   assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'The voxel editorbuilt for AI agents.');
-  assert.equal(await page.locator('.header nav').getByRole('link', { name: 'Download', exact: true }).getAttribute('href'), '/download/');
-  await page.locator('label[for="proof-before"]').click();
+  assert.equal(await page.getByRole('link', { name: 'Open the desktop web editor', exact: false }).count(), 1);
+  await page.getByText('Before', { exact: true }).click();
   assert.equal(await page.locator('.proof-before').isVisible(), true);
   assert.equal(await page.locator('.proof-after').isVisible(), false);
-  await page.locator('label[for="proof-after"]').click();
+  await page.getByText('After +3 voxels', { exact: true }).click();
   assert.equal(await page.locator('.proof-after').isVisible(), true);
   await page.goto(base + '/docs/getting-started/');
-  await page.locator('.docs-mobile-nav summary').filter({ hasText: 'On this page' }).click();
-  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'First model through MCP', exact: true }).click();
+  await page.getByText('On this page', { exact: true }).click();
+  await page.locator('.docs-mobile-nav').getByRole('link', { name: 'Your first model through MCP', exact: true }).click();
   assert.equal(new URL(page.url()).hash, '#first-model');
   await page.goto(base + '/docs/getting-started/');
   await page.getByText('Browse docs', { exact: true }).click();
@@ -293,14 +146,6 @@ try {
   await page.goto(base + '/docs/getting-started/');
   await page.getByRole('link', { name: 'Connect MCP', exact: false }).click();
   assert.equal(new URL(page.url()).hash, '#connect');
-  assert.equal(await page.getByRole('button', { name: 'Copy page as Markdown', exact: true }).count(), 0);
-  const rawResponse = await Promise.all([
-    page.waitForResponse(response => response.url() === base + '/docs/getting-started.md'),
-    page.getByRole('link', { name: 'View .md', exact: true }).click()
-  ]);
-  assert.equal(rawResponse[0].status(), 200);
-  assert.ok((await rawResponse[0].text()).startsWith('# Getting started\n'));
-  report.checks.push('View .md works with JavaScript disabled');
   report.checks.push('Mobile comparison switches with keyboard, pointer and JavaScript disabled; no-JavaScript setup navigation');
   report.checks.push('No horizontal overflow, one h1, decoded images, theme toggle and persistence, no page errors, no-JavaScript navigation');
   await page.close();

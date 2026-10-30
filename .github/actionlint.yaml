@@ -1,4 +1,0 @@
-self-hosted-runner:
-  # actionlint 1.7.12 predates the hosted xcode-27 label. This allowlist only
-  # teaches the linter the label; xcode-27 jobs still use GitHub-hosted runners.
-  labels: [xcode, xcode-27]

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Quantum project 1.0",
+  "title": "Voxelite project 1.0",
   "type": "object",
   "required": [
     "format",
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "format": {
-      "enum": ["quantum", "voxelite"]
+      "const": "voxelite"
     },
     "version": {
       "type": "object",
@@ -692,142 +692,7 @@
       "type": "object"
     },
     "extensions": {
-      "description": "Optional plugin-owned sections. Raw section envelopes are preserved byte-for-byte; Rust additionally enforces duplicate-key, nesting and encoded-size limits.",
-      "type": "object",
-      "propertyNames": {
-        "maxLength": 253,
-        "pattern": "^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
-      },
-      "additionalProperties": {
-        "type": "object",
-        "propertyNames": {
-          "maxLength": 253,
-          "pattern": "^[a-z][a-z0-9_-]*(?:\\.[a-z][a-z0-9_-]*)*$"
-        },
-        "additionalProperties": {
-          "type": "object",
-          "required": [
-            "schema_version",
-            "encoding",
-            "payload"
-          ],
-          "properties": {
-            "schema_version": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 4294967295
-            },
-            "encoding": {
-              "enum": [
-                "json",
-                "bytes"
-              ]
-            },
-            "payload": {}
-          },
-          "if": {
-            "properties": {
-              "encoding": {
-                "const": "bytes"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "type": "array",
-                "items": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 255
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "build_history": {
-      "description": "Optional deterministic build recipe, validated by core command replay against the complete live document.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "version",
-        "base_layer",
-        "steps"
-      ],
-      "properties": {
-        "version": {
-          "const": 1
-        },
-        "base_layer": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        },
-        "steps": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 64,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "id",
-              "label",
-              "origin",
-              "elapsed_ms",
-              "command"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-              },
-              "label": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 128
-              },
-              "origin": {
-                "enum": [
-                  "human",
-                  "agent"
-                ]
-              },
-              "elapsed_ms": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 4294967295
-              },
-              "command": {
-                "description": "Externally tagged quantum-core Command. Rust validates its complete typed payload, work limits and effect; SetVoxels writes use [x,y,z,slot] tuples, with slot zero for erase.",
-                "type": "object",
-                "minProperties": 1,
-                "maxProperties": 1,
-                "propertyNames": {
-                  "enum": [
-                    "set_voxels",
-                    "erase_region",
-                    "flood_fill",
-                    "primitive",
-                    "transform_region",
-                    "batch",
-                    "palette",
-                    "layer",
-                    "edit_document",
-                    "create_comment",
-                    "reanchor",
-                    "reply",
-                    "resolve",
-                    "save_version",
-                    "restore_version"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
+      "type": "object"
     }
   }
 }
