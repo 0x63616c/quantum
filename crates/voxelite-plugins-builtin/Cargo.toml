@@ -1,0 +1,24 @@
+[package]
+name = "voxelite-plugins-builtin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Composition of Voxelite's statically linked built-in plugins"
+
+[dependencies]
+voxelite-plugin-host.workspace = true
+voxelite-plugin-tools.workspace = true
+voxelite-plugin-mirror.workspace = true
+voxelite-plugin-gizmo-grid.workspace = true
+voxelite-plugin-shadows-lighting.workspace = true
+voxelite-plugin-palette.workspace = true
+voxelite-plugin-comments.workspace = true
+voxelite-plugin-agent.workspace = true
+voxelite-plugin-exporters.workspace = true
+
+[dev-dependencies]
+voxelite-plugin-api.workspace = true
+
+[lints]
+workspace = true

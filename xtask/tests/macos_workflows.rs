@@ -173,19 +173,16 @@ fn release_build_precedes_credentials() {
     let position = |name: &str| WORKFLOW.find(&format!("      - name: {name}")).unwrap();
     let package = position("Sign and package");
     assert!(position("Build app without signing credentials") < package);
-    let preflight = position("Validate release credentials");
-    let build_start = position("Build app without signing credentials");
-    assert!(preflight < build_start);
-    assert!(!WORKFLOW[build_start..package].contains("secrets."));
+    assert!(!WORKFLOW[..package].contains("secrets."));
     let build = workflow_step("Build app without signing credentials");
     for command in [
         "cargo build --release --locked -p xtask",
-        "cargo build --release --locked -p quantum-mcp",
+        "cargo build --release --locked -p voxelite-mcp",
         "target/release/xtask version --check-tag",
     ] {
         assert!(build.contains(command));
     }
-    assert!(build.find("version --check-tag").unwrap() < build.find("-p quantum-app").unwrap());
+    assert!(build.find("version --check-tag").unwrap() < build.find("-p voxelite-app").unwrap());
     let sign = workflow_step("Sign and package");
     assert!(
         sign.contains("target/release/xtask macos package --skip-build")
@@ -231,18 +228,23 @@ fn site_release_trigger_and_shared_concurrency() {
     }
 }
 #[test]
-fn release_requires_all_credentials_before_building() {
+fn release_requires_all_apple_credentials_before_packaging() {
     let names = [
         "MACOS_CERTIFICATE_P12_BASE64",
         "MACOS_CERTIFICATE_PASSWORD",
         "APPLE_API_KEY_P8_BASE64",
         "APPLE_API_KEY_ID",
         "APPLE_API_ISSUER_ID",
-        "SPARKLE_ED_PRIVATE_KEY",
     ];
     for missing in names.into_iter().map(Some).chain([None]) {
         let root = fixture();
-        let mut cmd = shell(root.path(), "Validate release credentials");
+        fs::create_dir_all(root.path().join("target/release")).unwrap();
+        fs::copy(
+            tool().join("tool"),
+            root.path().join("target/release/xtask"),
+        )
+        .unwrap();
+        let mut cmd = shell(root.path(), "Sign and package");
         cmd.env("TAG", "v1.2.3");
         for name in names {
             cmd.env(
@@ -256,7 +258,7 @@ fn release_requires_all_credentials_before_building() {
         }
         let output = cmd.output().unwrap();
         success(&output, missing.is_none());
-        assert!(!root.path().join("packaged").exists());
+        assert_eq!(root.path().join("packaged").exists(), missing.is_none());
         assert!(
             !String::from_utf8_lossy(&output.stdout).contains("fixture value")
                 && !String::from_utf8_lossy(&output.stderr).contains("fixture value")
@@ -297,9 +299,9 @@ fn publication_is_staged_and_immutable() {
         assert_eq!(calls[1][..3], ["release", "upload", "v1.2.3"]);
         assert!(!calls[1].contains(&"--clobber".into()));
         for asset in [
-            "dist/Quantum.dmg",
-            "dist/Quantum.dmg.sha256",
-            "dist/Quantum.html",
+            "dist/Voxelite.dmg",
+            "dist/Voxelite.dmg.sha256",
+            "dist/Voxelite.html",
             "site/appcast.xml",
         ] {
             assert!(calls[1].contains(&asset.into()));
@@ -315,7 +317,7 @@ fn publication_is_staged_and_immutable() {
 fn cli_rejects_wrong_local_dmg_length() {
     let root = fixture();
     let dist = root.path().join("dist");
-    let bundle = dist.join("Quantum.app/Contents");
+    let bundle = dist.join("Voxelite.app/Contents");
     fs::create_dir_all(&bundle).unwrap();
     let mut info = plist::Dictionary::new();
     for (key, value) in [
@@ -328,13 +330,13 @@ fn cli_rejects_wrong_local_dmg_length() {
     plist::Value::Dictionary(info)
         .to_file_xml(bundle.join("Info.plist"))
         .unwrap();
-    fs::write(dist.join("Quantum.html"), "fixture notes").unwrap();
+    fs::write(dist.join("Voxelite.html"), "fixture notes").unwrap();
     let signature =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
     let feed = root.path().join("feed.xml");
-    fs::write(&feed, format!("<rss version=\"2.0\" xmlns:s=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"><channel><item><s:version>1.2.3</s:version><s:shortVersionString>1.2.3</s:shortVersionString><s:minimumSystemVersion>13.0</s:minimumSystemVersion><enclosure url=\"{}v1.2.3/Quantum.dmg\" length=\"11\" s:edSignature=\"{signature}\"/><s:releaseNotesLink s:length=\"13\" s:edSignature=\"{signature}\">{}v1.2.3/Quantum.html</s:releaseNotesLink></item></channel></rss>", macos::DOWNLOAD, macos::DOWNLOAD)).unwrap();
+    fs::write(&feed, format!("<rss version=\"2.0\" xmlns:s=\"http://www.andymatuschak.org/xml-namespaces/sparkle\"><channel><item><s:version>1.2.3</s:version><s:shortVersionString>1.2.3</s:shortVersionString><s:minimumSystemVersion>13.0</s:minimumSystemVersion><enclosure url=\"{}v1.2.3/Voxelite.dmg\" length=\"11\" s:edSignature=\"{signature}\"/><s:releaseNotesLink s:length=\"13\" s:edSignature=\"{signature}\">{}v1.2.3/Voxelite.html</s:releaseNotesLink></item></channel></rss>", macos::DOWNLOAD, macos::DOWNLOAD)).unwrap();
     for (data, valid) in [("fixture dmg", true), ("altered", false)] {
-        fs::write(dist.join("Quantum.dmg"), data).unwrap();
+        fs::write(dist.join("Voxelite.dmg"), data).unwrap();
         let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
             .args(["macos", "check-appcast"])
             .arg(&feed)

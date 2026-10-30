@@ -17,11 +17,9 @@ use std::{
 pub mod appcast;
 mod feed;
 mod files;
-mod homebrew;
 pub mod package;
 pub mod release_notes;
 pub mod sign;
-mod update_compat;
 
 pub use feed::{Update, validate, validate_release};
 pub use files::sha256;
@@ -36,22 +34,10 @@ pub const SECRETS: &[&str] = &[
     "APPLE_API_ISSUER_ID",
     "SPARKLE_ED_PRIVATE_KEY",
 ];
-/// Canonical repository for new stable update URLs.
-pub const REPOSITORY: &str = "0x63616c/quantum";
+/// The only repository permitted in the stable update feed.
+pub const REPOSITORY: &str = "0x63616c/voxelite";
 /// Stable download URL prefix; preserve published asset names.
-pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
-
-// Retained for immutable signed feeds published before the repository rename.
-pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
-
-fn release_repository(environment: &Environment) -> Result<&str> {
-    let repository = environment.or("GITHUB_REPOSITORY", REPOSITORY);
-    if repository == REPOSITORY {
-        Ok(repository)
-    } else {
-        Err(invalid("Invalid GitHub repository"))
-    }
-}
+pub const DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
 
 /// Explicit configuration, without global environment mutation or secret Debug output.
 #[derive(Default)]
@@ -172,10 +158,10 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
             context: "cargo metadata".into(),
             source,
         })?;
-    let version = metadata.package_version("quantum-app")?.to_string();
+    let version = metadata.package_version("voxelite-app")?.to_string();
     if tag.is_some_and(|tag| tag != format!("v{version}")) {
         return Err(Error::Invalid(
-            "Release tag must match the quantum-app Cargo version.".into(),
+            "Release tag must match the voxelite-app Cargo version.".into(),
         ));
     }
     Ok(version)
@@ -184,19 +170,7 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
 /// Grouped CLI for release preparation; none of these commands publish assets.
 #[derive(Subcommand)]
 pub enum Task {
-    /// Render the stable Homebrew cask from verified release metadata
-    HomebrewCask {
-        /// Stable release version (at least 0.4.0)
-        #[arg(long)]
-        version: String,
-        /// SHA-256 of the published DMG
-        #[arg(long)]
-        sha256: String,
-        /// Destination cask file
-        #[arg(long)]
-        output: PathBuf,
-    },
-    /// Build, sign, optionally notarize, and create dist/Quantum.dmg
+    /// Build, sign, optionally notarize, and create dist/Voxelite.dmg
     Package {
         /// Use existing executables from the configured packaging profile
         #[arg(long)]
@@ -302,11 +276,6 @@ pub fn execute(task: Task, workspace: &Workspace) -> Result<u8> {
             release_dir.as_deref(),
             previous.as_deref(),
         ),
-        Task::HomebrewCask {
-            version,
-            sha256,
-            output,
-        } => homebrew::write(&version, &sha256, &output),
         Task::ReleaseNotes => release_notes::generate(&context),
     };
     if runner.interruption_code() != 0 && !matches!(result, Err(Error::Cleanup(_))) {

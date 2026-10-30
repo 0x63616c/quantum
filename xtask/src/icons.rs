@@ -11,7 +11,7 @@ use crate::{Error, Result, workspace::Workspace};
 
 const MASTER: &str = "packaging/macos/icon.svg";
 const SMALL: &str = "packaging/macos/mark-small.svg";
-const ICONSET: &str = "packaging/macos/Quantum.iconset";
+const ICONSET: &str = "packaging/macos/Voxelite.iconset";
 const PREVIEW: &str = "docs/images/quantize-preview.png";
 const SIZES: &[u32] = &[16, 32, 64, 128, 256, 512, 1024];
 
@@ -90,10 +90,10 @@ pub fn generate(workspace: &Workspace, check: bool, preview: Option<&Path>) -> R
         assets[&format!("{ICONSET}/icon_512x512@2x.png")].clone(),
     );
     assets.insert(
-        "crates/quantum-app/assets/app-icon-256.png".into(),
+        "crates/voxelite-app/assets/app-icon-256.png".into(),
         assets[&format!("{ICONSET}/icon_256x256.png")].clone(),
     );
-    assets.insert("packaging/macos/Quantum.icns".into(), icns(&assets)?);
+    assets.insert("packaging/macos/Voxelite.icns".into(), icns(&assets)?);
     assets.insert("site/assets/mark.svg".into(), art.mark.as_bytes().to_vec());
     assets.insert(
         "site/assets/favicon.svg".into(),
@@ -227,7 +227,7 @@ fn preview_image(workspace: &Workspace, art: &Artwork) -> Result<Vec<u8>> {
     }
     svg.push_str("</g></svg>");
     let mut options = usvg::Options::default();
-    let font = workspace.path("crates/quantum-app/assets/fonts/Geist.ttf");
+    let font = workspace.path("crates/voxelite-app/assets/fonts/Geist.ttf");
     options
         .fontdb_mut()
         .load_font_data(fs::read(&font).map_err(|source| Error::Io { path: font, source })?);
@@ -287,7 +287,7 @@ mod tests {
     fn generated_assets_are_current_and_icns_frames_decode() {
         let workspace = Workspace::discover().unwrap();
         generate(&workspace, true, None).unwrap();
-        let bytes = fs::read(workspace.path("packaging/macos/Quantum.icns")).unwrap();
+        let bytes = fs::read(workspace.path("packaging/macos/Voxelite.icns")).unwrap();
         assert_eq!(&bytes[..4], b"icns");
         let number = |b: &[u8]| u32::from_be_bytes(b.try_into().unwrap()) as usize;
         assert_eq!(number(&bytes[4..8]), bytes.len());

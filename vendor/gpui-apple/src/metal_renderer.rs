@@ -55,7 +55,7 @@ pub fn surface_device_registry_id() -> Option<u64> {
 }
 
 /// Consume a surface import failure so the application can stop painting the
-/// surface and use its software fallback. Quantum has a single editor window.
+/// surface and use its software fallback. Voxelite has a single editor window.
 pub fn take_surface_error() -> Option<String> {
     SURFACE_ERROR.lock().take()
 }

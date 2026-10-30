@@ -63,7 +63,7 @@ fn violations(json: &str) -> Result<Vec<String>> {
         .map(|n| (n.id.as_str(), &n.dependencies))
         .collect();
     let mut errors = Vec::new();
-    for root in ["quantum-core", "quantum-format", "quantum-mesh"] {
+    for root in ["voxelite-core", "voxelite-format", "voxelite-mesh"] {
         let package = metadata
             .packages
             .iter()
@@ -84,7 +84,7 @@ fn violations(json: &str) -> Result<Vec<String>> {
                 })?;
                 let mut path = path.clone();
                 path.push((*name).to_owned());
-                if matches!(*name, "gpui" | "gpui-unofficial" | "quantum-app") {
+                if matches!(*name, "gpui" | "gpui-unofficial" | "voxelite-app") {
                     errors.push(format!(
                         "portable crate dependency forbidden: {}",
                         path.join(" → ")
@@ -107,9 +107,9 @@ mod tests {
         let mut packages = Vec::new();
         let mut nodes = Vec::new();
         for (id, name, dependencies) in [
-            ("core", "quantum-core", vec![]),
-            ("format", "quantum-format", vec!["core"]),
-            ("mesh", "quantum-mesh", vec!["core"]),
+            ("core", "voxelite-core", vec![]),
+            ("format", "voxelite-format", vec!["core"]),
+            ("mesh", "voxelite-mesh", vec!["core"]),
         ]
         .into_iter()
         .chain(extra.iter().cloned())
@@ -149,7 +149,7 @@ mod tests {
     }
     #[test]
     fn direct_and_transitive_package_identity_are_checked() {
-        for forbidden in ["gpui", "gpui-unofficial", "quantum-app"] {
+        for forbidden in ["gpui", "gpui-unofficial", "voxelite-app"] {
             for through in [false, true] {
                 let mut value: serde_json::Value = serde_json::from_str(&fixture(&[
                     ("alias", forbidden, vec![]),
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn workspace_identity_wins_over_same_named_registry_package() {
         let mut value: serde_json::Value = serde_json::from_str(&fixture(&[
-            ("external-core", "quantum-core", vec!["forbidden"]),
+            ("external-core", "voxelite-core", vec!["forbidden"]),
             ("forbidden", "gpui-unofficial", vec![]),
         ]))
         .unwrap();

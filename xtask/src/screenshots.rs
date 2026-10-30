@@ -1,6 +1,6 @@
 //! `cargo xtask screenshots`: before/after captures of key screens for UI pull requests.
 //!
-//! Builds `quantum` at two refs, captures the same screens from each on a virtual X
+//! Builds `voxelite` at two refs, captures the same screens from each on a virtual X
 //! display (`scripts/capture-pr-screens.sh`), and writes a Before | After markdown block.
 //! `--publish <PR>` stores the PNGs on the `pr-assets` branch and puts that block in the
 //! PR description. See `.agents/skills/ui-pr-screenshots/SKILL.md`.
@@ -127,9 +127,6 @@ pub(super) const SCREENS: &[Screen] = screens![
         ("dialogs-acknowledgements", "Acknowledgements"),
         ("dialogs-keyboard-guide", "Keyboard guide"),
         ("dialogs-commands", "Command search"),
-        ("dialogs-commands-empty", "Empty command search"),
-        ("overlays-loading", "Scene loading shimmer"),
-        ("overlays-controls", "Shared controls: rest, hover, press, focus, disabled and loading"),
         ("dialogs-tools", "Tool search"),
         ("dialogs-extensions", "Extensions"),
         ("dialogs-unsaved-changes", "Unsaved changes"),
@@ -139,12 +136,6 @@ pub(super) const SCREENS: &[Screen] = screens![
         ("popovers-palette-menu", "Palette import/export menu"),
         ("dialogs-palette-delete", "Delete custom palette confirmation"),
         ("overlays-debug", "Debug overlay"),
-    ],
-    "^Quantum Feedback$", (880, 760) => [
-        ("dialogs-feedback", "Feedback preview and consent"),
-        ("dialogs-crash-report", "Next-launch crash report preview"),
-        ("dialogs-feedback-relay", "Configured relay feedback confirmation"),
-        ("dialogs-crash-relay", "Configured relay crash confirmation"),
     ],
     "^Quantum Settings$", (880, 640) => [
         ("settings-general", "Settings: General"),
@@ -451,45 +442,23 @@ fn build(tree: &Path, out: &Path, label: &str) -> Result<PathBuf> {
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../target"));
-    let (package, executable) = app_target(tree)?;
-    eprintln!("building {executable} ({label}) in {}", tree.display());
+    eprintln!("building voxelite ({label}) in {}", tree.display());
     status(
         Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
             .current_dir(tree)
             .env("CARGO_TARGET_DIR", &target)
-            .args(["build", "--locked", "-p", &package, "--bin", &executable]),
+            .args([
+                "build",
+                "--locked",
+                "-p",
+                "voxelite-app",
+                "--bin",
+                "voxelite",
+            ]),
     )?;
     let bin = out.join("bin").join(label);
-    fs::copy(target.join("debug").join(executable), &bin)
-        .map_err(|e| format!("copy binary: {e}"))?;
+    fs::copy(target.join("debug/voxelite"), &bin).map_err(|e| format!("copy binary: {e}"))?;
     Ok(bin)
-}
-
-// Read the selected revision's manifest so comparisons span package renames.
-fn app_target(tree: &Path) -> Result<(String, String)> {
-    for entry in fs::read_dir(tree.join("crates")).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        if !entry.file_name().to_string_lossy().ends_with("-app") {
-            continue;
-        }
-        let source =
-            fs::read_to_string(entry.path().join("Cargo.toml")).map_err(|e| e.to_string())?;
-        let manifest: toml::Value = toml::from_str(&source).map_err(|e| e.to_string())?;
-        let package = manifest
-            .get("package")
-            .and_then(|p| p.get("name"))
-            .and_then(toml::Value::as_str);
-        let executable = manifest
-            .get("bin")
-            .and_then(toml::Value::as_array)
-            .and_then(|bins| bins.first())
-            .and_then(|b| b.get("name"))
-            .and_then(toml::Value::as_str);
-        if let (Some(package), Some(executable)) = (package, executable) {
-            return Ok((package.into(), executable.into()));
-        }
-    }
-    Err("Selected revision has no application target".into())
 }
 
 #[derive(PartialEq)]
@@ -637,15 +606,15 @@ impl Urls {
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
     let url = urls.image(side, screen.name);
     format!(
-        r#"<img src="{url}" width="{width}" alt="{} screenshot">"#,
-        side.label
+        r#"<a href="{url}"><img src="{url}" width="{width}" alt="{} — {}"></a>"#,
+        screen.caption, side.label
     )
 }
 
 fn zoom_img(urls: &Urls, side: &Side, screen: &Screen) -> String {
     let url = urls.image(side, &format!("{}-zoom", screen.name));
     format!(
-        r#"<img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change">"#,
+        r#"<a href="{url}"><img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change"></a>"#,
         screen.caption, side.label
     )
 }
@@ -707,7 +676,11 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
                 zoom_img(urls, head, s)
             );
         }
-        let _ = writeln!(md, "\n`quantum {}` · {}×{}\n", s.args, s.size.0, s.size.1);
+        let _ = writeln!(
+            md,
+            "\n<sub><code>voxelite {}</code> at {}×{}</sub>\n",
+            s.args, s.size.0, s.size.1
+        );
     }
     if !same.is_empty() {
         let _ = writeln!(

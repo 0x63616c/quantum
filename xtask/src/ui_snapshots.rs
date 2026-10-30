@@ -11,7 +11,7 @@ use xtask::{
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-const GOLDENS: &str = "crates/quantum-app/tests/ui-goldens";
+const GOLDENS: &str = "crates/voxelite-app/tests/ui-goldens";
 const FIXTURE_CLOCK: &str = "1782048000";
 
 #[derive(clap::Args)]
@@ -34,9 +34,6 @@ fn registry() -> Vec<&'static Screen> {
                 || s.name.starts_with("panels-palette-")
                 || s.name.starts_with("panels-comments-empty-")
                 || s.name.starts_with("dialogs-about-")
-                || s.name.starts_with("dialogs-commands-empty-")
-                || s.name.starts_with("overlays-loading-")
-                || s.name.starts_with("overlays-controls-")
         })
         .collect()
 }
@@ -159,7 +156,7 @@ fn capture(root: &Path, out: &Path, home: &Path, actual: &Path, screens: &[&Scre
     let shell = xshell::Shell::new()?;
     let build: Command = xshell::cmd!(
         shell,
-        "cargo build --locked -p quantum-app --bin quantum --features ui-snapshots"
+        "cargo build --locked -p voxelite-app --bin voxelite --features ui-snapshots"
     )
     .into();
     build.current_dir(root).run(&runner)?;
@@ -167,19 +164,17 @@ fn capture(root: &Path, out: &Path, home: &Path, actual: &Path, screens: &[&Scre
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| root.join("target"));
     // Other worktrees share Cargo artifacts. Keep this exact feature build alive.
-    let binary = out.join("quantum-headless");
-    fs::copy(target.join("debug/quantum"), &binary)?;
+    let binary = out.join("voxelite-headless");
+    fs::copy(target.join("debug/voxelite"), &binary)?;
     let icd = Path::new("/usr/share/vulkan/icd.d/lvp_icd.json");
     if !icd.is_file() {
         return Err("install mesa-vulkan-drivers: lavapipe ICD missing".into());
     }
-    for (index, screen) in screens.iter().enumerate() {
+    for screen in screens {
         let name = screen.name;
         let (width, height) = (screen.size.0.to_string(), screen.size.1.to_string());
         let output = actual.join(format!("{name}.png"));
-        // The app binds its session socket inside the data directory. Unix socket
-        // paths are limited to ~104 bytes, so keep this per-screen path short.
-        let data = out.join("data").join(index.to_string());
+        let data = out.join("data").join(name);
         fs::create_dir_all(&data)?;
         if name.starts_with("welcome-recents-") {
             xtask::screenshot_fixtures::prepare_welcome(root, home, &data)?;
@@ -197,8 +192,8 @@ fn capture(root: &Path, out: &Path, home: &Path, actual: &Path, screens: &[&Scre
             .env("XDG_RUNTIME_DIR", "/tmp")
             .env("TZ", "UTC")
             .env("SEED", "0")
-            .env("QUANTUM_DATA_DIR", &data)
-            .env_remove("QUANTUM_CAPTURE_STATUS")
+            .env("VOXELITE_DATA_DIR", &data)
+            .env_remove("VOXELITE_CAPTURE_STATUS")
             .run(&runner)?;
         let image = comparison::Image::read(&output)?;
         if (image.width, image.height) != (screen.size.0 * 2, screen.size.1 * 2) {

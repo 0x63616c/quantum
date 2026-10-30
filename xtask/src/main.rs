@@ -148,14 +148,12 @@ struct Harness {
     args: Vec<OsString>,
 }
 
-mod reports;
-
 fn main() -> ExitCode {
     let cli = parse_cli(std::env::args_os()).unwrap_or_else(|error| error.exit());
     match dispatch(cli) {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
-            eprintln!("{:?}", reports::report(error.as_ref()));
+            eprintln!("{error}");
             ExitCode::FAILURE
         }
     }
@@ -286,7 +284,7 @@ fn harness_command(workspace: &Workspace, subcommand: &str, args: &[OsString]) -
     let mut command =
         workspace
             .cargo()
-            .args(["run", "--release", "--locked", "-p", "quantum-bench"]);
+            .args(["run", "--release", "--locked", "-p", "voxelite-bench"]);
     if args
         .windows(2)
         .any(|pair| pair[0] == "--scene" && pair[1] == "terrain10m")

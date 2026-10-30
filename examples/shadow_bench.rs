@@ -1,16 +1,16 @@
 //! Reproducible CPU shadow timings and optional wide/close demo PNGs.
-//! Run: cargo run --release -p quantum-plugin-exporters --example shadow_bench -- /tmp/shadows
-//! Occupancy internals: cargo test -p quantum-render --release --locked occupancy_timings -- --ignored --nocapture
+//! Run: cargo run --release -p voxelite-plugin-exporters --example shadow_bench -- /tmp/shadows
+//! Occupancy internals: cargo test -p voxelite-render --release --locked occupancy_timings -- --ignored --nocapture
 //! Uses 1024x640 because the public CPU renderer caps either dimension at 1024.
-use quantum_render::*;
 use std::{hint::black_box, path::Path, time::Instant};
+use voxelite_render::*;
 #[expect(clippy::print_stdout, reason = "CLI output")]
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let output = std::env::args().nth(1);
     if let Some(path) = &output {
         std::fs::create_dir_all(path)?;
     }
-    let project = quantum_format::from_bytes(include_bytes!("autumn-workshop.voxl"))?;
+    let project = voxelite_format::from_bytes(include_bytes!("autumn-workshop.voxl"))?;
     let snapshot = &project.document.content;
     let camera = Camera::fit(snapshot, PresetView::Iso, 1.6, false)?;
     for (name, camera) in [

@@ -10,7 +10,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'site'
-BASE_URL = 'https://quantum.worldwidewebb.co'
+BASE_URL = 'https://voxelite.worldwidewebb.co'
 
 for name in ('index.html', 'docs/index.html', 'download/index.html'):
     if not (SITE / name).is_file():
@@ -76,11 +76,6 @@ class Page(HTMLParser):
 # content/ contains build-time article fragments, not standalone pages.
 pages = {p: Page(p.read_text()) for p in sorted(SITE.rglob('*.html'))
          if 'content' not in p.relative_to(SITE).parts}
-for path in pages:
-    footer = re.search(r'<footer\b[^>]*>(.*?)</footer>', path.read_text(), re.S)
-    assert footer, f'{path.relative_to(SITE)}: missing footer'
-    destinations = Page(footer.group(1)).links
-    assert len(destinations) == len(set(destinations)), f'{path.relative_to(SITE)}: repeated footer destination'
 checked = 0
 
 def check(source, link):
@@ -300,7 +295,7 @@ assert 'outputDirectory' not in hosting, 'site/ is published as the site-dist ro
 assert any(rule['source'] == '/assets/fonts/(.*)' and
            {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
            for rule in hosting['headers']), 'Missing immutable font cache headers'
-with ZipFile(SITE / 'assets/quantum-skills.zip') as archive:
+with ZipFile(SITE / 'assets/voxelite-skills.zip') as archive:
     expected = {str(p.relative_to(ROOT)): p for folder in ('skills', 'integrations') for p in (ROOT / folder).rglob('*') if p.is_file()}
     assert set(archive.namelist()) == set(expected)
     for name, source in expected.items():

@@ -96,18 +96,15 @@ registered in `validate`, which runs Clippy only once.
 The repository checks run in-process from `src/checks/`:
 
 - `boundaries`: locked `cargo metadata --all-features` graph traversal from
-  `quantum-core`, `quantum-format` and `quantum-mesh`. Rejects direct/transitive
+  `voxelite-core`, `voxelite-format` and `voxelite-mesh`. Rejects direct/transitive
   dependencies on `gpui`, its published package `gpui-unofficial`, or
-  `quantum-app`, including dev/build/optional and target-specific edges.
+  `voxelite-app`, including dev/build/optional and target-specific edges.
   Errors show the dependency path; cycles terminate.
 - `source-lints`: syntax-aware rules described below.
 - `workflows`: parse every workflow YAML file, require explicit top-level
   permissions and full commit SHAs for action/reusable workflow references. Local
-  actions and Docker images pinned by SHA-256 digest are exempt. Each self-hosted
-  job must retain the owner/same-repository guard as a top-level conjunction and
-  set `CARGO_BUILD_JOBS: 4`; `pull_request_target` is forbidden. PR workflows must
-  cancel superseded runs per PR, while scheduled runs use unique concurrency
-  groups to preserve pending coverage. Runs in CI Linux and in `validate`.
+  actions and Docker images pinned by SHA-256 digest are exempt. Runs in CI Linux
+  and in `validate`.
 - `plugin-deps`: plugin and MCP dependency rules, including optional, renamed,
   target-specific, build and patched registry dependencies. Reads locked Cargo
   metadata offline first and retries online if that command fails. Preserves the
@@ -115,15 +112,9 @@ The repository checks run in-process from `src/checks/`:
   adds its timed summary on stdout. Failures exit with status 1.
 - `brand`: `brand.toml` stability and consistency with packaging, package names,
   app IDs, MCP names, site metadata, project format, storage paths and skills.
-  Also scans tracked text and filenames for legacy branding, allowing only live,
-  justified literal/path exceptions in `brand.toml` compatibility entries.
-  Diagnostics include line/column; unused exceptions fail.
   Storage checks match the production path-selection functions, verifying macOS
   Application Support, XDG/fallback paths and the environment override without
   counting migration code or test assertions.
-- `typos`: source/documentation spelling via typos-cli 1.51.1 and `_typos.toml`.
-  Install with `cargo install typos-cli --version 1.51.1 --locked`; missing tools
-  fail this gate. CI Linux installs that version and runs both brand and typos.
 - `docs-links`: local file and directory links in every tracked `docs/**/*.md`,
   resolved relative to each document with URL escapes decoded. Parses inline and
   reference Markdown links and images, skipping code examples and external URLs;
@@ -144,7 +135,7 @@ closures and macro-generated functions do not have separate function budgets.
 Qualified module/impl/function names identify functions; mutually exclusive cfg
 implementations with the same name share their maximum size budget.
 
-In `crates/quantum-app/src/`, including submodules, the styling rules count:
+In `crates/voxelite-app/src/`, including submodules, the styling rules count:
 
 - `px` calls with numeric literal, negated or parenthesized literal arguments;
 - `rgb`/`rgba` calls with hexadecimal literal arguments, and `hsl`/`hsla` calls
@@ -157,16 +148,8 @@ Qualified calls and styling inside macro tokens count. Macro string dispatch is
 checked for literal arms/alternatives and equality comparisons; `matches!` checks
 all string literals. Arbitrary generated macro expansions and renamed imports
 are not expanded. Dynamic document colors and `px(metrics::TOKEN)` are permitted;
-put new control styling in `quantum-ui` components/tokens. Shared UI owns styling
+put new control styling in `voxelite-ui` components/tokens. Shared UI owns styling
 and is exempt from the app styling rules, but retains the source size budgets.
-
-Across `crates/`, `raw-radius` rejects numeric literals inside `rounded` and
-`rounded_*` arguments, including corner-specific calls and macro tokens. Fixed
-shortcuts such as `rounded_sm()` also fail. Use `quantum-ui` radius tokens or
-token-based concentric calculations; `rounded_full()` remains the intentional
-circular-shape exception. Only `quantum-ui/src/tokens.rs` and its `tokens/`
-submodules may define literal radii. Numeric expected values in style assertions
-remain independent checks of the rendered geometry.
 
 `xtask/lint-allowlist.json` records existing debt by file/rule and qualified
 function. Every entry must exactly match the remaining count or oversized line
@@ -179,9 +162,7 @@ The baseline itself is checked against `HEAD` locally, or `LINT_BASE_REF` when
 set. CI supplies the PR base SHA (previous revision for pushes), using full Git
 history, so increasing the baseline alongside new violations fails. Only the
 initial introduction may bootstrap when the base revision has no baseline file.
-An invalid/missing base revision fails. Git-recognized file renames carry their
-existing rule/function budgets to the new path; counts may still only shrink,
-and new rules or functions gain no allowance. To reproduce the full PR comparison:
+An invalid/missing base revision fails. To reproduce the full PR comparison:
 `LINT_BASE_REF=<base-sha> cargo xtask lint`.
 
 Run their fixture and parsing tests with `cargo test -p xtask --locked checks::`.
@@ -269,9 +250,7 @@ Drop guards restore keychains and remove temporary files on errors and unwinds.
 
 The `macos` group includes `package [--skip-build] [--dry-run]`, `appcast
 [--dry-run]`, `fetch-appcast <out>`, `check-appcast <file> [--allow-empty]` and
-`release-notes`, and `homebrew-cask --version X.Y.Z --sha256 HEX --output FILE`.
-The cask renderer accepts stable releases from 0.4.0 and a 64-hex digest.
-Configuration still uses the documented release environment
+`release-notes`. Configuration still uses the documented release environment
 variables. `check-appcast` also accepts paired `--release-dir` and `--previous`.
 The registered `appcast` check validates `site/appcast.xml`, allowing an empty feed.
 
@@ -295,8 +274,8 @@ possible certificate subject or authentication detail in it.
 | --- | --- |
 | `uname -s` | `macos::package::Options::is_macos`, production `cfg!(target_os = "macos")`; dry runs bypass execution |
 | `cargo metadata ...` + Python JSON version selector | `macos::version`, using cleaned Cargo metadata; dry runs read `version::workspace_version` |
-| `cargo build --release --locked -p quantum-app --bin quantum` | `package::build`, omitted by `--skip-build` |
-| `cargo build --release --locked -p quantum-mcp` | `package::build`, omitted by `--skip-build` |
+| `cargo build --release --locked -p voxelite-app --bin voxelite` | `package::build`, omitted by `--skip-build` |
+| `cargo build --release --locked -p voxelite-mcp` | `package::build`, omitted by `--skip-build` |
 | `mktemp -d` | `files::WorkDir`, tempfile with explicit 0700 directory permissions |
 | Python canonical public-key validation | `files::public_key`, canonical 32-byte base64 and committed-file equality |
 | Python secret decoding | `files::decode_secret`, in-process base64 into create-new 0600 files |
@@ -326,17 +305,17 @@ possible certificate subject or authentication detail in it.
 | `spctl --assess --type execute` app | `package::build`, private diagnostics |
 | `ditto` stapled app into stage | `package::build`, after app ticket validation |
 | `ln -s /Applications` | `std::os::unix::fs::symlink` in `package::build` |
-| `hdiutil create -volname Quantum -srcfolder ... -fs HFS+ -format UDZO -ov ...` | `package::create_dmg` |
+| `hdiutil create -volname Voxelite -srcfolder ... -fs HFS+ -format UDZO -ov ...` | `package::create_dmg` |
 | DMG `codesign --force --keychain ... --sign ... --timestamp` and `--verify --strict` | `package::build`, private diagnostics |
 | `spctl --assess --type open --context context:primary-signature` DMG | `package::build`, private diagnostics |
-| `(cd dist && shasum -a 256 Quantum.dmg > Quantum.dmg.sha256)` and `cat` | `macos::sha256`, `write` and `print!`; same relative filename and two-space separator |
+| `(cd dist && shasum -a 256 Voxelite.dmg > Voxelite.dmg.sha256)` and `cat` | `macos::sha256`, `write` and `print!`; same relative filename and two-space separator |
 | EXIT/INT/TERM traps; `security delete-keychain`, `security list-keychains -d user -s ...`, `rm -rf` | `macos::Signals`, interruptible `SystemRunner`, `Keychain::finish`/Drop, `Marker` and `WorkDir` guards |
 
 The other migrated commands map as follows:
 
 | Former operation | Rust implementation |
 | --- | --- |
-| `gh api --paginate --slurp repos/0x63616c/quantum/releases?per_page=100` | `appcast::fetch` |
+| `gh api --paginate --slurp repos/0x63616c/voxelite/releases?per_page=100` | `appcast::fetch` |
 | `gh release download ... --pattern appcast.xml --dir ...` | `appcast::fetch`; numeric stable selection and complete API asset-size validation |
 | XML parsing/validation | `feed::validate`, `feed::validate_release`; original XML copied without serialization |
 | DMG checksum check and `xcrun stapler validate` before signing feed | `appcast::generate` |

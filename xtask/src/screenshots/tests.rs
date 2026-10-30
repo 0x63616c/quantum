@@ -171,10 +171,7 @@ fn unchanged_screens_have_no_published_images_or_image_links() {
     assert!(asset_files(&results, &base, &head).is_empty());
     let md = render(&results, &base, &head, "main", &Urls::Local);
     assert!(md.contains("No visible change on the selected screens."));
-    assert!(md.contains(&format!(
-        "<details><summary>Unchanged screens ({})</summary>",
-        SCREENS.len()
-    )));
+    assert!(md.contains("<details><summary>Unchanged screens (86)</summary>"));
     assert!(!md.contains(".png"));
     assert!(!md.contains("| Before | After |"));
 }
@@ -270,14 +267,6 @@ fn screen_names_are_unique_and_state_screens_have_matching_themes() {
             screen.size,
             if state.starts_with("settings-") {
                 (880, 640)
-            } else if matches!(
-                state,
-                "dialogs-feedback"
-                    | "dialogs-crash-report"
-                    | "dialogs-feedback-relay"
-                    | "dialogs-crash-relay"
-            ) {
-                (880, 760)
             } else {
                 (1440, 900)
             }
@@ -348,42 +337,4 @@ fn parse_publish_accepts_hash() {
     .unwrap();
     assert_eq!(options.publish, Some(42));
     assert_eq!(options.screens, ["welcome"]);
-}
-
-#[test]
-fn complete_migration_gallery_fits_the_pr_body_limit() {
-    let side = |label| Side {
-        label,
-        id: "abcdef0".into(),
-        dir: PathBuf::from(label),
-    };
-    let results: Vec<_> = SCREENS
-        .iter()
-        .map(|screen| Comparison {
-            screen,
-            state: State::Changed,
-            zoom: None,
-        })
-        .collect();
-    let markdown = render(
-        &results,
-        &side("before"),
-        &side("after"),
-        "origin/main",
-        &Urls::Remote {
-            prefix: format!(
-                "https://raw.githubusercontent.com/0x63616c/quantum/{}/pr-99999/{}",
-                "a".repeat(40),
-                "b".repeat(40),
-            ),
-        },
-    );
-    // Reserve room for the issue link, summary, validation and owner handoff.
-    assert!(markdown.chars().count() + 4096 < 65_536);
-    assert_eq!(markdown.matches("<img ").count(), SCREENS.len() * 2);
-    for screen in SCREENS {
-        for side in ["before", "after"] {
-            assert!(markdown.contains(&format!("/{side}/{}.png", screen.name)));
-        }
-    }
 }

@@ -15,7 +15,7 @@ __pycache__/
 /site/assets/mcp-tools.json
 /site/assets/integrations/
 /site/assets/skills/
-/site/assets/quantum-skills.zip
+/site/assets/voxelite-skills.zip
 
 /dist/
 
@@ -23,12 +23,3 @@ __pycache__/
 
 *.snap.new
 *.pending-snap
-/site/changelog/
-/site/blog/
-
-# Impeccable runtime state; only shared configuration belongs in git.
-/.impeccable/*
-!/.impeccable/config.json
-*.local.json
-**/skills/impeccable/scripts/bin/
-**/skills/impeccable/scripts/.cache/

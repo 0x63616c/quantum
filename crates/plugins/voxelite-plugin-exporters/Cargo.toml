@@ -1,0 +1,31 @@
+[package]
+name = "voxelite-plugin-exporters"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+voxelite-plugin-api.workspace = true
+serde_json.workspace = true
+png.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+voxelite-plugin-host.workspace = true
+voxelite-render.workspace = true
+voxelite-core.workspace = true
+voxelite-format.workspace = true
+gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
+proptest.workspace = true
+
+[lints]
+workspace = true
+
+[[example]]
+name = "cottage"
+path = "../../../examples/cottage.rs"
+
+[[example]]
+name = "shadow_bench"
+path = "../../../examples/shadow_bench.rs"

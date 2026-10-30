@@ -7,7 +7,7 @@ use crate::{
     workspace::Workspace,
 };
 
-const REPO: &str = "0x63616c/quantum";
+const REPO: &str = "0x63616c/voxelite";
 
 fn command(workspace: &Workspace, program: &str, args: &[&str]) -> Result<Command> {
     let sh = xshell::Shell::new().map_err(|e| Error::Invalid(e.to_string()))?;

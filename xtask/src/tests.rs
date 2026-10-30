@@ -51,7 +51,7 @@ fn harness_arguments_and_help_are_forwarded_verbatim() {
             assert_eq!(harness.args, args, "{subcommand}");
             let workspace = Workspace::discover().unwrap();
             let command = harness_command(&workspace, subcommand, &harness.args);
-            let mut expected = vec!["run", "--release", "--locked", "-p", "quantum-bench"];
+            let mut expected = vec!["run", "--release", "--locked", "-p", "voxelite-bench"];
             if args
                 .windows(2)
                 .any(|pair| pair == ["--scene", "terrain10m"])

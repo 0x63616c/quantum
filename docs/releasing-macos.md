@@ -71,15 +71,6 @@ site** follows successful publication. Credentials and real macOS qualification
 below remain prerequisites. Fixture tests prove command orchestration, not Apple
 service behavior or a shipped release; shipping v0.3.2 remains tracked in #88.
 
-## Optional feedback relay activation
-
-The release app build reads the optional repository variable
-`QUANTUM_REPORT_ENDPOINT`. Leave it unset until the owner has deployed and
-verified the relay, approved its privacy policy and completed Mac QA. An unset
-or empty value keeps browser-only feedback. It is a public HTTPS destination,
-never a token; GitHub credentials stay in the Worker. Exact activation, QA and
-rollback commands are in the [relay runbook](../packaging/feedback-relay/README.md).
-
 ## Secrets to create
 
 | Secret | Value and source |
@@ -100,8 +91,8 @@ supplies the key when set, but must match the committed key. A missing/invalid
 file or mismatched override fails packaging; there is no silent key change or
 update-free package. No Actions variables are required.
 
-Read-only inventory on **2026-10-26**: `gh secret list -R 0x63616c/quantum
---json name,updatedAt` and `gh variable list -R 0x63616c/quantum --json
+Read-only inventory on **2026-10-26**: `gh secret list -R 0x63616c/voxelite
+--json name,updatedAt` and `gh variable list -R 0x63616c/voxelite --json
 name,updatedAt` both returned empty lists. All six required repository secrets
 above are missing; `MACOS_SIGNING_IDENTITY` is optional. This inventory confirms
 names only, not credential validity or organization/environment inheritance.
@@ -123,7 +114,7 @@ No secrets or variables were set during implementation.
 
    ```sh
    base64 -i /secure/path/developer-id.p12 | tr -d '\n' |
-     gh secret set MACOS_CERTIFICATE_P12_BASE64 --repo 0x63616c/quantum
+     gh secret set MACOS_CERTIFICATE_P12_BASE64 --repo 0x63616c/voxelite
    ```
 
 4. Normally omit `MACOS_SIGNING_IDENTITY`. If the export contains multiple
@@ -143,7 +134,7 @@ and [notarization workflow](https://developer.apple.com/documentation/security/c
 
 ```sh
 base64 -i /secure/path/AuthKey.p8 | tr -d '\n' |
-  gh secret set APPLE_API_KEY_P8_BASE64 --repo 0x63616c/quantum
+  gh secret set APPLE_API_KEY_P8_BASE64 --repo 0x63616c/voxelite
 ```
 
 Keep the downloaded key and certificate export in secure storage outside the
@@ -173,17 +164,13 @@ All three self-hosted jobs (CI macOS, Rendering checks, Release) use the labels
 `[self-hosted, macOS, ARM64, xcode]`, which select the self-hosted Apple Silicon runner, with
 `DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer`. There are no
 GitHub-hosted macOS jobs. CI macOS runs its Python script tests on a GitHub-hosted
-Linux runner. PRs and main pushes lint and test only crates with macOS-specific
-code: app, UI, render, MCP and bench. The package list lives in the workflow's
-`Select Rust packages` step; add a crate there when it gains macOS-specific code.
-CI Linux runs workspace Clippy with `--all-targets` and workspace tests on every
-PR and main push. Main pushes do not build a DMG.
+Linux runner. Main pushes run workspace Clippy and tests without building a DMG.
 Nightly and manual runs on `main` also build and upload the ad-hoc DMG with the
 full `release` profile. Pull requests still build it when they change packaging
 inputs (`packaging/`, `xtask/`, Cargo manifests, the toolchain or the macOS workflows).
 
 Rendering visual runs (PRs, `visual`, `rebaseline-visual`) use either Mac mini
-runner. Both runners are on the same machine, and homelab-quantum-2 rendered
+runner. Both runners are on the same machine, and homelab-voxelite-2 rendered
 every still bit-exact against the committed goldens with `--determinism` before
 the pin was lifted (#165). `bench` and `bench-baseline` always use the runner with
 the `golden` label, so timing baselines come from one place. The owner-only
@@ -200,37 +187,33 @@ runners share one 8 GB Mac mini, so this cap limits CPU and memory contention
 and avoids heavy swap when both runners build at once. PR screenshots runs on
 Ubuntu and does not use this Mac limit.
 
-Nightly and manual Mac runs use `--workspace` for Clippy and tests instead of the
-change-run package list. Clippy uses `--all-targets --locked -- -D warnings`;
-CI tests use nextest with `--locked --profile ci`, followed by `cargo test --doc`;
-release tests use `cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast`. The release workflow also runs both full
-workspace checks on the Mac before building or packaging. Either failure blocks
-the release. CI Linux checks formatting, and the Linux scripts job runs the
-mocked packaging/release regression tests. When selected above, Mac CI builds
-the app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
+CI checks formatting, runs the mocked packaging/release regression tests,
+runs `cargo clippy --workspace --locked -- -D warnings`,
+runs `cargo nextest run --workspace --locked --profile ci` and
+`cargo test --doc --workspace --locked`, and, when selected above, builds the
+app and packages a DMG. Only pull-request DMGs use `ci-dist`, which inherits
 `release` with LTO disabled and 16 codegen units. Main, nightly, dispatch and
 release packaging keep `release`. `cargo xtask macos package` reads
 `PACKAGE_CARGO_PROFILE` (default `release`) when building and locating binaries,
-including with `--skip-build`, and respects `CARGO_TARGET_DIR`. `MACOS_SIGNING_MODE=adhoc`
+including with `--skip-build`, and respects `CARGO_TARGET_DIR`. Strict Clippy passed on Linux when this workflow
+was added; the first macOS run must confirm the platform-specific code too. `MACOS_SIGNING_MODE=adhoc`
 forces an ad-hoc app and unsigned DMG even if the runner has signing credentials.
 No signing/notarization secrets are passed to CI. Its DMG and checksum artifacts
 expire after **3 days**. New push/PR runs cancel older change runs for the same
 ref. Nightly/manual runs use a separate concurrency group and are not cancelled
 by pushes or newer runs. Nightly runs intentionally check unchanged main too,
 because runner and toolchain drift can break packaging without a source change.
-Legacy GitHub automation for a failed nightly or manual main run opens an issue, or comments on the existing
+A failed nightly or manual main run opens an issue, or comments on the existing
 open `ci: CI macOS nightly checks failed` issue, with the run link and labels
 `type:ci`, `area:ci`, `priority:p0`. A skipped Mac job also reports the missing
-verification; the owner/fork guard remains in force. Track actionable failures in
-[Tickets](https://tickets.worldwidewebb.co), the sole source of truth; GitHub issues
-are retired as a work tracker.
+verification; the owner/fork guard remains in force.
 
 ## Release behavior
 
 The release workflow is triggered by `v*` tags or manual dispatch with an
 existing tag. It accepts stable `vMAJOR.MINOR.PATCH` tags only and checks out the
 fully qualified `refs/tags/` ref, so a same-named branch cannot supply the build.
-The tag without `v` must equal the `quantum-app` Cargo version and supplies both
+The tag without `v` must equal the `voxelite-app` Cargo version and supplies both
 bundle version fields. Bump the workspace version and lockfile before tagging. Use an
 increasing version for each public update and keep published release tags/assets
 immutable; the update feed depends on their exact bytes. Releases serialize and
@@ -242,7 +225,7 @@ that unpublished draft manually before retrying, or use a new version tag.
 
 The packager:
 
-1. Builds `quantum-app` with the locked dependencies and assembles the app/icon.
+1. Builds `voxelite-app` with the locked dependencies and assembles the app/icon.
    Release CI builds in a separate step without signing credentials, then invokes
    the packager with `--skip-build` and an explicit `VERSION`. Local packaging
    still builds by default. The task removes credential variables from child
@@ -254,7 +237,7 @@ The packager:
 3. With a certificate and password, signs the Sparkle XPC services, helper tool,
    updater app, framework, and outer app in that order, using the same Developer
    ID, hardened runtime, and secure timestamps. The app uses
-   `packaging/macos/Quantum.entitlements`; the empty entitlement dictionary keeps
+   `packaging/macos/Voxelite.entitlements`; the empty entitlement dictionary keeps
    library validation enabled. Downloader entitlements are preserved. See
    [Sparkle's manual signing guidance](https://sparkle-project.org/documentation/sandboxing/#code-signing).
 4. With all three API credentials, notarizes a ZIP of the app, requires an
@@ -262,18 +245,15 @@ The packager:
 5. Builds the DMG containing that stapled app and the Applications shortcut, signs
    and notarizes the DMG, staples/validates it, and runs the DMG Gatekeeper
    assessment. It computes SHA-256 **after** the final staple. The checksum names
-   `Quantum.dmg` without a directory prefix, so both downloaded assets can be
-   checked together with `shasum -a 256 --check Quantum.dmg.sha256`.
+   `Voxelite.dmg` without a directory prefix, so both downloaded assets can be
+   checked together with `shasum -a 256 --check Voxelite.dmg.sha256`.
 6. Deletes its temporary keychain and working files on exit.
 
 Without the certificate/password pair, the build succeeds with ad-hoc app signing
 and an unsigned DMG. With Developer ID but incomplete API credentials, it signs
-without notarizing. These local/CI modes print clear notices. The release workflow
-checks all five Apple secrets and the Sparkle secret
-before checkout or building, reporting only a missing secret’s name. Credentials
-remain scoped to their individual steps; the build receives none. Appcast
-generation also requires a notarized result; an incomplete configuration cannot
-publish a release.
+without notarizing. These local/CI modes print clear notices. The release workflow requires all five
+Apple secrets and appcast generation requires a notarized result and the Sparkle
+secret; an incomplete configuration cannot publish a release.
 Invalid credentials, rejected notarization, bad checksums, or failed signature
 verification fail the release; they do not silently fall back. Ad-hoc builds omit
 hardened runtime so they can load the ad-hoc Sparkle framework during development.
@@ -294,7 +274,7 @@ denies unsafe code, and other crates retain the workspace forbid lint.
 
 ### Policy and key custody
 
-The production feed is `https://quantum.worldwidewebb.co/appcast.xml`.
+The production feed is `https://voxelite.worldwidewebb.co/appcast.xml`.
 `SUEnableAutomaticChecks=true` starts automatic checks when the updater starts
 at launch, subject to Sparkle's remembered last-check time and default daily
 interval. `SUAutomaticallyUpdate=false` requires user approval before downloads
@@ -311,7 +291,7 @@ signed release replaces it. Older builds that never embedded Sparkle require a
 manual installation of v0.3.0 or later, which includes Sparkle.
 
 The existing production private key lives only at
-`/home/box/secrets/quantum-sparkle/sparkle_ed_private_key.txt`. It must never be
+`/home/box/secrets/voxelite-sparkle/sparkle_ed_private_key.txt`. It must never be
 read into a prompt, printed, logged, committed, or copied into the checkout.
 The maintainer uploads its existing contents as **`SPARKLE_ED_PRIVATE_KEY`** using
 stdin or the GitHub secrets UI. Sparkle 2.10.1's new format is already base64 of a
@@ -366,23 +346,23 @@ fallback and signed-feed failure expiration also need testing before use.
    `sparkle:shortVersionString`, and `sparkle:minimumSystemVersion` from the bundle
    (currently macOS 13.0). It signs the full DMG and escaped HTML release notes,
    and signs the resulting XML. Links use immutable version-specific GitHub
-   release assets, e.g. `.../releases/download/v0.3.0/Quantum.dmg` and
-   `.../releases/download/v0.3.0/Quantum.html`.
+   release assets, e.g. `.../releases/download/v0.3.0/Voxelite.dmg` and
+   `.../releases/download/v0.3.0/Voxelite.html`.
 4. `sign_update --verify` checks the generated XML signature. The offline checker
    checks canonical 64-byte signatures, exact GitHub URLs, local DMG/notes byte
    lengths, bundle metadata, newest-first ordering, and unchanged prior items.
    It checks structure/lengths, not Ed25519 cryptography; real signature checks
    belong to the pinned Sparkle tools and the installed client. The generated
    feed is copied to `site/appcast.xml` without reserialization.
-5. The workflow creates a draft, uploads `Quantum.dmg`, its checksum,
-   `Quantum.html`, and `appcast.xml`, then publishes. Existing releases/drafts
+5. The workflow creates a draft, uploads `Voxelite.dmg`, its checksum,
+   `Voxelite.html`, and `appcast.xml`, then publishes. Existing releases/drafts
    make creation fail; no asset is overwritten. A successful **Release macOS**
    workflow triggers **Deploy site** through `workflow_run`, which works even
    when publication uses `GITHUB_TOKEN`. The deploy builds trusted `main`, only
    accepts successful owner-triggered release runs from this repository, and
    shares the existing production concurrency group with main/manual builds.
 6. The site fetches the highest stable appcast using the same helper, then
-   `crates/quantum-site` preserves those bytes both in place and for another
+   `crates/voxelite-site` preserves those bytes both in place and for another
    output directory. The build stages the feed at the root of the `site-dist`
    artifact/branch. The Vercel project has no Git integration, so the workflow's
    last step deploys that directory to production with the Vercel CLI (needs the
@@ -467,16 +447,16 @@ printf '%s  %s\n' \
   "$sparkle_test/Sparkle.tar.xz" | shasum -a 256 --check
 # Continue only if the digest matches.
 tar -xf "$sparkle_test/Sparkle.tar.xz" -C "$sparkle_test"
-"$sparkle_test/bin/generate_keys" --account quantum-local-update-test
-"$sparkle_test/bin/generate_keys" --account quantum-local-update-test -p \
+"$sparkle_test/bin/generate_keys" --account voxelite-local-update-test
+"$sparkle_test/bin/generate_keys" --account voxelite-local-update-test -p \
   > packaging/macos/sparkle_public_ed_key.txt
-(umask 077; "$sparkle_test/bin/generate_keys" --account quantum-local-update-test \
+(umask 077; "$sparkle_test/bin/generate_keys" --account voxelite-local-update-test \
   -x "$sparkle_test/test-private-key.txt")
 ```
 
 In that disposable checkout, change the packager's `SUFeedURL` to
 `http://127.0.0.1:8091/appcast.xml` **before signing**, and use a test bundle
-identifier (e.g. `co.worldwidewebb.quantum.update-test`) to isolate preferences.
+identifier (e.g. `co.worldwidewebb.voxelite.update-test`) to isolate preferences.
 If macOS transport security blocks HTTP, add a loopback-only test ATS exception
 in that disposable plist; production must keep HTTPS. Unset the public-key
 override or set it to the throwaway public key.
@@ -490,7 +470,7 @@ private key under the served directory:
 
 ```sh
 mkdir "$sparkle_test/http"
-ditto -c -k --keepParent /path/to/newer/Quantum.app "$sparkle_test/http/Quantum.zip"
+ditto -c -k --keepParent /path/to/newer/Voxelite.app "$sparkle_test/http/Voxelite.zip"
 "$sparkle_test/bin/generate_appcast" --ed-key-file - --maximum-deltas 0 \
   --download-url-prefix http://127.0.0.1:8091/ "$sparkle_test/http" \
   < "$sparkle_test/test-private-key.txt" > /dev/null 2>&1
@@ -555,40 +535,3 @@ launch from `/Applications`. With the menu integration and hosted feed in place,
 test a real update from an older version, including relaunch and an offline
 launch of the stapled app. No macOS execution, release, or deployment was done
 while implementing this change.
-
-## Product rename qualification
-
-See [rename compatibility](rename-compatibility.md) before publishing the first
-Quantum release: preserve the bundle identifier and signing key, verify the
-old-host appcast returns the unchanged signed bytes directly, and test a real
-0.3.x update. Existing installed bundle filenames may remain unchanged after
-Sparkle updates them; new downloads use Quantum.app.
-
-## Homebrew tap
-
-After the DMG job publishes a release, the separate Ubuntu `homebrew-tap` job
-downloads the DMG and checksum, verifies the bytes and renders
-`packaging/homebrew/quantum.rb` with `cargo xtask macos homebrew-cask`. It commits
-only changed casks to `0x63616c/homebrew-tap` with a normal fast-forward push.
-Render locally without publishing:
-
-```sh
-cargo xtask macos homebrew-cask --version 0.4.0 --sha256 <64-hex-digest> --output /tmp/quantum.rb
-```
-
-The renderer rejects prereleases and versions before 0.4.0, validates the digest
-and normalizes it to lowercase. Reruns with identical metadata do nothing. A failure is nonblocking so it cannot
-prevent site deployment; inspect the job logs after a release. A missing secret
-produces a warning and skips publishing. Never replace published release assets.
-
-`HOMEBREW_TAP_DEPLOY_KEY` is an ed25519 SSH key with write access only to the tap.
-To rotate it, generate a new ed25519 key, add its public half as a write deploy
-key on `0x63616c/homebrew-tap` only, then set the private half:
-
-```sh
-gh secret set HOMEBREW_TAP_DEPLOY_KEY -R 0x63616c/quantum < key
-```
-
-Remove the old deploy key after verifying the replacement. GitHub SSH host keys
-are pinned in `packaging/homebrew/github_known_hosts` from GitHub's published
-`https://api.github.com/meta` SSH keys; review changes against that source.

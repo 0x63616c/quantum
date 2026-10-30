@@ -7,7 +7,7 @@
     "id": "c2901260-9de4-4376-b18e-9941dc7eb8ec",
     "name": "Snow Cabin"
   },
-  "format": "quantum",
+  "format": "voxelite",
   "layers": [
     {
       "id": "b4efd499-90b3-4377-8cb9-10af6ee26754",

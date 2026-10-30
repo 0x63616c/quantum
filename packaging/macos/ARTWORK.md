@@ -15,7 +15,7 @@ seam. The two SVG masters are readable vector artwork with no embedded bitmaps.
   32 pt @2x icon differs intentionally from a 64 pt @1x icon.
 
 Run `cargo xtask icons` after editing a master. It uses the locked resvg/tiny-skia
-renderer to produce the iconset, `icon-1024.png`, `Quantum.icns`, the app's
+renderer to produce the iconset, `icon-1024.png`, `Voxelite.icns`, the app's
 `app-icon-256.png`, the site/README mark, SVG/PNG favicons and
 [size/theme preview](../../docs/images/quantize-preview.png). The preview uses
 bundled Geist and includes actual-pixel-size samples on both backgrounds.
@@ -24,7 +24,7 @@ bundled Geist and includes actual-pixel-size samples on both backgrounds.
 The iconset contains the ten standard macOS filenames plus 64 pt (1x/2x) and
 1024 px copies. ICNS stores the ten standard PNG representations with explicit
 size/scale tags. The app targets macOS 13+. Packaging copies the generated ICNS
-unchanged into `Contents/Resources/Quantum.icns`, matching the existing
+unchanged into `Contents/Resources/Voxelite.icns`, matching the existing
 `CFBundleIconFile`; artwork replacement does not rename bundle identifiers.
 
 Commit all derivatives. `cargo xtask icons --check` and the registered `icons`

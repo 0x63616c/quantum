@@ -152,20 +152,20 @@ fn dependency_violations(metadata: &Metadata) -> Vec<String> {
     let mut violations = Vec::new();
     for package in &metadata.packages {
         let manifest = &package.manifest_path;
-        let is_mcp = manifest.parent() == Some(root.join("crates/quantum-mcp").as_path());
+        let is_mcp = manifest.parent() == Some(root.join("crates/voxelite-mcp").as_path());
         let (allowed, rule): (&[&str], _) = if manifest.starts_with(&plugins) {
             (
-                &["quantum-plugin-api"],
-                "only quantum-plugin-api is allowed outside dev-dependencies",
+                &["voxelite-plugin-api"],
+                "only voxelite-plugin-api is allowed outside dev-dependencies",
             )
         } else if is_mcp {
             (
                 &[
-                    "quantum-core",
-                    "quantum-format",
-                    "quantum-render",
-                    "quantum-plugin-api",
-                    "quantum-plugin-host",
+                    "voxelite-core",
+                    "voxelite-format",
+                    "voxelite-render",
+                    "voxelite-plugin-api",
+                    "voxelite-plugin-host",
                 ],
                 "MCP must receive plugins from its composition root",
             )
@@ -174,13 +174,13 @@ fn dependency_violations(metadata: &Metadata) -> Vec<String> {
         };
         let optional_builtin = is_mcp
             && package.dependencies.iter().any(|dependency| {
-                dependency.name == "quantum-plugins-builtin"
+                dependency.name == "voxelite-plugins-builtin"
                     && dependency.kind.is_none()
                     && dependency.optional
             });
         let allowed_edge = |kind: Option<&str>, name: &str| {
             (matches!(kind, None | Some("build")) && allowed.contains(&name))
-                || (kind.is_none() && name == "quantum-plugins-builtin" && optional_builtin)
+                || (kind.is_none() && name == "voxelite-plugins-builtin" && optional_builtin)
         };
         let mut forbidden = BTreeSet::new();
         for dependency in &package.dependencies {
@@ -193,7 +193,7 @@ fn dependency_violations(metadata: &Metadata) -> Vec<String> {
                 .as_deref()
                 .and_then(|path| workspace_crates.get(path))
                 && (!allowed_edge(kind, name)
-                    || (is_mcp && *name == "quantum-plugins-builtin" && !dependency.optional))
+                    || (is_mcp && *name == "voxelite-plugins-builtin" && !dependency.optional))
             {
                 forbidden.insert((kind.unwrap_or("normal"), *name));
             }

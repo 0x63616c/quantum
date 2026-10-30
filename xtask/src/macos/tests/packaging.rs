@@ -18,11 +18,11 @@ fn no_secrets_reach_build_or_tools() {
     f.package(false).unwrap();
     assert!(f.path("dist/.notarized").exists());
     let expected = format!(
-        "{}  Quantum.dmg\n",
-        files::sha256(&f.path("dist/Quantum.dmg")).unwrap()
+        "{}  Voxelite.dmg\n",
+        files::sha256(&f.path("dist/Voxelite.dmg")).unwrap()
     );
     assert_eq!(
-        fs::read_to_string(f.path("dist/Quantum.dmg.sha256")).unwrap(),
+        fs::read_to_string(f.path("dist/Voxelite.dmg.sha256")).unwrap(),
         expected
     );
     for (command, _) in f.runner.events.borrow().iter() {
@@ -39,12 +39,12 @@ fn no_secrets_reach_build_or_tools() {
     }
     // Independently verify the release checksum from a download directory.
     let download = tempfile::tempdir().unwrap();
-    for name in ["Quantum.dmg", "Quantum.dmg.sha256"] {
+    for name in ["Voxelite.dmg", "Voxelite.dmg.sha256"] {
         fs::copy(f.path(&format!("dist/{name}")), download.path().join(name)).unwrap();
     }
     assert!(
         std::process::Command::new("shasum")
-            .args(["-a", "256", "--check", "Quantum.dmg.sha256"])
+            .args(["-a", "256", "--check", "Voxelite.dmg.sha256"])
             .current_dir(download.path())
             .output()
             .unwrap()
@@ -64,16 +64,16 @@ fn default_public_key_and_matching_override() {
         }
         f.package(false).unwrap();
         assert_eq!(
-            fs::read(f.path("dist/Quantum.app/Contents/Resources/Quantum.icns")).unwrap(),
-            fs::read(f.path("packaging/macos/Quantum.icns")).unwrap(),
+            fs::read(f.path("dist/Voxelite.app/Contents/Resources/Voxelite.icns")).unwrap(),
+            fs::read(f.path("packaging/macos/Voxelite.icns")).unwrap(),
         );
-        let info = files::read_plist(&f.path("dist/Quantum.app/Contents/Info.plist")).unwrap();
+        let info = files::read_plist(&f.path("dist/Voxelite.app/Contents/Info.plist")).unwrap();
         assert_eq!(
             files::plist_string(&info, "SUPublicEDKey").unwrap(),
             raw.trim()
         );
         let feed = files::plist_string(&info, "SUFeedURL").unwrap();
-        assert_eq!(feed, "https://quantum.worldwidewebb.co/appcast.xml");
+        assert_eq!(feed, "https://voxelite.worldwidewebb.co/appcast.xml");
         let brand = fs::read_to_string(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../brand.toml"),
         )
@@ -122,9 +122,9 @@ fn skip_build_and_missing_mcp_executable() {
     for mcp in [true, false] {
         let mut f = Fixture::new();
         f.cert();
-        write(f.path("target/release/quantum"), "fixture app");
+        write(f.path("target/release/voxelite"), "fixture app");
         if mcp {
-            write(f.path("target/release/quantum-mcp"), "fixture server");
+            write(f.path("target/release/voxelite-mcp"), "fixture server");
         }
         assert_eq!(f.package(true).is_ok(), mcp);
         assert!(f.runner.calls("cargo").is_empty());
@@ -147,7 +147,7 @@ fn bundled_executables_and_sparkle_signed_inside_out() {
                 "release",
                 "--locked",
                 "-p",
-                "quantum-mcp"
+                "voxelite-mcp"
             ]
             .map(str::to_owned)
             .to_vec()
@@ -177,10 +177,10 @@ fn bundled_executables_and_sparkle_signed_inside_out() {
             "Autoupdate",
             "Updater.app",
             "Sparkle.framework",
-            "quantum-mcp",
-            "Quantum",
-            "Quantum.app",
-            "Quantum.dmg"
+            "voxelite-mcp",
+            "Voxelite",
+            "Voxelite.app",
+            "Voxelite.dmg"
         ]
     );
     for args in &signatures[..8] {
@@ -194,10 +194,10 @@ fn bundled_executables_and_sparkle_signed_inside_out() {
         );
         assert!(args.contains(&"--timestamp".into()) && !args.contains(&"--deep".into()));
     }
-    for (source, target) in [("quantum", "Quantum"), ("quantum-mcp", "quantum-mcp")] {
+    for (source, target) in [("voxelite", "Voxelite"), ("voxelite-mcp", "voxelite-mcp")] {
         assert_eq!(
             fs::read(f.path(&format!("target/release/{source}"))).unwrap(),
-            fs::read(f.path(&format!("dist/Quantum.app/Contents/MacOS/{target}"))).unwrap()
+            fs::read(f.path(&format!("dist/Voxelite.app/Contents/MacOS/{target}"))).unwrap()
         );
     }
     let events = f.runner.events.borrow();
@@ -536,13 +536,13 @@ fn cargo_target_dir_is_honoured() {
         };
         f.env.set("CARGO_TARGET_DIR", target.to_str().unwrap());
         f.package(false).unwrap();
-        assert!(!f.path("target/release/quantum").exists());
+        assert!(!f.path("target/release/voxelite").exists());
         // Reuse the custom target when the release workflow prebuilds binaries.
         f.package(true).unwrap();
-        for (source, bundled) in [("quantum", "Quantum"), ("quantum-mcp", "quantum-mcp")] {
+        for (source, bundled) in [("voxelite", "Voxelite"), ("voxelite-mcp", "voxelite-mcp")] {
             assert_eq!(
                 fs::read(f.root().join(&target).join("release").join(source)).unwrap(),
-                fs::read(f.path(&format!("dist/Quantum.app/Contents/MacOS/{bundled}"))).unwrap()
+                fs::read(f.path(&format!("dist/Voxelite.app/Contents/MacOS/{bundled}"))).unwrap()
             );
         }
     }
@@ -562,13 +562,13 @@ fn custom_profile_build_and_skip_build_use_matching_target_directory() {
             .iter()
             .all(|args| args.windows(2).any(|a| a == ["--profile", "ci-dist"]))
     );
-    for binary in ["quantum", "quantum-mcp"] {
+    for binary in ["voxelite", "voxelite-mcp"] {
         assert!(f.path(&format!("custom-target/ci-dist/{binary}")).exists());
     }
     f.package(true).unwrap();
     assert_eq!(f.runner.calls("cargo").len(), 2);
     assert_eq!(
-        fs::read(f.path("dist/Quantum.app/Contents/MacOS/Quantum")).unwrap(),
-        fs::read(f.path("custom-target/ci-dist/quantum")).unwrap()
+        fs::read(f.path("dist/Voxelite.app/Contents/MacOS/Voxelite")).unwrap(),
+        fs::read(f.path("custom-target/ci-dist/voxelite")).unwrap()
     );
 }

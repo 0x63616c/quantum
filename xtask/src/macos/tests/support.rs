@@ -16,7 +16,7 @@ pub const SECRET_KEY: &str = "fixture private key";
 pub const DIAGNOSTIC: &str = "PRIVATE-DIAGNOSTIC-SENTINEL";
 pub fn fixture_item(version: &str, dmg: u64, notes: u64) -> String {
     format!(
-        "<item><s:version>{version}</s:version><s:shortVersionString>{version}</s:shortVersionString><s:minimumSystemVersion>13.0</s:minimumSystemVersion><enclosure url=\"{}v{version}/Quantum.dmg\" length=\"{dmg}\" s:edSignature=\"{SIGNATURE}\"/><s:releaseNotesLink s:length=\"{notes}\" s:edSignature=\"{SIGNATURE}\">{}v{version}/Quantum.html</s:releaseNotesLink></item>",
+        "<item><s:version>{version}</s:version><s:shortVersionString>{version}</s:shortVersionString><s:minimumSystemVersion>13.0</s:minimumSystemVersion><enclosure url=\"{}v{version}/Voxelite.dmg\" length=\"{dmg}\" s:edSignature=\"{SIGNATURE}\"/><s:releaseNotesLink s:length=\"{notes}\" s:edSignature=\"{SIGNATURE}\">{}v{version}/Voxelite.html</s:releaseNotesLink></item>",
         macos::DOWNLOAD,
         macos::DOWNLOAD
     )
@@ -67,14 +67,6 @@ impl FakeRunner {
     pub fn has(&self, name: &str) -> bool {
         self.flags.borrow().contains_key(name)
     }
-    fn create_dmg_fixture(&self, args: &[String], root: &Path) {
-        if self.has("capture_stage") {
-            let index = args.iter().position(|arg| arg == "-srcfolder").unwrap() + 1;
-            tree_copy(&root.join(&args[index]), &root.join("captured-stage"));
-        }
-        write(root.join(args.last().unwrap()), "fixture dmg");
-    }
-
     pub fn calls(&self, program: &str) -> Vec<Vec<String>> {
         self.events
             .borrow()
@@ -151,10 +143,10 @@ impl Runner for FakeRunner {
         let mut stdout = Vec::new();
         match name.as_ref() {
             "cargo" => {
-                let binary = if args.iter().any(|a| a == "quantum-mcp") {
-                    "quantum-mcp"
+                let binary = if args.iter().any(|a| a == "voxelite-mcp") {
+                    "voxelite-mcp"
                 } else {
-                    "quantum"
+                    "voxelite"
                 };
                 write(
                     root.join(
@@ -230,7 +222,7 @@ impl Runner for FakeRunner {
                     tree_copy(&path(&args[0]), &path(&args[1]));
                 }
             }
-            "hdiutil" => self.create_dmg_fixture(&args, root),
+            "hdiutil" => write(path(args.last().unwrap()), "fixture dmg"),
             "xcrun" if args.starts_with(&["notarytool".into(), "submit".into()]) => {
                 assert_private(&path(
                     &args[args.iter().position(|a| a == "--key").unwrap() + 1],
@@ -262,9 +254,9 @@ impl Runner for FakeRunner {
                     assert_eq!(args[args.iter().position(|a| a == name).unwrap() + 1], "0");
                 }
                 let output = path(&args[args.iter().position(|a| a == "-o").unwrap() + 1]);
-                let notes = fs::read(path(args.last().unwrap()).join("Quantum.html"))?;
+                let notes = fs::read(path(args.last().unwrap()).join("Voxelite.html"))?;
                 let info =
-                    files::read_plist(&root.join("dist/Quantum.app/Contents/Info.plist")).unwrap();
+                    files::read_plist(&root.join("dist/Voxelite.app/Contents/Info.plist")).unwrap();
                 let version = files::plist_string(&info, "CFBundleVersion").unwrap();
                 let mut item = fixture_item(version, 11, notes.len() as u64);
                 if self.has("unsigned_feed") {
@@ -272,13 +264,13 @@ impl Runner for FakeRunner {
                 }
                 if self.has("wrong_url") {
                     item = item.replace(
-                        &format!("{}v{version}/Quantum.dmg", macos::DOWNLOAD),
-                        "https://example.invalid/Quantum.dmg",
+                        &format!("{}v{version}/Voxelite.dmg", macos::DOWNLOAD),
+                        "https://example.invalid/Voxelite.dmg",
                     );
                 }
                 if self.has("wrong_notes") {
                     item = item.replace(
-                        &format!("{}v{version}/Quantum.html", macos::DOWNLOAD),
+                        &format!("{}v{version}/Voxelite.html", macos::DOWNLOAD),
                         "https://example.invalid/notes",
                     );
                 }
@@ -350,7 +342,7 @@ impl Fixture {
         let repository = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         for name in [
             "packaging/macos/Info.plist",
-            "packaging/macos/Quantum.icns",
+            "packaging/macos/Voxelite.icns",
             "packaging/macos/sparkle_public_ed_key.txt",
             "packaging/macos/RELEASE_NOTES.md",
             "packaging/macos/RELEASE_NOTES.unnotarized.md",

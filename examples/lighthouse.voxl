@@ -7,7 +7,7 @@
     "id": "55a066b5-5650-45b1-ae18-5abd07d0eefc",
     "name": "Lighthouse"
   },
-  "format": "quantum",
+  "format": "voxelite",
   "layers": [
     {
       "id": "ca482172-1245-4aa9-8ccf-bd18d9e315f0",

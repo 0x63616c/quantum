@@ -6,8 +6,6 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-miette.workspace = true
-quantum-brand.workspace = true
 base64.workspace = true
 clap.workspace = true
 glob.workspace = true
