@@ -14,16 +14,17 @@ this decision does not certify platform support or release readiness.
 ## Decision
 
 Build an Aseprite-style 3D voxel editor for people and agents. The product scope is
-a Rust/GPUI native macOS application and MCP workflows for creating, inspecting
-and editing models. Human editing must remain useful without an agent or account.
-Keep canonical, versioned `.voxl` projects and GLB/PNG exports portable across
-these workflows.
+a Rust/GPUI native macOS application, the same editor compiled to WebAssembly,
+and MCP workflows for creating, inspecting and editing models. Human editing must
+remain useful without an agent or account. Keep canonical, versioned `.voxl`
+projects and GLB/PNG exports portable across these workflows.
 
 The shared document engine owns layers, palette slots, atomic commands, revision
 checks and undo/redo. History playback inspects immutable previews; named versions
 and anchored comments remain project content. Local human and agent edits use the
 same engine and history. The current MCP transports are standalone stdio and a
-private Unix-socket attachment to the native editor.
+private Unix-socket attachment to the native editor; the browser editor does not
+provide a live MCP attachment.
 
 Follow [ADR 0002](0002-built-in-plugin-architecture.md) for feature ownership:
 
@@ -32,17 +33,17 @@ Follow [ADR 0002](0002-built-in-plugin-architecture.md) for feature ownership:
   and owns platform UI and file dialogs.
 - Statically linked built-ins own tools, mirrors, gizmo/grid, palettes,
   comments/pins, export callbacks and agent command metadata. They use
-  `quantum-plugin-api` capabilities and propose edits for engine admission.
+  `voxelite-plugin-api` capabilities and propose edits for engine admission.
   Shell command metadata comes from enabled contributions.
 - Built-in registration and host enablement already exist. There is no external
   plugin loader or user-facing plugin enablement UI. The example plugin is a
   declaration-only template outside the app.
 
-These boundaries are implemented in the [shared app entry points](../../crates/quantum-app/src/lib.rs),
-[built-in registration](../../crates/quantum-app/src/core_plugin.rs),
-[engine](../../crates/quantum-core/src/engine.rs),
-[document session](../../crates/quantum-format/src/session.rs) and
-[MCP attachment](../../crates/quantum-mcp/src/attached.rs).
+These boundaries are implemented in the [shared app entry points](../../crates/voxelite-app/src/lib.rs),
+[built-in registration](../../crates/voxelite-app/src/core_plugin.rs),
+[engine](../../crates/voxelite-core/src/engine.rs),
+[document session](../../crates/voxelite-format/src/session.rs) and
+[MCP attachment](../../crates/voxelite-mcp/src/attached.rs).
 
 ## Deferred beyond v1
 
@@ -63,5 +64,3 @@ independent of hosted services. Extend built-ins through the existing portable
 API without weakening engine or persistence guarantees. Deferred systems require
 their own architecture and verification decisions before being advertised as
 implemented features.
-
-Update (2026-10-27): the browser/wasm build was removed; Quantum is macOS-only.

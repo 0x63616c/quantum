@@ -1,7 +1,7 @@
 # Portable palette manager
 
-`quantum-plugin-palette` owns manager behavior. Its only normal dependency is
-`quantum-plugin-api`; filesystem writes, settings admission, brush assignment and
+`voxelite-plugin-palette` owns manager behavior. Its only normal dependency is
+`voxelite-plugin-api`; filesystem writes, settings admission, brush assignment and
 core transactions remain with the host. API version 0.7.0 adds public fields and
 exhaustive action variants. The app continues to persist an outcome before adopting
 its state, so write failures preserve the previous library, selection and brush.
@@ -96,7 +96,7 @@ No new setting or core document schema is introduced.
 
 ## Interchange
 
-`PaletteView::formats` and `quantum_plugin_palette::FORMATS` expose the same
+`PaletteView::formats` and `voxelite_plugin_palette::FORMATS` expose the same
 `PaletteFormat { id, label, extension }` list. Every listed format supports import
 and export: `hex` (Lospec), `gpl` (GIMP), and `pal` (JASC-PAL/Aseprite).
 `ImportLibrary { name, format, text }` adds/selects a custom palette;
@@ -114,8 +114,8 @@ per line. The optional fourth alpha column used by
 is accepted only at 255; extra columns and transparency reject. CRLF, surrounding
 whitespace and blank color lines are accepted. The exporter emits three columns.
 
-Existing HEX/GPL registry exporters remain owned by `quantum-plugin-exporters`.
-The palette plugin registers `dev.quantum.palette.pal` as a stateless PAL exporter.
+Existing HEX/GPL registry exporters remain owned by `voxelite-plugin-exporters`.
+The palette plugin registers `dev.voxelite.palette.pal` as a stateless PAL exporter.
 Disabling the palette plugin removes that export and manager formats. MCP's
 `palette_import` and `palette_export` accept `pal` alongside `hex` and `gpl`.
 Document imports still append into free slots and return source-to-document slot

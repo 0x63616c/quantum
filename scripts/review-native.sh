@@ -3,11 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo build -p quantum-app --bin quantum
-export QUANTUM_REVIEW_ROOT="$PWD"
+cargo build -p voxelite-app --bin voxelite
+export VOXELITE_REVIEW_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
-export QUANTUM_REVIEW_ARTIFACTS="${QUANTUM_REVIEW_ARTIFACTS:-$PWD/screenshots/review-1}"
-mkdir -p "$QUANTUM_REVIEW_ARTIFACTS"
+export VOXELITE_REVIEW_ARTIFACTS="${VOXELITE_REVIEW_ARTIFACTS:-$PWD/screenshots/review-1}"
+mkdir -p "$VOXELITE_REVIEW_ARTIFACTS"
 xvfb-run -a -s '-screen 0 2880x1800x24 -nolisten tcp' dbus-run-session -- bash <<'REVIEW'
 set -euo pipefail
 export XDG_RUNTIME_DIR
@@ -21,11 +21,11 @@ cleanup() {
   rm -rf "$XDG_RUNTIME_DIR"
 }
 trap cleanup EXIT
-artifact="$QUANTUM_REVIEW_ARTIFACTS"
+artifact="$VOXELITE_REVIEW_ARTIFACTS"
 project="$XDG_RUNTIME_DIR/review.voxl"
 cp examples/autumn-workshop.voxl "$project"
 start_app() {
-  GPUI_X11_SCALE_FACTOR="$1" target/debug/quantum --theme "$2" --exit-after 180 "${@:3}" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+  GPUI_X11_SCALE_FACTOR="$1" target/debug/voxelite --theme "$2" --exit-after 180 "${@:3}" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..100}; do
@@ -47,7 +47,7 @@ wait_title() {
     [[ "$(xdotool getwindowname "$window")" == "$1" ]] && return
     sleep 0.1
   done
-  timeout 10s import -window root /tmp/quantum-review-failure.png || true
+  timeout 10s import -window root /tmp/voxelite-review-failure.png || true
   printf 'Expected title: %s; got: %s\n' "$1" "$(xdotool getwindowname "$window")" >&2
   exit 1
 }

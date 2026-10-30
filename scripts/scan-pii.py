@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Report potential identity/path/credential leaks without reproducing values.
 
-Read tracked and unignored files and all blobs/commits reachable through local
-refs or reflogs. Print the redacted report to stdout without writing files or
-modifying history.
+Read tracked and unignored files, generated web bundles, and
+all blobs/commits reachable through local refs or reflogs. Print the redacted
+report to stdout without writing files or modifying history.
 """
 from pathlib import Path
 import collections
@@ -38,7 +38,7 @@ for name, email in identities:
     if len(local) >= 4:
         identity_terms.add(local)
 # Product/bot labels are not human identity leaks in prose.
-identity_terms = {term for term in identity_terms if term.lower() not in {'quantum', 'quantum contributors', 'quantum agent', 'codex', 'openai', 'root', 'agent', 'contributors'}}
+identity_terms = {term for term in identity_terms if term.lower() not in {'voxelite', 'voxelite contributors', 'voxelite agent', 'codex', 'openai', 'root', 'agent', 'contributors'}}
 if identity_terms:
     patterns['Git identity name/username'] = re.compile(r'(?<![\w-])(?:' + '|'.join(re.escape(x) for x in sorted(identity_terms)) + r')(?![\w-])', re.I)
 
@@ -53,6 +53,8 @@ def scan(data):
     return result
 
 files = set(git('ls-files', '-z', '--cached', '--others', '--exclude-standard').decode().split('\0')) - {''}
+for directory in ('site/app', 'web/dist'):
+    files.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob('*') if p.is_file())
 current = []
 for name in sorted(files):
     path = ROOT / name
@@ -84,8 +86,8 @@ for oid in commits:
 
 report = ['# Repository and Git history personal-info scan', '',
     'Scanned on 2026-10-25. Values are deliberately redacted; locations and categories are sufficient for follow-up. No history was rewritten and no Git identity was changed.', '',
-    f'Scope: {len(files)} working-tree/generated files; {len(commits)} commits and {blobs} unique historical blobs reachable through all local refs and reflogs. Includes source, documentation, lockfiles and assets. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.', '',
-    'Excluded dependency caches and build intermediates (`node_modules/`, `target/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.', '',
+    f'Scope: {len(files)} working-tree/generated files; {len(commits)} commits and {blobs} unique historical blobs reachable through all local refs and reflogs. Includes source, documentation, lockfiles, assets and the generated wasm bundles. Scans commit messages plus every author/committer header. Git metadata pointer files are checked separately below.', '',
+    'Excluded dependency caches and build intermediates (`node_modules/`, `target/`, `target-webdeploy/`): these are not repository deliverables. Product/bot identity labels are excluded from prose name matching; all identity headers are still counted. Binary assets were byte-scanned; this is not OCR, a full secret entropy detector, or proof that every possible personal name/secret was found. No remote access or credential validation was attempted.', '',
     '## Git metadata', '',
     f'- {len(identities)} distinct author/committer identity pairs are present across {len(commits)} commits. Names, addresses and account identifiers are redacted here. These immutable headers remain as requested; inspect locally with `git log --all --format=fuller` if authorized.',
     '- `.git:1` is a worktree pointer containing a local machine path. It is untracked Git plumbing, not a distributable source file; changing it would break the checkout.', '',
@@ -100,6 +102,8 @@ for name, kind, lines in current:
         disposition = 'Embedded upstream font attribution/contact; retain original licensed font.'
     elif name.endswith('.png') and kind == 'email':
         disposition = 'Compressed binary byte-pattern match; not a verified address or visible image text.'
+    elif name.startswith(('site/app/', 'web/dist/')):
+        disposition = 'Ignored generated bundle; evaluate reproducible-build path remapping separately.'
     elif name == 'scripts/scan-pii.py':
         disposition = 'Scanner regex, not a real identity or credential.'
     report.append(f'| `{name}:{",".join(map(str, lines))}` | {kind} | {disposition} |')
