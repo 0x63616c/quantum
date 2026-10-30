@@ -3,8 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo build -p quantum-app
-export QUANTUM_CAPTURE_ROOT="$PWD"
+cargo build -p voxelite-app
+export VOXELITE_CAPTURE_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 xvfb-run -a -s '-screen 0 2880x1800x24 -nolisten tcp' dbus-run-session -- bash <<'CAPTURE'
 set -euo pipefail
@@ -29,12 +29,12 @@ for density in 150 200; do
     width=2880 height=1800
   fi
   for theme in dark light; do
-    export QUANTUM_DATA_DIR="$XDG_RUNTIME_DIR/$density-$theme"
-    target/debug/quantum --example --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+    export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/$density-$theme"
+    target/debug/voxelite --example --theme "$theme" --exit-after 60 >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
     app_pid=$!
     window=''
     for attempt in {1..100}; do
-      window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Quantum$' 2>/dev/null | head -1 || true)"
+      window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Voxelite$' 2>/dev/null | head -1 || true)"
       [[ -z "$window" ]] || break
       kill -0 "$app_pid"
       sleep 0.1

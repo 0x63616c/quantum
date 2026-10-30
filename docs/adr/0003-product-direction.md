@@ -32,17 +32,17 @@ Follow [ADR 0002](0002-built-in-plugin-architecture.md) for feature ownership:
   and owns platform UI and file dialogs.
 - Statically linked built-ins own tools, mirrors, gizmo/grid, palettes,
   comments/pins, export callbacks and agent command metadata. They use
-  `quantum-plugin-api` capabilities and propose edits for engine admission.
+  `voxelite-plugin-api` capabilities and propose edits for engine admission.
   Shell command metadata comes from enabled contributions.
 - Built-in registration and host enablement already exist. There is no external
   plugin loader or user-facing plugin enablement UI. The example plugin is a
   declaration-only template outside the app.
 
-These boundaries are implemented in the [shared app entry points](../../crates/quantum-app/src/lib.rs),
-[built-in registration](../../crates/quantum-app/src/core_plugin.rs),
-[engine](../../crates/quantum-core/src/engine.rs),
-[document session](../../crates/quantum-format/src/session.rs) and
-[MCP attachment](../../crates/quantum-mcp/src/attached.rs).
+These boundaries are implemented in the [shared app entry points](../../crates/voxelite-app/src/lib.rs),
+[built-in registration](../../crates/voxelite-app/src/core_plugin.rs),
+[engine](../../crates/voxelite-core/src/engine.rs),
+[document session](../../crates/voxelite-format/src/session.rs) and
+[MCP attachment](../../crates/voxelite-mcp/src/attached.rs).
 
 ## Deferred beyond v1
 

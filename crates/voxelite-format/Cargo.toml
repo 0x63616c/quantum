@@ -1,0 +1,29 @@
+[package]
+name = "voxelite-format"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tempfile.workspace = true
+voxelite-core.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.serde]
+workspace = true
+[dependencies.serde_json]
+workspace = true
+[dependencies.sha2]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[[example]]
+name = "demo-history"
+path = "../../examples/demo_history.rs"

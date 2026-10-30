@@ -1,0 +1,17 @@
+[package]
+name = "voxelite-mesh"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+voxelite-core.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+glam.workspace = true
+proptest.workspace = true
+
+[lints]
+workspace = true

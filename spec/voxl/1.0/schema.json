@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Quantum project 1.0",
+  "title": "Voxelite project 1.0",
   "type": "object",
   "required": [
     "format",
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "format": {
-      "enum": ["quantum", "voxelite"]
+      "const": "voxelite"
     },
     "version": {
       "type": "object",
@@ -800,7 +800,7 @@
                 "maximum": 4294967295
               },
               "command": {
-                "description": "Externally tagged quantum-core Command. Rust validates its complete typed payload, work limits and effect; SetVoxels writes use [x,y,z,slot] tuples, with slot zero for erase.",
+                "description": "Externally tagged voxelite-core Command. Rust validates its complete typed payload, work limits and effect; SetVoxels writes use [x,y,z,slot] tuples, with slot zero for erase.",
                 "type": "object",
                 "minProperties": 1,
                 "maxProperties": 1,
