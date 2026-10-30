@@ -1,0 +1,969 @@
+[
+  {
+    "id": "autumn-workshop",
+    "title": "Autumn workshop",
+    "category": "Buildings",
+    "description": "The original workshop. A warm place to begin.",
+    "voxel_count": 27897,
+    "dims": [
+      65,
+      41,
+      55
+    ],
+    "palette": [
+      {
+        "name": "",
+        "hex": "#59423a"
+      },
+      {
+        "name": "",
+        "hex": "#775642"
+      },
+      {
+        "name": "",
+        "hex": "#987759"
+      },
+      {
+        "name": "",
+        "hex": "#526343"
+      },
+      {
+        "name": "",
+        "hex": "#718250"
+      },
+      {
+        "name": "",
+        "hex": "#97a164"
+      },
+      {
+        "name": "",
+        "hex": "#48505a"
+      },
+      {
+        "name": "",
+        "hex": "#727c80"
+      },
+      {
+        "name": "",
+        "hex": "#a5aaa0"
+      },
+      {
+        "name": "",
+        "hex": "#4b3330"
+      },
+      {
+        "name": "",
+        "hex": "#785044"
+      },
+      {
+        "name": "",
+        "hex": "#a57551"
+      },
+      {
+        "name": "",
+        "hex": "#d9c5a0"
+      },
+      {
+        "name": "",
+        "hex": "#f4dfb5"
+      },
+      {
+        "name": "",
+        "hex": "#263a44"
+      },
+      {
+        "name": "",
+        "hex": "#365564"
+      },
+      {
+        "name": "",
+        "hex": "#50737b"
+      },
+      {
+        "name": "",
+        "hex": "#769497"
+      },
+      {
+        "name": "",
+        "hex": "#392e30"
+      },
+      {
+        "name": "",
+        "hex": "#f0a750"
+      },
+      {
+        "name": "",
+        "hex": "#ffd78b"
+      },
+      {
+        "name": "",
+        "hex": "#8a4636"
+      },
+      {
+        "name": "",
+        "hex": "#bc5c38"
+      },
+      {
+        "name": "",
+        "hex": "#df7d3f"
+      },
+      {
+        "name": "",
+        "hex": "#f3a44d"
+      },
+      {
+        "name": "",
+        "hex": "#f4bf65"
+      },
+      {
+        "name": "",
+        "hex": "#304d42"
+      },
+      {
+        "name": "",
+        "hex": "#49745a"
+      },
+      {
+        "name": "",
+        "hex": "#75936a"
+      },
+      {
+        "name": "",
+        "hex": "#b55259"
+      },
+      {
+        "name": "",
+        "hex": "#e58b73"
+      },
+      {
+        "name": "",
+        "hex": "#223942"
+      },
+      {
+        "name": "",
+        "hex": "#456a78"
+      }
+    ],
+    "source": "/gallery/models/autumn-workshop.voxl",
+    "sha256": "f7c8a5ca0a1f76b0db331b2255e6ff03353f1932ffd2145758cefcb89485f509",
+    "revision": "1",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "instant-summer",
+    "title": "Instant summer",
+    "category": "Objects",
+    "description": "A little analog magic, one square at a time.",
+    "voxel_count": 11678,
+    "dims": [
+      28,
+      25,
+      30
+    ],
+    "palette": [
+      {
+        "name": "Ink",
+        "hex": "#303740"
+      },
+      {
+        "name": "Ivory",
+        "hex": "#e8dfcb"
+      },
+      {
+        "name": "Mint",
+        "hex": "#78ada4"
+      },
+      {
+        "name": "Lens",
+        "hex": "#193d49"
+      },
+      {
+        "name": "Glass",
+        "hex": "#87c3d1"
+      },
+      {
+        "name": "Coral",
+        "hex": "#e48373"
+      },
+      {
+        "name": "Gold",
+        "hex": "#dabb6f"
+      }
+    ],
+    "source": "/gallery/models/instant-summer.voxl",
+    "sha256": "b5b0e8528665daa24210c06f0a48d6e0207f7d6f20d4f4fb3f64a50fa4965f06",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "small-step",
+    "title": "Small step",
+    "category": "Characters",
+    "description": "A tiny explorer, a very long way from home.",
+    "voxel_count": 12874,
+    "dims": [
+      50,
+      47,
+      24
+    ],
+    "palette": [
+      {
+        "name": "Suit",
+        "hex": "#e6e4d6"
+      },
+      {
+        "name": "Shadow",
+        "hex": "#adb9ba"
+      },
+      {
+        "name": "Visor",
+        "hex": "#344854"
+      },
+      {
+        "name": "Gold",
+        "hex": "#e6b767"
+      },
+      {
+        "name": "Orange",
+        "hex": "#db7855"
+      },
+      {
+        "name": "Blue",
+        "hex": "#80aebb"
+      }
+    ],
+    "source": "/gallery/models/small-step.voxl",
+    "sha256": "3ff50bc90d16ad9a71c40c9e96c035935c3473dc0092ef4bbe1288932feb0ba3",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "midnight-noodles",
+    "title": "Midnight noodles",
+    "category": "Buildings",
+    "description": "One last bowl, under the paper lanterns.",
+    "voxel_count": 17412,
+    "dims": [
+      46,
+      34,
+      32
+    ],
+    "palette": [
+      {
+        "name": "Charcoal",
+        "hex": "#293645"
+      },
+      {
+        "name": "Timber",
+        "hex": "#ac6a42"
+      },
+      {
+        "name": "Paper",
+        "hex": "#f0dfc0"
+      },
+      {
+        "name": "Vermilion",
+        "hex": "#e75b43"
+      },
+      {
+        "name": "Gold",
+        "hex": "#e9b45b"
+      },
+      {
+        "name": "Teal",
+        "hex": "#72b5ae"
+      },
+      {
+        "name": "Noodle",
+        "hex": "#ffdc8a"
+      }
+    ],
+    "source": "/gallery/models/midnight-noodles.voxl",
+    "sha256": "8b9a0eb1b15bfa0438430c257092fe15385da7ee67f563fcd0be18adbe15eb30",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "under-the-canopy",
+    "title": "Under the canopy",
+    "category": "Nature",
+    "description": "A miniature gathering on the forest floor.",
+    "voxel_count": 7735,
+    "dims": [
+      36,
+      28,
+      36
+    ],
+    "palette": [
+      {
+        "name": "Earth",
+        "hex": "#76604b"
+      },
+      {
+        "name": "Grass",
+        "hex": "#9ca873"
+      },
+      {
+        "name": "Stem",
+        "hex": "#e9d9b6"
+      },
+      {
+        "name": "Red",
+        "hex": "#d87562"
+      },
+      {
+        "name": "Light",
+        "hex": "#f6e7cc"
+      }
+    ],
+    "source": "/gallery/models/under-the-canopy.voxl",
+    "sha256": "eb2a1b728a2a0777e23c5936c188c0ecc28ee4242fe5cd06e9c471a3a07ed974",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "weekender",
+    "title": "Weekender",
+    "category": "Vehicles",
+    "description": "A surfboard, a full tank, and no particular plan.",
+    "voxel_count": 14443,
+    "dims": [
+      22,
+      27,
+      38
+    ],
+    "palette": [
+      {
+        "name": "Rubber",
+        "hex": "#28303a"
+      },
+      {
+        "name": "Cream",
+        "hex": "#f1e5c8"
+      },
+      {
+        "name": "Orange",
+        "hex": "#e99458"
+      },
+      {
+        "name": "Glass",
+        "hex": "#4b8288"
+      },
+      {
+        "name": "Chrome",
+        "hex": "#b0c3c0"
+      },
+      {
+        "name": "Wood",
+        "hex": "#aa7050"
+      },
+      {
+        "name": "Board",
+        "hex": "#d5aaa0"
+      }
+    ],
+    "source": "/gallery/models/weekender.voxl",
+    "sha256": "f76f720fd03d747dd61cf28071ba4fe06bd9a71301c47d79559d42b062c24bd4",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "forest-friend",
+    "title": "Forest friend",
+    "category": "Characters",
+    "description": "Quiet paws. An excessively good tail.",
+    "voxel_count": 6275,
+    "dims": [
+      33,
+      35,
+      27
+    ],
+    "palette": [
+      {
+        "name": "Rust",
+        "hex": "#c66d3d"
+      },
+      {
+        "name": "Orange",
+        "hex": "#ed9c54"
+      },
+      {
+        "name": "Cream",
+        "hex": "#f0e0be"
+      },
+      {
+        "name": "Ink",
+        "hex": "#30363d"
+      },
+      {
+        "name": "Tail",
+        "hex": "#dc8248"
+      }
+    ],
+    "source": "/gallery/models/forest-friend.voxl",
+    "sha256": "6474eae849c46989e1635bc19504e6b8e02a9e9287592231c27795e1ebb78df0",
+    "revision": "9",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "after-hours",
+    "title": "After hours",
+    "category": "Buildings",
+    "description": "For the nights when looking up is the whole plan.",
+    "voxel_count": 25356,
+    "dims": [
+      40,
+      41,
+      44
+    ],
+    "palette": [
+      {
+        "name": "Stone",
+        "hex": "#cdc6b4"
+      },
+      {
+        "name": "Blue",
+        "hex": "#6e99a1"
+      },
+      {
+        "name": "Dark",
+        "hex": "#354950"
+      },
+      {
+        "name": "Brass",
+        "hex": "#d8af64"
+      },
+      {
+        "name": "Glass",
+        "hex": "#92c6d5"
+      }
+    ],
+    "source": "/gallery/models/after-hours.voxl",
+    "sha256": "d5cfb6a94d64e415f229106d6c175fd20cedb0fc2da9f7629d0d9628e2071aca",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "one-more-credit",
+    "title": "One more credit",
+    "category": "Objects",
+    "description": "The high score can wait. One more game.",
+    "voxel_count": 17759,
+    "dims": [
+      24,
+      44,
+      23
+    ],
+    "palette": [
+      {
+        "name": "Dark",
+        "hex": "#303345"
+      },
+      {
+        "name": "Purple",
+        "hex": "#8881b5"
+      },
+      {
+        "name": "Pink",
+        "hex": "#e0a2bd"
+      },
+      {
+        "name": "Screen",
+        "hex": "#253f48"
+      },
+      {
+        "name": "Cyan",
+        "hex": "#8cd1ce"
+      },
+      {
+        "name": "Gold",
+        "hex": "#ebd699"
+      },
+      {
+        "name": "Cream",
+        "hex": "#e6e0db"
+      }
+    ],
+    "source": "/gallery/models/one-more-credit.voxl",
+    "sha256": "c3b38b6b4e099c61b7a97bacbaf1edc7f4ecd9a29898606dd79087de63c17433",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "desert-hours",
+    "title": "Desert hours",
+    "category": "Nature",
+    "description": "Patient company for a sunny corner.",
+    "voxel_count": 10193,
+    "dims": [
+      26,
+      49,
+      26
+    ],
+    "palette": [
+      {
+        "name": "Clay",
+        "hex": "#c78566"
+      },
+      {
+        "name": "Rim",
+        "hex": "#e0aa85"
+      },
+      {
+        "name": "Green",
+        "hex": "#6f9475"
+      },
+      {
+        "name": "Light",
+        "hex": "#a2b587"
+      },
+      {
+        "name": "Sand",
+        "hex": "#e1cb9d"
+      },
+      {
+        "name": "Pink",
+        "hex": "#e4a7ad"
+      }
+    ],
+    "source": "/gallery/models/desert-hours.voxl",
+    "sha256": "10521411dccd2db51f2703ad3fc40fbd6ec1d1f3d2ffd9a92373d93a251465dc",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "slow-sunday",
+    "title": "Slow Sunday",
+    "category": "Nature",
+    "description": "An entire old forest, small enough for a windowsill.",
+    "voxel_count": 9086,
+    "dims": [
+      40,
+      36,
+      22
+    ],
+    "palette": [
+      {
+        "name": "Bark",
+        "hex": "#77503a"
+      },
+      {
+        "name": "Moss",
+        "hex": "#7d9454"
+      },
+      {
+        "name": "Jade",
+        "hex": "#4e8361"
+      },
+      {
+        "name": "Leaf",
+        "hex": "#a6bc72"
+      },
+      {
+        "name": "Ceramic",
+        "hex": "#d8d7c2"
+      },
+      {
+        "name": "Earth",
+        "hex": "#554f3c"
+      }
+    ],
+    "source": "/gallery/models/slow-sunday.voxl",
+    "sha256": "19b2716c98e98e452c77f7b342340c58507a30c0b3e066aed2b0e85b398564c3",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "dust-runner",
+    "title": "Dust runner",
+    "category": "Vehicles",
+    "description": "Built for the scenic route across another planet.",
+    "voxel_count": 10346,
+    "dims": [
+      42,
+      39,
+      32
+    ],
+    "palette": [
+      {
+        "name": "Tire",
+        "hex": "#39434b"
+      },
+      {
+        "name": "Hull",
+        "hex": "#d8ceb2"
+      },
+      {
+        "name": "Orange",
+        "hex": "#d19159"
+      },
+      {
+        "name": "Solar",
+        "hex": "#557d96"
+      },
+      {
+        "name": "Line",
+        "hex": "#a6c5d4"
+      },
+      {
+        "name": "Lens",
+        "hex": "#294b54"
+      }
+    ],
+    "source": "/gallery/models/dust-runner.voxl",
+    "sha256": "abb8745494355d178683c4ea2398efa7aae1b64d230ffa9a052f2a53aebe90aa",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "the-last-light",
+    "title": "The last light",
+    "category": "Buildings",
+    "description": "A familiar landmark at the edge of everything.",
+    "voxel_count": 12916,
+    "dims": [
+      34,
+      57,
+      30
+    ],
+    "palette": [
+      {
+        "name": "Rock",
+        "hex": "#667d83"
+      },
+      {
+        "name": "Sand",
+        "hex": "#c8bb9b"
+      },
+      {
+        "name": "Chalk",
+        "hex": "#e7dfca"
+      },
+      {
+        "name": "Red",
+        "hex": "#c96f59"
+      },
+      {
+        "name": "Roof",
+        "hex": "#425a66"
+      },
+      {
+        "name": "Gold",
+        "hex": "#efcd84"
+      }
+    ],
+    "source": "/gallery/models/the-last-light.voxl",
+    "sha256": "39647665a3bb919031d41e63ffa685663ca88923e540fe919457e87e9d964ade",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "branch-line",
+    "title": "Branch line",
+    "category": "Vehicles",
+    "description": "A slow train to somewhere worth stopping.",
+    "voxel_count": 16512,
+    "dims": [
+      26,
+      33,
+      43
+    ],
+    "palette": [
+      {
+        "name": "Coal",
+        "hex": "#303c43"
+      },
+      {
+        "name": "Green",
+        "hex": "#527e70"
+      },
+      {
+        "name": "Cream",
+        "hex": "#d7cdb5"
+      },
+      {
+        "name": "Brass",
+        "hex": "#d2a75c"
+      },
+      {
+        "name": "Red",
+        "hex": "#b96455"
+      },
+      {
+        "name": "Steel",
+        "hex": "#9eadb0"
+      }
+    ],
+    "source": "/gallery/models/branch-line.voxl",
+    "sha256": "ce6daa3ac1c11274a7451d17d01e279bea40ddc958a070027b3bc8b186bb157d",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "still-water",
+    "title": "Still water",
+    "category": "Nature",
+    "description": "A koi pond with absolutely nowhere to be.",
+    "voxel_count": 7737,
+    "dims": [
+      42,
+      14,
+      42
+    ],
+    "palette": [
+      {
+        "name": "Stone",
+        "hex": "#9ea799"
+      },
+      {
+        "name": "Moss",
+        "hex": "#7f946e"
+      },
+      {
+        "name": "Water",
+        "hex": "#6ca7ac"
+      },
+      {
+        "name": "Cream",
+        "hex": "#f2dfb4"
+      },
+      {
+        "name": "Koi",
+        "hex": "#e99964"
+      },
+      {
+        "name": "Leaf",
+        "hex": "#567f63"
+      }
+    ],
+    "source": "/gallery/models/still-water.voxl",
+    "sha256": "9587b8bc0ba3b909dc3831d50840f6b551b5cd826830dbee9841d79e120543dd",
+    "revision": "11",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "orbit",
+    "title": "Orbit",
+    "category": "Characters",
+    "description": "A small companion with a very big field of view.",
+    "voxel_count": 11358,
+    "dims": [
+      33,
+      50,
+      16
+    ],
+    "palette": [
+      {
+        "name": "Ink",
+        "hex": "#27323f"
+      },
+      {
+        "name": "Shell",
+        "hex": "#e6dac2"
+      },
+      {
+        "name": "Teal",
+        "hex": "#64b6ac"
+      },
+      {
+        "name": "Glass",
+        "hex": "#214e57"
+      },
+      {
+        "name": "Glow",
+        "hex": "#b7f3d1"
+      },
+      {
+        "name": "Coral",
+        "hex": "#e18269"
+      }
+    ],
+    "source": "/gallery/models/orbit.voxl",
+    "sha256": "b5f22bcadbf61e5b3ecdff34d4b1941df44ec018ff4fb5137380fc64c4083d35",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "off-court",
+    "title": "Off court",
+    "category": "Objects",
+    "description": "Fresh out of the box. Ready to go nowhere fast.",
+    "voxel_count": 8834,
+    "dims": [
+      18,
+      21,
+      39
+    ],
+    "palette": [
+      {
+        "name": "Sole",
+        "hex": "#e8ddc8"
+      },
+      {
+        "name": "Ink",
+        "hex": "#303e4b"
+      },
+      {
+        "name": "Teal",
+        "hex": "#729f98"
+      },
+      {
+        "name": "Cream",
+        "hex": "#f4e9d6"
+      },
+      {
+        "name": "Coral",
+        "hex": "#d78c77"
+      },
+      {
+        "name": "Lace",
+        "hex": "#d5b995"
+      }
+    ],
+    "source": "/gallery/models/off-court.voxl",
+    "sha256": "e54d2bb7ecc0ae48e37e5fa5e9272d0d9c653aa6912d3038bc8b72f79f9ad43d",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "lavender-mill",
+    "title": "Lavender mill",
+    "category": "Buildings",
+    "description": "A little wind, a little lavender, a quieter pace.",
+    "voxel_count": 14734,
+    "dims": [
+      39,
+      44,
+      31
+    ],
+    "palette": [
+      {
+        "name": "Wall",
+        "hex": "#e2ceaa"
+      },
+      {
+        "name": "Roof",
+        "hex": "#758f9a"
+      },
+      {
+        "name": "Wood",
+        "hex": "#8d6653"
+      },
+      {
+        "name": "Canvas",
+        "hex": "#ede2c8"
+      },
+      {
+        "name": "Grass",
+        "hex": "#a0aa83"
+      },
+      {
+        "name": "Lavender",
+        "hex": "#9e8fae"
+      }
+    ],
+    "source": "/gallery/models/lavender-mill.voxl",
+    "sha256": "4bf29523d42a30f4703c8d4fe8256c979051e789f6ca0a5705e328319d87fadb",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  },
+  {
+    "id": "yellow-submarine",
+    "title": "Yellow submarine",
+    "category": "Vehicles",
+    "description": "For discoveries just beneath the surface.",
+    "voxel_count": 10277,
+    "dims": [
+      28,
+      32,
+      46
+    ],
+    "palette": [
+      {
+        "name": "Yellow",
+        "hex": "#e5b957"
+      },
+      {
+        "name": "Gold",
+        "hex": "#c08d44"
+      },
+      {
+        "name": "Ink",
+        "hex": "#34515a"
+      },
+      {
+        "name": "Glass",
+        "hex": "#88bcc0"
+      },
+      {
+        "name": "Cream",
+        "hex": "#f3dda7"
+      },
+      {
+        "name": "Red",
+        "hex": "#c97c60"
+      }
+    ],
+    "source": "/gallery/models/yellow-submarine.voxl",
+    "sha256": "f43c94cd1759326cb2501e93c37dda27a063353b6da030c01da2bf5c053761b8",
+    "revision": "10",
+    "formats": [
+      "webp",
+      "avif"
+    ]
+  }
+]

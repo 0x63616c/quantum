@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery — Voxelite</title>
+<meta name="description" content="Small blocks. Big ideas. Explore original voxel art made in Voxelite, download the models, and make something your own.">
+<meta name="theme-color" content="#000000"><meta property="og:title" content="Gallery — Voxelite"><meta property="og:description" content="Small blocks. Big ideas. A collection of editable voxel worlds."><meta property="og:type" content="website"><meta property="og:image" content="https://voxelite.worldwidewebb.co/gallery/images/midnight-noodles-dark-large.webp">
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><link rel="stylesheet" href="/gallery/gallery.css">
+<script src="/assets/theme.js"></script><script src="/gallery/gallery.js" defer></script>
+</head>
+<body class="gallery-page">
+<a class="skip" href="#main">Skip to content</a>
+<header class="header"><div class="shell nav"><a class="brand" href="/" aria-label="Voxelite home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/gallery/" aria-current="page">Gallery</a><a href="/docs/">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/></svg></button><a class="button small" href="/app/">Open editor <span aria-hidden="true">↗</span></a></div></div></header>
+<main id="main">
+<section class="gallery-intro" aria-labelledby="gallery-title"><div><p class="eyebrow">MADE IN VOXELITE</p><h1 id="gallery-title">Small blocks.<span> Big ideas.</span></h1></div><p>A few little worlds to get lost in. <br>Pick one up. Make it your own.</p></section>
+<div class="gallery-toolbar"><div class="filters" role="group" aria-label="Filter models" hidden><!-- FILTERS --></div><p class="model-count" aria-live="polite" aria-atomic="true">19 models</p></div>
+<div class="gallery-wall" aria-label="Voxel art gallery"><!-- CARDS --></div>
+<div class="gallery-end"><span class="end-mark" aria-hidden="true">◇</span><p>Every little world starts with one block.</p><a class="text-link" href="/app/">Make something of your own <span aria-hidden="true">↗</span></a></div>
+<noscript><p class="no-js-note">Select a model to download its editable .voxl file. Open it with File → Open in <a href="/app/">Voxelite</a>.</p></noscript>
+</main>
+<footer class="shell footer"><div><a class="brand" href="/">Voxelite<span class="caption">A little more dimension.</span></a></div><nav aria-label="Footer"><a href="/gallery/">Gallery</a><a href="/docs/">Documentation</a><a href="/docs/skills/">Agent skills</a></nav><span class="caption">Open source. Open possibilities.</span></footer>
+<dialog class="lightbox" aria-labelledby="model-title" aria-describedby="model-description">
+<div class="lightbox-top"><span class="lightbox-label">THE GALLERY <span class="lightbox-position"></span></span><button class="icon-button close-lightbox" aria-label="Close model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+<div class="lightbox-body"><div class="model-stage"><div class="model-picture"></div><div class="model-paging"><button class="icon-button previous-model" aria-label="Previous model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><span class="paging-hint">Explore a little</span><button class="icon-button next-model" aria-label="Next model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div></div><div class="model-info"><p class="eyebrow model-category"></p><h2 id="model-title" aria-live="polite" aria-atomic="true"></h2><p id="model-description"></p><dl class="model-stats"><div><dt>Voxels</dt><dd class="voxel-count"></dd></div><div><dt>Dimensions</dt><dd class="model-dims"></dd></div></dl><div class="palette-group"><p class="detail-label">Palette</p><ul class="model-palette" aria-label="Model palette"></ul></div><div class="model-actions"><a class="button primary remix-model" href="/app/">Remix in Voxelite <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a><a class="button download-model" download href="/gallery/models/orbit.voxl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>Download .voxl</a></div><p class="model-note">Made in Voxelite. Yours to take further.</p></div></div>
+</dialog>
+<script id="gallery-data" type="application/json"><!-- DATA --></script>
+</body></html>

@@ -1,0 +1,68 @@
+<!doctype html><html lang="en" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started — Voxelite</title><meta name="description" content="Voxelite documentation: Getting started. Build, connect, create and inspect with the Rust voxel editor.">
+<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/gallery/">Gallery</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
+<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation"><a href="/docs/">Documentation</a><a href="/docs/getting-started/" aria-current="page">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a></nav></details><details name="docs-menu"><summary>On this page</summary><nav aria-label="Page sections"><a href="#build">Build from source</a><a href="#web">Build the web editor and site</a><a href="#hands">Make your first edit by hand</a><a href="#connect">Connect your agent</a><a href="#first-model">Your first model through MCP</a><a href="#recover">When a call fails</a></nav></details></div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p><a href="/docs/">Documentation</a><a href="/docs/getting-started/" aria-current="page">Getting started</a><a href="/docs/mcp/">MCP tools</a><a href="/docs/format/">The .voxl format</a><a href="/docs/skills/">Agent skills</a></nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>Getting started</h1><p class="lede">Build locally. Connect your agent. Make your first model.</p>
+<nav class="setup-paths" aria-label="Quick start"><a href="#build">Build the app <span aria-hidden="true">↘</span></a><a href="#connect">Connect MCP <span aria-hidden="true">↘</span></a></nav>
+<p class="explore-note">Just exploring? <a href="/app/">Try the web editor</a> on desktop.<br>Keyboard &amp; mouse required · 1024 × 640 minimum.</p>
+<h2 id="build">Build from source</h2><p>Install Rust with rustup, then run from a repository checkout. The pinned toolchain is Rust 1.99.1.</p><pre><code class="language-sh">export PATH="$HOME/.cargo/bin:$PATH"
+cargo build --locked --release \
+  -p voxelite-app -p voxelite-mcp
+./target/release/voxelite</code></pre><p>Signed macOS downloads and Homebrew packages are not available yet. On macOS, install the Xcode command line tools (<code>xcode-select --install</code>) before building. This native target is wired through GPUI, but has not been built on this Linux machine. Linux native compilation and capture are verified with X11/Xvfb and Mesa software rendering.</p><details><summary>Linux build and desktop dependencies (Debian / Ubuntu)</summary><pre><code class="language-sh">sudo apt-get install build-essential pkg-config clang libclang-dev \
+  libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev \
+  libx11-xcb-dev libxcb1-dev libfontconfig-dev libasound2-dev libssl-dev \
+  mesa-vulkan-drivers dbus-x11 xdg-desktop-portal xdg-desktop-portal-gtk</code></pre><p>A display server and a desktop portal are needed for native windows and file dialogs. Headless MCP builds need no display or GPU:</p><pre><code class="language-sh">cargo build --locked --release -p voxelite-mcp
+cargo test -p voxelite-app --no-default-features</code></pre></details>
+<h2 id="web">Build the web editor and site</h2><pre><code class="language-sh">scripts/build-site.sh
+python3 -m http.server 8090 --directory site --bind 127.0.0.1</code></pre><p>Open <code>http://127.0.0.1:8090</code>; the editor lives at <code>/app/</code>. The script builds the shared GPUI app for wasm, generates these docs from Rust, and copies <code>web/dist/</code> to <code>site/app/</code>. It installs the wasm target and matching wasm-bindgen CLI if needed. For site-only iteration after a web build, use <code>scripts/build-site.sh --skip-web</code>.</p><p>Use localhost or HTTPS for browser graphics. WebGPU is preferred and WebGL2 is the fallback. A query of <code>?backend=webgl</code> forces WebGL2. Save downloads a <code>.voxl</code>; download before reloading to preserve your edits. Browser MCP pairing and project recovery are not implemented.</p>
+<h2 id="hands">Make your first edit by hand</h2><ol><li>Open the bundled Autumn Workshop. Right-drag to orbit; wheel to zoom; press <kbd>F</kbd> to frame.</li><li>Select a visible, unlocked layer and a palette swatch. Press <kbd>B</kbd> to place on a face, <kbd>E</kbd> to erase, or <kbd>P</kbd> to paint.</li><li>Use <kbd>Ctrl/Cmd + Z</kbd> to undo. <kbd>Ctrl/Cmd + K</kbd> opens command search.</li><li>Choose File → Save As for your own <code>.voxl</code>. Export GLB or PNG through the File menu or command search.</li></ol>
+<h2 id="connect">Connect your agent</h2><p>Build <code>voxelite-mcp</code> first. Choose one of these modes; each standalone process owns its own in-memory documents.</p><h3>Headless: create and save independently</h3><p>Use an existing directory as the file root. Substitute absolute paths for the placeholders below; they are examples, not commands to run unchanged.</p><pre><code class="language-json">{
+  "mcpServers": {
+    "voxelite": {
+      "command": "/absolute/path/to/voxelite-mcp",
+      "args": ["--root", "/absolute/path/to/project"]
+    }
+  }
+}</code></pre><p>Merge that entry into <code>.mcp.json</code> for Claude Code or <code>.cursor/mcp.json</code> for Cursor. For Codex, merge this table into your trusted project's <code>.codex/config.toml</code> or user <code>~/.codex/config.toml</code>:</p><pre><code class="language-toml">[mcp_servers.voxelite]
+command = "/absolute/path/to/voxelite-mcp"
+args = ["--root", "/absolute/path/to/project"]</code></pre><p>Preserve existing settings. Reconnect the host, list tools, then call <code>voxelite_capabilities_get</code>. Expect API <code>voxelite.v1</code>, an epoch, CPU rendering, and open document IDs. Host launches are not verified in this headless environment. See the official <a href="https://code.claude.com/docs/en/mcp">Claude Code</a>, <a href="https://cursor.com/docs/mcp">Cursor</a>, and <a href="https://developers.openai.com/codex/mcp">Codex MCP</a> documentation for host-specific setup.</p>
+<h3>Native: work in the same document</h3><pre><code class="language-sh">./target/release/voxelite --session-socket /tmp/voxelite-session.sock</code></pre><p>Configure the host's executable as above, replacing its arguments with <code>["--connect", "/tmp/voxelite-session.sock"]</code>. The socket path must not already exist. Or copy the configuration from Agent → Agent connection in the editor. Discover the existing model with capabilities; do not create a second document.</p><p>Watch committed calls in Session, pause new writes, and undo or edit by hand. The attached catalog excludes document create/open/save: the native editor owns file lifecycle. Save through the app. Browser sessions cannot attach yet.</p>
+<h2 id="first-model">Your first model through MCP</h2><p>In standalone mode, ask your connected agent:</p><blockquote><p>Build a 32 × 32 × 32 clay tower using one atomic box batch. Discover the epoch first. Inspect iso, front, right, and back PNGs, then save first-tower.voxl and export first-tower.glb. Use returned IDs and revisions for each write.</p></blockquote><p>A minimal call sequence follows. These are tool argument objects, not full JSON-RPC messages. Replace placeholders with returned values, and generate a fresh UUID for each new mutation.</p><h3>1. Discover, then create</h3><p>Call <code>voxelite_capabilities_get</code> with <code>{}</code>, then <code>voxelite_document_create</code>:</p><pre><code class="language-json">{
+  "name": "First tower",
+  "bounds": {"min": [0, 0, 0], "max": [32, 32, 32]},
+  "expected_epoch": "&lt;returned epoch&gt;",
+  "operation_id": "&lt;fresh UUID&gt;"
+}</code></pre><h3>2. Batch the blockout</h3><p>Call <code>voxelite_voxels_batch</code>. A new project has a Base layer and clay at slot 1.</p><pre><code class="language-json">{
+  "model_id": "&lt;returned model_id&gt;",
+  "expected_epoch": "&lt;returned epoch&gt;",
+  "expected_revision": "&lt;current revision&gt;",
+  "operation_id": "&lt;fresh UUID&gt;",
+  "label": "Block out tower",
+  "operations": [
+    {"kind": "box", "layer": "Base", "slot": 1,
+     "region": {"min": [10, 0, 10], "max": [22, 2, 22]}},
+    {"kind": "box", "layer": "Base", "slot": 1,
+     "region": {"min": [13, 2, 13], "max": [19, 18, 19]}},
+    {"kind": "box", "layer": "Base", "slot": 1,
+     "region": {"min": [11, 18, 11], "max": [21, 20, 21]}}
+  ]
+}</code></pre><h3>3. Inspect real pixels</h3><p>Call <code>voxelite_render</code> and inspect the returned image block:</p><pre><code class="language-json">{
+  "model_id": "&lt;returned model_id&gt;",
+  "views": ["iso", "front", "right", "back"],
+  "width": 512, "height": 512,
+  "image_mode": "contact_sheet",
+  "revision": "&lt;current revision&gt;"
+}</code></pre><h3>4. Save the result</h3><p>Call <code>voxelite_document_save</code> with the latest captured revision:</p><pre><code class="language-json">{
+  "model_id": "&lt;returned model_id&gt;",
+  "expected_epoch": "&lt;returned epoch&gt;",
+  "expected_revision": "&lt;current revision&gt;",
+  "operation_id": "&lt;fresh UUID&gt;",
+  "path": "first-tower.voxl"
+}</code></pre><p>Then call <a href="/docs/mcp/#voxelite_export_glb">voxelite_export_glb</a>. Exports use <code>revision</code>, without mutation guards or operation IDs:</p><pre><code class="language-json">{
+  "model_id": "&lt;returned model_id&gt;",
+  "revision": "&lt;current revision&gt;",
+  "path": "first-tower.glb"
+}</code></pre><p>Save before disconnecting: edits and undo history live in memory. Existing export paths reject; choose a fresh output name.</p>
+<h2 id="recover">When a call fails</h2><p>Check <code>isError</code> and the structured envelope's <code>ok</code> flag. On a revision conflict, read current state and rebase. On a lost response, retry only the identical request with the same operation ID in the same session. Never guess whether an edit committed. <a href="/docs/mcp/#errors">Read the error guide</a> before retrying.</p>
+<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main><aside class="docs-toc"><p class="eyebrow">ON THIS PAGE</p><nav aria-label="Page sections"><a href="#build">Build from source</a><a href="#web">Build the web editor and site</a><a href="#hands">Make your first edit by hand</a><a href="#connect">Connect your agent</a><a href="#first-model">Your first model through MCP</a><a href="#recover">When a call fails</a></nav></aside></div><footer class="shell footer"><div><a class="brand" href="/">Voxelite</a><span class="caption">by World Wide Webb</span></div><nav aria-label="Footer"><a href="/gallery/">Gallery</a><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
