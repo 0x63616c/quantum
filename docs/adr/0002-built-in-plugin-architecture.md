@@ -15,7 +15,7 @@ an empty lighting slot uses deterministic ambient shading.
 
 ## Context
 
-Quantum needs one source of metadata for commands, settings and formats so the
+Voxelite needs one source of metadata for commands, settings and formats so the
 shell can present installed features consistently and users can disable optional
 features without weakening document or save guarantees.
 
@@ -31,10 +31,10 @@ MCP/agent tools and FPS/stats as standard built-in plugins that can be disabled.
 This splits feature exposure and orchestration; document invariants and shared
 engine operations remain core responsibilities.
 
-`quantum-plugin-api` is pure Rust with no GPUI or app dependency. Built-ins use
+`voxelite-plugin-api` is pure Rust with no GPUI or app dependency. Built-ins use
 only this crate as their interface to the host (dogfooding the same API), without
 privileged access to app internals. Statically linked plugins declare manifests
-with stable reverse-DNS IDs such as `dev.quantum.tools`, localization keys,
+with stable reverse-DNS IDs such as `dev.voxelite.tools`, localization keys,
 versions and enablement policy. A `Registrar` collects data-only commands, tools,
 command transforms, panels, formats, render passes, settings and `.voxl` data
 section declarations into `Contributions`, preserving registration order across kinds.
@@ -57,7 +57,7 @@ service locator.
 voxel and face normal, bounded work-plane intersection, visible composite sample,
 layer voxel lookup, palette, selected color, active layer, visibility/lock state
 and document bounds. It exposes no engine, mutations, mirror settings or GUI.
-The API depends on `quantum-core`, `quantum-mesh` and `quantum-render-plan`
+The API depends on `voxelite-core`, `voxelite-mesh` and `voxelite-render-plan`
 and re-exports the core command/value types, portable greedy geometry and portable
 render graph/kernel declarations. It defines export errors without a renderer or
 built-in exporter dependency; plugin crates still depend only on the API and
@@ -97,7 +97,7 @@ The `0.6.0` bump adds the `Pin` variant to the exhaustive `OverlayPrimitive` enu
 portable discussion panel types and a default-unbound `comments_panel` lookup.
 Optional overlay projection/picking/discussion queries default to no capability.
 The `0.8.0` bump removes the shared `encoding` module: GLB/PNG encoders now belong
-to `quantum-plugin-exporters::encoding`. Export errors are defined in the API with
+to `voxelite-plugin-exporters::encoding`. Export errors are defined in the API with
 the same variants and messages; export callbacks, images and capabilities are unchanged.
 The compatible `0.8.1` addition publishes the comments/palette panel IDs and palette
 preset setting key used by shell/MCP adapters. Plugins re-export the old names.
@@ -112,7 +112,7 @@ binary ABI or an external code loader.
 
 ## Render pass graph and shadows/lighting
 
-`quantum-render-plan::PASS_GRAPH` (re-exported by `quantum-render`) documents the logical order:
+`voxelite-render-plan::PASS_GRAPH` (re-exported by `voxelite-render`) documents the logical order:
 `BeforeScene -> Geometry -> Lighting -> AfterScene -> Overlay -> PostProcess`.
 Core owns geometry/depth, coverage, outlines, antialiasing resolve and presentation.
 The host sorts contributions by slot, preserving plugin/declaration registration
@@ -120,17 +120,17 @@ order for ties. Existing portable overlays still use their background/foreground
 shell composition paths. Unbound declarations are inert; slots do not grant
 arbitrary access to a framebuffer or an engine.
 
-`dev.quantum.shadows-lighting` ships enabled and can be disabled. It declares
-`dev.quantum.shadows-lighting.surface` in Lighting and selects the typed kernel
+`dev.voxelite.shadows-lighting` ships enabled and can be disabled. It declares
+`dev.voxelite.shadows-lighting.surface` in Lighting and selects the typed kernel
 ID `RenderKernel::ExactShadowsLighting` (diagnostic ID
-`dev.quantum.render.exact-shadows-lighting`) through `PassCx::select`.
+`dev.voxelite.render.exact-shadows-lighting`) through `PassCx::select`.
 `PassCx` exposes only the admitted slot, its owner's settings and the selection
 sink. This kernel is accepted only in Lighting; unsupported slot/kernel pairs
 return false without modifying the plan. Repeated selections replace the same
 surface implementation, never multiply its illumination. The API re-exports
-portable graph/kernel data from the dependency-free `quantum-render-plan` crate,
+portable graph/kernel data from the dependency-free `voxelite-render-plan` crate,
 so plugin crates and hosts never depend on the renderer, and exposes no GPU resource types. Built-ins still depend only
-on `quantum-plugin-api`.
+on `voxelite-plugin-api`.
 
 This is deliberately an implementation selection, with no new lighting parameters.
 Moving shading code or changing physical passes is riskier than retaining the
@@ -172,7 +172,7 @@ Metal execution/presentation still requires macOS hardware.
 
 ## Tool behavior and transaction boundary
 
-`quantum-plugin-tools` implements Place, Erase, Paint, Fill, Box and Picker through
+`voxelite-plugin-tools` implements Place, Erase, Paint, Fill, Box and Picker through
 the API's `Tool` trait. `ToolInput` describes hover, preview, pointer click or an
 explicit keyboard coordinate, plus the pending box anchor. Stateless tools return
 `ToolOutcome`: ordered typed core `Command`s, transaction label, optional preview
@@ -214,7 +214,7 @@ The editor's live registry check disables stale shell commands and toggles.
 
 ## Gizmo and grid overlays
 
-`quantum-plugin-gizmo-grid` (`dev.quantum.gizmo-grid`) owns the existing six-ended
+`voxelite-plugin-gizmo-grid` (`dev.voxelite.gizmo-grid`) owns the existing six-ended
 camera orientation widget and ground grid. The repository's gizmo is a camera
 navigation widget, not a voxel transform tool: dragging orbits, clicking snaps to
 one of six signed axes, and double-clicking invokes the core isometric fit action.
@@ -242,9 +242,9 @@ batch through its existing human transaction path before adopting camera or gest
 feedback. The built-in gizmo returns no document commands, so navigation never adds
 undo entries or changes `.voxl` bytes.
 
-The grid command retains `dev.quantum.core.grid` as an explicit compatibility ID,
+The grid command retains `dev.voxelite.core.grid` as an explicit compatibility ID,
 now owned by the plugin. Its menu placement, label and lack of default binding are
-unchanged. The declared boolean `dev.quantum.gizmo-grid.grid_enabled` defaults to
+unchanged. The declared boolean `dev.voxelite.gizmo-grid.grid_enabled` defaults to
 true. The shell bridges it to the existing app-owned `Preferences.grid` JSON field;
 there is no settings-file or `.voxl` migration. Settings rows read the enabled
 registry. Disabling the plugin removes its command, setting, widget and grid while
@@ -260,7 +260,7 @@ bindings across enable/disable/enable, alongside tools and command transforms.
 
 ## Export formats and persistence boundary
 
-`quantum-plugin-exporters` (`dev.quantum.exporters`) contributes GLB, PNG, HEX
+`voxelite-plugin-exporters` (`dev.voxelite.exporters`) contributes GLB, PNG, HEX
 and GPL formats and their stateless byte callbacks. Document/view formats appear
 in the Save/Export dialog; palette formats appear in the palette panel. This
 category preserves the existing dialog choices, labels, extension handling and
@@ -271,11 +271,11 @@ remain core operations and are never dependent on a format contribution.
 `ExportCx` exposes an immutable captured `Snapshot` (content, palette and bounds)
 and rendering of only the host-selected view or contact sheet to RGBA8 pixels.
 It supplies no engine, undo history, GUI, filesystem or general service access.
-The GLB and PNG encoders live in `quantum-plugin-exporters::encoding`, with
+The GLB and PNG encoders live in `voxelite-plugin-exporters::encoding`, with
 byte-stable characterization fixtures alongside them. Geometry is supplied through
-`quantum-plugin-api`; HEX/GPL use the API's existing palette type. No extra workspace
+`voxelite-plugin-api`; HEX/GPL use the API's existing palette type. No extra workspace
 dependency is allowed for plugins. The dependency-rule tests explicitly reject
-direct `quantum-mesh` dependencies and permit the API to depend on it, without
+direct `voxelite-mesh` dependencies and permit the API to depend on it, without
 widening the allowed plugin set. MCP render feedback encodes PNG directly with
 `png`, independently of exporter enablement.
 
@@ -321,7 +321,7 @@ disabled.
 
 ## Palette panel and local library boundary
 
-`quantum-plugin-palette` (`dev.quantum.palette`) owns the exact built-in presets,
+`voxelite-plugin-palette` (`dev.voxelite.palette`) owns the exact built-in presets,
 HEX/GPL/JASC-PAL import, local library validation and serialization, swatch selection,
 add/remove/color/name edits, duplication, and display-order moves. Preset construction
 and manual ordering introduce no generator or sorting command. Manager drag moves
@@ -331,8 +331,8 @@ redo. The existing HEX/GPL export encoders remain on the exporters path; the
 palette plugin adds its JASC-PAL exporter to the same registry. Manager text exports
 for all three formats are also available as a palette interaction outcome.
 
-The plugin declares `dev.quantum.palette.panel`, its three existing shell commands,
-and the Choice setting `dev.quantum.palette.preset`. The choice drives the existing
+The plugin declares `dev.voxelite.palette.panel`, its three existing shell commands,
+and the Choice setting `dev.voxelite.palette.preset`. The choice drives the existing
 project/preset chooser and defaults to project colors; it remains transient per
 editor, with no new settings row or preferences-file migration. Custom library JSON
 retains the exact `entries` array, UUIDs, names, slots and order, the 128-entry limit,
@@ -438,10 +438,10 @@ scoped writes, ordered migrations, failures/panics, and replay/undo preservation
 
 ## Comments and pins (PR 11)
 
-`quantum-plugin-comments` (`dev.quantum.comments`) now owns discussion command
+`voxelite-plugin-comments` (`dev.voxelite.comments`) now owns discussion command
 proposals, voxel/region placement, transient selection and numbering, filtering,
 thread presentation data, pin visibility/occlusion descriptions and MCP listing.
-It contributes `dev.quantum.comments.tool`, `.panel` and `.pins` alongside the
+It contributes `dev.voxelite.comments.tool`, `.panel` and `.pins` alongside the
 existing `.comment` command, retaining its C shortcut, icon, menu and order.
 The separate placement mode remains separate from the six voxel tool choices.
 
@@ -504,21 +504,21 @@ Core crates live in `crates/*`; plugin packages live in `crates/plugins/*`.
 includes both globs and excludes only `crates/plugins/Cargo.toml`, because excluding
 the container directory would also exclude the plugin packages beneath it.
 
-Plugin packages may depend only on `quantum-plugin-api` and external crates in
+Plugin packages may depend only on `voxelite-plugin-api` and external crates in
 normal and build dependencies. This includes optional, renamed and target-specific
 dependencies. Direct dependencies on any other workspace crate, including
-`quantum-core`, are forbidden; shared core types must be exposed through the API
+`voxelite-core`, are forbidden; shared core types must be exposed through the API
 crate. Dev-dependencies are exempt so tests can use the host's conformance harness.
-`cargo xtask check plugin-deps` enforces this boundary from Cargo metadata in CI,
+`scripts/check-plugin-deps.py` enforces this boundary from Cargo metadata in CI,
 trying locked offline resolution first and retrying without offline mode if needed.
 
-`quantum-plugin-example` is a minimal template (`dev.quantum.example`,
+`voxelite-plugin-example` is a minimal template (`dev.voxelite.example`,
 `builtin = false`) with one command declaration and a conformance test. It is not
 linked into the app and adds no built-in feature or command execution.
 
 ## Host
 
-`quantum-plugin-host` is pure Rust and depends on the API without GPUI. It validates
+`voxelite-plugin-host` is pure Rust and depends on the API without GPUI. It validates
 manifests and collects declarations once per plugin. The read-only `Registry`
 exposes only successfully enabled plugins, preserving plugin and declaration
 registration order. Catalog conflicts include disabled plugins; duplicate IDs
@@ -556,18 +556,18 @@ from aborts or roll back arbitrary plugin-owned external effects.
 ## Consequences
 
 The API and host have independent unit tests and a reusable conformance harness;
-the app's `app_host()` registers required `dev.quantum.core`, then tools, mirror,
+the app's `app_host()` registers required `dev.voxelite.core`, then tools, mirror,
 gizmo/grid, palette, comments, agent and exporters built-ins, all enabled. These seven
 plugin crates depend only on the API outside their tests. Core currently owns the
 remaining shell commands, including camera navigation and native saving.
 
-`quantum-plugins-builtin`, outside the plugin directory, owns the ordered built-in
+`voxelite-plugins-builtin`, outside the plugin directory, owns the ordered built-in
 lists. The app registers its core plugin then calls `register_all`; the MCP binary
 supplies `mcp_host` as a request-thread factory. MCP's library depends on portable
 API/host contracts, with concrete plugins only in tests. The binary shares the
 package to preserve existing build and release commands, so its composition
 dependency is optional behind the default `standalone` feature. Library consumers
-disable default features; `cargo check -p quantum-mcp --locked --lib --no-default-features`
+disable default features; `cargo check -p voxelite-mcp --locked --lib --no-default-features`
 verifies that no built-in imports leak into the adapter. Standalone format order,
 the full schema catalog and attached live-host dispatch remain unchanged.
 
@@ -607,5 +607,3 @@ partial-draw disposal, error handling and panic quarantine.
 
 The palette manager contract, preview lifecycle, and backward-compatible recent
 color persistence are described in [palette-manager.md](../palette-manager.md).
-
-Update (2026-10-27): the browser/wasm build was removed; Quantum is macOS-only.

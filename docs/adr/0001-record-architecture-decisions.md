@@ -6,7 +6,7 @@ Status: Accepted for documentation; the refactors below remain recommendations.
 
 ## Context
 
-The Quantum architecture review of commit `09b29d3` identified overlapping app
+The Voxelite architecture review of commit `09b29d3` identified overlapping app
 and MCP lifecycle responsibilities and a large `EditorView`, with no glossary or
 ADR directory to record shared terminology and decisions.
 

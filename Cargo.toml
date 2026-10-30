@@ -5,101 +5,73 @@ exclude = ["crates/plugins/Cargo.toml"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.1"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
-tracing = "0.1.44"
-quantum-brand = { path = "crates/quantum-brand" }
-slotmap = "1.1.1"
-quantum-core = { path = "crates/quantum-core", version = "0.4.1" }
-quantum-format = { path = "crates/quantum-format" }
-quantum-mesh = { path = "crates/quantum-mesh" }
-quantum-plugin-api = { path = "crates/quantum-plugin-api" }
-quantum-plugin-host = { path = "crates/quantum-plugin-host" }
-quantum-render = { path = "crates/quantum-render" }
-quantum-render-plan = { path = "crates/quantum-render-plan" }
-quantum-mcp = { path = "crates/quantum-mcp", default-features = false }
-quantum-plugins-builtin = { path = "crates/quantum-plugins-builtin" }
-quantum-ui = { path = "crates/quantum-ui" }
-quantum-plugin-agent = { path = "crates/plugins/quantum-plugin-agent" }
-quantum-plugin-comments = { path = "crates/plugins/quantum-plugin-comments" }
-quantum-plugin-exporters = { path = "crates/plugins/quantum-plugin-exporters" }
-quantum-plugin-gizmo-grid = { path = "crates/plugins/quantum-plugin-gizmo-grid" }
-quantum-plugin-mirror = { path = "crates/plugins/quantum-plugin-mirror" }
-quantum-plugin-palette = { path = "crates/plugins/quantum-plugin-palette" }
-quantum-plugin-shadows-lighting = { path = "crates/plugins/quantum-plugin-shadows-lighting" }
-quantum-plugin-tools = { path = "crates/plugins/quantum-plugin-tools" }
-quantum-crash = { path = "crates/quantum-crash" }
-clap = { version = "4.5", default-features = false, features = ["derive", "std", "help", "usage", "error-context"] }
+voxelite-core = { path = "crates/voxelite-core" }
+voxelite-format = { path = "crates/voxelite-format" }
+voxelite-mesh = { path = "crates/voxelite-mesh" }
+voxelite-plugin-api = { path = "crates/voxelite-plugin-api" }
+voxelite-plugin-host = { path = "crates/voxelite-plugin-host" }
+voxelite-render = { path = "crates/voxelite-render" }
+voxelite-render-plan = { path = "crates/voxelite-render-plan" }
+voxelite-mcp = { path = "crates/voxelite-mcp", default-features = false }
+voxelite-plugins-builtin = { path = "crates/voxelite-plugins-builtin" }
+voxelite-ui = { path = "crates/voxelite-ui" }
+voxelite-plugin-agent = { path = "crates/plugins/voxelite-plugin-agent" }
+voxelite-plugin-comments = { path = "crates/plugins/voxelite-plugin-comments" }
+voxelite-plugin-exporters = { path = "crates/plugins/voxelite-plugin-exporters" }
+voxelite-plugin-gizmo-grid = { path = "crates/plugins/voxelite-plugin-gizmo-grid" }
+voxelite-plugin-mirror = { path = "crates/plugins/voxelite-plugin-mirror" }
+voxelite-plugin-palette = { path = "crates/plugins/voxelite-plugin-palette" }
+voxelite-plugin-shadows-lighting = { path = "crates/plugins/voxelite-plugin-shadows-lighting" }
+voxelite-plugin-tools = { path = "crates/plugins/voxelite-plugin-tools" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 semver = "1.0"
-syn = { version = "2.0.119", features = ["full", "visit"] }
-proc-macro2 = { version = "1", features = ["span-locations"] }
-quote = "1"
-serde-saphyr = "2.0.0"
 thiserror = "2.0"
-miette = { version = "7.6", features = ["fancy-no-backtrace"] }
 uuid = { version = "1.18", features = ["serde", "v4"] }
 sha2 = "0.10"
 proptest = "1.9"
-divan = "0.1.21"
 png = "0.18"
-percent-encoding = "2"
-pulldown-cmark = { version = "0.13", default-features = false }
-url = "2"
-glob = "0.3"
-plist = "1.8"
-regex = "1"
-roxmltree = "0.21"
-resvg = { version = "=0.46.0", default-features = false, features = ["text"] }
-rustix = { version = "1.1", features = ["process"] }
-signal-hook = "0.3"
-xshell = "0.2.7"
-toml = "1.1"
 glam = "0.30"
 base64 = "0.22"
 futures-channel = "0.3"
 gpui = { package = "gpui-unofficial", version = "=1.25.3", default-features = false }
 objc2 = "0.6.5"
 tempfile = "3"
-insta = { version = "1.49", default-features = false, features = ["json"] }
-schemars = "1.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
 
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
-unwrap_used = "warn"
-expect_used = "warn"
-panic = "warn"
-todo = "warn"
-dbg_macro = "warn"
-print_stdout = "warn"
+all = "warn"
 
 [profile.release]
 lto = "thin"
 codegen-units = 1
 
-[profile.ci-dist]
+# Keep CPU viewport interaction responsive in the native development build.
+[profile.dev.package.voxelite-render]
+opt-level = 3
+
+[profile.dev.package.voxelite-mesh]
+opt-level = 3
+
+[profile.dev.package.voxelite-core]
+opt-level = 2
+
+# Fast browser iteration with optimized rasterization and a compact wasm module.
+[profile.web]
 inherits = "release"
+opt-level = 2
 lto = false
 codegen-units = 16
-
-# Keep CPU viewport interaction responsive in the native development build.
-[profile.dev.package.quantum-render]
-opt-level = 3
-
-[profile.dev.package.quantum-mesh]
-opt-level = 3
-
-[profile.dev.package.quantum-core]
-opt-level = 2
+strip = "debuginfo"
 
 # Pinned GPUI surface handoff fixes; see vendor/README.md.
 [patch.crates-io]
