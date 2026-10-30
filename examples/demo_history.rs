@@ -1,9 +1,8 @@
 //! Regenerate the bundled demo without a renderer or display.
-//! cargo run --locked -p quantum-format --example demo-history [-- --check]
+//! cargo run --locked -p voxelite-format --example demo-history [-- --check]
 #[path = "support/autumn_workshop.rs"]
 mod autumn_workshop;
 
-#[expect(clippy::expect_used, reason = "internal invariant: generated recipe")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/autumn-workshop.voxl");
@@ -15,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project = autumn_workshop::build()?;
     let bytes = project.to_bytes()?;
     // Validate the serialized recipe, including replay, before replacing the asset.
-    quantum_format::from_bytes(&bytes)?;
+    voxelite_format::from_bytes(&bytes)?;
     if check {
         if std::fs::read(&path)? != bytes {
             return Err("bundled demo differs; rerun without --check".into());
