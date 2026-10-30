@@ -1,0 +1,87 @@
+[package]
+name = "voxelite-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["native"]
+native = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_platform", "dep:image", "dep:env_logger", "dep:gpui_apple"]
+web = ["dep:voxelite-ui", "dep:gpui", "dep:gpui_web", "dep:image", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:js-sys", "dep:futures-channel"]
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "voxelite"
+path = "src/main.rs"
+required-features = ["native"]
+
+[dependencies]
+voxelite-ui = { workspace = true, optional = true }
+voxelite-core.workspace = true
+voxelite-plugin-api.workspace = true
+voxelite-plugin-host.workspace = true
+voxelite-plugins-builtin.workspace = true
+voxelite-plugin-mirror.workspace = true
+voxelite-plugin-gizmo-grid.workspace = true
+voxelite-plugin-palette.workspace = true
+voxelite-plugin-comments.workspace = true
+voxelite-format.workspace = true
+voxelite-render.workspace = true
+glam.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+anyhow = "1"
+web-time = "1"
+gpui = { workspace = true, optional = true }
+gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.25.3", default-features = false, features = ["x11", "wayland", "font-kit"], optional = true }
+image = { version = "0.25", default-features = false, optional = true }
+
+# Keep unsafe denied except in the audited macOS FFI modules.
+# `forbid` cannot be locally overridden for the Objective-C runtime bridge.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+
+[dependencies.env_logger]
+version = "0.11"
+optional = true
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+voxelite-mcp.workspace = true
+tempfile.workspace = true
+png.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+gpui_apple = { package = "gpui-apple-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
+objc2.workspace = true
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSButton", "NSControl", "NSColor", "NSColorSpace", "NSColorSampler", "objc2-core-foundation", "NSPanel", "NSPopUpButton", "NSResponder", "NSSavePanel", "NSTextField", "NSView", "NSWindow", "block2", "objc2-uniform-type-identifiers"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSObject", "NSString", "NSURL"] }
+objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
+block2 = "0.6.2"
+futures-channel.workspace = true
+libloading = "0.8.9"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+gpui_web = { package = "gpui-web-gpui-unofficial", version = "=1.25.3", default-features = false, optional = true }
+wasm-bindgen = { version = "0.2.120", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+futures-channel = { workspace = true, optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "HtmlInputElement", "HtmlAnchorElement", "FileList", "File", "Blob", "BlobPropertyBag", "Url", "Storage", "Event", "EventTarget", "Location", "BeforeUnloadEvent"] }
+uuid = { workspace = true, features = ["js"] }
+
+[target.'cfg(target_os = "macos")'.dependencies.voxelite-render]
+workspace = true
+features = ["gpu"]
+
+[dev-dependencies]
+voxelite-plugin-tools.workspace = true
+voxelite-plugin-exporters.workspace = true
+voxelite-plugin-shadows-lighting.workspace = true
