@@ -1,0 +1,29 @@
+name: Feature
+description: "A new capability or user-facing improvement."
+title: "feat: "
+labels: ["type:feat"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why"
+      description: "The user or agent problem this solves."
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: "Proposal"
+      description: "What it should do, and what is out of scope."
+    validations:
+      required: false
+  - type: textarea
+    id: done
+    attributes:
+      label: "Done when"
+      description: "Observable outcomes. Each one is checked against the merged PR before closing."
+      value: |
+        - [ ] 
+        - [ ] Tests or evidence linked in the PR
+    validations:
+      required: true

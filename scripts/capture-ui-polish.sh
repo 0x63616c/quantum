@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [[ -z "${BIN:-}" ]]; then
-  BIN="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"] + "/debug/quantum")')"
+  BIN="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"] + "/debug/voxelite")')"
 fi
 BIN="$(realpath "$BIN")"
 mkdir -p "${OUT:-/workspace/ui-polish-shots/after}"
@@ -17,9 +17,9 @@ set -euo pipefail
 export XDG_RUNTIME_DIR
 XDG_RUNTIME_DIR="$(mktemp -d)"
 chmod 700 "$XDG_RUNTIME_DIR"
-export QUANTUM_DATA_DIR="$XDG_RUNTIME_DIR/data" XDG_CURRENT_DESKTOP=GNOME
+export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data" XDG_CURRENT_DESKTOP=GNOME
 export XDG_CACHE_HOME="$XDG_RUNTIME_DIR/cache" XDG_CONFIG_HOME="$XDG_RUNTIME_DIR/config" GSETTINGS_BACKEND=memory
-export QUANTUM_CAPTURE_STATUS=1
+export VOXELITE_CAPTURE_STATUS=1
 unset WAYLAND_DISPLAY
 app_pid=''
 wm_pid=''
@@ -39,7 +39,7 @@ fi
 app_pid=$!
 window=''
 for attempt in {1..150}; do
-  window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Autumn Workshop.*Quantum' 2>/dev/null | head -1 || true)"
+  window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name 'Autumn Workshop.*Voxelite' 2>/dev/null | head -1 || true)"
   [[ -n "$window" ]] && break
   kill -0 "$app_pid"
   sleep 0.2

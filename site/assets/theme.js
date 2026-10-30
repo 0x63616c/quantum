@@ -1,7 +1,7 @@
 // Resolve appearance before first paint; storage is optional, never required.
 (() => {
   let saved;
-  try { saved = localStorage.getItem('quantum-theme'); } catch { /* private storage */ }
+  try { saved = localStorage.getItem('voxelite-theme'); } catch { /* private storage */ }
   const system = matchMedia('(prefers-color-scheme: light)');
   const apply = theme => {
     document.documentElement.dataset.theme = theme;
@@ -22,7 +22,7 @@
     apply(document.documentElement.dataset.theme);
     document.querySelectorAll('.theme-toggle').forEach(button => button.addEventListener('click', () => {
       saved = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem('quantum-theme', saved); } catch { /* appearance still works */ }
+      try { localStorage.setItem('voxelite-theme', saved); } catch { /* appearance still works */ }
       apply(saved);
     }));
   });

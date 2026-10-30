@@ -1,7 +1,7 @@
 {
   "source": "examples/autumn-workshop.voxl",
   "operation": {
-    "tool": "quantum_voxels_box",
+    "tool": "voxelite_voxels_box",
     "region": {
       "min": [
         11,
