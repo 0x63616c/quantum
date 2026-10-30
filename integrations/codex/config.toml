@@ -1,3 +1,5 @@
-[mcp_servers.quantum]
-command = "/Applications/Quantum.app/Contents/MacOS/quantum-mcp"
-args = ["--root","<project dir>"]
+[mcp_servers.voxelite]
+command = "/absolute/path/to/voxelite-build/target/release/voxelite-mcp"
+args = ["--root", "/absolute/path/to/project"]
+startup_timeout_sec = 10
+tool_timeout_sec = 120

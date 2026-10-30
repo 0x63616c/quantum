@@ -1,9 +1,13 @@
 {
-  "name": "quantum",
+  "name": "voxelite",
   "version": "1.0.0",
-  "description": "Quantum website capture and verification tooling",
+  "description": "Standalone Voxelite editor UI concepts",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "build:concepts": "node scripts/build-concepts.mjs",
+    "render": "node scripts/render.mjs"
+  },
   "keywords": [],
   "type": "module",
   "devDependencies": {
