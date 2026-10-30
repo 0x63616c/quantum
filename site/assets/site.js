@@ -1,56 +1,4 @@
 // Progressive enhancement only: all navigation and documentation remain static.
-for (const block of document.querySelectorAll('[data-install]')) {
-  const panels = [...block.querySelectorAll('[data-install-panel]')];
-  const tabs = document.createElement('div');
-  tabs.className = 'install-tabs';
-  tabs.setAttribute('role', 'tablist');
-  tabs.setAttribute('aria-label', 'MCP host');
-  const buttons = panels.map(panel => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.id = `${panel.id}-tab`;
-    button.textContent = panel.dataset.installPanel;
-    button.setAttribute('role', 'tab');
-    button.setAttribute('aria-controls', panel.id);
-    panel.setAttribute('role', 'tabpanel');
-    panel.setAttribute('aria-labelledby', button.id);
-    panel.tabIndex = 0;
-    button.addEventListener('click', () => select(panel));
-    tabs.append(button);
-    return button;
-  });
-  function select(selected) {
-    panels.forEach((panel, index) => {
-      const active = panel === selected;
-      panel.hidden = !active;
-      buttons[index].setAttribute('aria-selected', String(active));
-      buttons[index].tabIndex = active ? 0 : -1;
-    });
-  }
-  tabs.addEventListener('keydown', event => {
-    const index = buttons.indexOf(event.target);
-    if (index < 0) return;
-    let next;
-    if (event.key === 'ArrowRight') next = (index + 1) % buttons.length;
-    else if (event.key === 'ArrowLeft') next = (index + buttons.length - 1) % buttons.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = buttons.length - 1;
-    else return;
-    event.preventDefault();
-    select(panels[next]);
-    buttons[next].focus();
-  });
-  const selectFromHash = () => {
-    const panel = panels.find(panel => `#${panel.id}` === location.hash);
-    if (panel) select(panel);
-  };
-  block.prepend(tabs);
-  block.classList.add('install-enhanced');
-  select(panels[0]);
-  selectFromHash();
-  window.addEventListener('hashchange', selectFromHash);
-}
-
 for (const link of document.querySelectorAll('[data-markdown]')) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -116,12 +64,9 @@ for (const pre of document.querySelectorAll('.docs-content pre')) {
 }
 
 // Native disclosures keep both menus usable without JavaScript. Enhancement
-// dismisses them on navigation, focus leaving, outside clicks and Escape.
+// dismisses them on navigation, outside clicks and Escape without trapping focus.
 const docsMenus = document.querySelectorAll('.docs-mobile-nav details');
 for (const menu of docsMenus) {
-  menu.addEventListener('focusout', event => {
-    if (!menu.contains(event.relatedTarget)) menu.open = false;
-  });
   menu.addEventListener('click', event => {
     const anchor = event.target.closest('a');
     if (!anchor) return;

@@ -7,7 +7,7 @@ import sys
 import uuid
 
 root = pathlib.Path(__file__).resolve().parents[2]
-process = subprocess.Popen([str(root / 'target/debug/quantum-mcp'), '--connect', sys.argv[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+process = subprocess.Popen([str(root / 'target/debug/voxelite-mcp'), '--connect', sys.argv[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 serial = 0
 
 def rpc(method, params):
@@ -20,7 +20,7 @@ def rpc(method, params):
     return response['result']
 
 def tool(name, args):
-    result = rpc('tools/call', {'name': 'quantum_' + name, 'arguments': args})
+    result = rpc('tools/call', {'name': 'voxelite_' + name, 'arguments': args})
     assert not result.get('isError'), result
     return result['structuredContent']
 

@@ -1,34 +1,10 @@
 node_modules/
-__pycache__/
 .DS_Store
 /target/
 
-/site/docs/
-/site/docs.md
-/site/index.html
-/site/404.html
-/site/download/
-/site/llms.txt
-/site/llms-full.txt
-/site/sitemap.xml
-/site/robots.txt
-/site/assets/mcp-tools.json
-/site/assets/integrations/
-/site/assets/skills/
-/site/assets/quantum-skills.zip
+/web/dist/
+/site/app/
+/site/assets/voxelite-source.tar.gz
+/target-webdeploy/
 
 /dist/
-
-/screenshots/
-
-*.snap.new
-*.pending-snap
-/site/changelog/
-/site/blog/
-
-# Impeccable runtime state; only shared configuration belongs in git.
-/.impeccable/*
-!/.impeccable/config.json
-*.local.json
-**/skills/impeccable/scripts/bin/
-**/skills/impeccable/scripts/.cache/

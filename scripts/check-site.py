@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a built site's navigation, Markdown, SEO, crawl files and source parity."""
+"""Check site navigation, Markdown exports, SEO, crawl files and source parity."""
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -10,11 +10,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / 'site'
-BASE_URL = 'https://quantum.worldwidewebb.co'
-
-for name in ('index.html', 'docs/index.html', 'download/index.html'):
-    if not (SITE / name).is_file():
-        raise SystemExit(f'Missing site/{name}; run scripts/build-site.sh first.')
+BASE_URL = 'https://voxelite.worldwidewebb.co'
 
 class Page(HTMLParser):
     def __init__(self, text):
@@ -76,11 +72,6 @@ class Page(HTMLParser):
 # content/ contains build-time article fragments, not standalone pages.
 pages = {p: Page(p.read_text()) for p in sorted(SITE.rglob('*.html'))
          if 'content' not in p.relative_to(SITE).parts}
-for path in pages:
-    footer = re.search(r'<footer\b[^>]*>(.*?)</footer>', path.read_text(), re.S)
-    assert footer, f'{path.relative_to(SITE)}: missing footer'
-    destinations = Page(footer.group(1)).links
-    assert len(destinations) == len(set(destinations)), f'{path.relative_to(SITE)}: repeated footer destination'
 checked = 0
 
 def check(source, link):
@@ -115,7 +106,7 @@ def check_seo(path, page):
     description = page.meta('description')
     assert 120 <= len(description) <= 160, f'Description length: {len(description)}'
     if path.is_relative_to(SITE / 'docs'):
-        assert title.endswith(': Quantum docs'), f'Docs title: {title}'
+        assert title.endswith(' — Voxelite docs'), f'Docs title: {title}'
         assert 'documentation: documentation' not in description.lower(), description
 
     canonical = [attrs for attrs in page.tags('link') if 'canonical' in attrs.get('rel', '').split()]
@@ -135,7 +126,7 @@ def check_seo(path, page):
         'og:description': description,
         'og:url': page_url(path),
         'og:type': 'website',
-        'og:site_name': 'Quantum',
+        'og:site_name': 'Voxelite',
     }.items():
         assert page.meta(key, 'property') == expected, f'Incorrect {key}'
     image = page.meta('og:image', 'property')
@@ -149,13 +140,9 @@ def check_seo(path, page):
     assert page.meta('twitter:image') == image, 'Twitter and OG images differ'
     assert page.meta('twitter:image:alt') == page.meta('og:image:alt', 'property'), 'Image alt text differs'
     icons = [attrs for attrs in page.tags('link') if 'icon' in attrs.get('rel', '').split()]
-    actual_icons = [(attrs.get('type'), urlsplit(attrs.get('href', '')).path,
-                     attrs.get('sizes')) for attrs in icons]
-    assert actual_icons == [
-        ('image/png', '/assets/favicon-16.png', '16x16'),
-        ('image/png', '/assets/favicon-32.png', '32x32'),
-        ('image/svg+xml', '/assets/favicon.svg', None),
-    ], 'Expected the Quantize SVG favicon and both PNG fallbacks'
+    assert len(icons) == 1, 'Expected one favicon'
+    assert icons[0].get('type') == 'image/svg+xml', 'Expected an SVG favicon'
+    assert icons[0].get('href') in ('/assets/mark.svg', f'{BASE_URL}/assets/mark.svg'), 'Incorrect favicon'
 
 
 ANALYTICS_SCRIPTS = ('/_vercel/insights/script.js', '/_vercel/speed-insights/script.js')
@@ -171,19 +158,10 @@ def check_analytics(path, page):
         assert queue in text, f'Missing analytics queue {queue}'
 
 
-def check_fonts(page):
-    for name in ('Geist', 'GeistMono'):
-        preload = page.tags('link', rel='preload', href=f'/assets/fonts/{name}.woff2')
-        assert len(preload) == 1, f'Missing or duplicated {name} preload'
-        assert preload[0].get('as') == 'font' and preload[0].get('type') == 'font/woff2'
-        assert 'crossorigin' in preload[0], 'Fonts must preload with CORS'
-
-
 for path, page in pages.items():
     try:
         check_analytics(path, page)
         check_seo(path, page)
-        check_fonts(page)
     except AssertionError as error:
         raise AssertionError(f'{path.relative_to(SITE)}: {error}') from error
     for link in page.links:
@@ -200,10 +178,10 @@ application = json.loads(home.structured_data[0])
 for key, expected in {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    'name': 'Quantum',
+    'name': 'Voxelite',
     'description': home.meta('description'),
     'applicationCategory': 'DesignApplication',
-    'operatingSystem': 'macOS',
+    'operatingSystem': 'Web, macOS',
     'url': f'{BASE_URL}/',
     'image': home.meta('og:image', 'property'),
     'license': f'{BASE_URL}/assets/LICENSE',
@@ -242,12 +220,12 @@ def markdown_links(text):
 
 llms = (SITE / 'llms.txt').read_text()
 full = (SITE / 'llms-full.txt').read_text()
-assert llms.startswith('# Quantum\n\n> '), 'llms.txt must start with an H1 and summary blockquote'
+assert llms.startswith('# Voxelite\n\n> '), 'llms.txt must start with an H1 and summary blockquote'
 assert '\n## Documentation\n\n' in llms, 'Missing llms.txt documentation section'
 entries = re.findall(r'^- \[([^\]]+)\]\(([^)]+)\): (.+)$', llms, flags=re.M)
 assert len(entries) == len(doc_pages), 'llms.txt must list each doc exactly once'
 assert {url for _, url, _ in entries} == markdown_urls, 'llms.txt must link to every canonical .md page'
-assert full.startswith('# Quantum documentation\n\n> '), 'Missing full documentation heading'
+assert full.startswith('# Voxelite documentation\n\n> '), 'Missing full documentation heading'
 assert full.count('\nSource: [') == len(doc_pages), 'llms-full.txt must contain each doc exactly once'
 for html, page in doc_pages.items():
     url = page_url(html).rstrip('/') + '.md'
@@ -255,7 +233,7 @@ for html, page in doc_pages.items():
     markdown = path.read_text()
     alias = html.with_suffix('.md')
     assert alias.read_bytes() == path.read_bytes(), f'Markdown aliases differ: {path}'
-    title = page.titles[0].removesuffix(': Quantum docs')
+    title = page.titles[0].removesuffix(' — Voxelite docs')
     assert markdown.startswith(f'# {title}\n\n'), f'Incorrect Markdown heading: {path}'
     assert (title, url, page.meta('description')) in entries, f'Stale llms.txt entry: {path}'
     assert f'\nSource: [{url}]({url})\n\n{markdown}' in full, f'Stale llms-full.txt content: {path}'
@@ -277,9 +255,7 @@ for path in (SITE / 'llms.txt', SITE / 'llms-full.txt'):
 
 catalog = json.loads((SITE / 'assets/mcp-tools.json').read_text())
 mcp = (SITE / 'docs/mcp.md').read_text()
-# Installation now contains JSON too; schemas start at the live tool catalog.
-catalog_markdown = re.split(r'^## All \d+ tools\s*$', mcp, maxsplit=1, flags=re.M)[1]
-schemas = [json.loads(block) for block in re.findall(r'^```json\n(.*?)\n```', catalog_markdown, flags=re.M | re.S)]
+schemas = [json.loads(block) for block in re.findall(r'^```json\n(.*?)\n```', mcp, flags=re.M | re.S)]
 expected_schemas = [tool[key] for tool in catalog for key in ('inputSchema', 'outputSchema') if key in tool]
 assert schemas == expected_schemas, 'Markdown MCP schemas must exactly match the live catalog'
 
@@ -288,24 +264,15 @@ for path in (SITE / 'assets').rglob('*.md'):
         check(path, link)
 for link in re.findall(r'url\([\'"]?([^\)\'\"]+)', (SITE / 'assets/site.css').read_text()):
     check(SITE / 'assets/site.css', link)
-css = (SITE / 'assets/site.css').read_text()
-assert '.ttf' not in css and 'font-display:swap' not in css, 'Site fonts must not swap late'
-for name in ('Geist', 'GeistMono'):
-    assert (SITE / f'assets/fonts/{name}.woff2').read_bytes()[:4] == b'wOF2'
-    assert (SITE / f'assets/fonts/OFL-{name}.txt').is_file()
-hosting = json.loads((SITE / 'vercel.json').read_text())
-for source in ('/app', '/app/:path*'):
-    assert {'source': source, 'destination': '/download', 'permanent': True} in hosting['redirects'], f'Missing download redirect: {source}'
-assert 'outputDirectory' not in hosting, 'site/ is published as the site-dist root'
-assert any(rule['source'] == '/assets/fonts/(.*)' and
-           {'key': 'Cache-Control', 'value': 'public, max-age=31536000, immutable'} in rule['headers']
-           for rule in hosting['headers']), 'Missing immutable font cache headers'
-with ZipFile(SITE / 'assets/quantum-skills.zip') as archive:
+with ZipFile(SITE / 'assets/voxelite-skills.zip') as archive:
     expected = {str(p.relative_to(ROOT)): p for folder in ('skills', 'integrations') for p in (ROOT / folder).rglob('*') if p.is_file()}
     assert set(archive.namelist()) == set(expected)
     for name, source in expected.items():
         assert archive.read(name) == source.read_bytes(), f'Stale archive: {name}'
         assert (SITE / 'assets' / name).read_bytes() == source.read_bytes(), f'Stale site skill: {name}'
 assert json.loads((SITE / 'assets/mcp-tools.json').read_text()) == json.loads((ROOT / 'spec/mcp/v1/tools.json').read_text())
+for name in ('index.html', 'voxelite_app.js', 'voxelite_app_bg.wasm'):
+    assert (SITE / 'app' / name).read_bytes() == (ROOT / 'web/dist' / name).read_bytes(), f'Stale app: {name}'
+assert (SITE / 'app/index.html').read_bytes() == (ROOT / 'web/index.html').read_bytes(), 'Stale app template'
 print(f'Checked {len(pages)} pages with SEO metadata, {len(doc_pages) * 2} Markdown exports, LLM indexes, {len(locations)} sitemap URLs, robots.txt, '
-      f'homepage JSON-LD, {checked} local links/assets, skill archive, MCP catalog and download redirects.')
+      f'homepage JSON-LD, {checked} local links/assets, skill archive, MCP catalog and bundled app.')

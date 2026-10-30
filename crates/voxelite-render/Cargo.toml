@@ -1,0 +1,20 @@
+[package]
+name = "voxelite-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+voxelite-core.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.glam]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
