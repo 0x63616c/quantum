@@ -1,0 +1,32 @@
+[package]
+name = "voxelite-export"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+voxelite-core.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.voxelite-render]
+workspace = true
+[dependencies.serde_json]
+workspace = true
+[dependencies.png]
+workspace = true
+[dependencies.thiserror]
+workspace = true
+
+[dev-dependencies]
+gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
+proptest.workspace = true
+
+[dev-dependencies.voxelite-format]
+workspace = true
+
+[[example]]
+name = "cottage"
+path = "../../examples/cottage.rs"

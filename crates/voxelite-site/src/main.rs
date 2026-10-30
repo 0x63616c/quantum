@@ -1,0 +1,232 @@
+//! Static documentation generator. Discovery schemas come directly from the MCP
+//! server, so API names, required arguments and constraints cannot drift by hand.
+use serde_json::Value;
+use std::{error::Error, fmt::Write as _, fs, path::Path};
+use voxelite_mcp::VoxeliteServer;
+
+mod seo;
+
+const PAGES: &[(&str, &str, &str, &str)] = &[
+    (
+        "",
+        "Documentation",
+        "Explore Voxelite's native, browser and headless workflows, with guides to building the editor, connecting MCP agents, and working with voxel projects.",
+        include_str!("../../../site/content/overview.html"),
+    ),
+    (
+        "getting-started",
+        "Getting started",
+        "Build Voxelite locally, connect an MCP agent, and create your first voxel model. Follow a complete tutorial from atomic edits to renders and file exports.",
+        include_str!("../../../site/content/getting-started.html"),
+    ),
+    (
+        "mcp",
+        "MCP tools",
+        "Reference Voxelite's MCP tools, argument schemas and shared API contract. Learn how to batch edits, render models, handle conflicts, and save files.",
+        include_str!("../../../site/content/mcp.html"),
+    ),
+    (
+        "format",
+        "The .voxl format",
+        "Understand the .voxl project format: voxel coordinates, layers, palette slots, canonical JSON, portable versions, validation rules, and resource limits.",
+        include_str!("../../../site/content/format.html"),
+    ),
+    (
+        "skills",
+        "Agent skills",
+        "Install Voxelite agent skills for voxel workflows, palettes, primitive shapes, and render review. Download portable skills and try a first modeling brief.",
+        include_str!("../../../site/content/skills.html"),
+    ),
+];
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
+
+/// Index authored second-level headings, using the same anchors as the article.
+/// Content is trusted build-time HTML; no runtime parsing or script is needed.
+fn section_links(content: &str) -> String {
+    let mut links = String::new();
+    for heading in content.split("<h2 id=\"").skip(1) {
+        let Some((id, rest)) = heading.split_once("\">") else {
+            continue;
+        };
+        let Some((label, _)) = rest.split_once("</h2>") else {
+            continue;
+        };
+        write!(links, "<a href=\"#{}\">{label}</a>", escape(id)).expect("string write");
+    }
+    links
+}
+
+fn docs_path(slug: &str) -> String {
+    if slug.is_empty() {
+        "/docs/".to_owned()
+    } else {
+        format!("/docs/{slug}/")
+    }
+}
+
+fn layout(slug: &str, title: &str, description: &str, content: &str) -> String {
+    let path = if slug == "404" {
+        "/404.html".to_owned()
+    } else {
+        docs_path(slug)
+    };
+    let metadata = seo::metadata(&path, &format!("{title} — Voxelite"), description);
+    let sections = section_links(content);
+    let mobile_sections = if sections.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<details name=\"docs-menu\"><summary>On this page</summary><nav aria-label=\"Page sections\">{sections}</nav></details>"
+        )
+    };
+    let desktop_sections = if sections.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<aside class=\"docs-toc\"><p class=\"eyebrow\">ON THIS PAGE</p><nav aria-label=\"Page sections\">{sections}</nav></aside>"
+        )
+    };
+    let mut navigation = String::new();
+    for (path, label, _, _) in PAGES {
+        let href = docs_path(path);
+        let current = if *path == slug {
+            " aria-current=\"page\""
+        } else {
+            ""
+        };
+        write!(navigation, "<a href=\"{href}\"{current}>{label}</a>").expect("string write");
+    }
+    format!(
+        r##"<!doctype html><html lang="en" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+{metadata}
+<meta name="theme-color" content="#000000"><link rel="icon" href="/assets/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/theme.js"></script><script src="/assets/site.js" defer></script></head><body class="documentation">
+<a class="skip" href="#main">Skip to content</a><header class="header"><div class="shell nav"><a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5M12 12 3 7m9 5v10"/></svg>Voxelite</a><nav aria-label="Main navigation"><a href="/">Overview</a><a href="/docs/" aria-current="page">Docs</a></nav><div class="nav-end"><button class="theme-toggle" type="button" aria-label="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button><a class="button small" href="/app/">Open editor ↗</a></div></div></header>
+<div class="shell docs-mobile-nav"><details name="docs-menu"><summary>Browse docs</summary><nav aria-label="Documentation">{navigation}</nav></details>{mobile_sections}</div><div class="shell docs-layout"><nav class="docs-nav" aria-label="Documentation"><p class="eyebrow">VOXELITE / DOCUMENTATION</p>{navigation}</nav><main class="docs-content" id="main"><p class="eyebrow">DEVELOPMENT BUILD · API VOXELITE.V1</p><h1>{title}</h1>{content}<div class="doc-next"><a href="/docs/">All documentation</a> · <a href="/docs/getting-started/">Start building →</a></div></main>{desktop_sections}</div><footer class="shell footer"><a class="brand" href="/">Voxelite</a><nav aria-label="Footer"><a href="/docs/skills/">Agent skills</a><a href="/assets/LICENSE">MIT License</a></nav><span class="caption">Open source. Local first.</span></footer></body></html>
+"##
+    )
+}
+
+fn catalog(tools: &[Value]) -> Result<String, Box<dyn Error>> {
+    let mut html = format!(
+        "<h2 id=\"catalog\">All {} tools</h2><p>Generated directly from <code>VoxeliteServer::tools()</code>. Expand a schema for nested properties, defaults, limits, conditional requirements and the output envelope. A property marked optional may still be required by a schema condition.</p><div class=\"tool-index\">",
+        tools.len()
+    );
+    for tool in tools {
+        let name = tool["name"].as_str().ok_or("tool has no name")?;
+        write!(
+            html,
+            "<a href=\"#{name}\">{}</a>",
+            escape(name.trim_start_matches("voxelite_"))
+        )?;
+    }
+    html.push_str("</div>");
+    for tool in tools {
+        let name = tool["name"].as_str().ok_or("tool has no name")?;
+        let description = escape(tool["description"].as_str().unwrap_or(""));
+        let required = tool["inputSchema"]["required"].as_array();
+        write!(
+            html,
+            "<section class=\"tool\" aria-labelledby=\"{name}\"><h3 id=\"{name}\">{name}</h3><p>{description}</p><div class=\"table-scroll\"><table><thead><tr><th scope=\"col\">Argument</th><th scope=\"col\">Required</th><th scope=\"col\">Type / constraints</th></tr></thead><tbody>"
+        )?;
+        if let Some(properties) = tool["inputSchema"]["properties"].as_object() {
+            for (key, schema) in properties {
+                let required = required
+                    .is_some_and(|fields| fields.iter().any(|field| field.as_str() == Some(key)));
+                let mut summary = schema["type"].as_str().unwrap_or("See schema").to_owned();
+                for constraint in [
+                    "default",
+                    "enum",
+                    "const",
+                    "minimum",
+                    "maximum",
+                    "minItems",
+                    "maxItems",
+                    "maxLength",
+                ] {
+                    if let Some(value) = schema.get(constraint) {
+                        write!(summary, "; {constraint}: {value}")?;
+                    }
+                }
+                if let Some(description) = schema["description"].as_str() {
+                    write!(summary, ". {description}")?;
+                }
+                write!(
+                    html,
+                    "<tr><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
+                    escape(key),
+                    if required { "Yes" } else { "Optional" },
+                    escape(&summary)
+                )?;
+            }
+        }
+        html.push_str("</tbody></table></div>");
+        for (key, label) in [
+            ("inputSchema", "Complete input schema"),
+            ("outputSchema", "Complete output schema"),
+        ] {
+            if let Some(schema) = tool.get(key) {
+                write!(
+                    html,
+                    "<details><summary>{label}</summary><pre><code>{}</code></pre></details>",
+                    escape(&serde_json::to_string_pretty(schema)?)
+                )?;
+            }
+        }
+        html.push_str("</section>");
+    }
+    Ok(html)
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let destination = std::env::args().nth(1).unwrap_or_else(|| "site".into());
+    let root = Path::new(&destination);
+    let tools: Vec<Value> = VoxeliteServer::tools()
+        .into_iter()
+        .map(serde_json::to_value)
+        .collect::<Result<_, _>>()?;
+    fs::create_dir_all(root.join("assets"))?;
+    fs::write(
+        root.join("assets/mcp-tools.json"),
+        format!("{}\n", serde_json::to_string_pretty(&tools)?),
+    )?;
+    seo::write_authored_pages(root)?;
+    let mut public_paths = vec!["/".to_owned(), "/app/".to_owned()];
+    for (slug, title, description, content) in PAGES {
+        let directory = root.join("docs").join(slug);
+        fs::create_dir_all(&directory)?;
+        let body = if *slug == "mcp" {
+            format!("{content}{}", catalog(&tools)?)
+        } else {
+            (*content).to_owned()
+        };
+        fs::write(
+            directory.join("index.html"),
+            layout(slug, title, description, &body),
+        )?;
+        public_paths.push(docs_path(slug));
+    }
+    fs::write(
+        root.join("404.html"),
+        layout(
+            "404",
+            "A little off the grid",
+            "This Voxelite page could not be found. Return to the homepage or explore setup guides, MCP tool references, file format documentation, and agent skills.",
+            "<p>This page could not be found. Head back to the <a href=\"/\">Voxelite homepage</a> or explore the <a href=\"/docs/\">documentation</a>.</p>",
+        ),
+    )?;
+    seo::write_crawl_files(root, &public_paths)?;
+    println!(
+        "Generated homepage, editor shell, 404, crawl files, {} documentation pages and {} MCP tool references",
+        PAGES.len(),
+        tools.len()
+    );
+    Ok(())
+}

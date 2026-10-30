@@ -1,14 +1,14 @@
-# Quantum MCP
+# Voxelite MCP
 
-`quantum-mcp` is a Rust library and stdio binary for creating, editing, inspecting,
+`voxelite-mcp` is a Rust library and stdio binary for creating, editing, inspecting,
 rendering and saving voxel projects without a GPU or display. Its 38 tools use the
 same validated core commands, history, `.voxl` format and CPU renderer as the
 other workspace crates. All content mutations are attributed to an agent.
 
 ```sh
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo build --release -p quantum-mcp
-./target/release/quantum-mcp --root /absolute/path/to/project
+cargo build --release -p voxelite-mcp
+./target/release/voxelite-mcp --root /absolute/path/to/project
 ```
 
 The project directory must exist. The process now reads MCP from stdin and writes
@@ -17,18 +17,16 @@ human-readable command summary use `--help`; `--schema` prints the complete tool
 catalog and exits. Connect a host using the [Cursor, Claude and Codex configuration
 examples](../integrations/README.md).
 
-This stage has no GUI/plugin dependency and builds on stable Rust on Linux.
-Edits are held in memory; call `quantum_document_save` before disconnecting.
-Interactive undo history and retry receipts are session-local. A saved build recipe
-(such as the bundled demo) reconstructs its timeline when opened, subject to the
-host's history budget. Comments and named versions persist inside saved `.voxl`
-files. Comment lists page both threads and messages:
+This stage has no GUI/plugin/web dependency and builds on stable Rust on Linux.
+Edits are held in memory; call `voxelite_document_save` before disconnecting.
+Undo history and retry receipts are session-local. Comments and named versions
+persist inside saved `.voxl` files. Comment lists page both threads and messages:
 `limit` and `message_limit` default to 50 (maximum 200); use `offset` and
 `message_offset` with the captured revision to read more.
 
 ## Agent workflow
 
-1. Call `quantum_capabilities_get` to capture the epoch and discover open model IDs.
+1. Call `voxelite_capabilities_get` to capture the epoch and discover open model IDs.
 2. Create or open a document. Keep its returned `model_id`, layer IDs and revision.
 3. Apply palette changes or an atomic voxel batch. Each write uses the captured
    epoch/revision and a fresh UUID `operation_id`. Update your revision from the result.
@@ -52,17 +50,17 @@ addition to JSON Schema character limits.
 For MCP `2025-11-25`, initialize and then notify:
 
 ```json
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"quantum-example","version":"1.0"}}}
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"voxelite-example","version":"1.0"}}}
 {"jsonrpc":"2.0","method":"notifications/initialized"}
 {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"quantum_capabilities_get","arguments":{}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"voxelite_capabilities_get","arguments":{}}}
 ```
 
 Each line is a separate message; wait for each request's matching response. For
 MCP `2026-07-28`, start directly with per-request metadata instead of initialize:
 
 ```json
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"quantum-example","version":"1.0"},"io.modelcontextprotocol/clientCapabilities":{}},"name":"quantum_capabilities_get","arguments":{}}}
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"voxelite-example","version":"1.0"},"io.modelcontextprotocol/clientCapabilities":{}},"name":"voxelite_capabilities_get","arguments":{}}}
 ```
 
 Use that same `_meta` structure on subsequent requests in the newer profile. The
@@ -78,8 +76,8 @@ model and revision values. UUID operation IDs must be fresh for each new write:
 }
 ```
 
-Pass those arguments to `quantum_document_create`. Next call
-`quantum_voxels_batch` with the returned model ID and revision:
+Pass those arguments to `voxelite_document_create`. Next call
+`voxelite_voxels_batch` with the returned model ID and revision:
 
 ```json
 {
@@ -96,7 +94,7 @@ Pass those arguments to `quantum_document_create`. Next call
 }
 ```
 
-Render it using `quantum_render`:
+Render it using `voxelite_render`:
 
 ```json
 {"model_id":"<created model UUID>","views":["iso","front","right","back"],"width":512,"height":512,"image_mode":"contact_sheet"}
@@ -120,7 +118,7 @@ block. Content-edit data includes these fields (UUID placeholders abbreviated):
 
 ```json
 {
-  "api_version": "quantum.v1",
+  "api_version": "voxelite.v1",
   "session_id": "<session UUID>",
   "epoch": "<epoch UUID>",
   "ok": true,
@@ -149,7 +147,7 @@ and an envelope such as:
 
 ```json
 {
-  "api_version":"quantum.v1",
+  "api_version":"voxelite.v1",
   "session_id":"<session UUID>",
   "epoch":"<epoch UUID>",
   "ok":false,
@@ -175,7 +173,7 @@ clean document cannot consume another dirty document's reserved capacity.
 
 ## Tool catalog
 
-Every name below starts with `quantum_`. Exact defaults, limits and required fields
+Every name below starts with `voxelite_`. Exact defaults, limits and required fields
 are in the discoverable schemas and the [frozen catalog](../spec/mcp/v1/tools.json).
 
 | Tools | Behavior |
@@ -186,7 +184,7 @@ are in the discoverable schemas and the [frozen catalog](../spec/mcp/v1/tools.js
 | `voxels_erase_region`, `voxels_fill`, `voxels_box`, `voxels_batch` | Half-open regions, six-connected fill, solid/shell boxes, atomic ordered batches. Mirror planes are explicit on each operation. |
 | `query` | Bounds, occupied bounds, counts by slot, paged stored or visible-composite voxels. Include captured revision when continuing pages. |
 | `layers_list`, `layers_add`, `layers_remove`, `layers_rename`, `layers_reorder`, `layers_visibility`, `layers_lock` | Stable IDs and bottom-to-top order. Voxel writes require visible/unlocked layers. Final-layer deletion rejects. |
-| `palette_list`, `palette_set_slot`, `palette_apply_preset`, `palette_import`, `palette_export` | Opaque slots and exact presets; bounded `.hex`/`.gpl`/JASC-PAL `.pal` text. Imports/presets append into unused slots and return mappings, preserving existing geometry appearance. Explicit slot replacement recolors references. |
+| `palette_list`, `palette_set_slot`, `palette_apply_preset`, `palette_import`, `palette_export` | Opaque slots and exact presets; bounded `.hex`/`.gpl` text. Imports/presets append into unused slots and return mappings, preserving existing geometry appearance. Explicit slot replacement recolors references. |
 | `render` | Headless CPU PNGs with fitted named or explicit cameras, transparent background, AO/shadows, antialiasing, and labeled contact sheets. |
 | `export_png`, `export_glb` | Deterministic new-file exports of visible content; existing paths reject. PNG may be one view or one sheet. |
 | `comments_list`, `comments_add`, `comments_reply`, `comments_resolve`, `comments_reopen` | Anchored discussions with agent attribution, derived visible/hidden/orphaned state, persistence and undo. |
@@ -199,11 +197,6 @@ first and then views in request order. At most six views, 1024² each and 4,194,
 combined view/sheet pixels. A 12 MiB encoded result cap covers base64 plus all
 metadata. Reduce resolution/view count if that cap rejects. Front looks from +Z,
 right from +X, top from +Y with −Z up; all fits use Y-up coordinates.
-
-`render` and `export_png` accept `ambient_occlusion_strength` from 0 to 2.
-The default is 1, preserving the original shading; 0 disables local voxel
-contact shading while retaining directional shadows. Saved viewport preferences
-never change MCP output. See [AO comparisons](ambient-occlusion.md).
 
 Palette presets are `pico8`, `endesga32`, `sweetie16`, `grayscale`, `neutral`,
 `warm`, and `vivid`. Imported slots may differ from their source indices: use the
@@ -267,22 +260,16 @@ Agent → Agent connection to copy a stdio MCP configuration, or choose the sock
 path explicitly:
 
 ```sh
-quantum --session-socket /tmp/quantum-session.sock
-quantum-mcp --connect /tmp/quantum-session.sock
+voxelite --session-socket /tmp/voxelite-session.sock
+voxelite-mcp --connect /tmp/voxelite-session.sock
 ```
 
 `--connect` forwards the existing MCP protocol to the app; it does not open a
 second document authority. Discover the app's model/epoch/revision with
-`quantum_capabilities_get`. Human and agent edits use the same engine and undo
+`voxelite_capabilities_get`. Human and agent edits use the same engine and undo
 history, and completed calls appear in the Session feed with actual differences.
 Exact mutation retries retain their original receipts. New/Open in the app
 rotates the epoch. Pause rejects new agent mutations while leaving reads enabled.
-
-Attached file tools are rooted at the folder containing the current `.voxl` file.
-Untitled projects use `~/Documents/Quantum`, created when attaching if missing;
-the process working directory is never used. Save As, Open and New update the
-root before queued requests run, without disconnecting clients. If the app cannot
-resolve or create the root, attachment setup or request processing fails.
 
 The attached catalog excludes document create/open/save: the app owns file
 lifecycle and its external-file conflict checks. Other existing tools retain
@@ -291,7 +278,8 @@ saved in the app, with no implied durable journal. Socket permissions are 0600;
 existing paths are never replaced. The bridge is local to Unix platforms and
 supports the same two MCP protocol profiles as the standalone server.
 
-See [native editor controls](../crates/quantum-app/README.md). The process test
-`cargo test -p quantum-mcp --test attached` runs a real stdio bridge against the
+See [native editor controls](../crates/voxelite-app/README.md) and
+[the executable round 2 review](reviews/app-polish-2.md). The process test
+`cargo test -p voxelite-mcp --test attached` runs a real stdio bridge against the
 app-side attachment and checks shared history, conflicts, pause, retries and
 socket cleanup. `scripts/capture-native.sh` also exercises the live GPUI window.
