@@ -4,12 +4,9 @@
 state, actions, focus restoration and open/close state. They must not choose their
 own colors, type sizes, spacing, radii or control geometry.
 
-Issue #133 supplies the API; #134 migrates every application surface. App actions,
-fields, tabs, segments, rows and swatches use `::design` (or the component’s `::new`)
-and the typed tokens below. Shared compatibility color accessors now resolve the
-same semantic palette; they no longer define a second set of screen colors. Layout
-metrics retain viewport/window sizes and platform artwork geometry. See the
-[migration audit](../../docs/design-system-migration.md) for coverage and verification.
+Issue #133 supplies the new API. Issue #134 migrates screens. Existing constructors
+and the documented `tokens::legacy` compatibility aliases preserve existing pixels;
+new code uses `::design` (or the new component's `::new`) and the typed tokens below.
 Do not add new compatibility colors. `Theme::palette()` is the only new color system.
 
 ## Tokens
@@ -48,14 +45,11 @@ not another palette. Tests pin all values and require 4.5:1 contrast for text on
 four surfaces and white on primary/rest, primary/hover and primary/pressed. Disabled controls are
 intentionally exempt from normal text contrast.
 
-State tokens: neutral hover 5%, pressed 8% (white in dark, primary text ink in light), selected accent 16% with primary
+State tokens: hover white 5%, pressed white 8%, selected accent 16% with primary
 text and accent icon, navigation/tab indicator 2px, keyboard focus ring 2px with
 1px offset, disabled opacity 40%, scrim black 50%, primary hover 6% white mixed
 into accent in sRGB. `ControlState` allows deterministic state previews; ordinary
-controls use an absolute painted wash and GPUI focus-visible hooks. Pointer hover/release
-ease out over 120 ms, press over 80 ms, retargeting from the current painted value.
-No geometry or text moves. Reduced motion applies immediately; idle, hidden and
-removed controls schedule no ongoing frames. Focus is immediate. Selection never implies focus. `Button::on_surface(ColorToken)` sets the surrounding
+controls use GPUI hover/active/focus-visible hooks. Selection never implies focus. `Button::on_surface(ColorToken)` sets the surrounding
 surface used for the focus offset; menus, segments and dialogs supply it automatically.
 
 ## Components
@@ -75,17 +69,15 @@ surface used for the focus offset; menus, segments and dialogs supply it automat
 | Popover | `Popover::design` surface plus `Popover::anchored(trigger_bounds, side, content)`; measured flip, 4px gap, viewport clamping |
 | Dialog | `Dialog::design(id, title, theme, focus, cancel)`; cancel callback required, Cancel always supplied, Escape capture and tab trap; `danger` left, `primary` right |
 | TextField | `TextField::design(placeholder, cx)` uses the existing editor; `appearance` and `error` control theme and inline validation; keyboard focus ring only |
-| Swatch | `Swatch::design(theme, document_color)`; selection changes the outer ring only; `interactive(id, label)` adds Tab traversal and a contrasting inner focus stroke |
-| FocusGroup | Focusable list/grid frame with an inset ring that survives scroll clipping; host owns selection and arrow navigation |
+| Swatch | `Swatch::design(theme, document_color)`; selection changes the outer ring only |
 | StatusBarItem | Proportional label, fixed-width tabular value, overflow/padding, optional separator |
 | Toast / InlineError | `message(text, FeedbackKind::{Info, Success, Danger}, theme)`; glyph plus color |
 | Spinner / Shimmer | Eight-dot inline spinner; automatically respects GPUI reduced motion, with additional host-preference/snapshot controls; `Shimmer` aliases the existing `AsciiSkeleton` |
 
 Use the builder's guarded `on_click` for new controls. Adding a callback directly
 to a raw `build()` result transfers disabled/loading enforcement to the caller.
-The app uses `ButtonStyle` directly. Rich rows use `ListRow::frame` so hover,
-pressed and keyboard focus styles remain owned by the library. Do not add a second
-GPUI hover/active/focus-visible style to a component that already supplies one.
+Legacy `Button::legacy_style(ButtonStyle)` preserves current screen appearance
+while removing style policy based on IDs, labels or icon names.
 
 ## Overlay lifecycle
 
@@ -97,9 +89,8 @@ or dialog is open hints are suppressed. A new hover is required after dismissal.
 Mouse presses (including capture-phase presses on children) cancel pending timers.
 
 `OverlayLayer` is the single deferred ordering contract: Tooltip < Popover < Dialog.
-The new tooltip does not use GPUI's native topmost tooltip slot. App tooltips share one overlay state per window. `Tooltip::decorate` keeps host
-event hooks and places its hitbox outside layout; opening editor overlays suppresses
-those hints before they paint. `Popover::anchored` measures content before positioning;
+The new tooltip does not use GPUI's native topmost tooltip slot. Existing app tooltips
+are untouched until #134. `Popover::anchored` measures content before positioning;
 submenus and tooltips use the same placement function. The host owns trigger bounds
 and dialog focus restoration. `Dialog::build()` is an inline preview; render the
 builder or call `overlay()` for a modal scrim and proper layer ordering.

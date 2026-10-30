@@ -1,5 +1,5 @@
 //! The design system's sole palette, type and geometry scales.
-//! Compatibility aliases retain shared layout metrics for existing callers.
+//! Old screens use explicitly documented compatibility aliases until #134.
 mod legacy;
 use gpui::{FontWeight, Hsla, Styled, px, rgb};
 pub use legacy::*;
@@ -232,18 +232,6 @@ impl TextSize {
 
 /// Interaction opacities and geometry, shared by every new control.
 pub mod state {
-    /// Short ease-out for pointer entry, exit and release, with no layout motion.
-    pub const HOVER_DURATION: std::time::Duration = std::time::Duration::from_millis(120);
-    /// Press feedback reaches its target sooner than hover feedback.
-    pub const PRESS_DURATION: std::time::Duration = std::time::Duration::from_millis(80);
-    /// Translucency of diagnostic chrome over the viewport.
-    pub const DEBUG_OVERLAY: f32 = 0.82;
-    /// Quiet thumbnail wash between canvas and hover fills.
-    pub const THUMBNAIL_WASH: f32 = 0.5;
-    /// Keyboard focus wash behind a palette's document-color cells.
-    pub const PALETTE_FOCUS: f32 = 0.22;
-    /// Subtle selected tint inside the illustrative appearance preview.
-    pub const PREVIEW_SELECTED: f32 = 0.08;
     /// Neutral hover overlay.
     pub const HOVER: f32 = 0.05;
     /// Neutral pressed overlay.
@@ -271,24 +259,6 @@ pub mod state {
 }
 /// Component geometry that is not spacing or typography.
 pub mod geometry {
-    /// Width of the development-only control state audit surface.
-    pub const CONTROL_AUDIT_WIDTH: f32 = 800.;
-    /// Fixed state label slot in the control audit.
-    pub const STATE_LABEL_WIDTH: f32 = 96.;
-    /// Largest dialog fraction of the available window.
-    pub const DIALOG_MAX_FRACTION: f32 = 0.95;
-    /// Sidebar fraction inside the illustrative appearance preview.
-    pub const PREVIEW_SIDEBAR_FRACTION: f32 = 0.28;
-    /// Artwork overscan on each edge of a sample thumbnail.
-    pub const THUMBNAIL_OVERSCAN: f32 = 0.06;
-    /// Full artwork scale, including both overscanned edges.
-    pub const THUMBNAIL_SCALE: f32 = 1. + 2. * THUMBNAIL_OVERSCAN;
-    /// Half-pixel overlap prevents seams between neighboring color-plane cells.
-    pub const COLOR_CELL_OVERLAP: f32 = 0.5;
-    /// Stroke for the projected voxel hover outline.
-    pub const VOXEL_OUTLINE: f32 = 1.4;
-    /// Settings slider width, independent of its changing value label.
-    pub const SETTINGS_SLIDER: f32 = 200.;
     /// Hairline border.
     pub const EDGE: f32 = 1.;
     /// Standard glyph within dense/default controls.

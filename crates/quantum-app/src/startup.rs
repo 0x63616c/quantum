@@ -8,10 +8,7 @@ use std::path::Path;
 pub fn open(path: Option<&Path>) -> (Option<Editor>, Option<String>) {
     match path.map(Editor::open) {
         Some(Ok(editor)) => (Some(editor), None),
-        Some(Err(error)) => {
-            eprintln!("{:?}", crate::reports::report(&error));
-            (None, Some(error.to_string()))
-        }
+        Some(Err(error)) => (None, Some(error.to_string())),
         None => (None, None),
     }
 }

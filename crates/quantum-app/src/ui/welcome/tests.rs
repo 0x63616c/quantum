@@ -51,7 +51,7 @@ fn arrows_visit_every_recent_and_sample_in_display_order_and_clamp() {
 }
 
 #[cfg(feature = "test-support")]
-pub(super) fn window_fixture(
+fn window_fixture(
     cx: &mut gpui::TestAppContext,
     count: usize,
 ) -> (gpui::WindowHandle<super::WelcomeView>, tempfile::TempDir) {
@@ -70,7 +70,7 @@ pub(super) fn window_fixture(
         cx.set_global(super::Launcher {
             editor: None,
             welcome: None,
-            socket: Some(dir.path().join("session.sock")),
+            socket: None,
             projects: paths
                 .iter()
                 .map(|path| quantum_app::recents::RecentProject {
@@ -94,7 +94,6 @@ pub(super) fn window_fixture(
         window.focus(&view.focus, cx);
         view
     });
-    cx.update(|cx| cx.global_mut::<super::Launcher>().welcome = Some(window));
     cx.run_until_parked();
     (window, dir)
 }

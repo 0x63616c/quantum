@@ -64,10 +64,7 @@ class MacosCiTests(unittest.TestCase):
             'cargo test --workspace --locked --features quantum-app/test-support --no-fail-fast',
         ):
             self.assertLess(workflow.index(command), build)
-        dmg, tap = workflow.split('  homebrew-tap:', 1)
-        self.assertNotIn('continue-on-error:', dmg)
-        self.assertEqual(workflow.count('continue-on-error:'), 1)
-        self.assertIn('    continue-on-error: true', tap)
+        self.assertNotIn('continue-on-error:', workflow)
 
     def test_package_routing(self):
         cases = [

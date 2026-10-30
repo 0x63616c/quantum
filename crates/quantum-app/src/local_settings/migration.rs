@@ -14,7 +14,7 @@ pub(super) fn initialize(home: &Path, xdg: Option<&Path>, macos: bool) -> io::Re
     Ok(())
 }
 
-pub(super) fn exists(path: &Path) -> io::Result<bool> {
+fn exists(path: &Path) -> io::Result<bool> {
     match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
@@ -22,7 +22,7 @@ pub(super) fn exists(path: &Path) -> io::Result<bool> {
     }
 }
 
-pub(super) fn migrate(old: &Path, new: &Path) -> io::Result<()> {
+fn migrate(old: &Path, new: &Path) -> io::Result<()> {
     migrate_with(old, new, rename_new, copy_directory)
 }
 

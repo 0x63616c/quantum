@@ -1,14 +1,9 @@
 //! Stdio entry point. Standard output is reserved for MCP JSON-RPC messages.
-mod reports;
 use quantum_mcp::QuantumServer;
 
 #[tokio::main]
-async fn main() -> miette::Result<()> {
-    run().await.map_err(|error| reports::report(error.as_ref()))
-}
-
 #[expect(clippy::print_stdout, reason = "CLI output")]
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let mut root = std::env::current_dir()?;
     while let Some(arg) = args.next() {
@@ -26,7 +21,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             "--help" | "-h" => {
                 println!(
-                    "quantum-mcp [--root DIRECTORY]\nquantum-mcp --connect SOCKET\n\nServe quantum.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
+                    "quantum-mcp [--root DIRECTORY]\nquantum-mcp --connect SOCKET\n\nServe voxelite.v1 over newline-delimited stdio JSON-RPC.\n--root DIRECTORY  Existing project directory (default current directory).\n--schema          Print the tool catalog as JSON and exit.\n--version         Print binary version and exit."
                 );
                 return Ok(());
             }

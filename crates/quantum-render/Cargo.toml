@@ -6,11 +6,9 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-tracing = { workspace = true, optional = true }
 quantum-core.workspace = true
 quantum-mesh.workspace = true
 serde.workspace = true
-rayon = "1.12"
 quantum-render-plan.workspace = true
 
 # Unsafe FFI is confined to the audited Metal interop module.
@@ -30,15 +28,11 @@ print_stdout = "warn"
 workspace = true
 
 [dev-dependencies]
-divan.workspace = true
-tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"] }
 quantum-format.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
 
 [features]
-# Live tracing is explicitly opt-in, including in release builds.
-profiling = ["dep:tracing", "quantum-mesh/profiling"]
 # Additive backend for the portable harness; production Metal devices are unchanged.
 headless-vulkan = ["gpu", "wgpu/vulkan"]
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:objc2-core-foundation", "dep:objc2-core-video", "dep:objc2-metal", "dep:futures-timer", "dep:objc2-io-surface", "dep:objc2", "dep:pollster", "dep:futures-channel"]
@@ -67,7 +61,3 @@ objc2-io-surface = { version = "0.3.2", optional = true, features = ["objc2-core
 [dev-dependencies.naga]
 version = "=30.0.1"
 features = ["wgsl-in"]
-
-[[bench]]
-name = "chunks"
-harness = false

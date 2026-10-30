@@ -2,11 +2,9 @@
 use super::{AnchoredTooltip, EditorView, TooltipSide, row};
 use gpui::{prelude::*, *};
 use quantum_core::Pos;
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
-use quantum_ui::tokens::type_size;
+use quantum_ui::tokens::{space, type_size};
 use quantum_ui::{
-    COORDINATE_CELLS, COUNT_CELLS, DIMENSION_CELLS, StatusBar, StatusBarItem, ToolbarSeparator,
+    COORDINATE_CELLS, COUNT_CELLS, DIMENSION_CELLS, StatusBar, StatusSegment, ToolbarSeparator,
 };
 
 fn grouped(value: impl ToString) -> String {
@@ -65,48 +63,73 @@ impl EditorView {
         // keep exact values. Only the window-size breakpoint changes geometry.
         let extent_cells = if compact { 3 } else { DIMENSION_CELLS };
         let count_cells = if compact { 6 } else { COUNT_CELLS };
-        let slot = |label, value: String, cells| {
-            StatusBarItem::new(label, Some(value), cells, t)
-                .separator(false)
-                .build()
-        };
-        let position = self.status_position(hover);
+        let slot =
+            |label, value: String, cells| StatusSegment::new(label, Some(value), cells).build();
+        let position = row()
+            .id("status-position")
+            .flex_shrink_0()
+            .gap(px(space::MD))
+            .anchored_hint(
+                hover.map_or_else(
+                    || "No cursor position".to_owned(),
+                    |[x, y, z]| format!("Cursor position: {x}, {y}, {z}"),
+                ),
+                t,
+                TooltipSide::Above,
+            )
+            .children((0..3).map(|axis| {
+                row()
+                    .flex_shrink_0()
+                    .gap(px(space::XS))
+                    .child(slot(["X", "Y", "Z"][axis], String::new(), 0).text_color(t.axis(axis)))
+                    .child(
+                        StatusSegment::new("", hover.map(|p| p[axis]), COORDINATE_CELLS)
+                            .left_aligned()
+                            .build(),
+                    )
+            }));
         let selection_row = row().id("status-selection").flex_shrink_0()
-            .anchored_hint(format!("Box selection preview: {} × {} × {} · {} cells. No persistent selection remains after commit.", selection.0[0], selection.0[1], selection.0[2], selection.1), t, TooltipSide::Above, &self.overlays)
+            .anchored_hint(format!("Box selection preview: {} × {} × {} · {} cells. No persistent selection remains after commit.", selection.0[0], selection.0[1], selection.0[2], selection.1), t, TooltipSide::Above)
             .child(slot("Sel ", selection.0[0].to_string(), extent_cells))
             .child(slot("×", selection.0[1].to_string(), extent_cells))
             .child(slot("×", selection.0[2].to_string(), extent_cells))
             .child(slot(" · ", selection.1.to_string(), count_cells));
         let zoom = self.zoom_reference_span / self.viewport.display_camera().span * 100.0;
-        let performance = self.status_performance();
+        let renderer = self.viewport.frame_meter().renderer().label();
+        let average = if self.capture_state.is_some() {
+            None
+        } else {
+            self.viewport.frame_meter().average()
+        };
+        let performance = row().id("status-performance").flex_shrink_0()
+            .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above)
+            .text_color(if self.viewport.rendering() { t.accent() } else { t.muted() })
+            .child(slot("", renderer.to_owned(), 3))
+            .child(StatusSegment::new(" ", average.map(|a| format!("{:.1}", a.fps)), 6).build())
+            .child(StatusSegment::new(" FPS / ", average.map(|a| format!("{:.1}", a.frame_ms)), 7).build())
+            .child(slot(" ms", String::new(), 0));
         StatusBar::row(t)
             .child(
                 row()
-                    .gap(px(Space::S3.px()))
+                    .gap(px(space::MD))
                     .flex_shrink_0()
                     .child(position)
                     .child(ToolbarSeparator::line(t))
                     .child(selection_row)
                     .child(ToolbarSeparator::line(t))
                     .child(
-                        StatusBarItem::new("", Some(layer), if compact { 8 } else { 16 }, t)
-                            .separator(false)
-                            .icon("layer", t.color(ColorToken::TextSecondary))
+                        StatusSegment::new("", Some(layer), if compact { 8 } else { 16 })
+                            .icon("layer", t.muted())
                             .build()
                             .id("status-layer")
-                            .anchored_hint(
-                                format!("Active layer: {layer}"),
-                                t,
-                                TooltipSide::Above,
-                                &self.overlays,
-                            ),
+                            .anchored_hint(format!("Active layer: {layer}"), t, TooltipSide::Above),
                     )
                     .child(slot("", self.editor.tool.name().to_owned(), 6)),
             )
             .child(self.status_message(compact))
             .child(
                 row()
-                    .gap(px(Space::S3.px()))
+                    .gap(px(space::MD))
                     .flex_shrink_0()
                     .child(
                         slot("", format!("{zoom:.0}%"), 6)
@@ -115,7 +138,6 @@ impl EditorView {
                                 "Zoom relative to the last fitted view",
                                 t,
                                 TooltipSide::Above,
-                                &self.overlays,
                             ),
                     )
                     .when(self.preferences.show_performance, |d| d.child(performance))
@@ -134,7 +156,6 @@ impl EditorView {
                                 ),
                                 t,
                                 TooltipSide::Above,
-                                &self.overlays,
                             )
                             .children((0..3).map(|axis| {
                                 slot(
@@ -154,16 +175,12 @@ impl EditorView {
         div()
             .id("status-message")
             .flex_1()
-            .min_w(px(Space::S0.px()))
+            .min_w(px(space::NONE))
             .overflow_hidden()
             .text_ellipsis()
             .font_family(type_size::UI)
-            .text_color(if self.error {
-                t.color(ColorToken::Danger)
-            } else {
-                t.color(ColorToken::TextSecondary)
-            })
-            .anchored_hint(self.status.clone(), t, TooltipSide::Above, &self.overlays)
+            .text_color(if self.error { t.danger() } else { t.muted() })
+            .anchored_hint(self.status.clone(), t, TooltipSide::Above)
             .when(!compact, |d| {
                 if !self.error
                     && let Some(text) = self.status.plain_text()
@@ -186,67 +203,6 @@ impl EditorView {
                 d.child(self.status.clone())
             })
             .when(compact && self.error, |d| d.child("!"))
-    }
-}
-
-impl EditorView {
-    fn status_performance(&self) -> Stateful<Div> {
-        let t = self.theme;
-        let slot = |label, value: String, cells| {
-            StatusBarItem::new(label, Some(value), cells, t)
-                .separator(false)
-                .build()
-        };
-        let renderer = self.viewport.frame_meter().renderer().label();
-        let average = if self.capture_state.is_some() {
-            None
-        } else {
-            self.viewport.frame_meter().average()
-        };
-
-        row().id("status-performance").flex_shrink_0()
-            .anchored_hint("Newly painted viewport frames: average FPS and time between frames over about 1 second. Holds the last average while idle; unchanged repaints are excluded.", t, TooltipSide::Above, &self.overlays)
-            .text_color(if self.viewport.rendering() { t.color(ColorToken::AccentText) } else { t.color(ColorToken::TextSecondary) })
-            .child(slot("", renderer.to_owned(), 3))
-            .child(StatusBarItem::new(" ", average.map(|a| format!("{:.1}", a.fps)), 6, t).separator(false).build())
-            .child(StatusBarItem::new(" FPS / ", average.map(|a| format!("{:.1}", a.frame_ms)), 7, t).separator(false).build())
-            .child(slot(" ms", String::new(), 0))
-    }
-}
-
-impl EditorView {
-    fn status_position(&self, hover: Option<Pos>) -> Stateful<Div> {
-        let t = self.theme;
-        row()
-            .id("status-position")
-            .flex_shrink_0()
-            .gap(px(Space::S3.px()))
-            .anchored_hint(
-                hover.map_or_else(
-                    || "No cursor position".to_owned(),
-                    |[x, y, z]| format!("Cursor position: {x}, {y}, {z}"),
-                ),
-                t,
-                TooltipSide::Above,
-                &self.overlays,
-            )
-            .children((0..3).map(|axis| {
-                row()
-                    .flex_shrink_0()
-                    .gap(px(Space::S2.px()))
-                    .child(
-                        StatusBarItem::new(["X", "Y", "Z"][axis], None::<u8>, 0, t)
-                            .separator(false)
-                            .build()
-                            .text_color(t.axis(axis)),
-                    )
-                    .child(
-                        StatusBarItem::new("", hover.map(|p| p[axis]), COORDINATE_CELLS, t)
-                            .separator(false)
-                            .left_aligned()
-                            .build(),
-                    )
-            }))
     }
 }
 

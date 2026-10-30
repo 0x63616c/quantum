@@ -1,7 +1,7 @@
 //! Display-independent editor state, picking, camera, and file persistence.
 
 /// Application identifier shared by native windows and the macOS bundle.
-pub const APP_ID: &str = "co.worldwidewebb.quantum";
+pub const APP_ID: &str = "co.worldwidewebb.voxelite";
 
 #[cfg(unix)]
 mod attachment;
@@ -19,7 +19,6 @@ mod persistence;
 pub mod preferences;
 pub mod recents;
 pub mod reduce_motion;
-pub mod reports;
 pub mod samples;
 #[path = "ui/save_flow/format.rs"]
 pub mod save_format;

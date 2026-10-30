@@ -12,7 +12,7 @@
   ],
   "properties": {
     "format": {
-      "enum": ["quantum", "voxelite"]
+      "const": "voxelite"
     },
     "version": {
       "type": "object",

@@ -17,11 +17,9 @@ use std::{
 pub mod appcast;
 mod feed;
 mod files;
-mod homebrew;
 pub mod package;
 pub mod release_notes;
 pub mod sign;
-mod update_compat;
 
 pub use feed::{Update, validate, validate_release};
 pub use files::sha256;
@@ -41,12 +39,13 @@ pub const REPOSITORY: &str = "0x63616c/quantum";
 /// Stable download URL prefix; preserve published asset names.
 pub const DOWNLOAD: &str = "https://github.com/0x63616c/quantum/releases/download/";
 
-// Retained for immutable signed feeds published before the repository rename.
+// Retained for immutable signed feeds and the transition before issue #91.
+pub(crate) const LEGACY_REPOSITORY: &str = "0x63616c/voxelite";
 pub(crate) const LEGACY_DOWNLOAD: &str = "https://github.com/0x63616c/voxelite/releases/download/";
 
 fn release_repository(environment: &Environment) -> Result<&str> {
     let repository = environment.or("GITHUB_REPOSITORY", REPOSITORY);
-    if repository == REPOSITORY {
+    if matches!(repository, REPOSITORY | LEGACY_REPOSITORY) {
         Ok(repository)
     } else {
         Err(invalid("Invalid GitHub repository"))
@@ -184,18 +183,6 @@ pub fn version(workspace: &Workspace, runner: &dyn Runner, tag: Option<&str>) ->
 /// Grouped CLI for release preparation; none of these commands publish assets.
 #[derive(Subcommand)]
 pub enum Task {
-    /// Render the stable Homebrew cask from verified release metadata
-    HomebrewCask {
-        /// Stable release version (at least 0.4.0)
-        #[arg(long)]
-        version: String,
-        /// SHA-256 of the published DMG
-        #[arg(long)]
-        sha256: String,
-        /// Destination cask file
-        #[arg(long)]
-        output: PathBuf,
-    },
     /// Build, sign, optionally notarize, and create dist/Quantum.dmg
     Package {
         /// Use existing executables from the configured packaging profile
@@ -302,11 +289,6 @@ pub fn execute(task: Task, workspace: &Workspace) -> Result<u8> {
             release_dir.as_deref(),
             previous.as_deref(),
         ),
-        Task::HomebrewCask {
-            version,
-            sha256,
-            output,
-        } => homebrew::write(&version, &sha256, &output),
         Task::ReleaseNotes => release_notes::generate(&context),
     };
     if runner.interruption_code() != 0 && !matches!(result, Err(Error::Cleanup(_))) {

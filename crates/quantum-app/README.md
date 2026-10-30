@@ -26,26 +26,6 @@ GPUI dependency when built with `--no-default-features`:
 cargo test -p quantum-app --no-default-features
 ```
 
-## Module layout
-
-- `src/editor.rs` translates gestures into engine transactions;
-  `src/editor/camera.rs` owns orbit geometry and voxel picking. The existing
-  `editor::{OrbitCamera, Ray, Hit, raycast}` entry points remain re-exports.
-- `src/actions.rs` derives shell metadata from the enabled command registry;
-  `src/actions/bindings.rs` installs native menus and platform key bindings.
-  Command regression tests live in `src/actions/command_tests.rs`.
-- `src/ui/settings.rs` composes Settings pages. Its `settings/controls.rs`,
-  `settings/history.rs` and `settings/window.rs` modules own control construction,
-  navigation history and window lifecycle respectively. History tests live beside
-  its private storage; page and search tests remain in `settings/tests.rs`.
-
-Editor operations return `EditorResult<T>` with typed `EditorError` variants from
-`src/editor/error.rs` for editor preconditions and underlying session, plugin,
-I/O, format and encoding failures. Callers can match variants without parsing
-user-facing messages; `Display` preserves the existing shell messages. Core
-errors from tool and palette operations remain `EditorError::Core`; open failures
-retain the requested path and a typed cause in `EditorError::Open`.
-
 ## UI capture states
 
 The development-only `--show <state>` flag opens a surface at launch on the bundled
@@ -66,9 +46,9 @@ Each full state below is a prefix plus one suffix. Its screenshot names are
 | --- | --- |
 | `chrome-menu-` | `file`, `edit`, `view`, `tools`, `palette`, `layers`, `agent`, `extensions`, `window`, `help` |
 | `panels-` | `palette`, `history`, `history-preview`, `comments-empty`, `comments`, `comment-thread`, `comment-draft`, `agent`, `agent-inspection` |
-| `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `commands-empty`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
+| `dialogs-` | `about`, `acknowledgements`, `keyboard-guide`, `commands`, `tools`, `extensions`, `unsaved-changes`, `save-waiting`, `palettes`, `palette-delete` |
 | `popovers-` | `connect-agent`, `palette-chooser`, `palette-menu` |
-| `overlays-` | `debug`, `loading`, `controls` |
+| `overlays-` | `debug` |
 | `settings-` | `general`, `appearance`, `viewport`, `shortcuts`, `agent`, `updates`, `advanced` |
 
 The existing `welcome`, `editor-dark` and `editor-light` captures retain their args
@@ -85,12 +65,6 @@ inspection state also renders three thumbnails; separate captures keep the expan
 event controls visible. The palette deletion fixture copies a palette in memory. No project is saved by these launch fixtures. The
 save-waiting fixture holds the app-owned waiting/cancel surface with a static
 spinner, without opening a desktop portal. Capture states omit live frame cadence in the status bar and debug overlay.
-
-The empty command search fixture includes the real Clear search action. The loading
-fixture holds the production scene shimmer at 400 ms without delaying a render job.
-The controls fixture displays the production primary, secondary, ghost and danger
-actions in all six states, plus a long list row; it freezes decorative motion.
-These three fixtures are also covered by the headless golden gate in both themes.
 
 Native file pickers, macOS menus, Sparkle dialogs, the macOS eyedropper and hover
 tooltip timing/placement still need platform/manual checks. The Linux captures
@@ -483,21 +457,7 @@ Keep for later retains it and Delete report explicitly removes it.
 See the [privacy note](../../site/content/getting-started.html) for collected fields,
 redaction limits, storage/retention and unsupported crash types.
 
-Capture states `dialogs-feedback`, `dialogs-feedback-relay`, `dialogs-crash-relay` and `dialogs-crash-report` open the independent
+Capture states `dialogs-feedback` and `dialogs-crash-report` open the independent
 report window (880×760); both support `--theme dark|light`. The crash fixture writes
 only to the selected local app data directory. Use an isolated `QUANTUM_DATA_DIR`
 for manual capture runs. These fixtures are for UI review and never send data.
-
-### Error reports
-
-The app prints miette diagnostics to standard error for startup, file-load and
-plugin command failures, including the underlying error chain. Interactive
-failures retain the existing Welcome/status messages and document recovery
-behavior. Headless export failures exit unsuccessfully. Reports do not replace
-the opt-in crash reporter or install a panic hook.
-
-The MCP CLI and xtask use the same terminal reporting convention; MCP standard
-output remains reserved for protocol messages (or explicitly requested CLI
-output such as `--schema`). Domain and plugin libraries retain typed `thiserror`
-errors and do not depend on miette. Terminal styling follows terminal capability
-and `NO_COLOR`; redirected reports contain no ANSI styling.

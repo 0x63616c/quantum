@@ -185,10 +185,6 @@ impl Worker {
     }
 
     /// Submit the latest camera/style; provide a snapshot only on content changes.
-    #[cfg_attr(
-        feature = "profiling",
-        tracing::instrument(name = "render.gpu.frame", skip_all)
-    )]
     pub async fn render(
         &self,
         snapshot: Option<quantum_core::Snapshot>,
@@ -501,10 +497,6 @@ impl Surfaces {
         }
     }
     #[allow(clippy::too_many_arguments)]
-    #[cfg_attr(
-        feature = "profiling",
-        tracing::instrument(name = "render.gpu.present", skip_all)
-    )]
     pub(super) async fn present(
         &mut self,
         device: &wgpu::Device,

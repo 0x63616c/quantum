@@ -123,7 +123,7 @@ impl Report {
             ),
         };
         Ok(format!(
-            "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below.\nContact email (if provided) is separate from the public issue; the configured relay's privacy policy controls its handling. The browser fallback excludes contact email entirely.\nScene consent: {}; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n{}\n{}",
+            "## What is sent\n\nThis preview becomes a public GitHub issue via the configured relay or browser.\nIncludes version/OS/architecture and the details below.\nContact email (if provided) is sent privately to the maintainers through the relay and is not shown in the public issue. The browser fallback excludes contact email entirely.\nScene consent: {}; scene contents are never included by this crate.\nHome paths and free-text emails are redacted. Review all text before confirming.\n\n## Environment\n\n{}\n{}",
             scene,
             quote(&format!(
                 "Quantum {}\n{} {}\n{}",

@@ -2,10 +2,6 @@
 use super::*;
 use quantum_app::history::{HISTORY_STEP_INTERVAL, PreviewSource, display_label};
 use quantum_core::{Changes, Origin, Uuid};
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
-use quantum_ui::TextSize;
-use quantum_ui::TextStyle;
 
 const RECENT_STEPS: usize = 5;
 
@@ -52,7 +48,7 @@ pub(super) struct Timeline {
 }
 impl Timeline {
     pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
-        let name = crate::text_field::TextField::design("Name this version…", cx);
+        let name = crate::text_field::TextField::new("Name this version…", cx);
         cx.subscribe_in(
             &name,
             window,
@@ -208,13 +204,10 @@ impl EditorView {
             )
             .w_full()
             .border_0()
-            .mb(px(Space::S2.px()))
+            .mb(px(space::COMPACT))
             .when(
                 p.is_some_and(|p| p.source == PreviewSource::History(*id)),
-                |d| {
-                    d.bg(t.selected())
-                        .text_color(t.color(ColorToken::AccentText))
-                },
+                |d| d.bg(t.selected()).text_color(t.accent()),
             )
         };
         let playing = self.editor.history_playing();
@@ -241,22 +234,19 @@ impl EditorView {
         };
         Panel::section(t)
             .flex_1()
-            .min_h(px(Space::S0.px()))
+            .min_h(px(space::NONE))
             .flex()
             .flex_col()
-            .p(px(Space::S5.px()))
-            .gap(px(Space::S4.px()))
+            .p(px(space::PANEL))
+            .gap(px(space::LG))
             .child(
                 row()
                     .justify_between()
                     .child(section_title("History & versions"))
                     .child(
                         row()
-                            .gap(px(Space::S3.px()))
-                            .child(
-                                mono(format!("{} steps", steps.len()))
-                                    .text_color(t.color(ColorToken::TextSecondary)),
-                            )
+                            .gap(px(space::MD))
+                            .child(mono(format!("{} steps", steps.len())).text_color(t.muted()))
                             .when(count > 1, |d| {
                                 d.child(
                                     self.control(
@@ -267,8 +257,8 @@ impl EditorView {
                                         |this, _, cx| this.toggle_history(cx),
                                     )
                                     .w(px(metrics::PLAYBACK_WIDTH))
-                                    .px(px(Space::S0.px()))
-                                    .gap(px(Space::S0.px()))
+                                    .px(px(space::NONE))
+                                    .gap(px(space::NONE))
                                     .justify_center()
                                     .aria_label(playback_label)
                                     .aria_keyshortcuts("Space")
@@ -276,7 +266,6 @@ impl EditorView {
                                         HintText::from(playback_label).key("space"),
                                         t,
                                         TooltipSide::Below,
-                                        &self.overlays,
                                     ),
                                 )
                             }),
@@ -284,8 +273,8 @@ impl EditorView {
             )
             .child(
                 div()
-                    .text_color(t.color(ColorToken::TextSecondary))
-                    .text_style(TextSize::Small)
+                    .text_color(t.muted())
+                    .text_size(px(type_size::BODY))
                     .child(
                         p.map_or("Live document", |p| display_label(&p.label))
                             .to_string(),
@@ -297,22 +286,20 @@ impl EditorView {
                     .h(px(metrics::TIMELINE_HEIGHT))
                     .relative()
                     .cursor_pointer()
-                    .anchored_hint(
+                    .tooltip(hint(
                         "Drag to preview · Restore applies the selected state",
                         t,
-                        TooltipSide::Below,
-                        &self.overlays,
-                    )
+                    ))
                     .child(
                         canvas(
                             move |b, _, _| paint.set(b),
                             move |b, _, window, _| {
                                 window.paint_quad(fill(
                                     Bounds::new(
-                                        point(b.left(), b.top() + px(Space::S4.px())),
-                                        size(b.size.width, px(Space::S1.px())),
+                                        point(b.left(), b.top() + px(space::LG)),
+                                        size(b.size.width, px(space::XXS)),
                                     ),
-                                    t.color(ColorToken::BorderSubtle),
+                                    t.line(),
                                 ));
                             },
                         )
@@ -332,37 +319,28 @@ impl EditorView {
                                     .left(relative(
                                         i as f32 / count.saturating_sub(1).max(1) as f32,
                                     ))
-                                    .top(px(Space::S2.px()))
-                                    .ml(px(-Space::S3.px()))
-                                    .size(px(Space::S5.px()))
+                                    .top(px(space::GLYPH))
+                                    .ml(px(-space::MD))
+                                    .size(px(space::XL))
                                     .rounded_full()
                                     .justify_center()
-                                    .bg(t.color(ColorToken::Canvas))
+                                    .bg(t.background())
                                     .border_1()
                                     .border_color(if i == selected {
-                                        t.color(ColorToken::AccentText)
+                                        t.accent()
                                     } else {
-                                        t.color(ColorToken::Canvas)
+                                        t.background()
                                     })
-                                    .anchored_hint(
-                                        format!("{} · {}", i, display_label(label)),
-                                        t,
-                                        TooltipSide::Below,
-                                        &self.overlays,
-                                    )
+                                    .tooltip(hint(format!("{} · {}", i, display_label(label)), t))
                                     .child(
                                         icon(if *origin == Origin::Agent {
                                             "diamond"
                                         } else {
                                             "circle"
                                         })
-                                        .size(px(Space::S3.px()))
+                                        .size(px(space::MD))
                                         .text_color(
-                                            if i == selected {
-                                                t.color(ColorToken::AccentText)
-                                            } else {
-                                                t.color(ColorToken::TextSecondary)
-                                            },
+                                            if i == selected { t.accent() } else { t.muted() },
                                         ),
                                     )
                             }),
@@ -393,7 +371,7 @@ impl EditorView {
             .when(p.is_some(), |d| {
                 d.child(
                     row()
-                        .gap(px(Space::S3.px()))
+                        .gap(px(space::MD))
                         .child(self.control(
                             "history-live",
                             "log-out",
@@ -418,7 +396,7 @@ impl EditorView {
                                     this.report(r, "History restored as a new edit", cx);
                                 },
                             )
-                            .text_color(t.color(ColorToken::TextPrimary)),
+                            .text_color(t.text()),
                         ),
                 )
             })
@@ -452,7 +430,7 @@ impl EditorView {
                             .aria_expanded(expanded)
                             .w_full()
                             .border_0()
-                            .mb(px(Space::S2.px())),
+                            .mb(px(space::COMPACT)),
                         )
                     })
                     .children(earlier.rev().map(event_row)),
@@ -463,32 +441,60 @@ impl EditorView {
                     .child(section_title("Named versions"))
                     .child(
                         row()
-                            .gap(px(Space::S2.px()))
-                            .text_style(TextSize::Small)
-                            .text_color(t.color(ColorToken::TextSecondary))
-                            .child(
-                                icon("circle")
-                                    .size(px(Space::S4.px()))
-                                    .text_color(t.color(ColorToken::TextSecondary)),
-                            )
+                            .gap(px(space::GLYPH))
+                            .text_size(px(type_size::BODY))
+                            .text_color(t.muted())
+                            .child(icon("circle").size(px(space::INSET)).text_color(t.muted()))
                             .child("Human")
                             .child(
                                 icon("diamond")
-                                    .size(px(Space::S4.px()))
-                                    .text_color(t.color(ColorToken::AccentText)),
+                                    .size(px(space::INSET))
+                                    .text_color(t.accent()),
                             )
                             .child("Agent"),
                     ),
             )
-            .child(self.named_versions(versions, cx))
+            .child(
+                div()
+                    .id("versions-scroll")
+                    .max_h(px(metrics::VERSIONS_MAX_HEIGHT))
+                    .overflow_y_scroll()
+                    .children(versions.into_iter().enumerate().map(|(i, v)| {
+                        let id = v.id;
+                        self.control(
+                            ("named-version", i),
+                            if v.origin == Origin::Agent {
+                                "diamond"
+                            } else {
+                                "circle"
+                            },
+                            v.name.clone(),
+                            cx,
+                            move |this, _, cx| {
+                                let r = this.editor.preview_version(id);
+                                if r.is_ok() {
+                                    this.refresh_preview(cx);
+                                }
+                                this.report(r, "Version preview · read-only", cx);
+                            },
+                        )
+                        .w_full()
+                        .border_0()
+                        .mb(px(space::COMPACT))
+                        .when(
+                            p.is_some_and(|p| p.source == PreviewSource::Version(id)),
+                            |d| d.bg(t.selected()).text_color(t.accent()),
+                        )
+                    })),
+            )
             .when(p.is_none(), |d| {
                 d.child(
                     row()
-                        .gap(px(Space::S3.px()))
+                        .gap(px(space::MD))
                         .child(
                             div()
                                 .flex_1()
-                                .min_w(px(Space::S0.px()))
+                                .min_w(px(space::NONE))
                                 .child(self.timeline.name.clone()),
                         )
                         .child(self.control(
@@ -500,51 +506,6 @@ impl EditorView {
                         )),
                 )
             })
-    }
-}
-
-impl EditorView {
-    fn named_versions(
-        &self,
-        versions: Vec<&quantum_core::NamedVersion>,
-        cx: &Context<Self>,
-    ) -> Stateful<Div> {
-        let t = self.theme;
-        let p = self.editor.preview.as_ref();
-        div()
-            .id("versions-scroll")
-            .max_h(px(metrics::VERSIONS_MAX_HEIGHT))
-            .overflow_y_scroll()
-            .children(versions.into_iter().enumerate().map(|(i, v)| {
-                let id = v.id;
-                self.control(
-                    ("named-version", i),
-                    if v.origin == Origin::Agent {
-                        "diamond"
-                    } else {
-                        "circle"
-                    },
-                    v.name.clone(),
-                    cx,
-                    move |this, _, cx| {
-                        let r = this.editor.preview_version(id);
-                        if r.is_ok() {
-                            this.refresh_preview(cx);
-                        }
-                        this.report(r, "Version preview · read-only", cx);
-                    },
-                )
-                .w_full()
-                .border_0()
-                .mb(px(Space::S2.px()))
-                .when(
-                    p.is_some_and(|p| p.source == PreviewSource::Version(id)),
-                    |d| {
-                        d.bg(t.selected())
-                            .text_color(t.color(ColorToken::AccentText))
-                    },
-                )
-            }))
     }
 }
 

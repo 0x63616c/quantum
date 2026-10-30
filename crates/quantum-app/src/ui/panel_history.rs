@@ -1,7 +1,5 @@
 //! Compact recent changes panel and empty state.
 use super::*;
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
 
 impl EditorView {
     pub(super) fn history_panel(&self, compact: bool, cx: &Context<Self>) -> Div {
@@ -17,19 +15,15 @@ impl EditorView {
             .flex()
             .flex_col()
             .px(px(PANEL_GUTTER))
-            .py(px(if compact {
-                Space::S3.px()
-            } else {
-                Space::S5.px()
-            }))
-            .gap(px(Space::S5.px()))
+            .py(px(if compact { space::MD } else { space::XL }))
+            .gap(px(space::XL))
             .child(
                 row()
                     .justify_between()
                     .child(section_title("Recent changes"))
                     .child(
                         row()
-                            .gap(px(Space::S1.px()))
+                            .gap(px(space::XXS))
                             .child(self.button(
                                 "history-undo",
                                 "undo",
@@ -51,7 +45,7 @@ impl EditorView {
             .child(
                 div()
                     .id("history-scroll")
-                    .min_h(px(Space::S0.px()))
+                    .min_h(px(space::NONE))
                     .flex_1()
                     .overflow_y_scroll()
                     .when(empty, |d| d.child(self.empty_history(compact, cx)))
@@ -68,44 +62,77 @@ impl EditorView {
     }
 
     fn empty_history(&self, compact: bool, cx: &Context<Self>) -> Div {
-        let empty = quantum_ui::EmptyState::new("history", "No edits yet", self.theme);
-        if compact {
-            empty.build()
-        } else {
-            empty
-                .secondary(
-                    Button::design("history-guide", "Keyboard guide", self.theme)
-                        .style(ButtonStyle::Ghost)
-                        .on_click(
-                            cx.listener(|this, _, window, cx| this.invoke(Op::Help, window, cx)),
-                        ),
-                )
-                .build()
-        }
+        let t = self.theme;
+        row()
+            .items_start()
+            .gap(px(space::LG))
+            .py(px(space::XS))
+            .child(
+                row()
+                    .size(px(space::XXXL))
+                    .flex_shrink_0()
+                    .justify_center()
+                    .rounded(px(radius::LG))
+                    .bg(t.hover())
+                    .child(icon("history").text_color(t.muted())),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .child(div().font_weight(FontWeight::MEDIUM).child("No edits yet"))
+                    .child(
+                        div()
+                            .mt(px(space::XS))
+                            .text_size(px(type_size::BODY))
+                            .line_height(px(type_size::LINE_DENSE))
+                            .text_color(t.muted())
+                            .child("Your changes will appear here."),
+                    )
+                    .when(!compact, |d| {
+                        d.child(
+                            self.button(
+                                "history-guide",
+                                "",
+                                "Keyboard guide",
+                                Op::Help,
+                                ActionPresentation::Button(ButtonStyle::Ghost),
+                                cx,
+                            )
+                            .mt(px(space::MD))
+                            .px(px(space::NONE))
+                            .text_color(t.text())
+                            .child(
+                                icon("arrow-right")
+                                    .size(px(space::LG))
+                                    .text_color(t.muted()),
+                            ),
+                        )
+                    }),
+            )
     }
 
     fn history_row(&self, i: usize, entry: &quantum_core::HistoryEntry) -> Stateful<Div> {
         let t = self.theme;
         row()
             .id(("history", i))
-            .py(px(Space::S4.px()))
-            .gap(px(Space::S4.px()))
+            .py(px(space::INSET))
+            .gap(px(space::LG))
             .items_start()
             .child(
                 icon("check")
-                    .mt(px(Space::S1.px()))
-                    .size(px(Space::S5.px()))
-                    .text_color(t.color(ColorToken::TextSecondary)),
+                    .mt(px(space::XXS))
+                    .size(px(space::XL))
+                    .text_color(t.muted()),
             )
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(Space::S0.px()))
+                    .min_w(px(space::NONE))
                     .child(
                         div()
                             .text_ellipsis()
                             .overflow_hidden()
-                            .font_weight(type_size::MEDIUM)
+                            .font_weight(FontWeight::MEDIUM)
                             .child(entry.label.clone()),
                     )
                     .child(
@@ -119,8 +146,8 @@ impl EditorView {
                         ))
                         .text_ellipsis()
                         .overflow_hidden()
-                        .text_color(t.color(ColorToken::TextSecondary))
-                        .mt(px(Space::S2.px())),
+                        .text_color(t.muted())
+                        .mt(px(space::XS)),
                     ),
             )
     }

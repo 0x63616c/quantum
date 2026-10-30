@@ -4,38 +4,35 @@ use crate::{
     theme::Theme,
 };
 use gpui::{prelude::*, *};
-use quantum_ui::ColorToken;
-use quantum_ui::Radius;
-use quantum_ui::Space;
-use quantum_ui::TextSize;
-use quantum_ui::TextStyle;
-use quantum_ui::tokens::geometry;
-use quantum_ui::tokens::state;
-use quantum_ui::{Kbd, row, tokens::type_size};
+use quantum_ui::{
+    Kbd, row,
+    tokens::{radius, space, type_size},
+};
 
 pub(super) use quantum_ui::tokens::metrics::welcome::*;
 
 pub(super) fn caps(binding: &str, theme: Theme) -> Div {
-    row().gap(px(Space::S2.px())).flex_shrink_0().children(
+    row().gap(px(space::COMPACT)).flex_shrink_0().children(
         compact_shortcut_tokens(binding, ShortcutPlatform::current())
             .into_iter()
             .map(|token| {
-                let cap = Kbd::frame(theme.color(ColorToken::TextSecondary))
-                    .min_w(px(Space::S5.px()))
-                    .h(px(Space::S5.px()))
-                    .px(px(Space::S2.px()))
+                let cap = Kbd::frame(theme.muted())
+                    .min_w(px(space::SECTION))
+                    .h(px(space::SECTION))
+                    .px(px(space::COMPACT))
                     .bg(theme.hover())
-                    .border_color(theme.color(ColorToken::BorderSubtle))
+                    .border_color(theme.line())
                     .font_family(type_size::MONO)
-                    .text_color(theme.color(ColorToken::TextSecondary))
-                    .text_style(TextSize::Caption);
+                    .text_color(theme.muted())
+                    .text_size(px(type_size::CAPTION))
+                    .line_height(px(type_size::LINE_SM));
                 match token {
                     ShortcutToken::Text(text) => cap.child(text),
                     ShortcutToken::Symbol(symbol) => cap.child(
                         svg()
                             .path(symbol.path())
                             .size(px(KEY_GLYPH))
-                            .text_color(theme.color(ColorToken::TextSecondary)),
+                            .text_color(theme.muted()),
                     ),
                 }
             }),
@@ -44,13 +41,13 @@ pub(super) fn caps(binding: &str, theme: Theme) -> Div {
 
 pub(super) fn header(label: &'static str, theme: Theme) -> Div {
     row()
-        .h(px(Space::S5.px()))
+        .h(px(space::PANEL))
         .flex_shrink_0()
-        .px(px(Space::S3.px()))
-        .mb(px(Space::S4.px()))
-        .text_style(TextSize::Caption)
+        .px(px(space::MD))
+        .mb(px(space::LG))
+        .text_size(px(type_size::CAPTION))
         .font_weight(type_size::MEDIUM)
-        .text_color(theme.color(ColorToken::TextSecondary))
+        .text_color(theme.muted())
         .child(label)
 }
 
@@ -64,27 +61,21 @@ pub(super) fn thumbnail(
         .relative()
         .size_full()
         .overflow_hidden()
-        .rounded(px(if large {
-            Radius::Md.px()
-        } else {
-            Radius::Sm.px()
-        }))
+        .rounded(px(if large { radius::LG } else { radius::CONTROL }))
         // The reference's quiet raised black is halfway between the base and hover.
-        .bg(theme
-            .color(ColorToken::Canvas)
-            .blend(theme.hover().opacity(state::THUMBNAIL_WASH)))
+        .bg(theme.background().blend(theme.hover().opacity(0.5)))
         .border_1()
-        .border_color(theme.color(ColorToken::BorderSubtle))
+        .border_color(theme.line())
         .when_some(path, |d, path| {
             // HTML reference fills 112% of the artwork frame. Give GPUI an
             // explicit height so the PNG's intrinsic aspect cannot stretch it.
             d.child(
                 img(path.clone())
                     .absolute()
-                    .left(relative(-geometry::THUMBNAIL_OVERSCAN))
-                    .top(px(-height * geometry::THUMBNAIL_OVERSCAN))
-                    .w(relative(geometry::THUMBNAIL_SCALE))
-                    .h(px(height * geometry::THUMBNAIL_SCALE))
+                    .left(relative(-0.06))
+                    .top(px(-height * 0.06))
+                    .w(relative(1.12))
+                    .h(px(height * 1.12))
                     .object_fit(ObjectFit::Contain),
             )
         })
@@ -94,7 +85,6 @@ pub(super) fn thumbnail(
 mod tests {
     use super::Theme;
     use gpui::{Hsla, Rgba};
-    use quantum_ui::ColorToken;
 
     fn luminance(color: Hsla) -> f32 {
         let color = Rgba::from(color);
@@ -112,18 +102,12 @@ mod tests {
     fn secondary_text_meets_wcag_aa_on_every_welcome_surface() {
         for theme in [Theme::Dark, Theme::Light] {
             for (foreground, background) in [
+                (theme.muted(), theme.background()),
+                (theme.muted(), theme.hover()),
+                (theme.muted(), theme.selected()),
                 (
-                    theme.color(ColorToken::TextSecondary),
-                    theme.color(ColorToken::Canvas),
-                ),
-                (theme.color(ColorToken::TextSecondary), theme.hover()),
-                (
-                    theme.color(ColorToken::TextSecondary),
-                    theme.color(ColorToken::Canvas).blend(theme.selected()),
-                ),
-                (
-                    theme.color(ColorToken::TextSecondary),
-                    theme.color(ColorToken::Surface).blend(theme.selected()),
+                    theme.accent().blend(theme.text().opacity(0.30)),
+                    theme.selected(),
                 ),
             ] {
                 let a = luminance(foreground);

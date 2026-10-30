@@ -1,4 +1,4 @@
-use super::{SearchResult, Section, search_sections};
+use super::{SearchResult, Section, SectionHistory, search_sections};
 use crate::actions::Op;
 
 #[cfg(feature = "test-support")]
@@ -120,7 +120,9 @@ fn edits_during_io_coalesce_and_drain_even_after_an_older_write_fails() {
                 grid: false,
                 ..Default::default()
             });
-            return Err(std::io::Error::other("disk failure").into());
+            return Err(quantum_app::editor::EditorError::Gesture(
+                "disk failure".into(),
+            ));
         }
         Ok(())
     });
@@ -186,4 +188,48 @@ fn search_includes_parent_sections_and_individual_shortcuts() {
         search_sections("viewport ground")[0].settings,
         vec!["Ground grid"]
     );
+}
+
+#[test]
+fn history_moves_back_and_forward_and_stops_at_boundaries() {
+    let mut history = SectionHistory::new(Section::General);
+    assert!(!history.can_back());
+    assert!(!history.can_forward());
+    history.back();
+    history.forward();
+    assert_eq!(history.current(), Section::General);
+    history.visit(Section::Appearance);
+    history.visit(Section::Viewport);
+    history.back();
+    assert_eq!(history.current(), Section::Appearance);
+    assert!(history.can_back());
+    assert!(history.can_forward());
+    history.back();
+    history.back();
+    assert_eq!(history.current(), Section::General);
+    history.forward();
+    history.forward();
+    history.forward();
+    assert_eq!(history.current(), Section::Viewport);
+    assert!(!history.can_forward());
+}
+
+#[test]
+fn history_preserves_forward_on_reselection_and_truncates_on_new_navigation() {
+    let mut history = SectionHistory::new(Section::General);
+    history.visit(Section::Appearance);
+    history.visit(Section::Viewport);
+    history.back();
+    history.visit(Section::Appearance);
+    assert!(history.can_forward());
+    assert_eq!(history.entries.len(), 3);
+    history.visit(Section::Agent);
+    assert!(!history.can_forward());
+    assert_eq!(
+        history.entries,
+        vec![Section::General, Section::Appearance, Section::Agent]
+    );
+    history.visit(Section::Agent);
+    history.back();
+    assert_eq!(history.current(), Section::Appearance);
 }

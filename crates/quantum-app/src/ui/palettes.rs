@@ -36,14 +36,14 @@ pub(super) struct PaletteManager {
 }
 impl PaletteManager {
     pub fn new(window: &mut Window, cx: &mut Context<EditorView>) -> Self {
-        let hex = TextField::design("#RRGGBB", cx);
+        let hex = TextField::new("#RRGGBB", cx);
         hex.update(cx, |field, _| field.numeric(7));
         let manager = Self {
             open: false,
-            name: TextField::design("Palette name", cx),
+            name: TextField::new("Palette name", cx),
             hex,
             channels: ["Red", "Green", "Blue", "Hue", "Saturation", "Brightness"].map(|label| {
-                let field = TextField::design(label, cx);
+                let field = TextField::new(label, cx);
                 field.update(cx, |field, _| field.numeric(3));
                 field
             }),
@@ -573,12 +573,14 @@ impl EditorView {
         callback: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
     ) -> Stateful<Div> {
         let t = self.theme;
-        let mut button = Button::design(id, text, t).style(style);
+        let mut button = Button::new(id, text, t).legacy_style(style);
         if !name.is_empty() {
             button = button.icon(name);
         }
         button
             .build()
+            .border_1()
+            .border_color(t.line())
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus, cx);
                 callback(this, window, cx)

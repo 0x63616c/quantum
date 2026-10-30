@@ -4,17 +4,13 @@ use quantum_plugin_api::{
     OverlayColor, OverlayGesture, OverlayInput, OverlayNavigation, OverlayOutcome,
     OverlayPrimitive, RenderPassSlot,
 };
-use quantum_ui::ColorToken;
-use quantum_ui::Space;
-use quantum_ui::TextSize;
-use quantum_ui::TextStyle;
 
 pub(super) fn color(theme: Theme, color: OverlayColor) -> Hsla {
     match color {
         OverlayColor::Axis(axis) => theme.axis(axis),
-        OverlayColor::Line => theme.color(ColorToken::BorderSubtle),
-        OverlayColor::Background => theme.color(ColorToken::Canvas),
-        OverlayColor::Text => theme.color(ColorToken::TextPrimary),
+        OverlayColor::Line => theme.line(),
+        OverlayColor::Background => theme.background(),
+        OverlayColor::Text => theme.text(),
     }
 }
 
@@ -29,7 +25,7 @@ impl EditorView {
             .overlay_bounds
             .borrow()
             .get(id)
-            .map_or(point(px(Space::S0.px()), px(Space::S0.px())), |b| b.origin);
+            .map_or(point(px(space::NONE), px(space::NONE)), |b| b.origin);
         let local = position - origin;
         OverlayInput {
             gesture,
@@ -227,8 +223,8 @@ impl EditorView {
                             .border_color(color(t, circle.border))
                             .bg(color(t, circle.fill))
                             .text_color(color(t, circle.text))
-                            .text_style(TextSize::Small)
-                            .font_weight(type_size::SEMIBOLD)
+                            .text_size(px(type_size::BODY))
+                            .font_weight(FontWeight::SEMIBOLD)
                             .children(circle.label)
                             .when(circle.highlighted, |d| d.shadow(focus_ring(t)))
                     }))

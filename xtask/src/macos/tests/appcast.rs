@@ -448,12 +448,12 @@ fn legacy_signed_urls_validate_before_and_after_repository_redirects() {
 }
 
 #[test]
-fn release_repository_accepts_only_the_canonical_slug() {
+fn repository_transition_accepts_only_both_owner_slugs() {
     let mut env = macos::Environment::default();
-    env.set("GITHUB_REPOSITORY", macos::REPOSITORY);
-    assert_eq!(macos::release_repository(&env).unwrap(), macos::REPOSITORY);
-    for other in [concat!("0x63616c/voxe", "lite"), "another-owner/quantum"] {
-        env.set("GITHUB_REPOSITORY", other);
-        assert!(macos::release_repository(&env).is_err());
+    for repository in [macos::LEGACY_REPOSITORY, macos::REPOSITORY] {
+        env.set("GITHUB_REPOSITORY", repository);
+        assert_eq!(macos::release_repository(&env).unwrap(), repository);
     }
+    env.set("GITHUB_REPOSITORY", "another-owner/quantum");
+    assert!(macos::release_repository(&env).is_err());
 }

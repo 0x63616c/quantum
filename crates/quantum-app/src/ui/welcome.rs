@@ -1,9 +1,6 @@
 //! Native project launcher and recent-file integration. The editor remains the
 //! sole document owner; requests made here reuse its unsaved-change flow.
-use super::{
-    AnchoredTooltip, EditorView, TooltipSide, settings, sync_reduced_motion,
-    welcome_style as layout,
-};
+use super::{EditorView, hint, settings, welcome_style as layout};
 use crate::{
     actions::{self, Op, OpenRecentProject},
     shortcuts::{ShortcutPlatform, navigation_key},
@@ -16,10 +13,9 @@ use quantum_app::{
     samples::Sample,
     thumbnails::{SamplePreview, ThumbnailCache},
 };
-use quantum_ui::Space;
 use quantum_ui::{
-    AsciiReveal, icon, row,
-    tokens::{metrics, type_size},
+    AsciiReveal, Button, SidebarItem, icon, row,
+    tokens::{metrics, radius, space, type_size},
 };
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -55,7 +51,6 @@ pub(crate) fn init(
     preferences: quantum_app::editor::EditorResult<quantum_app::preferences::Preferences>,
     cx: &mut App,
 ) {
-    sync_reduced_motion(cx);
     settings::init_loaded(theme, preferences, cx);
     cx.set_global(Launcher {
         editor: None,
@@ -282,7 +277,7 @@ pub(crate) fn open_editor(editor: Editor, cx: &mut App) -> anyhow::Result<()> {
                     appears_transparent: true,
                     traffic_light_position: Some(point(
                         px(layout::EDITOR_TRAFFIC_LEFT),
-                        px(Space::S6.px()),
+                        px(space::XXL),
                     )),
                 })
             } else {
@@ -348,7 +343,7 @@ pub(crate) fn show(cx: &mut App) -> anyhow::Result<WindowHandle<WelcomeView>> {
             titlebar: Some(TitlebarOptions {
                 title: (!cfg!(target_os = "macos")).then(|| "Quantum".into()),
                 appears_transparent: true,
-                traffic_light_position: Some(point(px(Space::S5.px()), px(metrics::TRAFFIC_TOP))),
+                traffic_light_position: Some(point(px(space::SECTION), px(metrics::TRAFFIC_TOP))),
             }),
             app_owns_titlebar_drag: cfg!(target_os = "macos"),
             window_background: if cfg!(target_os = "macos") {
@@ -395,7 +390,6 @@ pub(super) fn request(op: Op, path: Option<PathBuf>, cx: &mut App) {
 }
 
 pub(crate) struct WelcomeView {
-    overlays: Entity<quantum_ui::OverlayState>,
     focus: FocusHandle,
     list_focus: FocusHandle,
     sidebar_focus: [FocusHandle; 4],
@@ -433,7 +427,7 @@ impl WelcomeView {
             .detach();
         cx.observe_window_activation(window, |this, window, cx| {
             if window.is_window_active() {
-                this.reduced_motion = sync_reduced_motion(cx);
+                this.reduced_motion = quantum_app::reduce_motion::prefers_reduced_motion();
                 history(HistoryChange::Reload, cx);
             }
             cx.notify();
@@ -471,7 +465,6 @@ impl WelcomeView {
 
     fn initial(cx: &mut Context<Self>) -> Self {
         Self {
-            overlays: quantum_ui::OverlayState::new(cx),
             focus: cx.focus_handle(),
             list_focus: cx.focus_handle(),
             sidebar_focus: std::array::from_fn(|_| cx.focus_handle()),
@@ -671,7 +664,6 @@ impl WelcomeView {
                     if let Err(error) = open_editor(editor, cx) {
                         let _ = this.update(cx, |this, cx| {
                             this.busy = false;
-                            eprintln!("{:?}", quantum_app::reports::report(error.as_ref()));
                             this.error = Some(error.to_string());
                             cx.notify();
                         });
@@ -680,7 +672,6 @@ impl WelcomeView {
             }
             Err(error) => {
                 self.busy = false;
-                eprintln!("{:?}", quantum_app::reports::report(&error));
                 self.error = Some(error.to_string());
             }
         }
@@ -872,7 +863,3 @@ pub(super) fn show_deferred(samples: bool, cx: &mut App) {
 mod snapshot;
 #[cfg(feature = "ui-snapshots")]
 pub(crate) use snapshot::{prepare_snapshot, snapshot_ready};
-
-#[cfg(test)]
-#[cfg(feature = "test-support")]
-mod first_frame;

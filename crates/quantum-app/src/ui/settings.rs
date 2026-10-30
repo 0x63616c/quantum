@@ -1,5 +1,5 @@
 //! Settings presented in a native utility window.
-use super::{AnchoredTooltip, EditorView, TooltipSide, icon, mono, row, sync_reduced_motion};
+use super::{EditorView, icon, mono, row};
 use crate::{
     actions::{self, Op},
     shortcuts::ShortcutPlatform,
@@ -9,15 +9,7 @@ use crate::{
 use gpui::{prelude::*, *};
 use quantum_app::preferences::{Appearance, Preferences};
 use quantum_render::AmbientOcclusionStrength;
-use quantum_ui::ColorToken;
-use quantum_ui::Radius;
-use quantum_ui::Space;
-use quantum_ui::TextSize;
-use quantum_ui::TextStyle;
-use quantum_ui::tokens::geometry;
-use quantum_ui::tokens::metrics;
-use quantum_ui::tokens::state;
-use quantum_ui::tokens::type_size;
+use quantum_ui::tokens::{metrics, radius, space, type_size};
 use quantum_ui::{
     Button, Card, FormRow, IconButton, Panel, SidebarItem, SidebarSection, Slider, SliderRange,
     Toggle,
@@ -31,13 +23,8 @@ pub(super) struct SettingsState {
 }
 impl Global for SettingsState {}
 
-mod history;
-use history::SectionHistory;
-
-mod controls;
 mod menu_actions;
 mod persistence;
-mod window;
 #[cfg(all(test, feature = "test-support"))]
 pub(super) use persistence::init_at;
 #[cfg(test)]
@@ -223,8 +210,47 @@ fn search_sections(query: &str) -> Vec<SearchResult> {
         .collect()
 }
 
+/// Browser-style history: selecting a new section after going back drops the forward branch.
+struct SectionHistory {
+    entries: Vec<Section>,
+    cursor: usize,
+}
+impl SectionHistory {
+    fn new(section: Section) -> Self {
+        Self {
+            entries: vec![section],
+            cursor: 0,
+        }
+    }
+    fn current(&self) -> Section {
+        self.entries[self.cursor]
+    }
+    fn can_back(&self) -> bool {
+        self.cursor > 0
+    }
+    fn can_forward(&self) -> bool {
+        self.cursor + 1 < self.entries.len()
+    }
+    fn visit(&mut self, section: Section) {
+        if self.current() != section {
+            self.entries.truncate(self.cursor + 1);
+            self.entries.push(section);
+            self.cursor += 1;
+        }
+    }
+    fn back(&mut self) {
+        if self.can_back() {
+            self.cursor -= 1;
+        }
+    }
+    fn forward(&mut self) {
+        if self.can_forward() {
+            self.cursor += 1;
+        }
+    }
+}
+
 pub(super) struct SettingsView {
-    overlays: Entity<quantum_ui::OverlayState>,
     history: SectionHistory,
     sidebar_visible: bool,
     pane_scroll: ScrollHandle,
@@ -241,23 +267,19 @@ impl SettingsView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let search = TextField::design("Search settings", cx);
+        let search = TextField::new("Search settings", cx);
         search.update(cx, |field, _| field.embed());
         cx.observe(&search, |_, _, cx| cx.notify()).detach();
         cx.observe_global::<SettingsState>(|_, cx| cx.notify())
             .detach();
-        cx.observe_window_activation(window, |_, _, cx| {
-            sync_reduced_motion(cx);
-            cx.notify();
-        })
-        .detach();
+        cx.observe_window_activation(window, |_, _, cx| cx.notify())
+            .detach();
         cx.observe_window_appearance(window, |_, _, cx| cx.notify())
             .detach();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         Self {
             history: SectionHistory::new(section),
-            overlays: quantum_ui::OverlayState::new(cx),
             sidebar_visible: true,
             pane_scroll: ScrollHandle::new(),
             search,
@@ -292,7 +314,7 @@ impl SettingsView {
     fn navigate(&mut self, section: Section, cx: &mut Context<Self>) {
         self.history.visit(section);
         self.pane_scroll
-            .set_offset(point(px(Space::S0.px()), px(Space::S0.px())));
+            .set_offset(point(px(space::NONE), px(space::NONE)));
         cx.notify();
     }
     fn history_step(&mut self, forward: bool, cx: &mut Context<Self>) {
@@ -302,8 +324,79 @@ impl SettingsView {
             self.history.back();
         }
         self.pane_scroll
-            .set_offset(point(px(Space::S0.px()), px(Space::S0.px())));
+            .set_offset(point(px(space::NONE), px(space::NONE)));
         cx.notify();
+    }
+    fn chrome_button(
+        &self,
+        id: &'static str,
+        glyph: &'static str,
+        label: &'static str,
+        enabled: bool,
+        t: Theme,
+    ) -> Stateful<Div> {
+        IconButton::button(id, glyph, label, t)
+            .disabled(!enabled)
+            .build()
+            .tooltip(super::hint(label, t))
+    }
+
+    fn sidebar_row(
+        &self,
+        section: Section,
+        setting: Option<&'static str>,
+        index: usize,
+        t: Theme,
+        cx: &Context<Self>,
+    ) -> Stateful<Div> {
+        let selected = setting.is_none() && section == self.history.current();
+        let label = setting.unwrap_or(section.title());
+        SidebarItem::row(
+            ("settings-result", index),
+            label,
+            if setting.is_some() {
+                "chevron-right"
+            } else {
+                section.icon()
+            },
+            selected,
+            t,
+        )
+        .mb(px(space::XXS))
+        .when(setting.is_some(), |d| {
+            d.ml(px(space::XXL)).text_size(px(type_size::CAPTION))
+        })
+        .on_click(cx.listener(move |this, _, window, cx| {
+            this.navigate(section, cx);
+            window.focus(&this.focus, cx);
+        }))
+    }
+    fn form_row(
+        &self,
+        label: impl Into<SharedString>,
+        detail: &'static str,
+        control: impl IntoElement,
+        t: Theme,
+    ) -> Div {
+        FormRow::row(label, detail, control, t)
+    }
+    fn group(&self, rows: Vec<Div>, t: Theme) -> Div {
+        Card::new(t).rows(rows)
+    }
+    fn toggle(
+        &self,
+        id: &'static str,
+        value: bool,
+        edit: fn(&mut Preferences),
+        t: Theme,
+        cx: &Context<Self>,
+    ) -> Stateful<Div> {
+        Toggle::switch(id, id, value, t)
+            .tooltip(super::hint(if value { "On" } else { "Off" }, t))
+            .on_click(cx.listener(move |_, _, _, cx| change(cx, edit)))
+    }
+    fn button(&self, id: &'static str, label: &'static str, t: Theme) -> Stateful<Div> {
+        Button::new(id, label, t).build()
     }
     fn appearance_preview(appearance: Appearance) -> Div {
         let fill: Background = match appearance {
@@ -317,18 +410,18 @@ impl SettingsView {
         };
         div()
             .h(px(metrics::APPEARANCE_PREVIEW_HEIGHT))
-            .rounded(px(Radius::Md.px()))
+            .rounded(px(radius::LG))
             .overflow_hidden()
             .bg(fill)
             .child(
                 row()
-                    .h(px(Space::S5.px()))
-                    .px(px(Space::S3.px()))
-                    .gap(px(Space::S2.px()))
+                    .h(px(space::PANEL))
+                    .px(px(space::MD))
+                    .gap(px(space::XS))
                     .bg(Theme::Dark.preview_chrome())
                     .children(
                         Theme::preview_lights()
-                            .map(|color| div().size(px(Space::S2.px())).rounded_full().bg(color)),
+                            .map(|color| div().size(px(space::GLYPH)).rounded_full().bg(color)),
                     ),
             )
             .child(
@@ -337,13 +430,13 @@ impl SettingsView {
                     .items_stretch()
                     .child(
                         div()
-                            .w(relative(geometry::PREVIEW_SIDEBAR_FRACTION))
-                            .p(px(Space::S3.px()))
+                            .w(relative(0.28))
+                            .p(px(space::OPTICAL))
                             .bg(Theme::Dark.preview_chrome())
                             .children([1.0, 0.8, 0.6].map(|width| {
                                 div()
-                                    .mt(px(Space::S3.px()))
-                                    .h(px(Space::S2.px()))
+                                    .mt(px(space::SM))
+                                    .h(px(space::XS))
                                     .w(relative(width))
                                     .rounded_full()
                                     .bg(Theme::Dark.preview_content())
@@ -352,12 +445,12 @@ impl SettingsView {
                     .child(
                         div()
                             .flex_1()
-                            .p(px(Space::S4.px()))
+                            .p(px(space::INSET))
                             .children([0.9, 0.65, 0.75].map(|width| {
                                 div()
-                                    .mt(px(Space::S2.px()))
-                                    .mb(px(Space::S3.px()))
-                                    .h(px(Space::S2.px()))
+                                    .mt(px(space::XS))
+                                    .mb(px(space::SM))
+                                    .h(px(space::XS))
                                     .w(relative(width))
                                     .rounded_full()
                                     .bg(Theme::Dark.preview_content())
@@ -419,15 +512,15 @@ impl SettingsView {
             Section::Appearance => self.group(
                 vec![
                     div()
-                        .p(px(Space::S5.px()))
+                        .p(px(space::SECTION))
                         .child(
                             div()
-                                .font_weight(type_size::SEMIBOLD)
-                                .mb(px(Space::S5.px()))
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .mb(px(space::XL))
                                 .child("Window appearance"),
                         )
                         .child(
-                            row().gap(px(Space::S4.px())).children(
+                            row().gap(px(space::LG)).children(
                                 [
                                     (Appearance::System, "System"),
                                     (Appearance::Light, "Light"),
@@ -437,37 +530,37 @@ impl SettingsView {
                                 .enumerate()
                                 .map(|(i, (appearance, label))| {
                                     let selected = p.appearance == appearance;
-                                    quantum_ui::ListRow::frame(("appearance", i), label, t, selected).flex_col().items_stretch()
+                                    Button::tile(("appearance", i), label)
                                         .tab_index(0)
                                         .role(Role::Button)
                                         .aria_label(label)
                                         .aria_selected(selected)
                                         .flex_1()
-                                        .min_w(px(Space::S0.px()))
-                                        .p(px(Space::S3.px()))
-                                        .rounded(px(Radius::Md.px()))
-                                        .when(selected, |d| d.bg(t.color(ColorToken::Accent).opacity(state::PREVIEW_SELECTED)))
+                                        .min_w(px(space::NONE))
+                                        .p(px(space::OPTICAL))
+                                        .rounded(px(radius::APPEARANCE))
+                                        .when(selected, |d| d.bg(t.tint().opacity(0.08)))
                                         .cursor_pointer()
-
-
+                                        .focus_visible(move |d| d.shadow(super::focus_ring(t)))
+                                        .hover(move |d| d.bg(t.tint().opacity(0.1)))
                                         .child(
                                             Self::appearance_preview(appearance)
                                                 .border_2()
                                                 .border_color(if selected {
-                                                    t.color(ColorToken::Accent)
+                                                    t.tint()
                                                 } else {
-                                                    t.color(ColorToken::Border)
+                                                    t.separator()
                                                 }),
                                         )
                                         .child(
                                             div()
-                                                .mt(px(Space::S3.px()))
+                                                .mt(px(space::CAPTION_OFFSET))
                                                 .text_center()
-                                                .font_weight(type_size::SEMIBOLD)
+                                                .font_weight(FontWeight::SEMIBOLD)
                                                 .text_color(if selected {
-                                                    t.color(ColorToken::Accent)
+                                                    t.tint()
                                                 } else {
-                                                    t.color(ColorToken::TextPrimary)
+                                                    t.text()
                                                 })
                                                 .child(label),
                                         )
@@ -479,9 +572,9 @@ impl SettingsView {
                         )
                         .child(
                             div()
-                                .mt(px(Space::S5.px()))
-                                .text_style(TextSize::Small)
-                                .text_color(t.color(ColorToken::TextSecondary))
+                                .mt(px(space::SECTION))
+                                .text_size(px(type_size::BODY))
+                                .text_color(t.muted())
                                 .child("System follows your device’s light and dark appearance."),
                         ),
                 ],
@@ -542,7 +635,7 @@ impl SettingsView {
                                 }),
                                 mono(format!("{:.2}", p.ambient_occlusion_strength.get())),
                             )
-                            .w(px(geometry::SETTINGS_SLIDER)),
+                            .w(px(200.0)),
                             t,
                         ),
                         self.form_row(
@@ -593,20 +686,21 @@ impl SettingsView {
                             op.label(),
                             op.menu(cfg!(target_os = "macos")),
                             row()
-                                .gap(px(Space::S3.px()))
+                                .gap(px(space::MD))
                                 .child(
                                     quantum_ui::Kbd::well(t)
                                         .child(super::shortcut_hint::sheet_shortcut(op)),
                                 )
                                 // The registry exposes fixed bindings, all already at their defaults.
                                 .child(
-                                    Button::design(("reset-shortcut", i), "Reset", t)
+                                    Button::new(("reset-shortcut", i), "Reset", t)
                                         .disabled(true)
                                         .build()
                                         .aria_label("Reset shortcut")
-                                        .anchored_hint(
+                                        .tooltip(super::hint(
                                             "This shortcut already uses its built-in default.",
-                                            t, TooltipSide::Below, &self.overlays),
+                                            t,
+                                        )),
                                 ),
                             t,
                         )
@@ -644,7 +738,7 @@ impl SettingsView {
                         } else {
                             "Updates are unavailable in this build."
                         },
-                        Button::design("check-updates", "Check for Updates…", t)
+                        Button::new("check-updates", "Check for Updates…", t)
                             .disabled(!updates_available)
                             .build()
                             .aria_description(if updates_available {
@@ -665,7 +759,7 @@ impl SettingsView {
                     self.form_row(
                         "Preferences",
                         "Saved locally on this device.",
-                        icon("lock").text_color(t.color(ColorToken::TextSecondary)),
+                        icon("lock").text_color(t.muted()),
                         t,
                     ),
                     self.form_row(
@@ -714,7 +808,7 @@ impl Render for SettingsView {
         let mut sidebar_rows = div()
             .id("settings-sections")
             .flex_1()
-            .min_h(px(Space::S0.px()))
+            .min_h(px(space::NONE))
             .overflow_y_scroll();
         let mut previous_group = "";
         let mut index = 0;
@@ -739,18 +833,18 @@ impl Render for SettingsView {
         if results.is_empty() {
             sidebar_rows = sidebar_rows.child(
                 div()
-                    .p(px(Space::S4.px()))
-                    .text_style(TextSize::Small)
-                    .text_color(t.color(ColorToken::TextSecondary))
+                    .p(px(space::LG))
+                    .text_size(px(type_size::BODY))
+                    .text_color(t.muted())
                     .child("No matching settings"),
             );
         }
-        if crate::actions::sync_native_menus(window) {
+        if window.is_window_active() && cfg!(target_os = "macos") {
             cx.set_menus(actions::menus_for_window(
                 window.is_fullscreen(),
                 |_| false,
                 |op| {
-                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window, cx))
+                    (matches!(op, Op::Undo | Op::Redo) && crate::text_field::focused(window))
                         || op
                             .availability(actions::CommandContext::Settings {
                                 updates_available: super::updates_available(),
@@ -768,15 +862,15 @@ impl Render for SettingsView {
             .key_context("Settings")
             .track_focus(&self.focus)
             .size_full()
-            .bg(t.color(ColorToken::Surface))
+            .bg(t.surface())
             .font(gpui::font(if cfg!(target_os = "macos") {
                 ".AppleSystemUIFont"
             } else {
                 "Geist"
             }))
-            .text_style(TextSize::Body)
-            .text_color(t.color(ColorToken::TextPrimary))
-            .rounded(px(Radius::Lg.px()))
+            .text_size(px(type_size::BODY_LG))
+            .text_color(t.text())
+            .rounded(px(radius::WINDOW))
             .overflow_hidden()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, op: &Op, window, cx| {
@@ -804,20 +898,20 @@ impl Render for SettingsView {
                     .id("settings-titlebar")
                     .h(px(metrics::SETTINGS_TITLEBAR))
                     .flex_shrink_0()
-                    .px(px(Space::S5.px()))
-                    .gap(px(Space::S5.px()))
+                    .px(px(space::XL))
+                    .gap(px(space::XL))
                     .when(cfg!(target_os = "macos"), |d| {
                         d.pl(px(metrics::SETTINGS_TRAFFIC_INSET))
                     })
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.start_window_move())
                     .child(
                         row()
-                            .p(px(Space::S2.px()))
-                            .gap(px(Space::S1.px()))
+                            .p(px(space::COMPACT))
+                            .gap(px(space::XXS))
                             .rounded_full()
                             .border_1()
-                            .border_color(t.color(ColorToken::Border))
-                            .bg(t.color(ColorToken::Raised))
+                            .border_color(t.separator())
+                            .bg(t.surface_raised())
                             .child(
                                 self.chrome_button(
                                     "settings-sidebar-toggle",
@@ -872,9 +966,9 @@ impl Render for SettingsView {
                     )
                     .child(
                         div()
-                            .min_w(px(Space::S0.px()))
-                            .text_style(TextSize::Title)
-                            .font_weight(type_size::BOLD)
+                            .min_w(px(space::NONE))
+                            .text_size(px(type_size::WINDOW_TITLE))
+                            .font_weight(FontWeight::BOLD)
                             .child("Quantum Settings"),
                     )
                     .child(div().flex_1())
@@ -886,7 +980,7 @@ impl Render for SettingsView {
             .child(
                 row()
                     .flex_1()
-                    .min_h(px(Space::S0.px()))
+                    .min_h(px(space::NONE))
                     .items_stretch()
                     .when(self.sidebar_visible, |d| {
                         d.child(
@@ -894,33 +988,33 @@ impl Render for SettingsView {
                                 .build()
                                 .w(px(metrics::MENU_WIDTH))
                                 .flex_shrink_0()
-                                .m(px(Space::S4.px()))
-                                .mt(px(Space::S0.px()))
-                                .mr(px(Space::S0.px()))
-                                .p(px(Space::S4.px()))
+                                .m(px(space::INSET))
+                                .mt(px(space::NONE))
+                                .mr(px(space::NONE))
+                                .p(px(space::INSET))
                                 .flex()
                                 .flex_col()
-                                .rounded(px(Radius::Lg.px()))
+                                .rounded(px(radius::XL))
                                 .border_1()
-                                .border_color(t.color(ColorToken::Border))
-                                .bg(t.color(ColorToken::Surface))
+                                .border_color(t.separator())
+                                .bg(t.sidebar())
                                 .child(
                                     quantum_ui::FieldFrame::search_row(
                                         t,
-                                        self.search.read(cx).focus_visible(window),
+                                        self.search.read(cx).focused(window),
                                     )
                                     .flex_shrink_0()
-                                    .mb(px(Space::S2.px()))
+                                    .mb(px(space::XS))
                                     .child(
                                         icon("search")
                                             .size(px(metrics::ICON_DENSE))
                                             .flex_shrink_0()
-                                            .text_color(t.color(ColorToken::TextSecondary)),
+                                            .text_color(t.muted()),
                                     )
                                     .child(
                                         div()
                                             .flex_1()
-                                            .min_w(px(Space::S0.px()))
+                                            .min_w(px(space::NONE))
                                             .child(self.search.clone()),
                                     )
                                     .when(
@@ -934,7 +1028,7 @@ impl Render for SettingsView {
                                                     true,
                                                     t,
                                                 )
-                                                .size(px(Space::S5.px()))
+                                                .size(px(space::PANEL))
                                                 .on_click(cx.listener(|this, _, window, cx| {
                                                     this.search.update(cx, |field, cx| {
                                                         field.set(String::new(), cx)
@@ -951,24 +1045,24 @@ impl Render for SettingsView {
                     .child(
                         div()
                             .flex_1()
-                            .min_w(px(Space::S0.px()))
+                            .min_w(px(space::NONE))
                             .flex()
                             .flex_col()
                             .child(
                                 div()
                                     .id("settings-pane")
                                     .flex_1()
-                                    .min_h(px(Space::S0.px()))
+                                    .min_h(px(space::NONE))
                                     .overflow_y_scroll()
                                     .track_scroll(&self.pane_scroll)
-                                    .px(px(Space::S7.px()))
-                                    .pt(px(Space::S5.px()))
-                                    .pb(px(Space::S7.px()))
+                                    .px(px(space::PANE))
+                                    .pt(px(space::SECTION))
+                                    .pb(px(space::PANE))
                                     .child(
                                         div()
-                                            .mb(px(Space::S6.px()))
-                                            .text_style(TextSize::Display)
-                                            .font_weight(type_size::BOLD)
+                                            .mb(px(space::XXL))
+                                            .text_size(px(type_size::DISPLAY))
+                                            .font_weight(FontWeight::BOLD)
                                             .child(section.title()),
                                     )
                                     .child(self.content(section, t, cx)),
@@ -976,15 +1070,118 @@ impl Render for SettingsView {
                             .when_some(state.error, |d, message| {
                                 d.child(
                                     div()
-                                        .px(px(Space::S7.px()))
-                                        .pb(px(Space::S5.px()))
-                                        .text_style(TextSize::Small)
-                                        .text_color(t.color(ColorToken::Danger))
+                                        .px(px(space::PANE))
+                                        .pb(px(space::SECTION))
+                                        .text_size(px(type_size::BODY))
+                                        .text_color(t.danger())
                                         .child(message),
                                 )
                             }),
                     ),
             )
+    }
+}
+
+impl EditorView {
+    pub(super) fn open_settings(
+        &mut self,
+        section: Section,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let owner = cx.weak_entity();
+        let owner_window = window.window_handle();
+        {
+            let existing = self.settings_window;
+            // open_window paints its first frame immediately. Defer until this
+            // EditorView update ends: settings reads the owner's live registry.
+            cx.defer(move |cx| {
+                if let Some(handle) = existing
+                    && handle
+                        .update(cx, |view, window, cx| {
+                            view.navigate(section, cx);
+                            window.activate_window();
+                            cx.notify();
+                        })
+                        .is_ok()
+                {
+                    return;
+                }
+                let bounds = Bounds::centered(
+                    None,
+                    size(px(metrics::SETTINGS_WIDTH), px(metrics::SETTINGS_HEIGHT)),
+                    cx,
+                );
+                let view_owner = owner.clone();
+                let result = cx.open_window(
+                    WindowOptions {
+                        window_bounds: Some(WindowBounds::Windowed(bounds)),
+                        app_owns_titlebar_drag: cfg!(target_os = "macos"),
+                        window_min_size: Some(size(
+                            px(metrics::SETTINGS_MIN_WIDTH),
+                            px(metrics::SETTINGS_MIN_HEIGHT),
+                        )),
+                        titlebar: Some(TitlebarOptions {
+                            title: Some("Quantum Settings".into()),
+                            appears_transparent: true,
+                            traffic_light_position: Some(point(
+                                px(space::SECTION),
+                                px(metrics::TRAFFIC_TOP),
+                            )),
+                        }),
+                        window_background: if cfg!(target_os = "macos") {
+                            WindowBackgroundAppearance::Blurred
+                        } else {
+                            WindowBackgroundAppearance::Opaque
+                        },
+                        app_id: Some(quantum_app::APP_ID.into()),
+                        ..Default::default()
+                    },
+                    |window, cx| {
+                        cx.new(|cx| {
+                            SettingsView::new(section, view_owner, owner_window, window, cx)
+                        })
+                    },
+                );
+                let _ = owner.update(cx, |this, cx| {
+                    match result {
+                        Ok(handle) => this.settings_window = Some(handle),
+                        Err(error) => {
+                            this.status = format!("Could not open settings: {error}").into();
+                            this.error = true;
+                        }
+                    }
+                    cx.notify();
+                });
+            });
+        }
+        cx.notify();
+    }
+    #[expect(
+        clippy::expect_used,
+        reason = "internal invariant: declared boolean grid setting"
+    )]
+    pub(super) fn sync_preferences(&mut self, window: &Window, cx: &mut Context<Self>) {
+        let next = cx.global::<SettingsState>().values.clone();
+        let next_theme = theme(next.appearance, window);
+        let rerender = self.preferences.antialiasing != next.antialiasing
+            || self.preferences.viewport_ambient_occlusion() != next.viewport_ambient_occlusion()
+            || (self.viewport.gpu_enabled()
+                && (self.theme != next_theme
+                    || self.preferences.grid != next.grid
+                    || self.preferences.show_debug_overlay != next.show_debug_overlay));
+        self.theme = next_theme;
+        self.editor
+            .set_grid(next.grid)
+            .expect("declared boolean grid setting");
+        if self.preferences.show_debug_overlay != next.show_debug_overlay {
+            self.viewport.clear_diagnostics();
+        }
+        self.preferences = next;
+        if rerender {
+            self.request_render(cx);
+        }
+        cx.notify();
     }
 }
 

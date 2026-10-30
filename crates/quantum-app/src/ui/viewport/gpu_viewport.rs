@@ -149,7 +149,7 @@ impl EditorView {
         let background = if self.theme == Theme::Light { 1. } else { 0. };
         let grid = self.viewport.scene_grid;
         let grid_color: Rgba = grid
-            .map_or(self.theme.color(ColorToken::BorderSubtle), |grid| {
+            .map_or(self.theme.line(), |grid| {
                 overlays::color(self.theme, grid.color)
             })
             .into();

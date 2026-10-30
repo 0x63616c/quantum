@@ -198,7 +198,7 @@ fn picker_preview_and_recent_colors_are_adopted_only_after_successful_persistenc
     assert_eq!(preview.state.library.entries.len(), 1);
     assert!(preview.state.recent_colors.is_empty());
     assert_eq!(editor.color, brush);
-    let failed = |_: &[u8]| Err(std::io::Error::other("write failed").into());
+    let failed = |_: &[u8]| Err(EditorError::Gesture("write failed".into()));
     assert!(
         editor
             .palette_action_with(PaletteAction::CommitColor, failed)
@@ -427,10 +427,6 @@ fn manager_capacity_and_last_swatch_errors_are_atomic() {
             panic!("invalid edit must not write")
         })
         .unwrap_err();
-    assert!(matches!(
-        &error,
-        EditorError::Palette(quantum_plugin_api::PaletteError::Message(_))
-    ));
     assert!(error.to_string().contains("Cannot remove the last swatch"));
     assert_eq!(editor.palette_view().unwrap(), single);
     editor
@@ -456,10 +452,6 @@ fn manager_capacity_and_last_swatch_errors_are_atomic() {
         let error = editor
             .palette_action_with(action, |_| panic!("capacity error must not write"))
             .unwrap_err();
-        assert!(matches!(
-            &error,
-            EditorError::Palette(quantum_plugin_api::PaletteError::Message(_))
-        ));
         assert!(error.to_string().contains("256 swatches maximum"));
         assert_eq!(editor.palette_view().unwrap(), full);
     }

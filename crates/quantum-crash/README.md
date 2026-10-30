@@ -23,9 +23,7 @@ Feedback contains caller-supplied version/OS/architecture, a bug/feature kind an
 what happened. Either report may carry an optional contact email: setting that
 field is explicit consent to send it privately to maintainers through the relay.
 It is never included in the public issue title/body or browser fallback URL.
-The relay must never publish `contact_email`; it may discard it under its documented
-policy. The prepared Cloudflare relay discards contact immediately and the app
-offers no contact field. See [the deployment runbook](../../packaging/feedback-relay/README.md).
+The relay must store/forward `contact_email` privately and never publish it.
 Emails in all other fields remain redacted regardless of contact consent. Malformed contact
 text is redacted normally. A crash report's scene flag records consent only; this
 crate never reads, embeds or uploads scene contents, even when the flag is true.
@@ -89,7 +87,6 @@ cap applies to the full encoded URL in bytes. Oversized reports return
 offer relay submission or copying/saving the report. This function does not open
 the browser. Browser submission also requires confirmation and a GitHub account.
 
-Startup installation, next-launch preview/confirmation dialogs, Help menu feedback
-and native metadata/log capture live in `quantum-app`. Scene attachments remain
-unavailable. Relay deployment and release activation require the owner steps in
-[the runbook](../../packaging/feedback-relay/README.md).
+Startup installation, next-launch preview/confirmation dialogs, Help menu feedback,
+native platform metadata/log capture, screenshots, scene attachment handling and
+the site privacy page belong to the later app-wiring work after #82/#104.

@@ -232,7 +232,7 @@ fn grid_preference_bridge_keeps_existing_bytes_defaults_and_document_unchanged()
 #[test]
 fn registered_overlay_edits_are_atomic_typed_commands_before_navigation_feedback() {
     use quantum_plugin_api::{
-        Overlay, OverlayCx, Plugin, Registrar, RenderPassContribution, RenderPassSlot, ToolError,
+        Overlay, OverlayCx, Plugin, Registrar, RenderPassContribution, RenderPassSlot,
     };
     struct EditingOverlay {
         commands: Vec<Command>,

@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-macos-${{ github.ref }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.run_id || 'change' }}
+  group: ci-macos-${{ github.ref }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'nightly' || 'change' }}
   cancel-in-progress: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
 
 jobs:
@@ -27,7 +27,6 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       package: ${{ steps.filter.outputs.package }}
-      metal: ${{ steps.filter.outputs.metal }}
     steps:
       - name: Detect code changes
         id: filter
@@ -37,7 +36,6 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
-            echo 'metal=true' >> "$GITHUB_OUTPUT"
             echo 'code=true' >> "$GITHUB_OUTPUT"
             package=false
             if [[ "$GITHUB_REF" == refs/heads/main && ( "$GITHUB_EVENT_NAME" == schedule || "$GITHUB_EVENT_NAME" == workflow_dispatch ) ]]; then
@@ -46,11 +44,10 @@ jobs:
             echo "package=$package" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
           code=false
           package=false
-          metal=false
-          [[ -z "$files" ]] && code=true && package=true && metal=true
+          [[ -z "$files" ]] && code=true && package=true
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
             # PR smoke DMGs use ci-dist; PRs only run packaging when
@@ -65,19 +62,14 @@ jobs:
               *.md) ;;
               *) code=true ;;
             esac
-            # Inputs of the Metal profiling test (quantum-render and its path dependencies).
-            case "$file" in
-              crates/quantum-render/*|crates/quantum-render-plan/*|crates/quantum-format/*|crates/quantum-app/*|crates/quantum-core/*|crates/quantum-mesh/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.config/nextest.toml|.github/workflows/ci-macos.yml) metal=true ;;
-            esac
           done <<< "$files"
-          echo "Code changes: $code, packaging changes: $package, Metal changes: $metal"
+          echo "Code changes: $code, packaging changes: $package"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "package=$package" >> "$GITHUB_OUTPUT"
-          echo "metal=$metal" >> "$GITHUB_OUTPUT"
 
   scripts:
     # Packaging task tests mock the macOS tools, so a GitHub-hosted Linux runner
-    # runs them in parallel with the macOS jobs.
+    # runs them in parallel and the Mac mini runners only do Rust builds.
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -101,76 +93,11 @@ jobs:
 
   macos:
     needs: changes
-    # Stable required-check name, including fork PRs. Keep filtering at job level.
-    if: needs.changes.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
-    runs-on: xcode-27
-    timeout-minutes: 60
-    env:
-      CARGO_BUILD_JOBS: 3
-      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
-      MACOS_SIGNING_MODE: adhoc
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install pinned Rust toolchain
-        # rustup reads the version and components from rust-toolchain.toml.
-        run: rustup show
-      - name: Check Xcode and Metal compiler
-        run: |
-          xcodebuild -version
-          # GPUI compiles Metal shaders even though this job does not run GPU tests.
-          if ! xcrun --sdk macosx metal --version; then
-            xcodebuild -downloadComponent MetalToolchain
-            xcrun --sdk macosx metal --version
-          fi
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          key: macos-xcode-27.0
-      - name: Select Rust packages
-        id: rust-packages
-        run: |
-          # Add crates here when they gain macOS-specific code paths.
-          echo 'packages=-p quantum-app -p quantum-ui -p quantum-render -p quantum-mcp -p quantum-bench' >> "$GITHUB_OUTPUT"
-      - name: Clippy
-        run: |
-          cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
-          cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling -- -D warnings
-      - name: Install nextest
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
-        with:
-          tool: cargo-nextest@0.9.150
-      - name: Test Rust packages
-        run: cargo nextest run ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support --profile ci
-      - name: Test doctests
-        if: ${{ !cancelled() }}
-        run: cargo test --doc ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support
-      - name: Build app and unsigned DMG
-        if: needs.changes.outputs.package == 'true'
-        env:
-          PACKAGE_CARGO_PROFILE: ci-dist
-        run: cargo xtask macos package
-      - name: Upload unsigned DMG
-        if: needs.changes.outputs.package == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: Quantum-macos-arm64-unsigned
-          path: |
-            dist/Quantum.dmg
-            dist/Quantum.dmg.sha256
-          if-no-files-found: error
-          retention-days: 3
-
-  macos-hardware:
-    needs: changes
-    # PRs only run the GPU test for its inputs; every main push runs it.
-    # Nightly/manual runs retain all workspace checks and release-profile packaging.
+    # Never schedule untrusted fork code on the homelab runner.
     # Only the owner may schedule work on the homelab runner; fork PRs never run here.
-    if: (github.event_name != 'pull_request' || needs.changes.outputs.metal == 'true') && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: needs.changes.outputs.code == 'true' && github.actor == '0x63616c' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, macOS, ARM64, xcode]
-    # Nightly/manual runs add a release-profile DMG build (~30+ min) after the
-    # full clippy and test pass (~31 min), which overran 60 minutes (#217).
-    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 120 || 60 }}
+    timeout-minutes: 60
     env:
       CARGO_BUILD_JOBS: 4
       DEVELOPER_DIR: /Applications/Xcode-27.0.app/Contents/Developer
@@ -191,18 +118,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          repo_dir="$(dirname "$GITHUB_WORKSPACE")"
-          work_dir="$(dirname "$repo_dir")"
-          target_dir="$repo_dir/cargo-target-ci-macos"
-          max_kb=$((10 * 1024 * 1024))      # wipe above 10 GiB
-          min_free_kb=$((30 * 1024 * 1024)) # or when the disk has under 30 GiB free
-          # A repo rename leaves the old workspace behind with its warm
-          # target dir. Drop warm target dirs that belong to any other workspace on this runner.
-          for stale in "$work_dir"/*/cargo-target-ci-macos; do
-            [[ -d "$stale" && "$stale" != "$target_dir" ]] || continue
-            echo "Removing stale warm target dir: $stale"
-            rm -rf "$stale"
-          done
+          target_dir="$(dirname "$GITHUB_WORKSPACE")/cargo-target-ci-macos"
+          max_kb=$((15 * 1024 * 1024))      # wipe above 15 GiB
+          min_free_kb=$((15 * 1024 * 1024)) # or when the disk has under 15 GiB free
           if [[ -d "$target_dir" ]]; then
             used_kb=$(du -sk "$target_dir" | cut -f1)
             free_kb=$(df -k "$target_dir" | awk 'NR==2 {print $4}')
@@ -232,36 +150,43 @@ jobs:
           else
             echo '::notice::Shared sccache server is not running; building without it.'
           fi
-      - name: Clippy workspace
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      - name: Select Rust packages
+        id: rust-packages
+        shell: bash
         run: |
-          cargo clippy --workspace --all-targets --locked --features quantum-app/test-support -- -D warnings
-          cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling -- -D warnings
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            schedule|workflow_dispatch) packages='--workspace' ;;
+            *)
+              # Add crates here when they gain macOS-specific code paths.
+              packages='-p quantum-app -p quantum-ui -p quantum-render -p quantum-mcp -p quantum-bench'
+              ;;
+          esac
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+      # Linux checks the workspace; Mac change runs check platform-specific crates.
+      - name: Clippy
+        run: cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
       - name: Install nextest
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest@0.9.150
 
-      - name: Test workspace
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: cargo nextest run --workspace --locked --features quantum-app/test-support --profile ci
-
-      - name: Test opt-in profiling on Metal
-        run: cargo nextest run -p quantum-render --lib --locked --features profiling,gpu --profile ci --run-ignored only -E 'test(profiling_gpu_zones)'
+      - name: Test Rust packages
+        run: cargo nextest run ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support --profile ci
 
       - name: Test doctests
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-        run: cargo test --doc --workspace --locked --features quantum-app/test-support
+        if: ${{ !cancelled() }}
+        run: cargo test --doc ${{ steps.rust-packages.outputs.packages }} --locked --features quantum-app/test-support
       - name: Build app and unsigned DMG
-        if: needs.changes.outputs.package == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: needs.changes.outputs.package == 'true'
         env:
-          PACKAGE_CARGO_PROFILE: release
+          PACKAGE_CARGO_PROFILE: ${{ github.event_name == 'pull_request' && 'ci-dist' || 'release' }}
         run: cargo xtask macos package
       - name: sccache stats
         if: always() && env.RUSTC_WRAPPER != ''
         run: sccache --show-stats || true
       - name: Upload unsigned DMG
-        if: needs.changes.outputs.package == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: needs.changes.outputs.package == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Quantum-macos-arm64-unsigned
@@ -272,8 +197,8 @@ jobs:
           retention-days: 3
 
   report-nightly-failure:
-    needs: [changes, scripts, macos-hardware]
-    if: always() && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (needs.changes.result != 'success' || needs.scripts.result != 'success' || needs.macos-hardware.result != 'success')
+    needs: [changes, scripts, macos]
+    if: always() && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (needs.changes.result != 'success' || needs.scripts.result != 'success' || needs.macos.result != 'success')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -286,7 +211,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           SCRIPTS_RESULT: ${{ needs.scripts.result }}
-          MACOS_RESULT: ${{ needs.macos-hardware.result }}
+          MACOS_RESULT: ${{ needs.macos.result }}
         run: |
           set -euo pipefail
           title='ci: CI macOS nightly checks failed'

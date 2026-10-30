@@ -74,7 +74,7 @@ fn failures_preserve_goldens_and_write_evidence() {
 #[test]
 fn key_surfaces_and_selector_contract() {
     let all = selected(&[]).unwrap();
-    assert_eq!(all.len(), 32);
+    assert_eq!(all.len(), 26);
     assert_eq!(selected(&["*".into()]).unwrap().len(), all.len());
     assert_eq!(
         selected(&["settings-*".into(), "settings-general-dark".into()])
@@ -92,9 +92,6 @@ fn key_surfaces_and_selector_contract() {
         "panels-palette-dark",
         "panels-comments-empty-light",
         "dialogs-about-dark",
-        "dialogs-commands-empty-light",
-        "overlays-loading-dark",
-        "overlays-controls-light",
     ] {
         assert!(all.iter().any(|s| s.name == name), "{name}");
     }

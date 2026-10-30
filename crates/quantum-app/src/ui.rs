@@ -5,14 +5,6 @@
 //! `sidebar` and `panel_*` build the editor surfaces; `dialogs` selects overlays.
 mod about;
 
-/// Refresh the shared control preference alongside the existing camera/reveal preference.
-fn sync_reduced_motion(cx: &mut App) -> bool {
-    let reduced =
-        cfg!(feature = "ui-snapshots") || quantum_app::reduce_motion::prefers_reduced_motion();
-    cx.set_reduce_motion(reduced);
-    reduced
-}
-
 /// Version shown in the UI. Pinned in `ui-snapshots` builds so release bumps
 /// do not invalidate the committed goldens.
 pub(crate) const APP_VERSION: &str = if cfg!(feature = "ui-snapshots") {
@@ -34,7 +26,6 @@ mod capture;
 mod chrome;
 mod command_palette;
 mod comments;
-mod control_states;
 mod debug_overlay;
 mod dialogs;
 mod dispatch;
@@ -79,7 +70,7 @@ use quantum_app::editor::{Editor, EditorResult, OrbitCamera, Tool};
 use quantum_core::{Palette, Pos};
 use quantum_plugin_api::{PaletteAction, PalettePresentation};
 use quantum_render::{PresetView, RenderOptions, View};
-use quantum_ui::tokens::{focus_ring, metrics, radius, type_size};
+use quantum_ui::tokens::{focus_ring, metrics, radius, space, type_size};
 use quantum_ui::{
     Button, ButtonStyle, ButtonVariant, Dialog, Toolbar, ToolbarSeparator, icon, mono, row,
 };
@@ -114,7 +105,6 @@ fn check_for_updates() {
 }
 
 pub struct EditorView {
-    overlays: Entity<quantum_ui::OverlayState>,
     capture_state: Option<launch::LaunchState>,
     palettes: palettes::PaletteManager,
     discussion: comments::Discussion,
@@ -145,7 +135,6 @@ pub struct EditorView {
     overlay_hover: Option<(String, u32)>,
     overlay_bounds: Rc<std::cell::RefCell<std::collections::BTreeMap<String, Bounds<Pixels>>>>,
     menu: Option<usize>,
-    menu_bounds: Rc<Cell<Bounds<Pixels>>>,
     menu_index: usize,
     commands: command_palette::CommandPalette,
     command_input: Entity<crate::text_field::TextField>,
@@ -157,6 +146,25 @@ pub struct EditorView {
     info: Option<(&'static str, InfoContent)>,
     status: HintText,
     error: bool,
+}
+struct Hint {
+    text: HintText,
+    theme: Theme,
+}
+impl Render for Hint {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        quantum_ui::tooltip(self.theme).child(self.text.clone())
+    }
+}
+fn hint(text: impl Into<HintText>, theme: Theme) -> impl Fn(&mut Window, &mut App) -> AnyView {
+    let text = text.into();
+    move |_, cx| {
+        cx.new(|_| Hint {
+            text: text.clone(),
+            theme,
+        })
+        .into()
+    }
 }
 
 enum InfoContent {

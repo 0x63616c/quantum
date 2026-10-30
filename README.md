@@ -13,23 +13,11 @@ skills, render-to-image feedback and live synchronization with a native editor
 window. Projects use the versioned `.voxl` format; geometry exports as glTF binary
 (`.glb`) and rendered views as `.png`.
 
-The current workspace version is **0.4.1**, from [Cargo.toml](Cargo.toml).
+The current workspace version is **0.3.1**, from [Cargo.toml](Cargo.toml).
 
 [Website](https://quantum.worldwidewebb.co/) ·
 [User documentation](https://quantum.worldwidewebb.co/docs/) ·
 [Downloads](https://github.com/0x63616c/quantum/releases)
-
-## Quick install
-
-Requires macOS 13 Ventura or later on Apple silicon.
-
-```sh
-brew install --cask 0x63616c/tap/quantum
-```
-
-Upgrade with `brew upgrade --cask --greedy quantum` (the app also updates itself).
-Or download [Quantum.dmg](https://github.com/0x63616c/quantum/releases/latest/download/Quantum.dmg)
-from the latest release. See [Install](#install) for details.
 
 ## Screenshots
 
@@ -38,28 +26,14 @@ Apple M2 Metal golden set:
 
 ![Autumn Workshop voxel cottage, garden and orange tree, with the ground grid on a black background](bench/golden/apple-m2-metal/autumn_fit.png)
 
-Current Quantum editor showing Autumn Workshop and its session history, in dark
-and light themes:
+Native editor captures showing an agent session in dark mode and the workspace
+in light mode. These are real earlier review captures: their toolbar Save/Share
+controls and status copy predate the current shell. Current Save actions live in
+the File menu, and hosted sharing is not implemented.
 
-![Quantum editor in dark mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-dark.png)
+![Dark native editor showing Autumn Workshop, an agent edit, captured camera views, layers and palette swatches](docs/images/agent-dark.png)
 
-![Quantum editor in light mode with Autumn Workshop, voxel tools, camera controls and session history](crates/quantum-app/tests/ui-goldens/editor-light.png)
-
-Welcome offers bundled samples and actions to create or open a project:
-
-![Quantum Welcome in dark mode with Autumn Workshop, Lighthouse, Cherry Blossom and Snow Cabin samples](crates/quantum-app/tests/ui-goldens/welcome.png)
-
-These images link directly to the checked-in [headless GPUI goldens](docs/ui-snapshots.md),
-which use the Linux CPU viewport. No duplicate screenshot assets are maintained.
-Verify them with `cargo xtask ui-snapshots`; after an intentional UI change,
-regenerate the README views with:
-
-```sh
-cargo xtask ui-snapshots --rebaseline --screen 'editor-*' --screen welcome
-```
-
-Inspect the regenerated PNGs before committing. Welcome's fixed `0.0.0` version
-is a capture fixture, not the current release version.
+![Light native editor showing Autumn Workshop, editing tools, session sidebar, layers and project colors](docs/images/main-light.png)
 
 ## What is implemented
 
@@ -93,9 +67,8 @@ is a capture fixture, not the current release version.
   word/line navigation, selection, clipboard, local undo and IME handling.
   Packaged macOS builds integrate Sparkle update checks.
 
-With no file argument, the app shows Welcome by default, or a blank editor when
-**Show at launch** is off. Use `--example` to open the bundled Autumn Workshop
-directly. For controls and their generated shortcut table, see the
+The app opens the bundled Autumn Workshop directly when no file is supplied.
+For controls and their generated shortcut table, see the
 [native editor guide](crates/quantum-app/README.md). Roadmap entries and older
 reviews can describe earlier stages; they are not a list of shipped features.
 
@@ -118,20 +91,6 @@ The [published documentation](https://quantum.worldwidewebb.co/docs/)
 is built in CI from [site sources](site/README.md).
 The canonical site URL is defined in
 [the site generator](crates/quantum-site/src/main.rs).
-
-### Homebrew
-
-```sh
-brew install --cask 0x63616c/tap/quantum
-```
-
-Homebrew links `quantum-mcp` onto PATH. The app updates itself through Sparkle;
-the cask sets `auto_updates true`, so `brew upgrade` skips it. Run
-`brew upgrade --cask --greedy quantum` to reinstall the latest release through
-Homebrew. Its recorded version can lag after an in-app update; this is harmless.
-
-Uninstall with `brew uninstall --cask quantum`. For full cleanup, use
-`brew uninstall --cask --zap quantum`; this never touches `~/Documents/Quantum`.
 
 ## Build and run
 
@@ -354,8 +313,6 @@ UPDATE_README=1 cargo test -p quantum-app --bin quantum readme_shortcuts_match_r
 ```
 
 ### Rendering correctness and performance
-
-For live frame traces, see [Tracy profiling](docs/perf/profiling.md).
 
 Read [docs/perf/rendering-harness.md](docs/perf/rendering-harness.md) and
 [bench/README.md](bench/README.md) before changing the renderer. Both harnesses

@@ -12,9 +12,8 @@ const DEMO: &[u8] = include_bytes!("../../../examples/autumn-workshop.voxl");
 const ORIGINAL_CONTENT_HASH: &str =
     "5d86c79aa8831a0ece6614b76a00845d6881f34135d8578cbf97bbb2d176bd39";
 // Project hash additionally freezes document identity, lineage and named versions.
-// Recomputed for the canonical Quantum discriminator; content hash above is unchanged.
 const ORIGINAL_PROJECT_HASH: &str =
-    "1866d0796b804f8388e5b9e17c86d3114fee4b505d255fe378cc2a093817bffc";
+    "ed053f9e9a8e5d0e4f407ae31eb88f829f4ad05af43a505f8c6428423f895d86";
 
 #[test]
 fn generated_demo_is_identical_to_original_and_reproducible() {

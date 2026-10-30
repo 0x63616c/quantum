@@ -44,24 +44,6 @@ pub(crate) fn neutral(theme: Theme, base: C, opacity: f32) -> Hsla {
         .color(base)
         .blend(theme.color(C::OnAccent).opacity(opacity))
 }
-/// Source-over composition for state previews. GPUI's `blend` preserves the
-/// destination alpha, which would make a hovered transparent ghost stay invisible.
-pub(crate) fn over(base: Hsla, wash: Hsla, opacity: f32) -> Hsla {
-    let base = Rgba::from(base);
-    let wash = Rgba::from(wash);
-    let alpha = opacity + base.a * (1. - opacity);
-    if alpha == 0. {
-        return transparent_black();
-    }
-    let channel = |a, b| (a * base.a * (1. - opacity) + b * opacity) / alpha;
-    Rgba {
-        r: channel(base.r, wash.r),
-        g: channel(base.g, wash.g),
-        b: channel(base.b, wash.b),
-        a: alpha,
-    }
-    .into()
-}
 pub(crate) fn selected(theme: Theme) -> Hsla {
     theme.color(C::Accent).opacity(state::SELECTED)
 }
@@ -73,34 +55,6 @@ pub(crate) fn glyph(name: impl AsRef<str>) -> Svg {
 mod tests {
     use super::*;
     use core::prelude::v1::test;
-    #[test]
-    fn translucent_preview_matches_two_painted_layers_on_both_surfaces() {
-        for theme in [Theme::Dark, Theme::Light] {
-            for base in [transparent_black(), selected(theme), theme.color(C::Raised)] {
-                for opacity in [state::HOVER, state::PRESSED] {
-                    let wash = crate::interaction::wash(theme);
-                    let composite = over(base, wash, opacity);
-                    assert!(composite.a > 0.);
-                    for surface in [C::Surface, C::Overlay] {
-                        let expected = Rgba::from(
-                            theme
-                                .color(surface)
-                                .blend(base)
-                                .blend(wash.opacity(opacity)),
-                        );
-                        let actual = Rgba::from(theme.color(surface).blend(composite));
-                        for (a, b) in [
-                            (actual.r, expected.r),
-                            (actual.g, expected.g),
-                            (actual.b, expected.b),
-                        ] {
-                            assert!((a - b).abs() < 0.00001);
-                        }
-                    }
-                }
-            }
-        }
-    }
     #[test]
     fn titles_ellipsize_in_a_shrinkable_single_line() {
         let mut title = ellipsis("An arbitrarily long layer or document name");

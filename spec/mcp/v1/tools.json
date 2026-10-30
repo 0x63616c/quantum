@@ -1,7 +1,7 @@
 [
   {
     "name": "quantum_capabilities_get",
-    "description": "Discover quantum.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.",
+    "description": "Discover voxelite.v1, session epoch, limits, CPU renderer, exact palette presets and open model IDs. Start here; use returned epoch and revisions for edits.",
     "inputSchema": {
       "type": "object",
       "properties": {},
@@ -13,7 +13,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -30,7 +30,7 @@
           "type": "object",
           "properties": {
             "api_version": {
-              "const": "quantum.v1"
+              "const": "voxelite.v1"
             },
             "protocol_versions": {
               "type": "array",
@@ -520,7 +520,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -827,7 +827,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -1200,7 +1200,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -1502,7 +1502,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -1804,7 +1804,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -2127,7 +2127,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -2409,7 +2409,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -2704,7 +2704,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -3010,7 +3010,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -3186,7 +3186,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -3552,7 +3552,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -3967,7 +3967,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -4304,7 +4304,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -4608,7 +4608,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -4924,7 +4924,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -5198,7 +5198,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -5418,7 +5418,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -5713,7 +5713,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -6016,7 +6016,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -6316,7 +6316,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -6615,7 +6615,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -6915,7 +6915,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -7219,7 +7219,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -7416,7 +7416,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -7711,7 +7711,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -8005,7 +8005,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -8349,7 +8349,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -8842,7 +8842,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -9230,7 +9230,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -9466,7 +9466,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -9769,7 +9769,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -10510,7 +10510,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -10919,7 +10919,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -11280,7 +11280,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -11672,7 +11672,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -11965,7 +11965,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
@@ -12258,7 +12258,7 @@
       "type": "object",
       "properties": {
         "api_version": {
-          "const": "quantum.v1"
+          "const": "voxelite.v1"
         },
         "session_id": {
           "type": "string",
