@@ -2,19 +2,19 @@
 
 The stage evidence below is historical.
 
-Verified 2026-10-25 in the Linux build worktree. Scope: `quantum-app`, binary
-`quantum`. No plugin application was built.
+Verified 2026-10-25 in the Linux build worktree. Scope: `voxelite-app`, binary
+`voxelite`. No plugin or web application was built.
 
 ## Build and automated checks
 
 - Rust 1.99.1 stable, edition 2024.
 - `gpui-unofficial = 1.25.3`, `gpui-platform-gpui-unofficial = 1.25.3`; complete
   registry resolutions and checksums are recorded in `Cargo.lock`.
-- `cargo build -p quantum-app --bin quantum`: passes on Linux with native GPUI.
+- `cargo build -p voxelite-app --bin voxelite`: passes on Linux with native GPUI.
 - `cargo fmt --all -- --check`: passes.
 - `cargo clippy --workspace --all-targets -- -D warnings`: passes.
 - `cargo test --workspace`: **90 passed, 0 failed**, including 16 editor tests.
-- `cargo test -p quantum-app --no-default-features`: **16 passed**, with GPUI
+- `cargo test -p voxelite-app --no-default-features`: **16 passed**, with GPUI
   excluded. Camera/raycast, tools, mirror, locks/visibility, palette capacity,
   atomic failure, undo/redo, file round trips and forward metadata are covered.
 
@@ -50,7 +50,7 @@ not a performance guarantee. No GPU or display is initialized by `--viewport-png
 - [Light native window](../images/app-light.png)
 - [Display-free viewport](../images/viewport.png)
 - [Capture script](../../scripts/capture-native.sh)
-- [Build dependencies, controls and stage boundaries](../../crates/quantum-app/README.md)
+- [Build dependencies, controls and stage boundaries](../../crates/voxelite-app/README.md)
 
 The screenshots are 1440×900 and were visually inspected after regeneration.
 The viewport PNG is 1024×900. Dark/light surface samples are exact `#000000` /
