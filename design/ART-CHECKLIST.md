@@ -1,4 +1,4 @@
-# Quantum — Art Checklist
+# Voxelite — Art Checklist
 
 ## Target
 Pro creative tool. Concept A now leads: modern macOS Sonoma/Sequoia toolbar and sidebar, shadcn-style menus/popovers/dialogs, Vercel/Stripe restraint, Figma collaboration and Blender viewport conventions. Aseprite informs keyboard workflow, not dense or dated editor chrome. B/C remain historical studies.
@@ -20,11 +20,16 @@ Pro creative tool. Concept A now leads: modern macOS Sonoma/Sequoia toolbar and 
 - No fixed single palette; users must define palettes or pick from preset lists — 2026-10-25
 - Dated editor chrome; use modern macOS/shadcn components — 2026-10-25
 
+- Brand icon round 1 rejected: "none of these honestly, theyr eawful, i liked the idea of the black background but like u get me? gotta be better than just a square" — 2026-10-26. Never again: generic cubes/squares as the whole idea, Rubik-like multicolour cubes, cottage/diorama scenes, blue gradient squircles, cream backgrounds, plain square marks.
+
+## Brand icon (2026-10-26)
+Keep: black background. Each direction must carry one idea (light, interaction, negative space), not just a shape. References in design/references/brand/.
+
 ## Theme direction (2026-10-24)
 Vercel / Stripe aesthetic. Dark mode = pure black #000 backgrounds, crisp 1px hairline borders (#1f1f1f–#2e2e2e), Geist / Geist Mono typography, restrained single accent, very clean. Light mode = pure white with matching hairlines. Applies to all concepts, the GPUI app theme and the marketing site. App is all-Rust GPUI (Zed-level native polish), not Tauri.
 
 ## Positioning (2026-10-24)
-Quantum is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a prominent agent session panel: live tool calls, added/removed diff counts, per-step undo, multi-angle render thumbnails, and a follow-agent camera toggle. Humans watch agents build and retain a complete keyboard-first editor. ⌘K must be visible and operable. Use native split panes, muted macOS traffic lights, readable secondary text and genuinely distinct concept layouts. Marketing leads with the agent workflow; docs and integrations make it reproducible.
+Voxelite is THE optimal voxel editor for AI agents, while fully excellent for humans. Concepts must show a prominent agent session panel: live tool calls, added/removed diff counts, per-step undo, multi-angle render thumbnails, and a follow-agent camera toggle. Humans watch agents build and retain a complete keyboard-first editor. ⌘K must be visible and operable. Use native split panes, muted macOS traffic lights, readable secondary text and genuinely distinct concept layouts. Marketing leads with the agent workflow; docs and integrations make it reproducible.
 
 ## Palette system (2026-10-25)
 
