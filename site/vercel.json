@@ -1,40 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
-    {
-      "source": "/:path((?!appcast\\.xml$).*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "voxelite.worldwidewebb.co"
-        }
-      ],
-      "destination": "https://quantum.worldwidewebb.co/:path",
-      "permanent": true
-    },
-    {
-      "source": "/app",
-      "destination": "/download",
-      "permanent": true
-    },
-    {
-      "source": "/app/:path*",
-      "destination": "/download",
-      "permanent": true
-    }
+    { "source": "/app", "destination": "/download", "permanent": true },
+    { "source": "/app/:path*", "destination": "/download", "permanent": true }
   ],
   "headers": [
     {
       "source": "/appcast.xml",
       "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/rss+xml; charset=utf-8"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
+        { "key": "Content-Type", "value": "application/rss+xml; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     },
     {
