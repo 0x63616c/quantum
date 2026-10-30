@@ -1,6 +1,6 @@
 {
-  "api_version": "quantum.v1",
-  "application_version": "0.4.1",
+  "api_version": "voxelite.v1",
+  "application_version": "0.3.1",
   "protocol_profiles": [
     "2025-11-25",
     "2026-07-28"
@@ -15,7 +15,7 @@
   "project_format": "voxl/1.0",
   "stage": "standalone-headless-mcp",
   "durability": "explicit-document-save",
-  "wire_test": "crates/quantum-mcp/tests/stdio.rs",
+  "wire_test": "crates/voxelite-mcp/tests/stdio.rs",
   "host_configs": [
     "cursor",
     "claude",
@@ -31,8 +31,5 @@
     "cargo_build_workspace": true,
     "cargo_fmt_check": true,
     "cargo_clippy_workspace_all_targets_deny_warnings": true
-  },
-  "legacy_api_versions": [
-    "voxelite.v1"
-  ]
+  }
 }

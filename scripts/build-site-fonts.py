@@ -37,7 +37,7 @@ for path in sorted((ROOT / 'site').rglob('*.html')):
 # Basic Latin and Latin-1, plus every punctuation/symbol used in the HTML.
 characters = set(range(0x20, 0x100)) | text.characters
 for name in ('Geist', 'GeistMono'):
-    source = ROOT / f'crates/quantum-app/assets/fonts/{name}.ttf'
+    source = ROOT / f'crates/voxelite-app/assets/fonts/{name}.ttf'
     font = TTFont(source, recalcTimestamp=False)
     axes = [(a.axisTag, a.minValue, a.defaultValue, a.maxValue) for a in font['fvar'].axes]
     options = subset.Options()
