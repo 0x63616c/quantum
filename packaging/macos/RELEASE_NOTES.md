@@ -1,9 +1,6 @@
-Quantum for macOS (Apple silicon).
+Voxelite for macOS (Apple silicon).
 
-1. Download **Quantum.dmg** and open it.
-2. Drag **Quantum** into **Applications**.
-3. Open **Quantum** from Applications.
+1. Download **Voxelite.dmg**, open it and drag Voxelite into Applications.
+2. This build is not notarized yet. The first time, right-click Voxelite in Applications and choose **Open**, then **Open** again. (On macOS 15+, if that is not offered: System Settings → Privacy & Security → "Open Anyway".)
 
-Quantum is Developer ID signed and notarized by Apple. No Gatekeeper workaround is needed.
-
-Starting with version 0.3.0, Quantum checks for updates automatically through Sparkle and prompts you to install them.
+Prefer not to install? Use the browser editor: https://voxelite.worldwidewebb.co/app/

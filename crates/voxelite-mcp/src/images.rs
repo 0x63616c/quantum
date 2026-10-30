@@ -1,0 +1,216 @@
+//! Sequential CPU renders and bounded, labeled multi-angle PNG contact sheets.
+use crate::{
+    error::{Args, Failure, Result},
+    files,
+};
+use serde_json::{Value, json};
+use voxelite_core::Snapshot;
+use voxelite_render::{Camera, PresetView, Projection, RenderOptions, View};
+
+pub(crate) struct Images {
+    pub pngs: Vec<Vec<u8>>,
+    pub metadata: Value,
+}
+
+pub(crate) fn render(s: &Snapshot, a: &Args<'_>) -> Result<Images> {
+    let width: u32 = a.default("width", 512)?;
+    let height: u32 = a.default("height", 512)?;
+    let mode: String = a.default("image_mode", "contact_sheet".into())?;
+    let perspective = a.default("perspective", false)?;
+    let background = a.default("background", [0u8; 4])?;
+    let mut names: Vec<String> = a.default(
+        "views",
+        vec!["iso".into(), "front".into(), "right".into(), "back".into()],
+    )?;
+    let explicit = if let Some(c) = a.0.get("camera") {
+        if a.0.get("views").is_some() || a.0.get("perspective").is_some() {
+            return Err(Failure::invalid(
+                "camera is mutually exclusive with views and perspective",
+            ));
+        }
+        let c = Args(c);
+        let projection: String = c.get("projection")?;
+        let projection = match projection.as_str() {
+            "orthographic" if c.0.get("fov_y_degrees").is_none() => Projection::Orthographic {
+                height: c.get("ortho_height")?,
+            },
+            "perspective" if c.0.get("ortho_height").is_none() => Projection::Perspective {
+                fov_y_degrees: c.get("fov_y_degrees")?,
+            },
+            _ => {
+                return Err(Failure::invalid(
+                    "camera requires exactly its projection's height or FOV",
+                ));
+            }
+        };
+        let camera = Camera {
+            eye: c.get("eye")?,
+            target: c.get("target")?,
+            up: c.get("up")?,
+            projection,
+        };
+        camera.validate()?;
+        names = vec!["camera".into()];
+        Some(camera)
+    } else {
+        None
+    };
+    if !(1..=1024).contains(&width)
+        || !(1..=1024).contains(&height)
+        || names.is_empty()
+        || names.len() > 6
+    {
+        return Err(Failure::invalid("render dimensions/views exceed limits"));
+    }
+    let sheet = mode != "individual";
+    let individual = mode != "contact_sheet";
+    let columns = if names.len() == 1 { 1 } else { 2 };
+    let rows = (names.len() as u32).div_ceil(columns);
+    let sw = width * columns;
+    let sh = height * rows;
+    let pixels = u64::from(width) * u64::from(height) * names.len() as u64
+        + if sheet {
+            u64::from(sw) * u64::from(sh)
+        } else {
+            0
+        };
+    if pixels > 4_194_304 || (sheet && (sw > 2048 || sh > 2048)) {
+        return Err(Failure::new(
+            "limit_exceeded",
+            "render and contact sheet exceed pixel budget; reduce dimensions or views",
+        ));
+    }
+    let mut canvas = if sheet {
+        background.repeat((sw * sh) as usize)
+    } else {
+        Vec::new()
+    };
+    let mut pngs = Vec::new();
+    let mut views = Vec::new();
+    let mut output = Vec::new();
+    for (i, name) in names.iter().enumerate() {
+        let view = if let Some(c) = explicit {
+            View::Camera(c)
+        } else {
+            let direction = match name.as_str() {
+                "iso" => PresetView::Iso,
+                "front" => PresetView::Front,
+                "back" => PresetView::Back,
+                "left" => PresetView::Left,
+                "right" => PresetView::Right,
+                "top" => PresetView::Top,
+                _ => return Err(Failure::invalid("unknown view")),
+            };
+            View::Preset {
+                direction,
+                perspective,
+            }
+        };
+        let image = voxelite_render::render(
+            s,
+            &RenderOptions {
+                width,
+                height,
+                view,
+                background,
+                ..Default::default()
+            },
+        )?;
+        let png = voxelite_export::png_rgba(width, height, &image.rgba)?;
+        let projection = match image.camera.projection {
+            Projection::Orthographic { height } => {
+                json!({"projection":"orthographic","ortho_height":height})
+            }
+            Projection::Perspective { fov_y_degrees } => {
+                json!({"projection":"perspective","fov_y_degrees":fov_y_degrees})
+            }
+        };
+        let mut camera =
+            json!({"eye":image.camera.eye,"target":image.camera.target,"up":image.camera.up});
+        camera
+            .as_object_mut()
+            .unwrap()
+            .extend(projection.as_object().unwrap().clone());
+        views.push(json!({"view":name,"width":width,"height":height,"camera":camera,"sha256":files::hash(&png),"bytes":png.len()}));
+        if sheet {
+            let ox = (i as u32 % columns) * width;
+            let oy = (i as u32 / columns) * height;
+            for y in 0..height as usize {
+                let start = (((oy as usize + y) * sw as usize) + ox as usize) * 4;
+                canvas[start..start + width as usize * 4].copy_from_slice(
+                    &image.rgba[y * width as usize * 4..(y + 1) * width as usize * 4],
+                );
+            }
+            label(&mut canvas, sw, [ox, oy, width, height], name);
+        }
+        if individual {
+            output.push(json!({"view":name,"width":width,"height":height,"sha256":files::hash(&png),"bytes":png.len()}));
+            pngs.push(png);
+        }
+    }
+    if sheet {
+        let png = voxelite_export::png_rgba(sw, sh, &canvas)?;
+        output.insert(0,json!({"view":"contact_sheet","width":sw,"height":sh,"sha256":files::hash(&png),"bytes":png.len()}));
+        pngs.insert(0, png);
+    }
+    Ok(Images {
+        pngs,
+        metadata: json!({"backend":"cpu","bounds":voxelite_render::visible_bounds(s),"views":views,"images":output,"image_mode":mode}),
+    })
+}
+// Minimal embedded 5×7 capitals for view labels. Labels stay inside each tile,
+// so tile dimensions and the advertised contact-sheet pixel budget are exact.
+fn label(canvas: &mut [u8], stride: u32, tile: [u32; 4], text: &str) {
+    let [ox, oy, w, h] = tile;
+    if w < 80 || h < 24 {
+        return;
+    }
+    let scale = if w >= 256 { 2 } else { 1 };
+    let glyph = |c| -> [u8; 7] {
+        match c {
+            'A' => [14, 17, 17, 31, 17, 17, 17],
+            'B' => [30, 17, 17, 30, 17, 17, 30],
+            'C' => [14, 17, 16, 16, 16, 17, 14],
+            'E' => [31, 16, 16, 30, 16, 16, 31],
+            'F' => [31, 16, 16, 30, 16, 16, 16],
+            'G' => [14, 17, 16, 23, 17, 17, 15],
+            'H' => [17, 17, 17, 31, 17, 17, 17],
+            'I' => [14, 4, 4, 4, 4, 4, 14],
+            'K' => [17, 18, 20, 24, 20, 18, 17],
+            'L' => [16, 16, 16, 16, 16, 16, 31],
+            'M' => [17, 27, 21, 21, 17, 17, 17],
+            'N' => [17, 25, 25, 21, 19, 19, 17],
+            'O' => [14, 17, 17, 17, 17, 17, 14],
+            'P' => [30, 17, 17, 30, 16, 16, 16],
+            'R' => [30, 17, 17, 30, 20, 18, 17],
+            'S' => [15, 16, 16, 14, 1, 1, 30],
+            'T' => [31, 4, 4, 4, 4, 4, 4],
+            _ => [0; 7],
+        }
+    };
+    let label_w = text.len() as u32 * 6 * scale + 12;
+    for y in 0..(7 * scale + 8) {
+        for x in 0..label_w.min(w) {
+            let i = (((oy + y) * stride + ox + x) * 4) as usize;
+            canvas[i..i + 4].copy_from_slice(&[0, 0, 0, 220]);
+        }
+    }
+    for (n, c) in text.to_ascii_uppercase().chars().enumerate() {
+        for (y, bits) in glyph(c).into_iter().enumerate() {
+            for x in 0..5 {
+                if bits & (1 << (4 - x)) != 0 {
+                    for dy in 0..scale {
+                        for dx in 0..scale {
+                            let px = ox + 6 + n as u32 * 6 * scale + x * scale + dx;
+                            let py = oy + 4 + y as u32 * scale + dy;
+                            if px < ox + w && py < oy + h {
+                                let i = ((py * stride + px) * 4) as usize;
+                                canvas[i..i + 4].copy_from_slice(&[235, 235, 235, 255]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,41 @@
+**Overall: 6.3/10.** The viewport composition, restrained color, and cottage artwork are convincing. The interface still lacks the material depth and interaction clarity expected of a polished native editor. The largest checklist gaps are meaningful translucency, inspectable agent changes, explicit interaction states, and a visible agent-made tool. Static PNGs cannot establish keyboard behavior or functional menus.
+
+1. **Dark comments — 6.2/10.** The thread obscures much of the canopy being discussed. Its attachment to the model relies on proximity; selection should identify the actual anchor or affected region. “Open thread” inside an already open thread is confusing. The agent reply lacks a timestamp, while `MCP · comments.reply` gets a conspicuous standalone line. Move provenance into expandable details and give the reply composer more usable space.
+
+2. **Dark history — 5.8/10.** This is a large drawer presented as a toolbar popover, covering almost the entire sidebar. “4 of 8” accompanies nine markers without identifying an initial state. Agent edits use diamonds on the timeline and sparkles in the list, weakening consistency. Repeated Restore / Compare / Branch actions make named versions unnecessarily busy. The viewport needs an unmistakable historical-preview state and a persistent route back to latest.
+
+3. **Dark menu — 7.0/10.** The File menu has the clearest component structure: sensible groups, aligned shortcuts, and restrained treatment. Its dark surface separates only weakly from the surrounding chrome. More significantly, this is the only demonstrated menu: the screenshots provide no selected tool state, checked view option, disabled command, export submenu, or extension command. “Extensions” in the menu bar does not demonstrate the requested custom-tool workflow.
+
+4. **Dark palettes — 6.4/10.** The manager covers the essential editing controls, but its information architecture needs another pass. “Woodland” appears in navigation, heading, and name field. “Active palette” alongside an enabled “Use palette” creates an ambiguous action state. Import, two exports, and Delete palette remain exposed despite the checklist’s menu/overflow direction. The distant arrow/trash/plus cluster has a weak relationship to the selected swatch. No immutable preset state is demonstrated.
+
+5. **Dark share — 5.5/10.** The permission segment is compact, but the sharing model is underspecified. “Anyone with the link” appears fixed; there is no visible restricted-access alternative. “Can remix” needs a clear explanation of what happens to the original. Initials and “2 collaborators · 1 agent” show membership, not presence or individual permissions. The copy action lacks emphasis. “Preview link · sharing is not connected” belongs outside the designed product surface.
+
+6. **Dark main — 6.5/10.** The pure-black base and artwork are the strongest parts of this direction. Toolbar and sidebar nevertheless read as opaque, flat surfaces; the requested Sonoma material treatment is barely perceptible. The sidebar gives substantial space to headings and gaps while completed changes reveal little useful information. Diff counts and per-step undo are not demonstrated. “Follow agent” lacks an explicit on/off state. The only visible tool is Place; the agent-made tool is absent.
+
+7. **Light comments — 6.4/10.** The floating thread separates more clearly from the canvas, but its large white surface competes with—and conceals—the model. The selected thread, other comments, and section boundaries accumulate several different grouping treatments. Simplify that hierarchy. “Open thread” remains redundant, reply provenance remains overexposed, and the composer feels cramped relative to the panel. The selected pin needs a stronger connection to the relevant geometry.
+
+8. **Light history — 6.0/10.** The white panel and broad shadow give history excessive visual weight. The same indexing ambiguity and inconsistent agent symbols remain. Only steps 3–6 are shown, with no clear indication of how the remaining entries are reached. Named-version action rows dominate the lower half. The subtle `main` indicator is appropriately restrained; preserve it. Add clear historical-preview feedback before treating Restore and Branch as sufficiently specified interactions.
+
+9. **Light menu — 7.2/10.** This is the most resolved floating component in the set. Spacing, separators, and shortcut alignment are convincing. The shadow is heavier than the otherwise restrained chrome warrants. The underlying toolbar and sidebar still lack a recognizable translucent material. The menu system needs additional states to establish completeness, particularly Tools, Palette, Extensions, contextual commands, and keyboard focus.
+
+10. **Light palettes — 6.6/10.** Swatches, selection outline, and field boundaries read well. The large dimmed backdrop makes a routine color-management task feel unnecessarily disruptive. The mostly empty navigation column and repeated palette identity inflate the dialog. Editing semantics are unclear: does changing a hex value apply immediately, when pressing Use palette, or when closing? Consolidate management actions into menus and distinguish editable custom palettes from immutable presets.
+
+11. **Light share — 5.7/10.** The popover has clean alignment but too much vertical space for the information it supplies. It offers no visible collaborator names, activity states, or individual access controls. The agent avatar identifies a category without identifying the connected agent. The permission segment needs clearer semantics, especially remixing. Copy success and permission-change feedback are not demonstrated. Remove the prototype-status sentence from the product composition.
+
+12. **Light main — 6.7/10.** The model reads beautifully against white, and the subtle ground treatment gives it better spatial grounding than the dark version. The surrounding UI is excessively uniform: canvas, toolbar, and sidebar share nearly identical material treatment. The static sidebar stack has no demonstrated resizing or overflow strategy for shorter windows. Agent controls lack explicit states, completed steps lack demonstrated inspection and undo, and the custom tool remains missing.
+
+**Prioritized fixes**
+
+1. **Complete the agent workflow.** Show an expanded change with added/removed counts, optional coordinates, and per-step undo. Give Follow agent and Pause unmistakable states. Demonstrate the agent-made tool in the tool picker and Extensions menu, including its active configuration.
+
+2. **Establish a coherent material hierarchy.** Preserve pure `#000` and `#fff` base surfaces. Give toolbar and sidebar restrained translucent materials, floating surfaces reliable separation, and light-mode shadows less spread. Avoid adding permanent cards to compensate for weak hierarchy.
+
+3. **Resolve history behavior.** Label the initial state, reconcile marker indexing, use consistent actor symbols, expose timeline navigation, and show persistent historical-preview feedback. Put secondary named-version actions in overflow menus.
+
+4. **Make comments spatially useful.** Position threads to preserve the discussed geometry, visibly identify their anchors, remove “Open thread,” improve the composer, and collapse MCP provenance.
+
+5. **Specify sharing and presence.** Show the access scope, explain permission modes, identify people and agents, communicate actual presence, and demonstrate copy/change feedback.
+
+6. **Simplify palette management.** Clarify edit commitment and active-palette states. Move import/export/delete into appropriate menus. Demonstrate preset duplication and immutability, and ensure palette switching does not silently recolor existing geometry.
+
+7. **Validate the complete component system.** Add focused examples of submenus, checked and disabled items, keyboard focus, contextual menus, and narrower window layouts. Verify bundled Geist, minimum text sizes, consistent spacing, and working ⌘K in the implementation.
