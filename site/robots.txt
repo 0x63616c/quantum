@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /content/
+Allow: /
+
+Sitemap: https://voxelite.vercel.app/sitemap.xml

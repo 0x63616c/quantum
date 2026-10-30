@@ -3,11 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$PATH"
-cargo build -p quantum-app --bin quantum
-export QUANTUM_REVIEW_ROOT="$PWD"
+cargo build -p voxelite-app --bin voxelite
+export VOXELITE_REVIEW_ROOT="$PWD"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
-export QUANTUM_REVIEW_ARTIFACTS="${QUANTUM_REVIEW_ARTIFACTS:-$PWD/screenshots/review-1}"
-mkdir -p "$QUANTUM_REVIEW_ARTIFACTS"
+export VOXELITE_REVIEW_ARTIFACTS="${VOXELITE_REVIEW_ARTIFACTS:-$PWD/screenshots/review-1}"
+mkdir -p "$VOXELITE_REVIEW_ARTIFACTS"
 xvfb-run -a -s '-screen 0 2880x1800x24 -nolisten tcp' dbus-run-session -- bash <<'REVIEW'
 set -euo pipefail
 export XDG_RUNTIME_DIR
@@ -21,15 +21,15 @@ cleanup() {
   rm -rf "$XDG_RUNTIME_DIR"
 }
 trap cleanup EXIT
-artifact="$QUANTUM_REVIEW_ARTIFACTS"
+artifact="$VOXELITE_REVIEW_ARTIFACTS"
 project="$XDG_RUNTIME_DIR/review.voxl"
 cp examples/autumn-workshop.voxl "$project"
 start_app() {
-  GPUI_X11_SCALE_FACTOR="$1" target/debug/quantum --theme "$2" --exit-after 180 "${@:3}" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
+  GPUI_X11_SCALE_FACTOR="$1" target/debug/voxelite --theme "$2" --exit-after 180 "${@:3}" >"$XDG_RUNTIME_DIR/app.log" 2>&1 &
   app_pid=$!
   window=''
   for attempt in {1..100}; do
-    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Quantum$' 2>/dev/null | head -1 || true)"
+    window="$(xdotool search --all --onlyvisible --pid "$app_pid" --name '.*Voxelite$' 2>/dev/null | head -1 || true)"
     [[ -n "$window" ]] && break
     kill -0 "$app_pid" || { cat "$XDG_RUNTIME_DIR/app.log"; exit 1; }
     sleep 0.1
@@ -47,7 +47,7 @@ wait_title() {
     [[ "$(xdotool getwindowname "$window")" == "$1" ]] && return
     sleep 0.1
   done
-  timeout 10s import -window root /tmp/quantum-review-failure.png || true
+  timeout 10s import -window root /tmp/voxelite-review-failure.png || true
   printf 'Expected title: %s; got: %s\n' "$1" "$(xdotool getwindowname "$window")" >&2
   exit 1
 }
@@ -72,40 +72,40 @@ xdotool key ctrl+k
 xdotool type --clearmodifiers 'paint'
 capture command-search
 xdotool key Escape
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 search 'choose tool'
 capture tools
 xdotool type --clearmodifiers 'paint'
 xdotool key Return
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 # Camera-axis controls must navigate without placing a voxel through the overlay.
 xdotool mousemove 632 174 click 1
 sleep 4
 capture axis-right
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 xdotool mousemove 608 126 click 1
 sleep 4
 capture axis-top
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 search 'frame model'
 sleep 4
 # Mirror controls disclose only while active; command search remains the entry.
 search 'mirror x'
 capture mirror-active
 search 'mirror x'
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 search 'choose palette'
 xdotool key Down Down Down Down Down Down Down
 capture palettes
 xdotool key Return
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 # A keyboard edit, then Save & continue must save once and finish New.
 xdotool key b Return
-wait_title 'Autumn Workshop • — Quantum'
+wait_title 'Autumn Workshop • — Voxelite'
 xdotool key ctrl+n
 capture unsaved
 xdotool key Return
-wait_title 'Untitled — Quantum'
+wait_title 'Untitled — Voxelite'
 python3 - "$project" <<'PY'
 import json,sys
 project=json.load(open(sys.argv[1]))
@@ -121,11 +121,11 @@ for attempt in {1..100}; do
 done
 [[ -n "$file_dialog" ]] || { cat "$XDG_RUNTIME_DIR/app.log"; exit 1; }
 xdotool key --window "$window" b Return Right Return
-wait_title 'Untitled — Quantum'
+wait_title 'Untitled — Voxelite'
 xdotool windowfocus "$file_dialog" key Escape
 sleep 0.5
 xdotool windowfocus "$window"
-wait_title 'Untitled — Quantum'
+wait_title 'Untitled — Voxelite'
 # Open through the real chooser, then exercise Cancel and Discard by keyboard.
 xdotool key ctrl+o
 sleep 0.6
@@ -139,17 +139,17 @@ sleep 0.5
 dialog_width="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/WIDTH=//p')"
 dialog_height="$(xdotool getwindowgeometry --shell "$file_dialog" | sed -n 's/HEIGHT=//p')"
 xdotool mousemove --window "$file_dialog" "$((dialog_width - 80))" "$((dialog_height - 24))" click 1
-wait_title 'Autumn Workshop — Quantum'
+wait_title 'Autumn Workshop — Voxelite'
 xdotool windowfocus "$window" key Right Return
-wait_title 'Autumn Workshop • — Quantum'
+wait_title 'Autumn Workshop • — Voxelite'
 xdotool key ctrl+n Left Return
-wait_title 'Autumn Workshop • — Quantum'
+wait_title 'Autumn Workshop • — Voxelite'
 xdotool key ctrl+n Left Left Return
-wait_title 'Untitled — Quantum'
+wait_title 'Untitled — Voxelite'
 stop_app
 # Inspect preset previews and the truthful local-session guide in both themes.
 for theme in dark light; do
-  start_app 1 "$theme" --example
+  start_app 1 "$theme"
   xdotool windowsize "$window" 1440 900
   sleep 6
   search 'choose palette'
@@ -158,7 +158,7 @@ for theme in dark light; do
   xdotool mousemove 1200 302 click 1
   capture "guide-$theme"
   xdotool key Escape
-  wait_title 'Autumn Workshop — Quantum'
+  wait_title 'Autumn Workshop — Voxelite'
   stop_app
 done
 # Boundary layout: 128-byte names, 64 layers and all 256 palette slots.
@@ -183,7 +183,7 @@ done
 # Large logical windows at fractional and high pixel density, both themes.
 for scale in 1.5 2; do
   for theme in dark light; do
-    start_app "$scale" "$theme" --example
+    start_app "$scale" "$theme"
     read -r width height < <(python3 - "$scale" <<'PY'
 import sys
 s=float(sys.argv[1]); print(int(1440*s), int(900*s))

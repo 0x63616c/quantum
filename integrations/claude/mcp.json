@@ -1,11 +1,9 @@
 {
   "mcpServers": {
-    "quantum": {
-      "command": "/Applications/Quantum.app/Contents/MacOS/quantum-mcp",
-      "args": [
-        "--root",
-        "<project dir>"
-      ]
+    "voxelite": {
+      "type": "stdio",
+      "command": "/absolute/path/to/voxelite-build/target/release/voxelite-mcp",
+      "args": ["--root", "/absolute/path/to/project"]
     }
   }
 }

@@ -1,8 +1,0 @@
-bench/golden/**/*.png binary
-
-# Vendored third-party impeccable files retain upstream whitespace and CRLF.
-.agents/skills/impeccable/** -whitespace
-.claude/skills/impeccable/** -whitespace
-.claude/agents/impeccable-* -whitespace
-.cursor/skills/impeccable/** -whitespace
-.cursor/agents/impeccable-* -whitespace
