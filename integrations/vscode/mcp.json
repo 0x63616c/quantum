@@ -1,7 +1,7 @@
 {
   "servers": {
-    "quantum": {
-      "command": "/Applications/Quantum.app/Contents/MacOS/quantum-mcp",
+    "voxelite": {
+      "command": "/Applications/Voxelite.app/Contents/MacOS/voxelite-mcp",
       "args": [
         "--root",
         "${workspaceFolder}"

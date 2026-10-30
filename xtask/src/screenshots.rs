@@ -1,6 +1,6 @@
 //! `cargo xtask screenshots`: before/after captures of key screens for UI pull requests.
 //!
-//! Builds `quantum` at two refs, captures the same screens from each on a virtual X
+//! Builds `voxelite` at two refs, captures the same screens from each on a virtual X
 //! display (`scripts/capture-pr-screens.sh`), and writes a Before | After markdown block.
 //! `--publish <PR>` stores the PNGs on the `pr-assets` branch and puts that block in the
 //! PR description. See `.agents/skills/ui-pr-screenshots/SKILL.md`.
@@ -14,147 +14,37 @@ use std::{
 
 type Result<T> = std::result::Result<T, String>;
 
-/// Capture surfaces, in display order, with fixed fixtures and sizes.
-#[derive(Debug)]
-pub(super) struct Screen {
-    key: bool,
-    pub(super) name: &'static str,
+/// Key screens, in display order. Each one is rendered from a fixed fixture at a fixed size.
+struct Screen {
+    name: &'static str,
     caption: &'static str,
     title: &'static str,
-    pub(super) size: (u32, u32),
+    size: (u32, u32),
     args: &'static str,
 }
 
-// Each launch state expands into both themes, with identical geometry and title matching.
-macro_rules! screens {
-    ($($title:literal, ($width:literal, $height:literal) => [
-        $(($state:literal, $caption:literal)),* $(,)?
-    ]),* $(,)?) => {
-        &[
-            Screen {
-                key: true,
-                name: "welcome",
-                caption: "Welcome window (no recent projects)",
-                title: "Quantum",
-                size: (760, 620),
-                args: "--theme dark",
-            },
-            Screen {
-                key: true,
-                name: "editor-dark",
-                caption: "Editor, dark theme (Autumn Workshop example)",
-                title: "Autumn Workshop",
-                size: (1440, 900),
-                args: "--example --theme dark",
-            },
-            Screen {
-                key: true,
-                name: "editor-light",
-                caption: "Editor, light theme (Autumn Workshop example)",
-                title: "Autumn Workshop",
-                size: (1440, 900),
-                args: "--example --theme light",
-            },
-            Screen {
-                key: false,
-                name: "welcome-light",
-                caption: "Welcome window, light theme (no recent projects)",
-                title: "Quantum",
-                size: (760, 620),
-                args: "--theme light",
-            },
-            Screen {
-                key: false,
-                name: "welcome-recents-dark",
-                caption: "Welcome window, dark theme (five recent projects)",
-                title: "Quantum",
-                size: (760, 620),
-                args: "--theme dark",
-            },
-            Screen {
-                key: false,
-                name: "welcome-recents-light",
-                caption: "Welcome window, light theme (five recent projects)",
-                title: "Quantum",
-                size: (760, 620),
-                args: "--theme light",
-            },
-            $($(
-                Screen {
-                    key: false,
-                    name: concat!($state, "-dark"),
-                    caption: concat!($caption, " (dark)"),
-                    title: $title,
-                    size: ($width, $height),
-                    args: concat!("--show ", $state, " --theme dark"),
-                },
-                Screen {
-                    key: false,
-                    name: concat!($state, "-light"),
-                    caption: concat!($caption, " (light)"),
-                    title: $title,
-                    size: ($width, $height),
-                    args: concat!("--show ", $state, " --theme light"),
-                },
-            )*)*
-        ]
-    };
-}
-
-pub(super) const SCREENS: &[Screen] = screens![
-    "Autumn Workshop", (1440, 900) => [
-        ("chrome-menu-file", "File menu"),
-        ("chrome-menu-edit", "Edit menu"),
-        ("chrome-menu-view", "View menu"),
-        ("chrome-menu-tools", "Tools menu"),
-        ("chrome-menu-palette", "Palette menu"),
-        ("chrome-menu-layers", "Layers menu"),
-        ("chrome-menu-agent", "Agent menu"),
-        ("chrome-menu-extensions", "Extensions menu"),
-        ("chrome-menu-window", "Window menu"),
-        ("chrome-menu-help", "Help menu"),
-        ("panels-palette", "Focused palette sidebar"),
-        ("panels-history", "History and named versions"),
-        ("panels-history-preview", "History preview and restore controls"),
-        ("panels-comments-empty", "Empty resolved comments"),
-        ("panels-comments", "Comments and model pins"),
-        ("panels-comment-thread", "Comment thread"),
-        ("panels-comment-draft", "New comment composer"),
-        ("panels-agent", "Expanded agent activity"),
-        ("panels-agent-inspection", "Agent inspection thumbnails"),
-        ("popovers-connect-agent", "Connect agent"),
-        ("dialogs-about", "About Quantum"),
-        ("dialogs-acknowledgements", "Acknowledgements"),
-        ("dialogs-keyboard-guide", "Keyboard guide"),
-        ("dialogs-commands", "Command search"),
-        ("dialogs-commands-empty", "Empty command search"),
-        ("overlays-loading", "Scene loading shimmer"),
-        ("overlays-controls", "Shared controls: rest, hover, press, focus, disabled and loading"),
-        ("dialogs-tools", "Tool search"),
-        ("dialogs-extensions", "Extensions"),
-        ("dialogs-unsaved-changes", "Unsaved changes"),
-        ("dialogs-save-waiting", "Save dialog waiting surface"),
-        ("popovers-palette-chooser", "Palette chooser"),
-        ("dialogs-palettes", "Palette manager and color editor"),
-        ("popovers-palette-menu", "Palette import/export menu"),
-        ("dialogs-palette-delete", "Delete custom palette confirmation"),
-        ("overlays-debug", "Debug overlay"),
-    ],
-    "^Quantum Feedback$", (880, 760) => [
-        ("dialogs-feedback", "Feedback preview and consent"),
-        ("dialogs-crash-report", "Next-launch crash report preview"),
-        ("dialogs-feedback-relay", "Configured relay feedback confirmation"),
-        ("dialogs-crash-relay", "Configured relay crash confirmation"),
-    ],
-    "^Quantum Settings$", (880, 640) => [
-        ("settings-general", "Settings: General"),
-        ("settings-appearance", "Settings: Appearance"),
-        ("settings-viewport", "Settings: Viewport / Rendering"),
-        ("settings-shortcuts", "Settings: Shortcuts"),
-        ("settings-agent", "Settings: Agent"),
-        ("settings-updates", "Settings: Updates"),
-        ("settings-advanced", "Settings: Advanced"),
-    ],
+const SCREENS: &[Screen] = &[
+    Screen {
+        name: "welcome",
+        caption: "Welcome window (no recent projects)",
+        title: "Quantum",
+        size: (1024, 704),
+        args: "--theme dark",
+    },
+    Screen {
+        name: "editor-dark",
+        caption: "Editor, dark theme (Autumn Workshop example)",
+        title: "Autumn Workshop",
+        size: (1440, 900),
+        args: "--example --theme dark",
+    },
+    Screen {
+        name: "editor-light",
+        caption: "Editor, light theme (Autumn Workshop example)",
+        title: "Autumn Workshop",
+        size: (1440, 900),
+        args: "--example --theme light",
+    },
 ];
 
 const ASSETS_BRANCH: &str = "pr-assets";
@@ -165,13 +55,10 @@ const CELL_WIDTH: u32 = 440;
 /// Fraction of pixels allowed to differ (after a 2% colour fuzz) before a screen counts as changed.
 const CHANGED_FRACTION: f64 = 0.0005;
 
-pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen SELECTOR ...] [--pr-body FILE] [--out DIR] [--publish PR] [--remote NAME]
+pub const USAGE: &str = "cargo xtask screenshots [--base REF] [--head REF] [--screen NAME ...] [--out DIR] [--publish PR] [--remote NAME]
   --base     before ref (default: merge-base of HEAD and <remote>/main)
   --head     after ref (default: the current working tree, uncommitted changes included)
-  --screen   exact name or trailing * prefix (quote patterns); repeat to combine, '*' selects all
-             default: welcome, editor-dark, editor-light; other surfaces are opt-in
-  --pr-body  add selectors from one 'Screens: panels-* settings-general-*' line in FILE to the key set
-             --publish reads the PR body automatically unless --screen or --pr-body is supplied
+  --screen   limit to these screens (welcome, editor-dark, editor-light); default all
   --out      output directory (default: target/pr-screenshots)
   --publish  push PNGs to the pr-assets branch and fill the PR's Screenshots section
   --remote   git remote for the base default and publishing (default: origin, else the only remote)
@@ -181,7 +68,6 @@ struct Options {
     base: Option<String>,
     head: Option<String>,
     screens: Vec<String>,
-    pr_body: Option<PathBuf>,
     out: Option<PathBuf>,
     publish: Option<u64>,
     remote: Option<String>,
@@ -203,15 +89,6 @@ pub fn run(args: &[String]) -> Result<()> {
         .parent()
         .ok_or("no workspace root")?
         .to_path_buf();
-    let body = match (&options.pr_body, options.publish) {
-        (Some(file), _) => {
-            Some(fs::read_to_string(file).map_err(|e| format!("read {}: {e}", file.display()))?)
-        }
-        (None, Some(pr)) if options.screens.is_empty() => Some(pr_body(&root, pr)?),
-        _ => None,
-    };
-    // Validate untrusted selectors before cleaning output, building or publishing.
-    let screens = selected_screens(&options.screens, body.as_deref())?;
     let remote = match options.remote.clone() {
         Some(remote) => remote,
         None => default_remote(&root)?,
@@ -220,21 +97,35 @@ pub fn run(args: &[String]) -> Result<()> {
         .out
         .clone()
         .unwrap_or_else(|| root.join("target/pr-screenshots"));
-    eprintln!(
-        "selected {} screens: {}",
-        screens.len(),
-        screens
+    let screens: Vec<&Screen> = if options.screens.is_empty() {
+        SCREENS.iter().collect()
+    } else {
+        options
+            .screens
             .iter()
-            .map(|s| s.name)
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
+            .map(|name| {
+                SCREENS
+                    .iter()
+                    .find(|s| s.name == name)
+                    .ok_or_else(|| format!("unknown screen {name:?}"))
+            })
+            .collect::<Result<_>>()?
+    };
     if out.exists() {
         fs::remove_dir_all(&out).map_err(|e| format!("clean {}: {e}", out.display()))?;
     }
     fs::create_dir_all(out.join("bin")).map_err(|e| e.to_string())?;
     let spec = out.join("screens.tsv");
-    write_spec(&spec, &screens)?;
+    let mut spec_text = String::new();
+    for s in &screens {
+        let _ = writeln!(
+            spec_text,
+            "{}\t{}\t{}\t{}\t{}",
+            s.name, s.title, s.size.0, s.size.1, s.args
+        );
+    }
+    fs::write(&spec, spec_text).map_err(|e| e.to_string())?;
+
     let base_ref = match options.base.clone() {
         Some(base) => base,
         None => git(&root, &["merge-base", "HEAD", &format!("{remote}/main")])?,
@@ -278,15 +169,10 @@ pub fn run(args: &[String]) -> Result<()> {
             )
         }
     };
-    prepare_fixtures(&root, &out, &screens)?;
     let script = root.join("scripts/capture-pr-screens.sh");
     for (side, bin) in [(&base, &base_bin), (&head, &head_bin)] {
         eprintln!("capturing {} ({})", side.label, side.id);
-        let sh = xshell::Shell::new().map_err(|error| error.to_string())?;
-        let dir = &side.dir;
-        xtask::cmd::Command::from(xshell::cmd!(sh, "{script} {bin} {dir} {spec}"))
-            .run(&xtask::cmd::SystemRunner::default())
-            .map_err(|error| error.to_string())?;
+        status(Command::new(&script).arg(bin).arg(&side.dir).arg(&spec))?;
     }
     let results: Vec<Comparison> = screens
         .iter()
@@ -294,7 +180,7 @@ pub fn run(args: &[String]) -> Result<()> {
         .collect();
 
     let urls = match options.publish {
-        Some(pr) if results.iter().any(|r| r.state.has_assets()) => {
+        Some(pr) => {
             let repo = gh(
                 &root,
                 &[
@@ -306,7 +192,7 @@ pub fn run(args: &[String]) -> Result<()> {
                     ".nameWithOwner",
                 ],
             )?;
-            let assets = publish_assets(&root, &remote, pr, &base, &head, &results)?;
+            let assets = publish_assets(&root, &remote, pr, &base, &head, &screens)?;
             Urls::Remote {
                 prefix: format!(
                     "https://raw.githubusercontent.com/{repo}/{assets}/pr-{pr}/{}",
@@ -314,7 +200,7 @@ pub fn run(args: &[String]) -> Result<()> {
                 ),
             }
         }
-        _ => Urls::Local,
+        None => Urls::Local,
     };
     let markdown = render(&results, &base, &head, &base_ref, &urls);
     fs::write(out.join("screenshots.md"), &markdown).map_err(|e| e.to_string())?;
@@ -334,7 +220,6 @@ fn parse(args: &[String]) -> Result<Options> {
         base: None,
         head: None,
         screens: Vec::new(),
-        pr_body: None,
         out: None,
         publish: None,
         remote: None,
@@ -350,7 +235,6 @@ fn parse(args: &[String]) -> Result<Options> {
             "--base" => options.base = Some(value()?),
             "--head" => options.head = Some(value()?),
             "--screen" => options.screens.push(value()?),
-            "--pr-body" => options.pr_body = Some(value()?.into()),
             "--out" => options.out = Some(value()?.into()),
             "--remote" => options.remote = Some(value()?),
             "--publish" => {
@@ -364,65 +248,7 @@ fn parse(args: &[String]) -> Result<Options> {
             _ => return Err(format!("unknown argument {arg:?}\n{USAGE}")),
         }
     }
-    if options.pr_body.is_some() && !options.screens.is_empty() {
-        return Err("--screen and --pr-body cannot be combined".into());
-    }
     Ok(options)
-}
-
-/// Resolve selectors to registry entries, deduplicated in registry order. Only a
-/// trailing `*` is supported; no shell expansion or user-provided app args exist.
-fn selected_screens(selectors: &[String], body: Option<&str>) -> Result<Vec<&'static Screen>> {
-    let extras = body.map(body_selectors).transpose()?.unwrap_or_default();
-    let mut selected: Vec<bool> = SCREENS
-        .iter()
-        .map(|s| selectors.is_empty() && s.key)
-        .collect();
-    for selector in selectors.iter().chain(&extras) {
-        let prefix = selector.strip_suffix('*');
-        let stem = prefix.unwrap_or(selector);
-        if selector.is_empty()
-            || !stem
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        {
-            return Err(format!(
-                "invalid screen selector {selector:?}: use an exact name or trailing * prefix"
-            ));
-        }
-        let mut matched = false;
-        for (screen, selected) in SCREENS.iter().zip(&mut selected) {
-            if prefix.map_or(screen.name == selector, |prefix| {
-                screen.name.starts_with(prefix)
-            }) {
-                *selected = true;
-                matched = true;
-            }
-        }
-        if !matched {
-            return Err(format!(
-                "unknown screen selector {selector:?}: matched no screens"
-            ));
-        }
-    }
-    Ok(SCREENS
-        .iter()
-        .zip(selected)
-        .filter_map(|(s, selected)| selected.then_some(s))
-        .collect())
-}
-
-/// A deliberately small line format, not Markdown or shell syntax. The directive
-/// must start at column zero; indented examples and inline mentions are ignored.
-fn body_selectors(body: &str) -> Result<Vec<String>> {
-    let mut lines = body
-        .lines()
-        .filter_map(|line| line.strip_prefix("Screens:"));
-    let selectors = lines.next().unwrap_or_default();
-    if lines.next().is_some() {
-        return Err("use only one Screens: line in the PR body".into());
-    }
-    Ok(selectors.split_whitespace().map(str::to_string).collect())
 }
 
 fn build_at_commit(root: &Path, out: &Path, sha: &str, label: &str) -> Result<PathBuf> {
@@ -451,45 +277,23 @@ fn build(tree: &Path, out: &Path, label: &str) -> Result<PathBuf> {
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../target"));
-    let (package, executable) = app_target(tree)?;
-    eprintln!("building {executable} ({label}) in {}", tree.display());
+    eprintln!("building voxelite ({label}) in {}", tree.display());
     status(
         Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
             .current_dir(tree)
             .env("CARGO_TARGET_DIR", &target)
-            .args(["build", "--locked", "-p", &package, "--bin", &executable]),
+            .args([
+                "build",
+                "--locked",
+                "-p",
+                "voxelite-app",
+                "--bin",
+                "voxelite",
+            ]),
     )?;
     let bin = out.join("bin").join(label);
-    fs::copy(target.join("debug").join(executable), &bin)
-        .map_err(|e| format!("copy binary: {e}"))?;
+    fs::copy(target.join("debug/voxelite"), &bin).map_err(|e| format!("copy binary: {e}"))?;
     Ok(bin)
-}
-
-// Read the selected revision's manifest so comparisons span package renames.
-fn app_target(tree: &Path) -> Result<(String, String)> {
-    for entry in fs::read_dir(tree.join("crates")).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        if !entry.file_name().to_string_lossy().ends_with("-app") {
-            continue;
-        }
-        let source =
-            fs::read_to_string(entry.path().join("Cargo.toml")).map_err(|e| e.to_string())?;
-        let manifest: toml::Value = toml::from_str(&source).map_err(|e| e.to_string())?;
-        let package = manifest
-            .get("package")
-            .and_then(|p| p.get("name"))
-            .and_then(toml::Value::as_str);
-        let executable = manifest
-            .get("bin")
-            .and_then(toml::Value::as_array)
-            .and_then(|bins| bins.first())
-            .and_then(|b| b.get("name"))
-            .and_then(toml::Value::as_str);
-        if let (Some(package), Some(executable)) = (package, executable) {
-            return Ok((package.into(), executable.into()));
-        }
-    }
-    Err("Selected revision has no application target".into())
 }
 
 #[derive(PartialEq)]
@@ -502,10 +306,6 @@ enum State {
 }
 
 impl State {
-    fn has_assets(&self) -> bool {
-        matches!(self, Self::Changed | Self::Added | Self::Removed)
-    }
-
     fn word(&self) -> &'static str {
         match self {
             State::Changed => "changed",
@@ -637,15 +437,15 @@ impl Urls {
 fn img(urls: &Urls, side: &Side, screen: &Screen, width: u32) -> String {
     let url = urls.image(side, screen.name);
     format!(
-        r#"<img src="{url}" width="{width}" alt="{} screenshot">"#,
-        side.label
+        r#"<a href="{url}"><img src="{url}" width="{width}" alt="{} — {}"></a>"#,
+        screen.caption, side.label
     )
 }
 
 fn zoom_img(urls: &Urls, side: &Side, screen: &Screen) -> String {
     let url = urls.image(side, &format!("{}-zoom", screen.name));
     format!(
-        r#"<img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change">"#,
+        r#"<a href="{url}"><img src="{url}" width="{CELL_WIDTH}" alt="{} — {}, zoomed to the change"></a>"#,
         screen.caption, side.label
     )
 }
@@ -667,14 +467,14 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
     };
     let _ = writeln!(
         md,
-        "<sub>Before <code>{}</code>{base_name} → after <code>{}</code>. {} of {} selected screens changed or unavailable. Linux, Mesa lavapipe, fixed window sizes; generated by <code>cargo xtask screenshots</code>.</sub>\n",
+        "<sub>Before <code>{}</code>{base_name} → after <code>{}</code>. {} of {} key screens changed. Linux, Mesa lavapipe, fixed window sizes; generated by <code>cargo xtask screenshots</code>.</sub>\n",
         base.id,
         head.id,
         changed.len(),
         results.len()
     );
     if changed.is_empty() {
-        md.push_str("No visible change on the selected screens.\n\n");
+        md.push_str("No visible change on the key screens.\n\n");
     }
     for r in &changed {
         let s = r.screen;
@@ -707,7 +507,11 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
                 zoom_img(urls, head, s)
             );
         }
-        let _ = writeln!(md, "\n`quantum {}` · {}×{}\n", s.args, s.size.0, s.size.1);
+        let _ = writeln!(
+            md,
+            "\n<sub><code>voxelite {}</code> at {}×{}</sub>\n",
+            s.args, s.size.0, s.size.1
+        );
     }
     if !same.is_empty() {
         let _ = writeln!(
@@ -715,39 +519,18 @@ fn render(results: &[Comparison], base: &Side, head: &Side, base_ref: &str, urls
             "<details><summary>Unchanged screens ({})</summary>\n",
             same.len()
         );
+        let _ = writeln!(md, "| Screen | After |\n| :--- | :---: |");
         for r in &same {
-            let _ = writeln!(md, "- {} (`{}`)", r.screen.caption, r.screen.name);
+            let _ = writeln!(
+                md,
+                "| {} | {} |",
+                r.screen.caption,
+                img(urls, head, r.screen, 300)
+            );
         }
         md.push_str("\n</details>\n");
     }
     md
-}
-
-/// Publish only images referenced by changed/new/removed rows, including useful
-/// zooms. Unchanged captures remain local or in CI artifacts, never in Git.
-fn asset_files(results: &[Comparison], base: &Side, head: &Side) -> Vec<(PathBuf, String)> {
-    let mut files = Vec::new();
-    for r in results.iter().filter(|r| r.state.has_assets()) {
-        for side in [base, head] {
-            if (r.state == State::Added && side.label == base.label)
-                || (r.state == State::Removed && side.label == head.label)
-            {
-                continue;
-            }
-            let name = r.screen.name;
-            files.push((
-                side.dir.join(format!("{name}.png")),
-                format!("{}/{name}.png", side.label),
-            ));
-            if r.zoom.is_some() {
-                files.push((
-                    side.dir.join(format!("{name}-zoom.png")),
-                    format!("{}/{name}-zoom.png", side.label),
-                ));
-            }
-        }
-    }
-    files
 }
 
 /// Commit the PNGs on top of the `pr-assets` branch with plumbing commands (no checkout,
@@ -758,12 +541,23 @@ fn publish_assets(
     pr: u64,
     base: &Side,
     head: &Side,
-    results: &[Comparison],
+    screens: &[&Screen],
 ) -> Result<String> {
     let mut blobs = Vec::new();
-    for (file, path) in asset_files(results, base, head) {
-        let blob = git(root, &["hash-object", "-w", &file.to_string_lossy()])?;
-        blobs.push((format!("pr-{pr}/{}/{path}", head.id), blob));
+    for side in [base, head] {
+        for name in screens
+            .iter()
+            .flat_map(|s| [s.name.to_string(), format!("{}-zoom", s.name)])
+        {
+            let file = side.dir.join(format!("{name}.png"));
+            if file.exists() {
+                let blob = git(root, &["hash-object", "-w", &file.to_string_lossy()])?;
+                blobs.push((
+                    format!("pr-{pr}/{}/{}/{name}.png", head.id, side.label),
+                    blob,
+                ));
+            }
+        }
     }
     let index = std::env::temp_dir().join(format!("pr-assets-index-{}", std::process::id()));
     for attempt in 1..=5 {
@@ -820,17 +614,12 @@ fn publish_assets(
     unreachable!()
 }
 
-fn pr_body(root: &Path, pr: u64) -> Result<String> {
-    let number = pr.to_string();
-    gh(
-        root,
-        &["pr", "view", &number, "--json", "body", "-q", ".body"],
-    )
-}
-
 fn update_pr_body(root: &Path, pr: u64, markdown: &str) -> Result<()> {
     let number = pr.to_string();
-    let body = pr_body(root, pr)?;
+    let body = gh(
+        root,
+        &["pr", "view", &number, "--json", "body", "-q", ".body"],
+    )?;
     let new = splice_body(&body, markdown);
     let file = std::env::temp_dir().join(format!("pr-{pr}-body.md"));
     fs::write(&file, new).map_err(|e| e.to_string())?;
@@ -915,32 +704,47 @@ fn status(command: &mut Command) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
 
-fn prepare_fixtures(root: &Path, out: &Path, screens: &[&Screen]) -> Result<()> {
-    if screens
-        .iter()
-        .any(|screen| screen.name.starts_with("welcome-recents-"))
-    {
-        xtask::screenshot_fixtures::prepare_welcome(
-            root,
-            &out.join("home"),
-            &out.join("welcome-data"),
-        )
-        .map_err(|error| error.to_string())?;
+    #[test]
+    fn splice_replaces_marked_block() {
+        let body =
+            format!("Closes #1\n\n## Screenshots\n\n{START}\nold\n{END}\n\n## Testing\n\nok\n");
+        let new = splice_body(&body, "new\n");
+        assert!(new.contains(&format!("{START}\nnew\n{END}")));
+        assert!(!new.contains("old"));
+        assert_eq!(new.matches("## Screenshots").count(), 1);
     }
-    Ok(())
-}
 
-fn write_spec(spec: &Path, screens: &[&Screen]) -> Result<()> {
-    let mut spec_text = String::new();
-    for s in screens {
-        let _ = writeln!(
-            spec_text,
-            "{}\t{}\t{}\t{}\t{}",
-            s.name, s.title, s.size.0, s.size.1, s.args
+    #[test]
+    fn splice_adds_section_before_testing() {
+        let new = splice_body(
+            "Closes #1\n\n## Changes\n\n- x\n\n## Testing\n\nok\n",
+            "shots\n",
         );
+        let shots = new.find("## Screenshots").unwrap();
+        assert!(new.find("## Changes").unwrap() < shots);
+        assert!(shots < new.find("## Testing").unwrap());
     }
-    fs::write(spec, spec_text).map_err(|e| e.to_string())?;
-    Ok(())
+
+    #[test]
+    fn splice_appends_without_testing_heading() {
+        let new = splice_body("Closes #1\r\n", "shots\n");
+        assert!(new.starts_with("Closes #1\n\n## Screenshots"));
+        assert!(new.trim_end().ends_with(END));
+    }
+
+    #[test]
+    fn parse_publish_accepts_hash() {
+        let options = parse(&[
+            "--publish".into(),
+            "#42".into(),
+            "--screen".into(),
+            "welcome".into(),
+        ])
+        .unwrap();
+        assert_eq!(options.publish, Some(42));
+        assert_eq!(options.screens, ["welcome"]);
+    }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Capture PR screenshot screens from one built `quantum` binary on a virtual X display.
+# Capture PR screenshot screens from one built `voxelite` binary on a virtual X display.
 # Called by `cargo xtask screenshots`; see .agents/skills/ui-pr-screenshots/SKILL.md.
 #
 # usage: capture-pr-screens.sh BINARY OUT_DIR SPEC_FILE
@@ -17,13 +17,9 @@ PR_SHOTS_BIN="$(realpath "$1")"
 mkdir -p "$2"
 PR_SHOTS_OUT="$(realpath "$2")"
 PR_SHOTS_SPEC="$(realpath "$3")"
-# Both revisions see the same disposable home. The app's normal path formatter
-# can abbreviate fixture folders without reading or writing the real user's data.
-export PR_SHOTS_HOME="$(dirname "$PR_SHOTS_OUT")/home"
-mkdir -p "$PR_SHOTS_HOME"
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 export LANG=C.UTF-8 TZ=UTC
-xvfb-run -a -s "-screen 0 ${PR_SHOTS_DISPLAY:-1600x1000x24} -nolisten tcp" dbus-run-session -- bash <<'CAPTURE' 2> >(grep -v -E 'xdg-desktop-portal|pw\.conf|PipeWire|dbus-daemon|^$' >&2)
+xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' dbus-run-session -- bash <<'CAPTURE' 2> >(grep -v -E 'xdg-desktop-portal|pw\.conf|PipeWire|dbus-daemon|^$' >&2)
 set -euo pipefail
 export XDG_RUNTIME_DIR
 XDG_RUNTIME_DIR="$(mktemp -d)"
@@ -38,20 +34,10 @@ cleanup() {
 trap cleanup EXIT
 while IFS=$'\t' read -r name title width height args; do
   [[ -z "$name" || "$name" == \#* ]] && continue
-  export QUANTUM_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
-  # Baseline revisions predate the environment-variable rename.
-  export VOXELITE_DATA_DIR="$QUANTUM_DATA_DIR"
-  mkdir -p "$QUANTUM_DATA_DIR"
-  if [[ "$name" == welcome-recents-* ]]; then
-    # xtask seeds one history with real projects for both revisions.
-    cp "$PR_SHOTS_HOME/../welcome-data/recents.json" "$QUANTUM_DATA_DIR/recents.json"
-  fi
-  # A private cwd keeps the displayed relative socket path stable across captures.
-  cd "$QUANTUM_DATA_DIR"
+  export VOXELITE_DATA_DIR="$XDG_RUNTIME_DIR/data-$name"
+  mkdir -p "$VOXELITE_DATA_DIR"
   # shellcheck disable=SC2086 # args are a space-separated list by design
-  env HOME="$PR_SHOTS_HOME" XDG_CACHE_HOME="$XDG_RUNTIME_DIR/cache-$name" \
-    XDG_CONFIG_HOME="$XDG_RUNTIME_DIR/config-$name" XDG_DATA_HOME="$XDG_RUNTIME_DIR/share-$name" \
-    "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "./session.sock" \
+  "$PR_SHOTS_BIN" $args --exit-after 300 --session-socket "$XDG_RUNTIME_DIR/$name.sock" \
     >"$XDG_RUNTIME_DIR/$name.log" 2>&1 </dev/null &
   app_pid=$!
   window=''
@@ -69,12 +55,9 @@ while IFS=$'\t' read -r name title width height args; do
     continue
   fi
   xdotool windowmove "$window" 0 0 windowsize "$window" "$width" "$height" || true
-  xdotool mousemove 0 9999
-  # Welcome renders up to nine previews serially on the CPU. Give those jobs
-  # time to finish as well as the editor's full-quality frame and animations.
-  settle=6
-  [[ "$name" == welcome* ]] && settle=15
-  sleep "${PR_SHOTS_SETTLE:-$settle}"
+  xdotool mousemove 1599 999
+  # Let the CPU renderer finish full-quality frames and any entrance animation.
+  sleep "${PR_SHOTS_SETTLE:-6}"
   import -window "$window" "$PR_SHOTS_OUT/$name.png"
   echo "captured $name"
   kill "$app_pid" 2>/dev/null || true
