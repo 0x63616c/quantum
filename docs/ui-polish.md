@@ -61,6 +61,4 @@ on a physical Mac. Also inspect native titlebars, save panels and the Metal surf
 handoff. CI macOS compilation/tests do not replace these visual/input checks.
 No signing, publishing or new credentials are required for the UI change.
 
-The original review was blocked on GitHub Project permissions (#148). Work is
-now tracked in [Tickets](https://tickets.worldwidewebb.co); its webhook moves
-tickets to In review when a PR opens and Done on merge.
+The original review was blocked on GitHub Project permissions (#148).
