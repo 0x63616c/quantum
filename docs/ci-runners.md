@@ -131,9 +131,7 @@ checks. Nightly and manual macOS/rendering runs have unique concurrency groups,
 so PRs and other runs cannot cancel or replace their pending work. Release macOS
 and its serialization are unchanged. The 10:00 UTC CI macOS nightly and 10:30 UTC
 rendering nightly still use legacy GitHub automation to open or update `type:ci`, `area:ci`, `priority:p0` issues on
-failures, including failed change detection or skipped hardware jobs. GitHub issues
-are retired as a work tracker: record actionable failures in
-[Tickets](https://tickets.worldwidewebb.co), the sole source of truth.
+failures, including failed change detection or skipped hardware jobs. Use the linked run output to investigate actionable failures.
 
 The target is a median PR feedback time under 10 minutes. Removing routine Rust
 builds from the two shared Mac slots should reduce both queues, but this requires

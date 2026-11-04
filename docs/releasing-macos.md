@@ -221,9 +221,7 @@ because runner and toolchain drift can break packaging without a source change.
 Legacy GitHub automation for a failed nightly or manual main run opens an issue, or comments on the existing
 open `ci: CI macOS nightly checks failed` issue, with the run link and labels
 `type:ci`, `area:ci`, `priority:p0`. A skipped Mac job also reports the missing
-verification; the owner/fork guard remains in force. Track actionable failures in
-[Tickets](https://tickets.worldwidewebb.co), the sole source of truth; GitHub issues
-are retired as a work tracker.
+verification; the owner/fork guard remains in force. Use the linked run output to investigate actionable failures.
 
 ## Release behavior
 

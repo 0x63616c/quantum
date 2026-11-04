@@ -1,52 +1,28 @@
 # Contributing to Quantum
 
-[Tickets](https://tickets.worldwidewebb.co) is the sole source of truth for planned,
-in-progress and completed work. GitHub issues and Projects are retired. Quantum
-uses the `QUA` prefix. Every change starts as a ticket and lands as one focused
-pull request. These rules apply to people and coding agents alike;
-[AGENTS.md](AGENTS.md) covers technical conventions.
+Keep changes focused and follow [AGENTS.md](AGENTS.md) for technical conventions.
 
-## 1. Ticket first
+## 1. Branches
 
-- Search Tickets before starting work and reuse an existing ticket when possible.
-- Every ticket states **Why** and a **Done when** checklist of observable outcomes
-  (behavior, tests, docs, screenshots).
-- Track priority, labels and status in Tickets. Check dependencies before starting
-  work and record blockers as Tickets dependency edges.
+Name branches `<type>/<slug>`, for example `ci/update-conventions`. Branch from `main`; never push to `main`.
 
-Every open ticket carries exactly one model label:
-
-- `model:sol`: everyday work: CI config, lint setup, small fixes, straightforward
-  refactors and docs. Run `codex exec -m gpt-6.1-sol`.
-- `model:astra`: hard work: UI/design-heavy tasks, complex refactors, spikes and
-  ports of someone else's code. Run `codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh`.
-
-Use Tickets dependency edges for blockers; do not encode dependencies in body text.
-
-## 2. Branches
-
-Name branches `<type>/<KEY-N>-<slug>`, for example `ci/QUA-87-tickets-conventions`. Branch from `main`; never push to `main`.
-
-## 3. Pull request titles
+## 2. Pull request titles
 
 Titles use [Conventional Commits](https://www.conventionalcommits.org/) and are
 checked in CI:
 
 ```text
-<type>(<optional scope>): <imperative summary> [QUA-N]
+<type>(<optional scope>): <imperative summary>
 ```
 
 Allowed types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`.
 Use an `area:*` name as the scope where it helps, e.g. `fix(mcp): …`. The squash
 commit keeps the title, so it must read well in public release notes.
 
-## 4. Pull request bodies
+## 3. Pull request bodies
 
 The [PR template](.github/pull_request_template.md) asks for:
 
-- `Closes [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` (or `Refs [QUA-N](https://tickets.worldwidewebb.co/t/QUA-N)` to link without closing).
-  CI requires a Tickets key at the end of the title, e.g. `feat(app): add thing [QUA-12]`,
-  and the same key linked like this in the body; on failure it prints the exact line to add.
 - **Summary**: the problem and the resulting behavior, in plain English.
 - **Changes**: bullets, most important first.
 - **Testing**: commands run and their result, plus untested platforms;
@@ -55,9 +31,7 @@ The [PR template](.github/pull_request_template.md) asks for:
 
 Keep the sections and their order so every PR reads the same way.
 
-Bot PRs (including Dependabot and Renovate) are exempt from the Ticket key check.
-Tickets links PRs through a GitHub webhook, moves tickets to **In review** when
-the PR opens and to **Done** on merge. GitHub Actions updates
+GitHub Actions updates
 use the accepted `ci:` commit-message prefix and one weekly group so related
 actions, including upload/download-artifact, are reviewed together. Keep action
 references SHA-pinned with exact version comments when reviewing that group.
@@ -102,24 +76,19 @@ project-only impeccable **4.8.0** install/update command, telemetry opt-outs and
 fallback cache. Keep upstream files verbatim. The repo git hooks in `.githooks/` are approved
 (see [Git hooks](#git-hooks)); any new hook still needs Calum's approval.
 
-## 5. One focus per PR
+## 4. One focus per PR
 
-One ticket, one concern, one PR. Split drive-by fixes into their own ticket. Do not
+One concern per PR. Split drive-by fixes into separate PRs. Do not
 mix refactors with behavior changes, or formatting churn with features.
 
-## 6. Definition of Done
+## 5. Definition of Done
 
-A ticket is done only when all of these hold:
-
-- [ ] Every **Done when** item is checked, with evidence linked in the PR.
+- [ ] Acceptance criteria are met, with evidence linked in the PR.
 - [ ] The PR is merged into `main` with green required checks.
 - [ ] Docs, schemas, fixtures and `AGENTS.md` are updated where behavior changed.
 - [ ] UI changes have before/after screenshots; perf changes have numbers.
-- [ ] Follow-up work is filed as new tickets, not left in comments.
-- [ ] Tickets shows **Done** after the merge.
 
-Never call work done from memory. Re-read the ticket's checklist against the merged
-diff first.
+Check the merged diff and validation evidence before claiming completion.
 
 ## Running Rust tests
 
