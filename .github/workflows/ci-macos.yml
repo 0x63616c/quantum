@@ -90,7 +90,7 @@ jobs:
         run: |
           cargo xtask check plugin-deps
       - name: Install nextest
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.150
       - name: Test packaging tasks
@@ -137,7 +137,7 @@ jobs:
           cargo clippy ${{ steps.rust-packages.outputs.packages }} --all-targets --locked --features quantum-app/test-support -- -D warnings
           cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling -- -D warnings
       - name: Install nextest
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.150
       - name: Test Rust packages
@@ -238,7 +238,7 @@ jobs:
           cargo clippy --workspace --all-targets --locked --features quantum-app/test-support -- -D warnings
           cargo clippy -p quantum-app -p quantum-render --all-targets --locked --features quantum-app/profiling -- -D warnings
       - name: Install nextest
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.150
 
