@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   changes:
-    # Docs-only PRs skip the macOS build. A skipped job still satisfies required checks.
+    # Docs-only PRs skip native work; the required macos result job verifies the skip.
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -100,6 +100,7 @@ jobs:
         run: cargo test --doc -p xtask --locked
 
   macos:
+    name: native-macos
     needs: changes
     # Stable required-check name, including fork PRs. Keep filtering at job level.
     if: needs.changes.outputs.code == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push')
@@ -270,6 +271,37 @@ jobs:
             dist/Quantum.dmg.sha256
           if-no-files-found: error
           retention-days: 3
+
+  macos-required:
+    name: macos
+    needs: [changes, scripts, macos]
+    # A skipped dependent job can satisfy branch protection even when its
+    # prerequisite failed. Always report the combined result on a hosted runner.
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify macOS CI results
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          SCRIPTS_RESULT: ${{ needs.scripts.result }}
+          MACOS_RESULT: ${{ needs.macos.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CHANGES_RESULT" == success ]]; then
+            if [[ "$CODE_CHANGED" == false && "$SCRIPTS_RESULT" == skipped && "$MACOS_RESULT" == skipped ]]; then
+              echo 'Docs-only change: native checks are not applicable.'
+              exit 0
+            fi
+            if [[ "$CODE_CHANGED" == true && "$SCRIPTS_RESULT" == success && "$MACOS_RESULT" == success ]]; then
+              echo 'All macOS CI checks passed.'
+              exit 0
+            fi
+          fi
+          echo "::error::macOS CI incomplete: changes=$CHANGES_RESULT, code=$CODE_CHANGED, scripts=$SCRIPTS_RESULT, native=$MACOS_RESULT. Code changes require a successful trusted native run."
+          exit 1
 
   report-nightly-failure:
     needs: [changes, scripts, macos-hardware]
